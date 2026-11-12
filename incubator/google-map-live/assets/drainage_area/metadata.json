@@ -1,0 +1,148 @@
+{
+  "name": "London 70 km shared Thames contributing-area field",
+  "generated_on": "2026-10-11",
+  "derived_product": true,
+  "purpose": [
+    "Contributing Area: evaluate upstream runoff-contributing scale",
+    "Terrain-derived Drainage Network: dynamically threshold the same accumulation field"
+  ],
+  "source_dem": {
+    "product": "OS Terrain® 50",
+    "product_id": "Terrain50",
+    "product_version": "2026-07",
+    "publisher": "Ordnance Survey",
+    "licence": "Open Government Licence",
+    "resolution_m": 50,
+    "crs": "EPSG:27700",
+    "downloads_api": "https://api.os.uk/downloads/v1",
+    "areas": [
+      "SO",
+      "SP",
+      "ST",
+      "SU",
+      "TL",
+      "TQ"
+    ],
+    "downloads": [
+      {
+        "area": "GB",
+        "fileName": "terr50_gagg_gb.zip",
+        "format": "ASCII Grid and GML (Grid)",
+        "subformat": null,
+        "size": 161706566,
+        "md5": "feba9008db55cdcb5c5e5b7896e3428b",
+        "url": "https://api.os.uk/downloads/v1/products/Terrain50/downloads?area=GB&format=ASCII+Grid+and+GML+%28Grid%29&redirect"
+      }
+    ]
+  },
+  "analysis": {
+    "upstream_domain_crs": "EPSG:27700",
+    "upstream_domain_bounds_m": [
+      300000.0,
+      100000.0,
+      625000.0,
+      300000.0
+    ],
+    "upstream_domain_size": [
+      6500,
+      4000
+    ],
+    "cell_size_m": 50.0,
+    "cell_area_km2": 0.0025,
+    "hydrological_conditioning": "PyFlwDir from_dem: Wang & Liu depression filling / flat resolution with D8 flow directions; valid edge cells are outlets.",
+    "flow_direction": "D8",
+    "flow_accumulation": "upstream area in km² computed once on the complete upstream analysis domain before the London crop",
+    "mosaic_stats": {
+      "tiles_used": 646,
+      "valid_cells": 25560000,
+      "valid_fraction": 0.9830769230769231,
+      "min_elevation_m": -134.89999389648438,
+      "max_elevation_m": 883.5999755859375
+    }
+  },
+  "validation": {
+    "reference": {
+      "station": "39001",
+      "name": "Thames at Kingston",
+      "easting": 517700.0,
+      "northing": 169800.0,
+      "catchment_area_km2": 9948.0,
+      "source": "https://nrfa.ceh.ac.uk/data/station/info/39001"
+    },
+    "search_radius_m": 1500,
+    "model_km2": 9957.0615234375,
+    "model_cell": {
+      "row": 2574,
+      "col": 4345,
+      "easting": 517275.0,
+      "northing": 171275.0
+    },
+    "absolute_error_km2": 9.0615234375,
+    "relative_error_percent": 0.09108889663751508,
+    "publish_gate_percent": 25,
+    "passed": true
+  },
+  "web_grid": {
+    "crs": "EPSG:3857",
+    "bounds_m": [
+      -127813.8696191665,
+      6596204.025752107,
+      102461.98815442335,
+      6827041.923624865
+    ],
+    "width": 2868,
+    "height": 2875,
+    "display_mask": "70 km radius around Charing Cross is applied by the shared browser worker"
+  },
+  "asset": "assets/drainage_area/area_log16.webp",
+  "asset_sha256": "2efa511f3e7b5599c42144f17b0c263e39efd777ddc45118edabd530826095ae",
+  "asset_size_bytes": 4428074,
+  "terrain_dem_asset": {
+    "path": "assets/drainage_area/dem50_log16.webp",
+    "sha256": "2a02b9fb006d3a2304bce9609d63be068570ed25711e1b7fc7b9b2e6f24d19bb",
+    "size_bytes": 5214836,
+    "source_resolution_m": 50,
+    "web_grid": "same EPSG:3857 bounds and dimensions as the accumulation field",
+    "reprojection": "bilinear from native OS Terrain 50 elevations",
+    "encoding": {
+      "code": "R * 256 + G; 0 = NoData",
+      "minimum_elevation_m": -100.0,
+      "step_m": 0.1,
+      "decode": "minimum_elevation_m + (code - 1) * step_m"
+    },
+    "purpose": "Local browser flood-routing simulation terrain. It remains a 50 m terrain model even when the visual simulation grid is finer.",
+    "valid_cells": 8245494,
+    "min_elevation_m": -4.8305344581604,
+    "max_elevation_m": 289.3976745605469,
+    "encoding_min_m": -100.0,
+    "encoding_step_m": 0.1
+  },
+  "encoding": {
+    "code": "R * 256 + G; 0 = NoData",
+    "minimum_area_km2": 0.0025,
+    "maximum_area_km2": 20000.0,
+    "decode": "0.0025 * exp((code - 1) / 65534 * log(20000 / 0.0025))"
+  },
+  "display": {
+    "area_layer": "B-spline visual resampling of the stored 50 m accumulation field; display smoothing does not increase analytical resolution.",
+    "network_layer": "Dynamic browser threshold A >= user-selected minimum contributing area using the SAME encoded 50 m field; no independent network raster.",
+    "display_valid_cells": 8245494,
+    "display_min_km2": 0.0024999999441206455,
+    "display_max_km2": 16420.982421875
+  },
+  "provenance_note": "The hydrology solve occurs before the London 70 km crop so upstream contributions from the full Thames catchment are retained.",
+  "references": [
+    {
+      "name": "OS Terrain 50",
+      "url": "https://www.ordnancesurvey.co.uk/products/os-terrain-50"
+    },
+    {
+      "name": "PyFlwDir from_dem",
+      "url": "https://deltares.github.io/pyflwdir/latest/_generated/pyflwdir.from_dem.html"
+    },
+    {
+      "name": "NRFA 39001 Thames at Kingston",
+      "url": "https://nrfa.ceh.ac.uk/data/station/info/39001"
+    }
+  ]
+}

@@ -19,7 +19,10 @@ const relDir = join(hist, 'releases', id);
 mkdirSync(join(hist, 'releases'), { recursive: true });
 
 rmSync(relDir, { recursive: true, force: true });
-cpSync(site, relDir, { recursive: true, filter: p => !p.startsWith(join(site, 'releases')) });
+// incubator/ apps are large and versioned by their own folders, so history
+// snapshots cover the unified app only (keeps the history branch small).
+cpSync(site, relDir, { recursive: true,
+  filter: p => !p.startsWith(join(site, 'releases')) && !p.startsWith(join(site, 'incubator')) });
 const path = `releases/${id}/`;
 writeFileSync(join(relDir, 'app/version.js'),
   `// Historical release copy\nexport const BUILD = ${JSON.stringify({ ...latest, releasePath: path })};\n`);
