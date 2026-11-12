@@ -161,3 +161,43 @@ export function truncatePolyline(line, fraction) {
   }
   return out;
 }
+
+/** Insert points so no segment is longer than `step` metres. */
+export function densify(line, step) {
+  const out = [line[0]];
+  for (let i = 1; i < line.length; i++) {
+    const d = dist(line[i - 1], line[i]);
+    const k = Math.max(1, Math.ceil(d / step));
+    for (let j = 1; j <= k; j++) out.push(lerp(line[i - 1], line[i], j / k));
+  }
+  return out;
+}
+
+/**
+ * Clip a polyline to any simple polygon. Returns the inside pieces.
+ * Uses densification (step metres), so crossings are accurate to ~step.
+ */
+export function clipPolylineToPolygon(line, ring, step = 10) {
+  const pts = densify(line, step);
+  const pieces = [];
+  let cur = [];
+  for (const p of pts) {
+    if (pointInPolygon(p, ring)) cur.push(p);
+    else if (cur.length) { if (cur.length > 1) pieces.push(cur); cur = []; }
+  }
+  if (cur.length > 1) pieces.push(cur);
+  return pieces.map(simplifyCollinear);
+}
+
+/** Drop interior points that lie on a straight line (keeps clipped lines light). */
+export function simplifyCollinear(line, tol = 0.01) {
+  if (line.length <= 2) return line;
+  const out = [line[0]];
+  for (let i = 1; i < line.length - 1; i++) {
+    const a = out[out.length - 1], b = line[i], c = line[i + 1];
+    const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    if (Math.abs(cross) > tol * dist(a, c)) out.push(b);
+  }
+  out.push(line[line.length - 1]);
+  return out;
+}

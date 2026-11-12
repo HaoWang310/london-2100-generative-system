@@ -1,0 +1,29 @@
+name: Test
+
+# Runs on every pull request and every branch push, so each collaborator's
+# branch is checked before it can be merged into main.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]   # main is tested by deploy.yml
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          for f in $(git ls-files '*.js' '*.mjs' | grep -v '^incubator/'); do node --check "$f" || exit 1; done
+      - name: Module isolation (modules may only import shared/)
+        run: node tools/check-isolation.mjs
+      - name: Unit tests
+        run: node --test
+      - name: Site builds
+        run: node tools/build-site.mjs _site

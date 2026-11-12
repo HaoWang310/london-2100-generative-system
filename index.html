@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>London 2100 · 多尺度城市生成系统</title>
+  <meta name="description" content="London 2100 — Multi-Scale Generative Urban System">
+  <link rel="stylesheet" href="./shared/ui/theme.css">
+  <link rel="stylesheet" href="./app/app.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">London 2100</span>
+        <span class="brand-sub" data-i18n="app.subtitle"></span>
+      </div>
+      <nav class="crumbs" id="crumbs" aria-label="Scale"></nav>
+      <div class="top-actions">
+        <div class="seg" role="group" aria-label="2D / 3D">
+          <button id="view2d" aria-pressed="true">2D</button>
+          <button id="view3d" aria-pressed="false">3D</button>
+        </div>
+        <button class="btn ghost" id="langToggle" data-i18n-title="app.language">EN</button>
+        <button class="btn ghost version" id="versionButton" aria-haspopup="true" aria-expanded="false"></button>
+      </div>
+    </header>
+
+    <aside class="sidenav" aria-label="Modules">
+      <div class="eyebrow pad" data-i18n="nav.scales"></div>
+      <ol class="modlist" id="scaleList"></ol>
+      <div class="eyebrow pad" data-i18n="nav.tools"></div>
+      <ol class="modlist" id="toolList"></ol>
+      <div class="sidenav-foot">
+        <button class="btn ghost" id="exportWorkspace" data-i18n="ws.save"></button>
+        <label class="btn ghost" for="importWorkspace" data-i18n="ws.open"></label>
+        <input type="file" id="importWorkspace" accept="application/json" hidden>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <div id="map" class="map" aria-label="Map"></div>
+      <div class="map-hint" id="mapHint" hidden></div>
+      <div class="map-badge" id="mapBadge" hidden></div>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Parameters">
+      <div class="insp-head">
+        <div class="eyebrow" id="inspCode"></div>
+        <h1 id="inspTitle"></h1>
+        <p class="muted" id="inspDesc"></p>
+        <div class="badges" id="inspBadges"></div>
+      </div>
+      <div class="insp-actions" id="inspActions"></div>
+      <section class="insp-section">
+        <div class="eyebrow" data-i18n="insp.params"></div>
+        <div id="inspParams"></div>
+      </section>
+      <section class="insp-section">
+        <div class="eyebrow" data-i18n="insp.result"></div>
+        <div id="inspStats"></div>
+        <p class="muted small" id="inspAlgo"></p>
+      </section>
+      <section class="insp-section">
+        <div class="eyebrow" data-i18n="insp.legend"></div>
+        <div id="legend" class="legend"></div>
+      </section>
+    </aside>
+
+    <footer class="timeline">
+      <button class="btn ghost play" id="playButton" aria-label="Play"></button>
+      <div class="tl-track">
+        <input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Timeline">
+      </div>
+      <div class="tl-label mono" id="tlLabel"></div>
+      <div class="tl-status" id="tlStatus"></div>
+    </footer>
+  </div>
+
+  <div class="popover" id="versionMenu" hidden></div>
+
+  <script type="module" src="./app/main.js"></script>
+</body>
+</html>

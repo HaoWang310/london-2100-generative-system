@@ -137,12 +137,25 @@ export function toBNG([lon, lat]) {
   return projectOSGB(phi, lam);
 }
 
-/** EPSG:27700 [E, N] (metres) -> WGS84 [lon, lat] (degrees). */
+/**
+ * EPSG:27700 [E, N] (metres) -> WGS84 [lon, lat] (degrees).
+ * The reverse Helmert is only approximately the inverse of the forward one
+ * (~3 mm), so the result is refined until toBNG(toWGS84(p)) === p to < 0.1 mm.
+ * That keeps geometry from drifting when it goes map -> model -> map.
+ */
 export function toWGS84([E, N]) {
   const [phi, lam] = unprojectOSGB(E, N);
   const xyz = helmert(toCartesian(phi, lam, 0, AIRY1830), HELMERT_TO_WGS);
-  const [lat, lon] = fromCartesian(xyz, WGS84);
-  return [lon / DEG, lat / DEG];
+  const [lat0, lon0] = fromCartesian(xyz, WGS84);
+  let lon = lon0 / DEG, lat = lat0 / DEG;
+  for (let i = 0; i < 4; i++) {
+    const [e, n] = toBNG([lon, lat]);
+    const dE = E - e, dN = N - n;
+    if (Math.hypot(dE, dN) < 1e-4) break;
+    lon += dE / (111320 * Math.cos(lat * DEG));
+    lat += dN / 111132;
+  }
+  return [lon, lat];
 }
 
 export const ringToWGS84 = ring => ring.map(toWGS84);

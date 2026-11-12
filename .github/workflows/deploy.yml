@@ -1,0 +1,70 @@
+name: Deploy to GitHub Pages
+
+# Every merge into main: test, build, record the release in the
+# `pages-history` branch (keeps the last 20 for rollback), then publish
+#   /                 latest build
+#   /version.json     what the running app polls to show "new version" prompts
+#   /releases/<id>/   frozen earlier builds
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write     # push the pages-history branch
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test
+        run: |
+          node tools/check-isolation.mjs
+          node --test
+
+      - name: Build site
+        run: node tools/build-site.mjs _site "$GITHUB_SHA"
+
+      - name: Update release history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          HIST="$RUNNER_TEMP/history"
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$REMOTE" pages-history >/dev/null; then
+            git clone --depth 1 --branch pages-history "$REMOTE" "$HIST"
+          else
+            mkdir -p "$HIST" && git -C "$HIST" init -b pages-history && git -C "$HIST" remote add origin "$REMOTE"
+          fi
+          node tools/update-history.mjs _site "$HIST" 20
+          git -C "$HIST" add -A
+          git -C "$HIST" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Release ${GITHUB_SHA::7}" || echo "nothing to commit"
+          git -C "$HIST" push origin pages-history
+          cp -r "$HIST/releases" _site/releases
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
