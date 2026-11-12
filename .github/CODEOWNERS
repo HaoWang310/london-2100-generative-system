@@ -1,0 +1,6 @@
+# 每个文件夹的负责人。改到别人负责的文件夹时，PR 会自动请对方审核。
+# 合作者加入后，把对应行的用户名换成她的 GitHub 用户名。
+*                       @HaoWang310
+/shared/                @HaoWang310
+/modules/               @HaoWang310
+/incubator/             @HaoWang310
