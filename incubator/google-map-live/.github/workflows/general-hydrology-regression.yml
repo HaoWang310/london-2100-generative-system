@@ -1,0 +1,81 @@
+name: London hydro generalization regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/hydro_tensor_field.js'
+      - 'scripts/parcel_generator.js'
+      - 'scripts/parcel_road_ui.js'
+      - 'scripts/test_release_version.mjs'
+      - 'scripts/test_isolated_site_entry.mjs'
+      - 'scripts/test_selection_two_enter.mjs'
+      - 'scripts/test_tensor_only_visibility.mjs'
+      - 'scripts/test_auto_wool_pipeline.mjs'
+      - 'scripts/flood_water_visual.js'
+      - 'scripts/test_flood_water_visual.mjs'
+      - 'scripts/site_element_decisions.js'
+      - 'scripts/site_planning_tensor.js'
+      - 'scripts/test_retained_tensor_constraints.mjs'
+      - 'scripts/test_site_element_decisions.mjs'
+      - 'scripts/local_flood_worker.js'
+      - 'scripts/local_flood_ui.js'
+      - 'scripts/hydro_tensor_worker.js'
+      - 'scripts/local_flood_sim.js'
+      - 'scripts/test_flood_building_footprints.mjs'
+      - 'scripts/test_hydro_tensor.mjs'
+      - 'scripts/test_70km_raster_coverage.py'
+      - 'assets/drainage_area/metadata.json'
+      - 'assets/drainage_area/dem50_log16.webp'
+      - 'assets/drainage_area/area_log16.webp'
+      - 'scripts/test_rain_scenario_tensor.mjs'
+      - '.github/workflows/general-hydrology-regression.yml'
+  workflow_dispatch:
+jobs:
+  hydrology:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check syntax
+        run: |
+          node --check scripts/local_flood_worker.js
+          node --check scripts/hydro_tensor_worker.js
+          node --check scripts/local_flood_sim.js
+          node --check scripts/local_flood_ui.js
+          node --check scripts/parcel_generator.js
+          node --check scripts/parcel_road_ui.js
+          node --check scripts/flood_water_visual.js
+          node --check scripts/site_element_decisions.js
+          node --check scripts/site_planning_tensor.js
+          node --check scripts/test_retained_tensor_constraints.mjs
+      - name: Check release label and nested worker cache keys
+        run: node scripts/test_release_version.mjs
+      - name: Verify automatic STEP04-to-Wool data flow
+        run: node scripts/test_auto_wool_pipeline.mjs
+      - name: Verify prepared-site double-click, entry button, and edit guards
+        run: node scripts/test_isolated_site_entry.mjs
+      - name: Verify double-Enter selection preview, edit and final confirmation
+        run: node scripts/test_selection_two_enter.mjs
+      - name: Verify STEP04 isolates tensor layer and restores original site layers
+        run: node scripts/test_tensor_only_visibility.mjs
+      - name: Verify mask-safe 2D and 3D water antialiasing
+        run: node scripts/test_flood_water_visual.mjs
+      - name: Verify original OSM planning selection and persistence
+        run: node scripts/test_site_element_decisions.mjs
+      - name: Verify kept OSM urban fabric influences design tensor
+        run: node scripts/test_retained_tensor_constraints.mjs
+      - name: Install raster regression dependencies
+        run: python -m pip install numpy Pillow
+      - name: Audit all 70-km numerical raster cells
+        run: python scripts/test_70km_raster_coverage.py
+      - name: Verify hydrology and barrier semantics
+        run: |
+          node scripts/test_flood_building_footprints.mjs
+          node scripts/test_hydro_tensor.mjs
+          node scripts/test_rain_scenario_tensor.mjs
+          node scripts/test_tensor_growth.mjs

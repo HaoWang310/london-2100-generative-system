@@ -1,0 +1,74 @@
+name: Parcel Generator STEP 05 regression
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/parcel_generator.js'
+      - 'scripts/parcel_road_ui.js'
+      - 'scripts/parcel_road_constraints.js'
+      - 'scripts/parcel_road_skeleton.js'
+      - 'scripts/parcel_wool_solver.js'
+      - 'scripts/parcel_road_topology.js'
+      - 'scripts/parcel_road_worker.js'
+      - 'scripts/parcel_road_presentation.js'
+      - 'scripts/organic_visual_field.js'
+      - 'scripts/site_visual_field.js'
+      - 'scripts/test_site_driven_presentation.mjs'
+      - 'scripts/hydro_tensor_geometry.js'
+      - 'scripts/hydro_tensor_field.js'
+      - 'scripts/test_parcel_step05.mjs'
+      - 'scripts/test_organic_road_network.mjs'
+      - 'scripts/test_tensor_wool_growth.mjs'
+      - 'scripts/test_wool_collision_regression.mjs'
+      - 'scripts/test_visual_first_presentation.mjs'
+      - 'scripts/test_organic_art_direction.mjs'
+      - 'scripts/test_step05_wool_final_only.mjs'
+      - 'scripts/test_parcel_step05_navigation.mjs'
+      - 'scripts/test_auto_wool_pipeline.mjs'
+      - 'diagnostics/tensor-audit.json'
+      - '.github/workflows/parcel-step05-regression.yml'
+  workflow_dispatch:
+jobs:
+  parcel-road:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check isolated STEP 05 modules
+        run: |
+          node --check scripts/parcel_generator.js
+          node --check scripts/parcel_road_ui.js
+          node --check scripts/parcel_road_constraints.js
+          node --check scripts/parcel_road_skeleton.js
+          node --check scripts/parcel_wool_solver.js
+          node --check scripts/parcel_road_topology.js
+          node --check scripts/parcel_road_worker.js
+          node --check scripts/parcel_road_presentation.js
+          node --check scripts/organic_visual_field.js
+          node --check scripts/hydro_tensor_geometry.js
+          node --check scripts/hydro_tensor_field.js
+      - name: Verify site-specific display from changed hydrology
+        run: node scripts/test_site_driven_presentation.mjs
+      - name: Verify continuous exhibition tensor mesh and dense presentation streets
+        run: node scripts/test_visual_first_presentation.mjs
+      - name: Validate organic arterial art direction and irregular parcel clipping
+        run: node scripts/test_organic_art_direction.mjs
+      - name: Verify STEP05 shows only final Wool combined organic streets
+        run: node scripts/test_step05_wool_final_only.mjs
+      - name: Verify automatic hydrological tensor to Wool handoff
+        run: node scripts/test_auto_wool_pipeline.mjs
+      - name: Verify STEP 05 map interaction and entry navigation
+        run: node scripts/test_parcel_step05_navigation.mjs
+      - name: Verify real London coordinates, source gate, Wool and STEP 06 handoff
+        run: node scripts/test_parcel_step05.mjs
+      - name: Verify dense organic roads, three-tier hierarchy and flood-safe topology
+        run: node scripts/test_organic_road_network.mjs
+      - name: Verify tensor-first, Wool growth, and A-star repair-only architecture
+        run: node scripts/test_tensor_wool_growth.mjs
+      - name: Verify no false Wool collision after safe A-star spine restoration
+        run: node scripts/test_wool_collision_regression.mjs
+
