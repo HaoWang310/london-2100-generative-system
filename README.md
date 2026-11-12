@@ -13,6 +13,11 @@
 - 界面：中文 / English 一键切换，默认中文
 - 无构建步骤：浏览器原生 ES Modules，GitHub Pages 直接发布
 
+**在线预览**：https://haowang310.github.io/london-2100-generative-system/
+（各模块独立预览：`/modules/<模块>/preview.html`）
+
+架构、数据接口与分阶段计划见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
 ## 仓库结构
 
 | 路径 | 用途 |

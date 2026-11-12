@@ -1,0 +1,12 @@
+{
+  "name": "london-2100-generative-system",
+  "private": true,
+  "type": "module",
+  "description": "London 2100 — Multi-Scale Generative Urban System. No build step; no dependencies.",
+  "scripts": {
+    "test": "node --test",
+    "check": "node tools/check-isolation.mjs",
+    "serve": "python3 -m http.server 8000",
+    "site": "node tools/build-site.mjs _site"
+  }
+}
