@@ -16,7 +16,7 @@ const commit = process.argv[3] || process.env.GITHUB_SHA || (() => { try { retur
 const builtAt = process.argv[4] || new Date().toISOString();
 const version = readFileSync(join(root, 'VERSION'), 'utf8').trim();
 
-const INCLUDE = ['index.html', 'app', 'shared', 'modules', 'incubator', 'data', 'VERSION'];
+const INCLUDE = ['index.html', 'app', 'shared', 'modules', 'incubator', 'assets', 'data', 'VERSION'];
 const SKIP_DIR = new Set(['tests', 'node_modules', '_template']);
 
 rmSync(out, { recursive: true, force: true });

@@ -101,5 +101,18 @@ export const zh = {
   "intro.hint": "按 Enter 进入",
   "intro.enter": "进入系统",
   "intro.reopen": "返回开场",
-  "map.loading": "正在加载底图…"
+  "map.loading": "正在加载底图…",
+  "cat.title": "目录",
+  "cat.lead": "孵化中的功能与统一系统都在这里。选择一个开始。",
+  "cat.count": "共 {n} 项",
+  "cat.filter.all": "全部",
+  "cat.filter.ready": "可用",
+  "cat.filter.incubating": "孵化中",
+  "cat.filter.planned": "规划中",
+  "cat.status.ready": "可用",
+  "cat.status.incubating": "孵化中",
+  "cat.status.planned": "规划中",
+  "cat.slot.title": "添加新功能",
+  "cat.slot.desc": "把 app 放进 incubator/，再在 catalogue.json 中加一条，就会出现在这里。",
+  "cat.back": "返回目录"
 };

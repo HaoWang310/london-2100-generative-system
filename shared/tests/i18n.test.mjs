@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 test('every literal t("key") used by the app exists in both dictionaries', () => {
   const root = fileURLToPath(new URL('../../', import.meta.url));
-  const files = ['app/main.js', 'app/updates.js', 'app/intro.js', 'shared/ui/index.js', 'shared/ui/preview.js']
+  const files = ['app/main.js', 'app/updates.js', 'app/intro.js', 'app/catalogue.js', 'shared/ui/index.js', 'shared/ui/preview.js']
     .filter(f => { try { readFileSync(root + f); return true; } catch { return false; } });
   const missing = [];
   for (const f of files) {

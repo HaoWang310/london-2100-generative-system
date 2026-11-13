@@ -32,6 +32,23 @@ git push -u origin module/03-tensor-roads/streamline-step
 `https://haowang310.github.io/london-2100-generative-system/incubator/<app 名>/` 单独访问。
 它不需要遵守模块接口；准备融合时，再为它写一个 `modules/NN-xxx/` 适配模块。
 
+**让它出现在开场后的目录里**：在 `incubator/catalogue.json` 的 `items` 中加一条：
+
+```json
+{
+  "id": "my-app",
+  "href": "incubator/my-app/",
+  "cover": "assets/catalogue/my-app.webp",
+  "status": "incubating",
+  "title": { "zh": "中文名称", "en": "English name" },
+  "desc":  { "zh": "一句话说明。", "en": "One-line description." },
+  "tags":  [{ "zh": "标签", "en": "Tag" }],
+  "owner": "你的 GitHub 用户名"
+}
+```
+
+`status` 可选 `ready`（可用）、`incubating`（孵化中）、`planned`（规划中）。封面建议 1200×800、深色，可以不填。
+
 ## 新建模块
 
 复制 `modules/_template/`（或参考任意现有模块），模块必须导出：
