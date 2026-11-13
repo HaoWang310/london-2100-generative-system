@@ -255,7 +255,11 @@ function createWeatherOverlay(map){
 
 /* ------------------------------------------------------------- controller */
 
-export function createAtmosphere(map,{onTint=()=>{},onChange=()=>{}}={}){
+/* Shadow strength per weather: overcast skies soften ground shadows. */
+export const WEATHER_SHADOW={clear:1,fog:0.25,rain:0.35,snow:0.55};
+export const SHADOW_STRENGTH=0.24;
+
+export function createAtmosphere(map,{onTint=()=>{},onChange=()=>{},onSun=()=>{}}={}){
   const overlay=createWeatherOverlay(map);
   let lighting='day',weather='clear';
   let current=LIGHTING_PRESETS.day;
@@ -297,6 +301,11 @@ export function createAtmosphere(map,{onTint=()=>{},onChange=()=>{}}={}){
         'atmosphere-blend':0
       });
     }catch(error){console.warn('Sky not supported',error);}
+    onSun({
+      azimuth:state.light.azimuth,
+      altitude:90-state.light.polar,
+      strength:SHADOW_STRENGTH*(1-(state.night||0))*(WEATHER_SHADOW[weather]??1)
+    });
     const now=performance.now();
     if(forceTint||now-lastTintAt>110){
       lastTintAt=now;

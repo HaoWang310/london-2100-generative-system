@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.33.0-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.34.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -1090,6 +1090,11 @@
         <span>Street vehicles</span>
         <input id="streetVehicleToggle" class="dpSwitch" type="checkbox" autocomplete="off" disabled>
       </label>
+      <label class="dpSwitchRow" title="Ground shadows of the 3D buildings, following the lighting setting (none at night)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V8l5-3v15"/><path d="M11 20l9-4-9-1"/></svg>
+        <span>Building shadows</span>
+        <input id="buildingShadowToggle" class="dpSwitch" type="checkbox" autocomplete="off" checked disabled>
+      </label>
     </div>
   </div>
 
@@ -1101,7 +1106,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.33.0-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.34.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1464,11 +1469,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.33.0-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.33.0-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.33.0-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.33.0-english';
-  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.33.0-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.34.0-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.34.0-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.34.0-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.34.0-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.34.0-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1489,7 +1494,7 @@
     }
   }
 
-  const APP_VERSION='3.33.0-english';
+  const APP_VERSION='3.34.0-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1648,6 +1653,10 @@
   // 3D buildings and vehicles only; analysis layers are never tinted.
   let atmosphere=null;
   let atmosphereTints=[];
+  // Ground shadows of the 3D buildings (scripts/building_shadows.js).
+  let buildingShadows=null;
+  let buildingShadowsWanted=true;
+  let buildingShadowsActive=null;
   let syncRasterBasemap=()=>{};
   let googleMarker=null;
   let osmMarker=null;
@@ -1759,12 +1768,43 @@
     }
   }
 
+  function syncBuildingShadows(){
+    if(!buildingShadows)return;
+    const active=buildingShadowsWanted&&!localFloodIsolateMode;
+    if(active!==buildingShadowsActive){
+      buildingShadowsActive=active;
+      buildingShadows.setEnabled(active);
+    }
+  }
+
   function initAtmosphere(){
     if(atmosphere||!osmMap)return;
-    import('./scripts/map_atmosphere.js?v='+APP_VERSION)
-      .then(({createAtmosphere})=>{
+    Promise.all([
+      import('./scripts/map_atmosphere.js?v='+APP_VERSION),
+      import('./scripts/building_shadows.js?v='+APP_VERSION).catch(error=>{
+        console.warn('Building shadows unavailable',error);
+        return null;
+      })
+    ])
+      .then(([{createAtmosphere},shadowModule])=>{
         if(atmosphere)return;
-        atmosphere=createAtmosphere(osmMap,{onTint:applyAtmosphereTints,onChange:syncAtmosphereButtons});
+        if(shadowModule){
+          buildingShadows=shadowModule.createBuildingShadowLayer(osmMap,maplibregl,{
+            sourceId:CITY_BUILDINGS_SOURCE,
+            beforeId:()=>osmMap.getLayer(CITY_BUILDINGS_LAYER)?CITY_BUILDINGS_LAYER:undefined
+          });
+          syncBuildingShadows();
+          $('buildingShadowToggle').disabled=false;
+        }
+        atmosphere=createAtmosphere(osmMap,{
+          onTint:applyAtmosphereTints,
+          onChange:syncAtmosphereButtons,
+          onSun:sun=>{
+            if(!buildingShadows)return;
+            buildingShadows.setSun(sun);
+            buildingShadows.setStrength(sun.strength);
+          }
+        });
         for(const b of document.querySelectorAll('#displayPanel [data-lighting]')){
           b.disabled=false;
           b.addEventListener('click',()=>atmosphere.setLighting(b.dataset.lighting));
@@ -3466,6 +3506,7 @@
     const next=Boolean(active);
     if(localFloodIsolateMode===next)return;
     localFloodIsolateMode=next;
+    syncBuildingShadows();
     syncCityView();
   }
 
@@ -3797,7 +3838,7 @@
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.33.0-english')
+      import('./scripts/local_flood_ui.js?v=3.34.0-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3822,7 +3863,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.33.0-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.34.0-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
@@ -4046,6 +4087,10 @@
 
   $('streetVehicleToggle').addEventListener('change',event=>{
     setStreetVehiclesEnabled(event.target.checked);
+  });
+  $('buildingShadowToggle').addEventListener('change',event=>{
+    buildingShadowsWanted=Boolean(event.target.checked);
+    syncBuildingShadows();
   });
   $('placeSearchForm').addEventListener('submit',e=>{e.preventDefault();runPlaceSearch();});
   $('placeSearchInput').addEventListener('input',()=>{
