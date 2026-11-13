@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./shared/ui/theme.css">
   <link rel="stylesheet" href="./app/app.css">
   <link rel="stylesheet" href="./app/intro.css">
+  <link rel="stylesheet" href="./app/catalogue.css">
   <link rel="preconnect" href="https://assets.mixkit.co">
 </head>
 <body>
@@ -82,6 +83,28 @@
   </div>
 
   <div class="popover" id="versionMenu" hidden></div>
+
+  <section class="catalogue" id="catalogue" aria-label="Catalogue" hidden>
+    <header class="cat-top">
+      <button class="home" id="catHome" data-i18n-title="intro.reopen">
+        <span class="brand-mark" aria-hidden="true"></span><b>London 2100</b><span data-i18n="app.subtitle"></span>
+      </button>
+      <span class="sp"></span>
+      <button class="btn ghost" id="catLang"></button>
+    </header>
+    <div class="cat-wrap">
+      <div class="cat-head">
+        <div>
+          <h1 data-i18n="cat.title"></h1>
+          <p data-i18n="cat.lead"></p>
+        </div>
+        <span class="sp"></span>
+        <span class="cat-count"></span>
+      </div>
+      <div class="cat-filters" role="group"></div>
+      <div class="cat-grid"></div>
+    </div>
+  </section>
 
   <section class="intro" id="intro" aria-label="London 2100" hidden>
     <div class="intro-top">

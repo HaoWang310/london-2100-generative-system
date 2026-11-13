@@ -75,7 +75,14 @@ export function createIntro(root, { onEnter } = {}) {
     root.classList.remove('is-leaving');
     requestAnimationFrame(() => root.classList.add('is-in'));
     play();
-    root.querySelector('.intro-enter')?.focus({ preventScroll: true });
+    function hide() {
+    open = false;
+    root.classList.remove('is-in', 'is-leaving');
+    root.hidden = true;
+    pause();
+  }
+
+  root.querySelector('.intro-enter')?.focus({ preventScroll: true });
   }
   function enter() {
     if (!open) return;
@@ -85,6 +92,13 @@ export function createIntro(root, { onEnter } = {}) {
     const done = () => { root.hidden = true; pause(); };
     reducedMotion() ? done() : setTimeout(done, 700);
     onEnter?.();
+  }
+
+  function hide() {
+    open = false;
+    root.classList.remove('is-in', 'is-leaving');
+    root.hidden = true;
+    pause();
   }
 
   root.querySelector('.intro-enter').addEventListener('click', e => { e.stopPropagation(); enter(); });
@@ -97,5 +111,5 @@ export function createIntro(root, { onEnter } = {}) {
     document.visibilityState === 'visible' ? play() : pause();
   });
 
-  return { show, enter, get open() { return open; } };
+  return { show, hide, enter, get open() { return open; } };
 }

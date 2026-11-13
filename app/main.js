@@ -14,6 +14,7 @@ import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-view
 import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared/i18n/index.js';
 import { h, renderParams, renderStats, toast, download } from '../shared/ui/index.js';
 import { createIntro } from './intro.js';
+import { createCatalogue } from './catalogue.js';
 import { watchForUpdates, fetchReleases, latestUrl, releaseUrl, versionLabel, describeBuild, BUILD } from './updates.js';
 
 const $ = id => document.getElementById(id);
@@ -474,6 +475,7 @@ for (const [id, on] of [['view2d', false], ['view3d', true]]) {
   });
 }
 document.addEventListener('keydown', e => {
+  if (!$('intro').hidden || !$('catalogue').hidden) return;   // shortcuts belong to the workspace only
   if (e.target.closest('input, select, textarea')) return;
   if (e.key === 'Escape') goBack();
   if (e.key === 'Enter') enterNext();
@@ -491,15 +493,30 @@ async function boot() {
   }
   render();
 
-  // Opening screen. It covers the workspace while the map loads underneath.
-  const intro = createIntro($('intro'), { onEnter: () => setTimeout(() => viewer?.resize(), 50) });
-  const introLang = () => { $('introLang').textContent = getLang() === 'zh' ? 'EN' : '中'; };
-  introLang(); onLangChange(introLang);
+  // Screens: '' = opening video, #catalogue = catalogue, #workspace = this app.
+  // The workspace stays mounted underneath, so its map loads while the
+  // opening screen and catalogue are shown.
+  const intro = createIntro($('intro'), { onEnter: () => { location.hash = 'catalogue'; } });
+  const catalogue = createCatalogue($('catalogue'), { onOpenWorkspace: () => { location.hash = 'workspace'; } });
+  const langLabel = () => { const l = getLang() === 'zh' ? 'EN' : '中'; $('introLang').textContent = l; $('catLang').textContent = l; };
+  langLabel(); onLangChange(langLabel);
   $('introLang').addEventListener('click', toggleLang);
-  if (!new URLSearchParams(location.search).has('nointro')) intro.show();
-  const reopen = () => { stop(); intro.show(); };
-  $('brandHome').addEventListener('click', reopen);
-  $('brandHome').addEventListener('keydown', e => { if (e.key === 'Enter') reopen(); });
+  $('catLang').addEventListener('click', toggleLang);
+  $('catHome').addEventListener('click', () => { location.hash = ''; });
+  const toCatalogue = () => { stop(); location.hash = 'catalogue'; };
+  $('brandHome').addEventListener('click', toCatalogue);
+  $('brandHome').addEventListener('keydown', e => { if (e.key === 'Enter') toCatalogue(); });
+  $('brandHome').dataset.i18nTitle = 'cat.back';
+
+  const route = () => {
+    const screen = location.hash.replace('#', '') || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
+    if (screen === 'intro') { catalogue.hide(); intro.show(); }
+    else if (screen === 'catalogue') { if (intro.open) intro.enter(); else intro.hide(); catalogue.show(); }
+    else { intro.hide(); catalogue.hide(); setTimeout(() => viewer?.resize(), 60); }
+  };
+  window.addEventListener('hashchange', route);
+  route();
+  applyI18n(document);
 
   viewer = await createMapViewer($('map'), {
     theme: 'dark',

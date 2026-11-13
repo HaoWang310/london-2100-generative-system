@@ -101,5 +101,18 @@ export const en = {
   "intro.hint": "Press Enter to begin",
   "intro.enter": "Enter",
   "intro.reopen": "Back to opening screen",
-  "map.loading": "Loading basemap…"
+  "map.loading": "Loading basemap…",
+  "cat.title": "Catalogue",
+  "cat.lead": "Incubating tools and the unified system live here. Pick one to begin.",
+  "cat.count": "{n} items",
+  "cat.filter.all": "All",
+  "cat.filter.ready": "Ready",
+  "cat.filter.incubating": "Incubating",
+  "cat.filter.planned": "Planned",
+  "cat.status.ready": "Ready",
+  "cat.status.incubating": "Incubating",
+  "cat.status.planned": "Planned",
+  "cat.slot.title": "Add a new tool",
+  "cat.slot.desc": "Put an app in incubator/ and add one entry to catalogue.json — it appears here.",
+  "cat.back": "Back to catalogue"
 };
