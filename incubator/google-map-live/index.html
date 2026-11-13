@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.35.1-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.35.2-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -1106,7 +1106,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.35.1-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.35.2-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1469,11 +1469,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.35.1-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.35.1-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.35.1-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.35.1-english';
-  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.35.1-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.35.2-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.35.2-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.35.2-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.35.2-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.35.2-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1494,7 +1494,7 @@
     }
   }
 
-  const APP_VERSION='3.35.1-english';
+  const APP_VERSION='3.35.2-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -3035,10 +3035,10 @@
       googleFocusCircle=new google.maps.Circle({
         center:FOCUS70_CENTER,
         radius:FOCUS70_RADIUS_M,
-        strokeColor:'#2563eb',
+        strokeColor:'#e5332a',
         strokeOpacity:0.95,
         strokeWeight:2,
-        fillColor:'#60a5fa',
+        fillColor:'#e5332a',
         fillOpacity:0.08,
         clickable:false
       });
@@ -3078,8 +3078,8 @@
         type:'fill',
         source:sourceId,
         paint:{
-          'fill-color':'#60a5fa',
-          'fill-opacity':0.08
+          'fill-color':'#e5332a',
+          'fill-opacity':0.05
         }
       });
     }
@@ -3090,10 +3090,36 @@
         type:'line',
         source:sourceId,
         paint:{
-          'line-color':'#2563eb',
+          'line-color':'#e5332a',
           'line-width':2.5,
           'line-opacity':0.95
         }
+      });
+    }
+
+    // The 70 km study extent is always outlined in red (dashed) with a label;
+    // the switch above additionally shades it and constrains navigation.
+    if(!osmMap.getLayer('focus70-outline')){
+      osmMap.addLayer({
+        id:'focus70-outline',type:'line',source:sourceId,
+        layout:{'line-join':'round'},
+        paint:{'line-color':'#e5332a','line-width':['interpolate',['linear'],['zoom'],6,1.6,11,2.4],
+          'line-dasharray':[3,2],'line-opacity':0.9}
+      });
+    }
+    if(!osmMap.getSource('focus70-label-source')){
+      const northLat=FOCUS70_CENTER.lat+FOCUS70_RADIUS_M/110540;
+      osmMap.addSource('focus70-label-source',{type:'geojson',data:{type:'FeatureCollection',features:[
+        {type:'Feature',properties:{name:'70 KM STUDY AREA'},geometry:{type:'Point',coordinates:[FOCUS70_CENTER.lng,northLat]}}
+      ]}});
+    }
+    if(!osmMap.getLayer('focus70-label')){
+      const cityLabel=(osmMap.getStyle()?.layers||[]).find(l=>l.type==='symbol'&&/label_city|place/i.test(l.id));
+      osmMap.addLayer({
+        id:'focus70-label',type:'symbol',source:'focus70-label-source',
+        layout:{'text-field':['get','name'],'text-font':cityLabel?.layout?.['text-font']||['Noto Sans Regular'],
+          'text-size':12,'text-letter-spacing':0.3,'text-offset':[0,-0.9],'text-max-width':30},
+        paint:{'text-color':'#e5332a','text-halo-color':'rgba(255,255,255,0.9)','text-halo-width':1.5}
       });
     }
 
@@ -3911,7 +3937,7 @@
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.35.1-english')
+      import('./scripts/local_flood_ui.js?v=3.35.2-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3951,7 +3977,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.35.1-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.35.2-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
