@@ -25,6 +25,7 @@ export function createAppView(root) {
   let origin = null;        // cover element it opened from
   let iframe = null;
   let anim = null;
+  let generation = 0;       // bumps on every open/close, so a late close never hides a newer open
 
   onLangChange(() => { if (current) title.textContent = pick(current.title); });
 
@@ -39,7 +40,8 @@ export function createAppView(root) {
     get openId() { return current?.id ?? null; },
 
     async open(item, coverEl) {
-      if (current?.id === item.id && !root.hidden) return;
+      if (current?.id === item.id && !root.hidden && root.classList.contains('is-open')) return;
+      const gen = ++generation;
       current = item; origin = coverEl || null;
       title.textContent = pick(item.title);
       external.href = item.href;
@@ -80,15 +82,18 @@ export function createAppView(root) {
       root.hidden = false;
       root.classList.add('is-open');
       await animate(insetFrom(origin), 'inset(0px 0px 0px 0px round 0px)', 620);
+      if (gen !== generation) return;
       root.style.clipPath = '';
-      iframe.focus?.();
+      iframe?.focus?.();
     },
 
     async close() {
       if (root.hidden) return;
+      const gen = ++generation;
       const target = insetFrom(origin);
       root.classList.remove('is-open');
       if (target) await animate('inset(0px 0px 0px 0px round 0px)', target, 460);
+      if (gen !== generation) return;   // reopened while closing: leave the new view alone
       root.hidden = true;
       anim?.cancel(); anim = null;
       root.style.clipPath = '';
