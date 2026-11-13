@@ -8,7 +8,7 @@
 | 画面 | 片段 | 链接 |
 |---|---|---|
 | 伦敦 2100 | Buildings in the City of London | https://mixkit.co/free-stock-video/buildings-in-the-city-of-london-4265/ |
-| 住宅 | The sky above the houses of an English village | https://mixkit.co/free-stock-video/the-sky-above-the-houses-of-an-english-village-4009/ |
+| 住宅 | Buildings under construction, aerial view | https://mixkit.co/free-stock-video/buildings-under-construction-aerial-view-4010/ |
 | 农业 | Top aerial view of a lot of greenhouses | https://mixkit.co/free-stock-video/top-aerial-view-of-a-lot-of-greenhouses-824/ |
 
 **换成自己的视频**：把 `.mp4` 放进 `assets/intro/`，再把 `app/intro.js` 中对应条目的 `src` 改成 `./assets/intro/文件名.mp4`。
