@@ -839,7 +839,33 @@ function chamferRect(L,W,cf,cr){
   ];
 }
 
-const ORDER={wheel:0,body:1,glass:2,roof:3,light:4};
+const ORDER={wheel:0,body:1,trim:2,glass:3,roof:4,light:5};
+
+const TRIM='#2a2c30';
+const GRILLE='#17181b';
+const HUB='#a7abb2';
+const PLATE_FRONT='#f4f4f2';
+const PLATE_REAR='#f2c230';
+
+/* Lower body outline with wheel-arch notches so the wheels show. */
+function archedBody(L,W,cf,cr,axles,arch=0.38,depth=0.2){
+  const f=L/2,l=W/2;
+  const [fa,ra]=axles;
+  const side=sign=>{
+    // Front-to-rear along one side (sign=+1 left, -1 right).
+    const y=sign*l,yi=sign*(l-depth);
+    return [
+      [fa+arch,y],[fa+arch,yi],[fa-arch,yi],[fa-arch,y],
+      [ra+arch,y],[ra+arch,yi],[ra-arch,yi],[ra-arch,y]
+    ];
+  };
+  const left=side(1);
+  const right=side(-1).reverse();
+  return [
+    [f-cf,l],...left,[-f+cr,l],[-f,l-cr*0.8],[-f,-l+cr*0.8],[-f+cr,-l],
+    ...right,[f-cf,-l],[f,-l+cf*0.8],[f,l-cf*0.8]
+  ];
+}
 
 export function vehicleParts(v,lod){
   const s=v.spec,c=v.color;
@@ -853,70 +879,118 @@ export function vehicleParts(v,lod){
   }
   const detail=lod==='detail';
   const flat=lod==='flat';
+  const l=W/2;
 
-  if(s.kind==='bus'){
-    const body=chamferRect(L,W,0.35,0.25);
-    if(detail){
-      const fa=L/2-2.55,ra=-L/2+3.05,wy=W/2-0.2;
-      for(const fx of [fa,ra])for(const side of [1,-1]){
-        add(rect(fx-0.5,fx+0.5,side*wy-0.15,side*wy+0.15),0,0.98,WHEEL,'wheel');
+  const wheels=(axles,radius,width,length)=>{
+    for(const fx of axles)for(const side of [1,-1]){
+      const outer=side*(l-0.01),inner=side*(l-0.01-width);
+      add(rect(fx-length/2,fx+length/2,Math.min(outer,inner),Math.max(outer,inner)),0,radius*2,WHEEL,'wheel');
+      if(detail){
+        const ho=side*(l+0.006),hi=side*(l-0.03);
+        add(rect(fx-length*0.22,fx+length*0.22,Math.min(ho,hi),Math.max(ho,hi)),radius*0.6,radius*1.4,HUB,'trim');
       }
     }
+  };
+  const plates=(front,rear,z0)=>{
+    add(rect(front-0.01,front+0.03,-0.26,0.26),z0,z0+0.12,PLATE_FRONT,'light');
+    add(rect(rear-0.03,rear+0.01,-0.26,0.26),z0+0.12,z0+0.24,PLATE_REAR,'light');
+  };
+
+  if(s.kind==='bus'){
+    const fa=L/2-2.55,ra=-L/2+3.05;
+    const body=chamferRect(L,W,0.35,0.25);
     if(flat){
       add(body,0,H,c,'body');
       add(rect(-L/2+0.6,L/2-0.4,-W/2+0.3,W/2-0.3),H,H,'#b3141a','roof');
       return parts;
     }
+    if(detail)wheels([fa,ra],0.49,0.3,1.0);
+    add(archedBody(L,W,0.35,0.25,[fa,ra],0.6,0.26),0.28,1.0,c,'body');
     const slices=s.decks===2
-      ?[[0.28,1.15,c],[1.15,2.05,GLASS],[2.05,2.5,c],[2.5,3.85,GLASS],[3.85,H,c]]
-      :[[0.28,1.05,c],[1.05,2.35,GLASS],[2.35,H,c]];
+      ?[[1.0,1.15,c],[1.15,2.05,GLASS],[2.05,2.5,c],[2.5,3.85,GLASS],[3.85,H,c]]
+      :[[1.0,1.05,c],[1.05,2.35,GLASS],[2.35,H,c]];
     slices.forEach(([b,t,col],i)=>add(body,b,t,col,i===slices.length-1?'roof':col===GLASS?'glass':'body'));
     if(detail){
-      for(const side of [1,-1]){
-        add(rect(L/2-0.06,L/2+0.02,side*(W/2-0.42)-0.18,side*(W/2-0.42)+0.18),0.55,0.75,HEADLIGHT,'light');
-        add(rect(-L/2-0.02,-L/2+0.06,side*(W/2-0.3)-0.12,side*(W/2-0.3)+0.12),0.7,1.0,TAILLIGHT,'light');
+      // Bumpers, destination blind, window pillars, roof unit, lights, plates.
+      add(rect(L/2-0.1,L/2+0.06,-W/2+0.12,W/2-0.12),0.22,0.55,TRIM,'trim');
+      add(rect(-L/2-0.06,-L/2+0.1,-W/2+0.12,W/2-0.12),0.22,0.55,TRIM,'trim');
+      const top=s.decks===2?3.85:2.35;
+      add(rect(L/2-0.04,L/2+0.02,-0.7,0.7),top-0.42,top-0.08,'#111113','trim');
+      const bands=s.decks===2?[[1.15,2.05],[2.5,3.85]]:[[1.05,2.35]];
+      for(const [b,t] of bands){
+        for(let fx=-L/2+1.4;fx<L/2-1.2;fx+=1.55){
+          for(const side of [1,-1]){
+            const o=side*(l+0.015),i=side*(l-0.06);
+            add(rect(fx-0.07,fx+0.07,Math.min(o,i),Math.max(o,i)),b,t,c,'trim');
+          }
+        }
       }
+      add(rect(-L/2+2.2,-L/2+4.2,-0.75,0.75),H,H+0.22,'#9b1015','roof');
+      for(const side of [1,-1]){
+        add(rect(L/2-0.06,L/2+0.03,side*(l-0.42)-0.18,side*(l-0.42)+0.18),0.6,0.8,HEADLIGHT,'light');
+        add(rect(-L/2-0.03,-L/2+0.06,side*(l-0.3)-0.12,side*(l-0.3)+0.12),0.7,1.0,TAILLIGHT,'light');
+      }
+      plates(L/2+0.06,-L/2-0.06,0.3);
     }
     return parts;
   }
 
+  const fa=s.wb/2,ra=-s.wb/2;
   const body=chamferRect(L,W,0.34,0.2);
-  if(detail){
-    const wy=W/2-0.15;
-    for(const fx of [s.wb/2,-s.wb/2])for(const side of [1,-1]){
-      add(rect(fx-0.33,fx+0.33,side*wy-0.12,side*wy+0.12),0,0.64,WHEEL,'wheel');
-    }
+  if(detail&&!flat)wheels([fa,ra],0.33,0.24,0.66);
+
+  if(flat){
+    add(body,0,s.belt,c,'body');
+  }else{
+    add(archedBody(L,W,0.34,0.2,[fa,ra]),0.3,0.68,c,'body');
+    add(body,0.68,s.belt,c,'body');
   }
 
+  let glassRear,glassFront;
   if(s.kind==='van'){
-    const cabFront=L/2-s.hood;
     const cabRear=L/2-1.55;
-    add(body,0.3,s.belt,c,'body');
-    if(flat){
-      add(rect(-L/2,cabRear,-W/2,W/2),s.belt,H,c,'roof');
-      add(rect(cabRear,cabFront,-W/2+0.1,W/2-0.1),s.belt,H-0.3,GLASS,'glass');
-    }else{
-      add(rect(-L/2,cabRear,-W/2,W/2),s.belt,H,c,'body');
-      add(rect(cabRear,cabFront,-W/2+0.06,W/2-0.06),s.belt,H-0.32,GLASS,'glass');
-      add(rect(cabRear,cabFront-0.45,-W/2+0.16,W/2-0.16),H-0.4,H-0.3,c,'roof');
-    }
+    glassFront=L/2-s.hood;glassRear=cabRear;
+    add(rect(-L/2,cabRear,-l,l),s.belt,H,c,flat?'roof':'body');
+    add(rect(cabRear,glassFront,-l+0.06,l-0.06),s.belt,H-0.32,GLASS,'glass');
+    add(rect(cabRear,glassFront-0.45,-l+0.16,l-0.16),H-0.4,H-0.3,c,'roof');
   }else{
-    const glassRear=-L/2+0.42;
-    const glassFront=L/2-s.hood;
-    add(body,0.3,s.belt,c,'body');
-    add(rect(glassRear,glassFront,-W/2+0.08,W/2-0.08),s.belt,H-0.06,GLASS,'glass');
-    add(rect(glassRear+0.3,glassFront-0.5,-W/2+0.22,W/2-0.22),H-0.08,H,c,'roof');
+    glassRear=-L/2+0.42;glassFront=L/2-s.hood;
+    add(rect(glassRear,glassFront,-l+0.08,l-0.08),s.belt,H-0.06,GLASS,'glass');
+    add(rect(glassRear+0.3,glassFront-0.5,-l+0.22,l-0.22),H-0.08,H,c,'roof');
     if(s.kind==='cab'){
       const mid=(glassRear+glassFront)/2+0.2;
       add(rect(mid-0.11,mid+0.11,-0.26,0.26),H,H+0.13,'#f2b200','light');
     }
   }
-  if(detail){
+  if(!detail)return parts;
+
+  // Window pillars: A (front), B (middle), C (rear), standing just proud of the glass.
+  const pillar=(f0,f1)=>{
     for(const side of [1,-1]){
-      add(rect(L/2-0.06,L/2+0.03,side*(W/2-0.33)-0.17,side*(W/2-0.33)+0.17),0.58,0.74,HEADLIGHT,'light');
-      add(rect(-L/2-0.03,-L/2+0.06,side*(W/2-0.25)-0.14,side*(W/2-0.25)+0.14),0.7,0.86,TAILLIGHT,'light');
+      const o=side*(l-0.065),i=side*(l-0.16);
+      add(rect(f0,f1,Math.min(o,i),Math.max(o,i)),s.belt,H-0.06,c,'trim');
     }
+  };
+  if(s.kind!=='van'){
+    pillar(glassFront-0.16,glassFront);
+    const mid=(glassRear+glassFront)/2-0.1;
+    pillar(mid-0.06,mid+0.06);
+    pillar(glassRear,glassRear+0.2);
+  }else{
+    pillar(glassRear,glassRear+0.12);
   }
+  // Bumpers, grille, mirrors, lights and UK plates (white front, yellow rear).
+  add(rect(L/2-0.12,L/2+0.04,-l+0.05,l-0.05),0.22,0.5,TRIM,'trim');
+  add(rect(-L/2-0.04,-L/2+0.12,-l+0.05,l-0.05),0.22,0.5,TRIM,'trim');
+  add(rect(L/2-0.04,L/2+0.015,-0.42,0.42),0.5,0.68,GRILLE,'trim');
+  for(const side of [1,-1]){
+    const mo=side*(l+0.16),mi=side*(l-0.02);
+    const mx=glassFront-0.12;
+    add(rect(mx-0.1,mx+0.1,Math.min(mo,mi),Math.max(mo,mi)),s.belt+0.04,s.belt+0.2,c,'trim');
+    add(rect(L/2-0.06,L/2+0.03,side*(l-0.33)-0.17,side*(l-0.33)+0.17),0.58,0.74,HEADLIGHT,'light');
+    add(rect(-L/2-0.03,-L/2+0.06,side*(l-0.25)-0.14,side*(l-0.25)+0.14),0.7,0.86,TAILLIGHT,'light');
+  }
+  plates(L/2+0.04,-L/2-0.04,0.28);
   return parts;
 }
 
@@ -1085,7 +1159,7 @@ export function createStreetTraffic(map,{
     if(!map.getSource(SOURCE_ID)){
       map.addSource(SOURCE_ID,{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     }
-    const before=beforeLayerId();
+    const before=placementBeforeId();
     if(!map.getLayer(LAYER_3D)){
       map.addLayer({
         id:LAYER_3D,type:'fill-extrusion',source:SOURCE_ID,minzoom:13.5,
@@ -1108,10 +1182,25 @@ export function createStreetTraffic(map,{
     }
   }
 
+  /* Draw above every basemap road, bridge and building footprint (otherwise a
+     bridge or flat building fill painted later covers the vehicles), but below
+     the labels that follow them. */
+  function placementBeforeId(){
+    const layers=map.getStyle()?.layers||[];
+    let last=-1;
+    layers.forEach((layer,i)=>{
+      if(layer.type!=='symbol'&&layer.source===roadSourceId)last=i;
+    });
+    for(let i=last+1;i<layers.length;i++){
+      if(!layers[i].id.startsWith('street-traffic'))return layers[i].id;
+    }
+    return beforeLayerId();
+  }
+
   function syncView(){
     if(!map.getLayer(LAYER_3D))return;
     const is3D=map.getPitch()>0.5;
-    const before=beforeLayerId();
+    const before=placementBeforeId();
     if(before){
       try{map.moveLayer(LAYER_3D,before);map.moveLayer(LAYER_2D,before);}catch(error){}
     }
