@@ -82,13 +82,23 @@ function mixHex(a,b,t){
   const A=parse(a),B=parse(b);
   return '#'+A.map((v,i)=>Math.max(0,Math.min(255,Math.round(v+(B[i]-v)*t))).toString(16).padStart(2,'0')).join('');
 }
+const TINT_ROLE_OF={
+  background:'ground',land:'ground',residential:'ground',park:'ground',water:'ground',boundary:'ground',
+  motorway:'road',primaryRoad:'road',road:'road',rail:'road',
+  building:'building',buildingEdge:'building'
+};
 export function tintPalette(palette,tints){
   if(!tints||!tints.length)return palette;
   const out={};
   for(const [key,value] of Object.entries(palette)){
     if(key==='text'||typeof value!=='string'||!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)){out[key]=value;continue;}
+    const role=TINT_ROLE_OF[key];
     let c=value;
-    for(const t of tints)if(t&&t.amount>0)c=mixHex(c,t.color,t.amount);
+    for(const t of tints){
+      if(!t)continue;
+      const a=role&&t.roles&&t.roles[role]!=null?t.roles[role]:t.amount;
+      if(a>0)c=mixHex(c,t.color,a);
+    }
     out[key]=c;
   }
   return out;

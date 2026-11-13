@@ -40,7 +40,7 @@ export function tintHex(hex,tints){
 
 export const LIGHTING_PRESETS=Object.freeze({
   dawn:{
-    light:{azimuth:100,polar:78,color:'#ffe0c2',intensity:0.45},
+    light:{azimuth:100,polar:64,color:'#fff3ea',intensity:0.42},
     sky:{sky:'#a7bfe3',horizon:'#ffd6b3',fog:'#f3dcc9'},
     tint:{color:'#ffb37f',amount:0.10},night:0
   },
@@ -51,14 +51,16 @@ export const LIGHTING_PRESETS=Object.freeze({
     tint:{color:'#ffffff',amount:0},night:0
   },
   dusk:{
-    light:{azimuth:262,polar:80,color:'#ffbf8c',intensity:0.55},
+    light:{azimuth:262,polar:62,color:'#fff2e8',intensity:0.42},
     sky:{sky:'#6c66a6',horizon:'#ffad86',fog:'#efc4ae'},
     tint:{color:'#ff8a55',amount:0.13},night:0
   },
   night:{
-    light:{azimuth:160,polar:55,color:'#9eb3de',intensity:0.32},
+    light:{azimuth:160,polar:45,color:'#e2e8f6',intensity:0.35},
     sky:{sky:'#050a18',horizon:'#1c2b4b',fog:'#121a2c'},
-    tint:{color:'#0c1630',amount:0.62},night:1
+    // Per-role strength: dark ground, lighter streets (street lighting),
+    // buildings in between, vehicles kept readable.
+    tint:{color:'#0b1328',amount:0.62,roles:{ground:0.8,road:0.5,building:0.52,vehicle:0.3}},night:1
   }
 });
 
@@ -70,6 +72,12 @@ export const WEATHER_PRESETS=Object.freeze({
 });
 
 const lerp=(a,b,t)=>a+(b-a)*t;
+export const TINT_ROLES=['ground','road','building','vehicle'];
+export function roleAmount(tint,role){
+  if(!tint)return 0;
+  const r=tint.roles&&tint.roles[role];
+  return r==null?tint.amount:r;
+}
 function lerpAngle(a,b,t){
   let d=((b-a)%360+540)%360-180;
   return (a+d*t+360)%360;
@@ -90,7 +98,8 @@ export function blendLighting(a,b,t){
     tint:{
       // Blend a "no tint" preset through its own colour at zero strength.
       color:a.tint.amount===0?b.tint.color:b.tint.amount===0?a.tint.color:mixHex(a.tint.color,b.tint.color,t),
-      amount:lerp(a.tint.amount,b.tint.amount,t)
+      amount:lerp(a.tint.amount,b.tint.amount,t),
+      roles:Object.fromEntries(TINT_ROLES.map(r=>[r,lerp(roleAmount(a.tint,r),roleAmount(b.tint,r),t)]))
     },
     night:lerp(a.night||0,b.night||0,t)
   };
