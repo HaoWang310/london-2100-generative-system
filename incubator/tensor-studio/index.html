@@ -256,7 +256,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 :root{--shell-height:0px}
 #wrap{display:block;height:100%}
 #view{position:fixed;inset:0}
-#panel.ts-panel{position:fixed;z-index:20;top:14px;left:14px;width:min(370px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
+#panel.ts-panel{position:fixed;z-index:20;top:14px;left:14px;width:min(370px,calc(100vw - 28px));max-width:calc(100vw - 28px);max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
  --side:#0b0b0d;--card:#1c1c1f;--ink:#f5f5f7;--grey:#a1a1a6;--grey2:#636366;--line:#343438;--fill:#2c2c30;--fill2:#36363a;--raise:#3a3a40;--track:#48484e;--knob:#fff;--accent:#0a84ff;
  background:rgba(11,11,13,.98);color:var(--ink);border:1px solid rgba(255,255,255,.13);border-radius:22px;box-shadow:0 18px 48px rgba(0,0,0,.36);
  -webkit-backdrop-filter:blur(18px) saturate(110%);backdrop-filter:blur(18px) saturate(110%);padding:16px;color-scheme:dark}
@@ -293,6 +293,17 @@ window.addEventListener('DOMContentLoaded',()=>{
 #panel details.info summary{color:#8ab4ff}
 #hud{position:fixed;z-index:10;bottom:14px;background:rgba(14,14,16,.9);color:#a1a1a6;border:1px solid #2f2f34;box-shadow:0 16px 45px rgba(0,0,0,.28)}
 #hud b{color:#f5f5f7}
+#tsResize{position:fixed;z-index:25;width:12px;cursor:ew-resize;touch-action:none}
+#tsResize[hidden]{display:none}
+#tsResize::after{content:"";position:absolute;top:25%;bottom:25%;left:5px;width:2px;border-radius:999px;background:transparent;transition:background .15s}
+#tsResize:hover::after,#tsResize.active::after,#tsResize:focus-visible::after{background:#a1a1a6}
+#tsResize:focus-visible{outline:none}
+#panel.resizing{user-select:none}
+#panel.ts-panel{min-width:300px}
+/* sliders take the room when the panel is wider */
+#panel .row > label{flex:0 1 42%}
+#panel .row > input[type=range]{flex:1 1 auto;width:auto;min-width:110px}
+#panel.collapsed{min-width:260px}
 /* right-hand display panel, as the London map's */
 .displayPanel{position:fixed;z-index:20;top:14px;right:14px;width:224px;max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
  background:rgba(14,14,16,.94);color:#f5f5f7;border:1px solid #2f2f34;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.28);
@@ -344,7 +355,7 @@ window.addEventListener('DOMContentLoaded',()=>{
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.3" data-en="Station P2 example · v8.3">车站 P2 示例 · v8.3</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.4" data-en="Station P2 example · v8.4">车站 P2 示例 · v8.4</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -454,9 +465,34 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
   if (hud) hud.style.left = 'calc(50% + ' + ((l - r) / 2) + 'px)';
   return { l, r, rb }; };
 (() => { const p = document.getElementById('panel'), b = document.getElementById('tsCollapse'); if (!p || !b) return;
-  const set = c => { p.classList.toggle('collapsed', c); b.textContent = c ? '+' : '−'; b.setAttribute('aria-expanded', String(!c)); try { localStorage.setItem('tensorStudio.panelCollapsed', c ? '1' : '0'); } catch (e) {} window.__TS_INSETS(); };
-  try { if (localStorage.getItem('tensorStudio.panelCollapsed') === '1') set(true); } catch (e) {}
-  b.onclick = () => set(!p.classList.contains('collapsed')); })();
+  // (v8.4) drag the panel's right edge to resize it, as on the London map: 300–720 px, remembered; double-click resets
+  const KEY_W = 'tensorStudio.panelWidth.v1', KEY_C = 'tensorStudio.panelCollapsed';
+  const h = document.createElement('div'); h.id = 'tsResize'; h.setAttribute('role', 'separator'); h.setAttribute('aria-orientation', 'vertical');
+  h.setAttribute('aria-label', 'Drag to resize the control panel'); h.title = 'Drag to resize · double-click to reset'; h.tabIndex = 0; document.body.append(h);
+  let width = null;
+  const narrow = () => matchMedia('(max-width:760px)').matches;
+  const maxW = () => { const d = document.getElementById('displayPanel'); return Math.max(300, Math.min(720, innerWidth - 28 - (d ? d.getBoundingClientRect().width + 40 : 0))); };
+  const place = () => { const r = p.getBoundingClientRect(), hide = p.classList.contains('collapsed') || narrow();
+    h.hidden = hide; if (!hide){ h.style.left = (r.right - 6) + 'px'; h.style.top = (r.top + 14) + 'px'; h.style.height = Math.max(0, r.height - 28) + 'px'; }
+    window.__TS_INSETS(); };
+  const apply = (w, persist) => { if (narrow()) { p.style.width = ''; place(); return; }
+    width = Math.max(300, Math.min(maxW(), Number(w) || 370)); if (!p.classList.contains('collapsed')) p.style.width = width + 'px';
+    if (persist) try { localStorage.setItem(KEY_W, String(Math.round(width))); } catch (e) {}
+    place(); };
+  const set = c => { p.classList.toggle('collapsed', c); p.style.width = c || narrow() || !width ? '' : width + 'px'; b.textContent = c ? '+' : '−'; b.setAttribute('aria-expanded', String(!c));
+    try { localStorage.setItem(KEY_C, c ? '1' : '0'); } catch (e) {} place(); };
+  try { const w = Number(localStorage.getItem(KEY_W)); if (w > 0) apply(w, false); if (localStorage.getItem(KEY_C) === '1') set(true); } catch (e) {}
+  b.onclick = () => set(!p.classList.contains('collapsed'));
+  h.addEventListener('pointerdown', e => { if (h.hidden) return; e.preventDefault(); const id = e.pointerId, x0 = e.clientX, w0 = p.getBoundingClientRect().width;
+    h.setPointerCapture?.(id); p.classList.add('resizing'); h.classList.add('active');
+    const move = m => { if (m.pointerId === id) apply(w0 + m.clientX - x0, false); };
+    const end = m => { if (m.pointerId !== id) return; p.classList.remove('resizing'); h.classList.remove('active'); h.releasePointerCapture?.(id);
+      h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', end); h.removeEventListener('pointercancel', end); apply(p.getBoundingClientRect().width, true); };
+    h.addEventListener('pointermove', move); h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end); });
+  h.addEventListener('dblclick', () => apply(370, true));
+  h.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ e.preventDefault(); apply(p.getBoundingClientRect().width + (e.key === 'ArrowRight' ? 20 : -20), true); } });
+  addEventListener('resize', () => apply(width || p.getBoundingClientRect().width, false));
+  new ResizeObserver(place).observe(p); place(); })();
 </script>
 <script>
 (()=>{const d=document.getElementById('advanced');if(!d)return;
@@ -468,8 +504,8 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite } from './scripts/site_builder.js?v=8.3.0';
-const V = '8.3.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite } from './scripts/site_builder.js?v=8.4.0';
+const V = '8.4.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
