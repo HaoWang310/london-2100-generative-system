@@ -221,6 +221,9 @@ function flowAt(x, y){ const q = sampleCS(CC, CS, x, y); if (!q) return null; co
 
 /* ------------------------------------------------------------------ the streets: a growth simulation (generators) */
 let LINES = [], HASH = new Map(), CULVERTS = [], GROW = null, GEN = null, GROWING = false, STEPS = 0, PHASE = '', CELLS = null, CELLIMG = null, FINISHED = false;
+// (v8.7) the process mode drives the growth from outside: PROC.stopAt(phase) pauses the generator at a phase boundary, PROC.record()
+// is called once a frame while it grows, PROC.onStop / PROC.onDone when it pauses or ends; SCRUB (a recorded frame) draws the net as it was
+let PROC = null, PH0 = '', SCRUB = null;
 const HC = 20, hk = (x, y) => Math.floor(x / HC) + ',' + Math.floor(y / HC);
 // (v7) the circus: the radius of its street's centre line (45 m: 90 m across, 105 m over its outer edge); and ring streets
 // round each whole circus, each {r: radius of its centre line, level: 1 main / 2 second} (none by default)
@@ -1081,7 +1084,7 @@ function drawUnder(g){ if (!CLAR) return;
   g.save(); g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.clip('evenodd'); g.imageSmoothingEnabled = true;
   g.drawImage(UNDERIMG, X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function drawEvents(){ const r = clamp(view.s * 8, 2.4, 5.5);
-  for (const e of EVENTS){ const x = X(e.x), y = Y(e.y); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
+  for (const e of (SCRUB ? EVENTS.slice(0, SCRUB.ev) : EVENTS)){ const x = X(e.x), y = Y(e.y); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
     if (e.k === 'branch' || e.k === 'edge-branch' || e.k === 'spoke'){ ctx.fillStyle = P.evBranch; ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0, 2 * PI); ctx.fill(); }
     else if (e.k === 'fork'){ ctx.strokeStyle = P.evFork; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + r * 1.3); ctx.lineTo(x, y); ctx.lineTo(x - r, y - r); ctx.moveTo(x, y); ctx.lineTo(x + r, y - r); ctx.stroke(); }
     else if (e.k === 'merge'){ ctx.fillStyle = P.evFork; ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0, 2 * PI); ctx.fill(); }
@@ -1255,9 +1258,16 @@ function drawNet(full){ const g = g2d(L_net); if (full){ g.clearRect(0, 0, VW, V
   if (!$('lStreets').checked){ netDrawn = LINES.length; return; }
   g.lineCap = 'round'; g.lineJoin = 'round';
   if (THEME === 'dark'){ g.shadowColor = 'rgba(120,220,255,0.35)'; g.shadowBlur = 0; }
+  if (SCRUB){ for (let i = 0; i < SCRUB.n.length; i++){ const l = SCRUB.o[i], n = SCRUB.n[i]; if (!l || n < 2) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
+      if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; const Pp = SCRUB.p[i]; pathLine(g, Pp.length === n ? Pp : Pp.slice(0, n)); g.stroke(); }
+    g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; return; }
   for (let i = netDrawn; i < LINES.length; i++){ const l = LINES[i]; if (l.dead) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
     if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; pathLine(g, l.pts); g.stroke(); }
   g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; }
+// (v8.7) a frame of the growth: each line's points so far (the arrays only grow while a street grows, so a frame keeps a reference and a length)
+function recordFrame(){ const n = new Uint32Array(LINES.length), p = new Array(LINES.length); for (let i = 0; i < LINES.length; i++){ const l = LINES[i]; n[i] = l.dead ? 0 : l.pts.length; p[i] = l.pts; }
+  return { n, p, o: LINES.slice(), ev: EVENTS.length, cul: CULVERTS.length, phase: PHASE, streets: LINES.filter(l => l.level > 0 && !l.dead).length }; }
+function setScrub(f){ SCRUB = f || null; netDirty = true; widthDirty = true; }
 // a value 0-1 for each street (or each point of it, for the tapering drivers), remapped into the domain [narrowest, widest]
 function plen(Pp){ let L = 0; for (let k = 1; k < Pp.length; k++) L += Math.hypot(Pp[k][0] - Pp[k - 1][0], Pp[k][1] - Pp[k - 1][1]); return L; }
 function cellAt(x, y){ return clamp(Math.round(y / cell), 0, ny - 1) * nx + clamp(Math.round(x / cell), 0, nx - 1); }
@@ -1408,18 +1418,18 @@ function render(now){
   if ($('lWind').checked) ctx.drawImage(L_wind, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   // the street growing now
-  if (GROW && $('lStreets').checked){ const [col, w] = GROW.level === 1 ? [P.grow, 3] : [P.grow, 1.6]; ctx.strokeStyle = col; ctx.lineWidth = w;
+  if (GROW && !SCRUB && $('lStreets').checked){ const [col, w] = GROW.level === 1 ? [P.grow, 3] : [P.grow, 1.6]; ctx.strokeStyle = col; ctx.lineWidth = w;
     if (GROW.h0){ ctx.beginPath(); const h = GROW.h0; h.forEach((p, k) => k ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke(); }
     const cur = GROW.cur; if (cur.length){ ctx.beginPath(); ctx.moveTo(X(GROW.seed[0]), Y(GROW.seed[1])); for (const p of cur) ctx.lineTo(X(p[0]), Y(p[1])); ctx.stroke();
       const tip = cur[cur.length - 1]; ctx.fillStyle = P.glow; ctx.beginPath(); ctx.arc(X(tip[0]), Y(tip[1]), 9, 0, 2 * PI); ctx.fill(); ctx.fillStyle = P.grow; ctx.beginPath(); ctx.arc(X(tip[0]), Y(tip[1]), 3, 0, 2 * PI); ctx.fill(); } }
   // mode B: every street growing now, its tip glowing
-  if (MODE === 'B' && GROWING && $('lStreets').checked){ for (const tp of TIPS){ if (tp.done) continue; ctx.fillStyle = P.glow; ctx.beginPath(); ctx.arc(X(tp.x), Y(tp.y), 7, 0, 2 * PI); ctx.fill(); ctx.fillStyle = P.grow; ctx.beginPath(); ctx.arc(X(tp.x), Y(tp.y), 2.4, 0, 2 * PI); ctx.fill(); } }
+  if (MODE === 'B' && GROWING && !SCRUB && $('lStreets').checked){ for (const tp of TIPS){ if (tp.done) continue; ctx.fillStyle = P.glow; ctx.beginPath(); ctx.arc(X(tp.x), Y(tp.y), 7, 0, 2 * PI); ctx.fill(); ctx.fillStyle = P.grow; ctx.beginPath(); ctx.arc(X(tp.x), Y(tp.y), 2.4, 0, 2 * PI); ctx.fill(); } }
   // the link and the bridges (as bridges: deck, parapets, abutments)
   ctx.strokeStyle = P.main; ctx.lineWidth = 2.4; for (const s of [D.fixed.link, ...D.fixed.streets]){ ctx.beginPath(); s.forEach((p, k) => k ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke(); }
   for (const b of D.fixed.bridges){ const a = b[0], c = b[b.length - 1]; ctx.lineCap = 'butt'; ctx.strokeStyle = P.bridge; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(c[0]), Y(c[1])); ctx.stroke();
     ctx.strokeStyle = P.bg; ctx.lineWidth = 4.5; ctx.stroke(); ctx.lineCap = 'round'; }
   // culverts, anchors, attractors (pulsing)
-  if ($('lStreets').checked){ ctx.strokeStyle = P.culvert; ctx.lineWidth = 1.2; ctx.fillStyle = P.bg; for (const c of CULVERTS){ ctx.beginPath(); ctx.arc(X(c.x), Y(c.y), 2.4, 0, 2 * PI); ctx.fill(); ctx.stroke(); } }
+  if ($('lStreets').checked){ ctx.strokeStyle = P.culvert; ctx.lineWidth = 1.2; ctx.fillStyle = P.bg; for (const c of (SCRUB ? CULVERTS.slice(0, SCRUB.cul) : CULVERTS)){ ctx.beginPath(); ctx.arc(X(c.x), Y(c.y), 2.4, 0, 2 * PI); ctx.fill(); ctx.stroke(); } }
   if ($('lEvents').checked) drawEvents();
   ctx.fillStyle = P.anchor; for (const a of D.anchors){ ctx.beginPath(); ctx.arc(X(a.x), Y(a.y), 4, 0, 2 * PI); ctx.fill(); }
   const tt = (now - T0) / 1000;
@@ -1433,10 +1443,15 @@ function drawScale(){ const want = VW * 0.16 / view.s; let m = 50; for (const s 
   const cx = x0 - 26, cy = y - 2, R = 9; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * PI); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R); ctx.stroke(); ctx.textAlign = 'center'; ctx.fillText('N', cx, cy - R - 4); }
 function hud(){ const pre = '<b>' + (MODE === 'A' ? 'A · today' : 'B · branching') + '</b> · ' + (SIM ? 'wind simulation · <b>' + YEAR[MONTH].name + '</b> · ' : ($('windOn').checked ? 'wind of <b>' + YEAR[MONTH].name + '</b> · ' : 'along the contour · '));
   const hudHTML = pre + (GROWING ? 'growing: <b>' + PHASE + '</b> · ' + LINES.filter(l => l.level > 0 && !l.dead).length + ' streets' : (FINISHED ? '<b>' + LINES.filter(l => l.level > 0 && !l.dead).length + '</b> streets · ' + CULVERTS.length + ' culverts · ' + HOLES.length + ' circuses' : 'ready')); if ($('hud')._lastEnglish !== hudHTML){ $('hud')._lastEnglish = hudHTML; $('hud').innerHTML = hudHTML; } }
+function genDone(now){ GEN = null; GROWING = false; netDirty = true; GHOSTT = now; if (SIM) SIM.next = now + SIM_HOLD; if (PROC && PROC.onDone) PROC.onDone(); }
+// (v8.7) run the generator at once up to the first phase pred(phase) accepts (or the end), without drawing: the steps before the one being watched
+function runUntil(pred){ if (!GEN) return; let r; do { r = GEN.next(); if (PHASE !== PH0){ PH0 = PHASE; if (!r.done && pred(PHASE)){ GROWING = false; return; } } } while (!r.done); genDone(performance.now()); }
 function frame(now){ morphStep();
-  if (GROWING && GEN){ const t0 = performance.now(), budget = v('speed'); let r;
-    do { r = GEN.next(); } while (!r.done && performance.now() - t0 < budget);
-    if (r.done){ GEN = null; GROWING = false; netDirty = true; GHOSTT = now; if (SIM) SIM.next = now + SIM_HOLD; } else { measuresLive(); if (MODE === 'B') netDirty = true; } }
+  if (GROWING && GEN){ const t0 = performance.now(), cap = PROC && PROC.steps ? PROC.steps() : 0, budget = cap ? 14 : v('speed'); let r, stopped = false, n = 0;
+    // (v8.7) the process mode grows a fixed number of steps a frame (cap), so slow is slow on any machine
+    do { r = GEN.next(); n++; if (PROC && PHASE !== PH0){ PH0 = PHASE; if (!r.done && PROC.stopAt && PROC.stopAt(PHASE)){ GROWING = false; stopped = true; break; } } } while (!r.done && (!cap || n < cap) && performance.now() - t0 < budget);
+    if (r.done){ if (PROC && PROC.record) PROC.record(true); genDone(now); }
+    else { measuresLive(); if (MODE === 'B') netDirty = true; if (PROC && PROC.record) PROC.record(false); if (stopped && PROC.onStop) PROC.onStop(PHASE); } }
   if (SIM && !SIM.paused && !GROWING && now >= SIM.next){ if (SIM.i >= 12){ SIM = null; } else { SIM.i++; setMonth(SIM.i, true); SIM.next = now + ($('simGrow').checked ? 1e9 : SIM_HOLD + 1200); } }
   render(now); requestAnimationFrame(frame); }
 let SIM = null, GHOST = null, GHOSTT = 0; const SIM_HOLD = 1500;
@@ -1568,9 +1583,15 @@ window.addEventListener('resize', resize);
   // the current result's field (step 3, settled: the contour 70 %, the year's wind 40 %, the attractors): A at once, then B grows live
   $('nMain').value = 2; $('nSec').value = 2; for (const id of ['nMain', 'nSec']){ const o = $(id).nextElementSibling; if (o) o.textContent = '2'; } $('windOn').checked = true; MONTH = 12;
   placeAttractors(); buildTarget(); settleField(); FIELDMODE = 'off'; $('lFlow').checked = false;
-  MODE = 'A'; start(false); MODE = 'B'; start(true); syncTools(); drawKey(); requestAnimationFrame(frame);
+  // (v8.7) in the process mode the app opens on step 1, nothing grown yet; the free mode opens on the result as before
+  if (window.__TS_PROCESS_ON){ MODE = 'B'; resetNet(); } else { MODE = 'A'; start(false); MODE = 'B'; start(true); } syncTools(); drawKey(); requestAnimationFrame(frame);
   window.__ts6 = { get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
-    get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; } }; })();
+    get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
+    // (v8.7) for the process mode
+    setProc: p => { PROC = p; PH0 = ''; }, syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,
+    setModeQuiet(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; syncTools(); drawCmp(); }, setEnv(k){ ENVSEL = ENV && k !== 'off' ? k : 'off'; baseDirty = true; syncEnv(); }, get env(){ return ENVSEL; }, get envStats(){ return ENV ? ENV.stats : null; },
+    setFlood(b){ SHOWFLOOD = !!b; baseDirty = true; syncTools(); }, get flood(){ return FR; }, get floodZones(){ return FLOOD ? FLOOD.zones : null; }, floodNum, get land(){ return FLAND; },
+    landHa(){ let n = 0; for (let i = 0; i < MASK.length; i++) n += MASK[i]; return n * MC * MC / 1e4; }, get holes(){ return HOLES; }, get year(){ return YEAR; }, get dirs(){ return DIRS; }, get month(){ return MONTH; }, clearNet(){ GEN = null; GROWING = false; resetNet(); SCRUB = null; } }; })();
 
 /* ---------------- catalogue presets */
 const HAND2 = [[518481.8, 238052.3], [517962, 238141]];            // two attractors placed by hand (British National Grid)
@@ -1620,7 +1641,7 @@ document.getElementById('applyPreset').onclick=()=>{
    document.getElementById('windOn').checked=o.wind!==false&&(o.wWind??40)>0;
    AMODE=o.hand?'hand':(o.where||'centre');document.getElementById('aMode').value=AMODE;
    if(o.hand)HAND=o.hand.map(p=>({x:p[0]-D.origin[0],y:p[1]-D.origin[1],kind:'main'}));
-   placeAttractors();buildTarget();settleField();start(false);syncTools();drawKey();
+   placeAttractors();buildTarget();settleField();if(!window.__TS_PROCESS_ON)start(false);syncTools();drawKey();
    for(const e of document.querySelectorAll('#panel input[type="range"]')){
     if(e.id==='month')continue;const out=e.nextElementSibling;if(out?.tagName==='OUTPUT')out.textContent=e.value+(['wC','wWind','thru','stag','bMem'].includes(e.id)?' %':'');
    }
