@@ -164,7 +164,7 @@ export function open(api, lang = 'zh', opt = {}){
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
 <button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="bld" class="on">${L.buildings}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
-<span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${L.close} ✕</button>`}</div><div class="note"></div>`;
+<span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${opt.closeLabel || L.close + ' ✕'}</button>`}</div><div class="note"></div>`;
   document.body.append(root);
   const cv = root.querySelector('canvas'), note = root.querySelector('.note');
   const gl = cv.getContext('webgl2', { antialias: true, alpha: true, xrCompatible: true });
@@ -323,7 +323,7 @@ export function open(api, lang = 'zh', opt = {}){
     session.requestAnimationFrame(onFrame);
   }
 
-  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; };
+  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; opt.onClose?.(); };
   if (btn('close')) btn('close').onclick = close; addEventListener('keydown', function esc(e){ if (e.key === 'Escape' && OPEN){ close(); removeEventListener('keydown', esc); } });
   OPEN = { close, state: st, refresh };
   return OPEN;

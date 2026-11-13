@@ -5,8 +5,8 @@
 //   3. the camera goes back exactly as it was, and the VR view opens over the map
 // Closing the view (or leaving the headset) returns to the map as it was. Call: openFromMap(map, 'zh' | 'en').
 
-import { open } from './xr_view.js?v=0.5';
-import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.5';
+import { open } from './xr_view.js?v=0.6';
+import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.6';
 
 const R = 6378137, MAX_TEX = 4096, MIN_ZOOM = 15;
 const merc = ([lon, lat]) => [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))];
@@ -33,7 +33,7 @@ function buildingFeatures(map){
   return out;
 }
 
-export async function openFromMap(map, lang = 'zh'){
+export async function openFromMap(map, lang = 'zh', viewOpt = {}){
   const note = busy(lang), cam = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
   let shot, bounds, feats;
   try {
@@ -72,5 +72,5 @@ export async function openFromMap(map, lang = 'zh'){
   const c = map.getCenter(), km = (Math.max(W, H) / 1000).toFixed(1);
   if (cam.zoom < MIN_ZOOM) extraNote = (lang === 'zh' ? `地图缩得太远（${cam.zoom.toFixed(1)} 级），VR 按 ${MIN_ZOOM} 级、当前中心生成` : `The map was far out (zoom ${cam.zoom.toFixed(1)}); VR uses zoom ${MIN_ZOOM} at the same centre`) + (extraNote ? ' · ' + extraNote : '');
   api.note = extraNote;
-  return open(api, lang, { title: (lang === 'zh' ? '伦敦地图 → VR · ' : 'London map → VR · ') + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) + ' · ' + km + ' km' });
+  return open(api, lang, { ...viewOpt, title: (lang === 'zh' ? '伦敦地图 → VR · ' : 'London map → VR · ') + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) + ' · ' + km + ' km' });
 }
