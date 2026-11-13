@@ -7951,9 +7951,16 @@
      * tile budget. At the working zoom this keeps the city source on the detailed z14
      * coverage while bearing/pitch changes, instead of swapping to coarser building tiles.
      */
+    /*
+     * Far-field fix: maxZoomLevelsOnScreen was 3, which let distant tiles at high
+     * pitch drop to z12/z11. This source has minzoom 13, so those tiles were simply
+     * skipped and the far city rendered with no buildings. A single LOD level keeps
+     * every tile on screen at z13–z14 (the only levels with building data); the
+     * larger tile-count ratio gives MapLibre enough budget to cover the horizon.
+     */
     if(typeof osmMap.setSourceTileLodParams==='function'){
       try{
-        osmMap.setSourceTileLodParams(3,4,CITY_BUILDINGS_SOURCE);
+        osmMap.setSourceTileLodParams(1,8,CITY_BUILDINGS_SOURCE);
         lastCityBuildingLodSource=source;
       }catch(error){
         console.warn('Unable to tune building tile LOD',error);
