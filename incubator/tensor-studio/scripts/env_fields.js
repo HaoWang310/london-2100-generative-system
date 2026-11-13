@@ -112,31 +112,39 @@ export function environmentFields(D, landMask = null){
     summerEnergy: eS.map(e => +e.toFixed(2)), winterColdEnergy: eW.map(e => +e.toFixed(2)) } };
 }
 
-/* (v8.8) the blue-green corridors: the main runoff paths (Q at or above q, on the land), widened to half m each side.
- * Returns the corridor mask (1 where a 10 m cell is in a corridor), the distance of every cell to the nearest corridor
- * axis (m) and the axis angle there (the downhill direction of the filled surface, as an axis mod pi), for the field.
- * Pieces shorter than minCells are dropped, so a corridor is a line and not a speck. */
-export function corridors(env, landMask, nx, ny, cell, { q = 0.6, half = 15, minCells = 8 } = {}){
-  const N = nx * ny, Q = env.Q, F = env.F || env.Z, seed = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (Q[i] >= q && (!landMask || landMask[i])) seed[i] = 1;
-  // drop the small pieces (8-connected)
-  const seen = new Uint8Array(N), stack = [];
-  for (let s = 0; s < N; s++){ if (!seed[s] || seen[s]) continue; const comp = []; stack.push(s); seen[s] = 1;
-    while (stack.length){ const k = stack.pop(); comp.push(k); const r = (k / nx) | 0, c = k % nx;
-      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){ const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc; if (seed[j] && !seen[j]){ seen[j] = 1; stack.push(j); } } }
-    if (comp.length < minCells) for (const k of comp) seed[k] = 0; }
+/* (v8.8, v8.10) the blue-green corridors: the main runoff paths, widened to half m each side.
+ * A path is a run of cells whose upstream area is at least minHa hectares (an absolute measure, so a flat or gently
+ * sloping site does not get a corridor on every faint trickle), at least minLen m long. If the corridors would still take
+ * more than maxShare of the land, the threshold rises until they do not (a cap, for the flat sites of London, where a
+ * 50 m terrain grid makes many parallel paths). Returns the corridor mask (1 where a 10 m cell is in a corridor), the
+ * distance of every cell to the nearest corridor axis (m) and the axis angle there (downhill on the filled surface). */
+export function corridors(env, landMask, nx, ny, cell, { minHa = 2, half = 15, minLen = 100, maxShare = 0.12 } = {}){
+  const N = nx * ny, F = env.F || env.Z, A = env.A, haPer = cell * cell / 1e4;
+  let land = 0; for (let i = 0; i < N; i++) if (!landMask || landMask[i]) land++;
   // the axis angle: downhill on the (lightly smoothed) filled surface
   const Fs = blur(F, nx, ny, 1.5), ang = new Float32Array(N);
   for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const gx = (Fs[r * nx + Math.min(c + 1, nx - 1)] - Fs[r * nx + Math.max(c - 1, 0)]), gy = (Fs[Math.min(r + 1, ny - 1) * nx + c] - Fs[Math.max(r - 1, 0) * nx + c]); ang[r * nx + c] = Math.atan2(-gy, -gx); }
-  // the distance to the nearest seed and the angle there (multi-source, 8 neighbours)
-  const dist = new Float32Array(N).fill(Infinity), near = new Int32Array(N).fill(-1); const H = []; 
-  const push = (d, k) => { H.push([d, k]); let i = H.length - 1; while (i){ const p = (i - 1) >> 1; if (H[p][0] <= H[i][0]) break; [H[p], H[i]] = [H[i], H[p]]; i = p; } };
-  const pop = () => { const t = H[0], l = H.pop(); if (H.length){ H[0] = l; let i = 0; for (;;){ const a = 2 * i + 1, b = a + 1; let m = i; if (a < H.length && H[a][0] < H[m][0]) m = a; if (b < H.length && H[b][0] < H[m][0]) m = b; if (m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return t; };
-  for (let i = 0; i < N; i++) if (seed[i]){ dist[i] = 0; near[i] = i; push(0, i); }
-  while (H.length){ const [d, k] = pop(); if (d > dist[k]) continue; const r = (k / nx) | 0, c = k % nx;
-    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){ if (!dr && !dc) continue; const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc, nd = d + Math.hypot(dr, dc) * cell;
-      if (nd < dist[j]){ dist[j] = nd; near[j] = near[k]; push(nd, j); } } }
-  const mask = new Uint8Array(N), axis = new Float32Array(N); let cells = 0;
-  for (let i = 0; i < N; i++){ axis[i] = near[i] >= 0 ? ang[near[i]] : 0; if (dist[i] <= half && (!landMask || landMask[i])){ mask[i] = 1; cells++; } }
-  return { mask, dist, axis, seed, cells, areaHa: cells * cell * cell / 1e4 };
+  const build = th => {
+    const seed = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (A[i] * haPer >= th && (!landMask || landMask[i])) seed[i] = 1;
+    // drop the short pieces (8-connected): a corridor is a line, not a speck
+    const seen = new Uint8Array(N), stack = [], minCells = Math.max(3, Math.round(minLen / cell));
+    for (let s = 0; s < N; s++){ if (!seed[s] || seen[s]) continue; const comp = []; stack.push(s); seen[s] = 1;
+      while (stack.length){ const k = stack.pop(); comp.push(k); const r = (k / nx) | 0, c = k % nx;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){ const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc; if (seed[j] && !seen[j]){ seen[j] = 1; stack.push(j); } } }
+      if (comp.length < minCells) for (const k of comp) seed[k] = 0; }
+    // the distance to the nearest seed and the angle there (multi-source, 8 neighbours)
+    const dist = new Float32Array(N).fill(Infinity), near = new Int32Array(N).fill(-1), H = [];
+    const push = (d, k) => { H.push([d, k]); let i = H.length - 1; while (i){ const q = (i - 1) >> 1; if (H[q][0] <= H[i][0]) break; [H[q], H[i]] = [H[i], H[q]]; i = q; } };
+    const pop = () => { const t = H[0], l = H.pop(); if (H.length){ H[0] = l; let i = 0; for (;;){ const a = 2 * i + 1, b = a + 1; let m = i; if (a < H.length && H[a][0] < H[m][0]) m = a; if (b < H.length && H[b][0] < H[m][0]) m = b; if (m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return t; };
+    for (let i = 0; i < N; i++) if (seed[i]){ dist[i] = 0; near[i] = i; push(0, i); }
+    while (H.length){ const [d, k] = pop(); if (d > dist[k]) continue; const r = (k / nx) | 0, c = k % nx;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){ if (!dr && !dc) continue; const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc, nd = d + Math.hypot(dr, dc) * cell;
+        if (nd < dist[j]){ dist[j] = nd; near[j] = near[k]; push(nd, j); } } }
+    const mask = new Uint8Array(N), axis = new Float32Array(N); let cells = 0;
+    for (let i = 0; i < N; i++){ axis[i] = near[i] >= 0 ? ang[near[i]] : 0; if (dist[i] <= half && (!landMask || landMask[i])){ mask[i] = 1; cells++; } }
+    return { mask, dist, axis, seed, cells }; };
+  let th = minHa, g = build(th), raised = false;
+  while (land && g.cells > maxShare * land && th < 2000){ th *= 1.5; g = build(th); raised = true; }
+  return { ...g, areaHa: g.cells * haPer, share: land ? g.cells / land : 0, minHa: th, raised };
 }
