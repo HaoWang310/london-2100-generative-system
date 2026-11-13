@@ -7,7 +7,19 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - 这个文件夹**只读场景文件**，不引用其他 app 的代码，格式见 [`docs/SCENE-FORMAT.md`](docs/SCENE-FORMAT.md)。所以可以和 Tensor Studio 同时开发：那边继续改算法，这边改三维和交互，互不影响。
 - 它和其他 app 在同一个网址下，以后可以直接读取正在运行的 Tensor Studio，不用再导出文件。
 
-## 现在有什么（原型 v0.2）
+## 从伦敦地图进入 VR（v0.3，打通流程）
+
+伦敦地图（`../google-map-live`）右下角坐标上方有一个 **VR** 按钮：
+1. 在地图上照常设置：搜索地点、开图层、选主题和光照、画场地边界……
+2. 按 **VR**：地图会短暂转成正北朝上的平面，截下当前画面（开着的图层都在里面），再把地图已经载入的 OSM 建筑按 `render_height` 拉伸成体块。相机随即回到原来的角度
+3. 三维沙盘覆盖在地图上：电脑上可以预览，Quest 上按「进入 MR」放到桌上，按 B 走进街道
+4. 按「关闭」回到地图，所有状态都还在
+
+建议缩放到 14–16 级再按（低于 13 级时地图不载入建筑，只有平面）。VR 里的地面是一张截图，在 VR 里不能改图层；要改就关掉 VR，在地图上改完再按一次。代码：`src/from_map.js`。
+
+另外，`?scene=osm:纬度,经度,半边长米` 可以不经过地图，直接从 OpenFreeMap 读取 OSM 数据生成场景（`src/osm.js`，顶栏菜单里有伦敦市中心）。
+
+## 现有场景（v0.2）
 
 - `index.html`：打开后显示 **Hydro Lab · 伦敦 70 公里**，顶栏的菜单可以切换场景：
   - `data/hydro-lab-70km.scene.json`：London map · Hydro Lab 的 70 公里研究圈，300 m 网格。OS Terrain 50 地形（高程默认放大 12 倍，伦敦太平了）、EA 洪水风险（河流海洋与地表水的较高等级）、汇水网络（上游面积 ≥ 1 / 10 / 100 / 1000 km²，颜色由浅到深）、大伦敦边界和 70 公里圈。用 `tools/build-scene-hydro-lab.py` 从 Hydro Lab 自己的资源文件生成。
@@ -39,6 +51,8 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 | `index.html` | 入口：载入场景，打开三维视图 |
 | `src/xr_view.js` | 三维视图、WebXR 会话、手柄和手势交互、几何生成（`buildTerrain` / `buildRibbons` 是纯函数） |
 | `src/scene.js` | 检查场景文件，并转换成视图需要的只读接口 |
+| `src/from_map.js` | 伦敦地图的 VR 按钮：截图、建筑、打开视图 |
+| `src/osm.js` | OpenFreeMap 矢量瓦片解码、地面贴图、建筑体块 |
 | `data/*.scene.json` | 场景；`data/scenes.json` 是顶栏菜单的列表 |
 | `tools/build-scene-hydro-lab.py` | 从 `../google-map-live/assets` 生成 Hydro Lab 场景（需要 numpy 和 Pillow；参数是网格倍数，默认 6 = 300 m） |
 | `tools/export-from-tensor-studio.mjs` | 无界面运行 Tensor Studio，导出场景（在本文件夹里运行） |

@@ -8,6 +8,13 @@
       }
     },
     {
+      "file": "osm:51.50733,-0.12768,900",
+      "title": {
+        "zh": "OSM · 伦敦市中心（实时）",
+        "en": "OSM · central London (live)"
+      }
+    },
+    {
       "file": "data/station-p2.scene.json",
       "title": {
         "zh": "Tensor Studio · 车站 P2",
