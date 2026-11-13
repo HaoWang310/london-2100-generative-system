@@ -1,0 +1,18 @@
+{
+  "scenes": [
+    {
+      "file": "data/hydro-lab-70km.scene.json",
+      "title": {
+        "zh": "Hydro Lab · 伦敦 70 公里",
+        "en": "Hydro Lab · London 70 km"
+      }
+    },
+    {
+      "file": "data/station-p2.scene.json",
+      "title": {
+        "zh": "Tensor Studio · 车站 P2",
+        "en": "Tensor Studio · station P2"
+      }
+    }
+  ]
+}

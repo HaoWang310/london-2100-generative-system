@@ -18,12 +18,23 @@ const q = new URLSearchParams(location.search), lang = q.get('lang') === 'en' ? 
 const msg = document.getElementById('msg'), drop = document.getElementById('drop');
 let view = null;
 function show(scene, name){
-  try { const api = apiFromScene(scene); view?.close(); view = open(api, lang, { standalone: true, title: 'London 2100 · VR / MR · ' + name }); msg.hidden = true; }
+  try { const api = apiFromScene(scene), t = scene.title ? (scene.title[lang] || scene.title.zh) : name;
+    view?.close(); view = open(api, lang, { standalone: true, title: 'London 2100 · ' + t }); msg.hidden = true; addPicker(); }
   catch (e){ msg.hidden = false; msg.textContent = (lang === 'zh' ? '无法打开场景：' : 'Could not open the scene: ') + e.message; console.error(e); }
 }
-const url = q.get('scene') || 'data/station-p2.scene.json';
+// scene list (data/scenes.json) as a menu in the viewer's bar
+let scenes = [];
+function addPicker(){
+  const bar = document.querySelector('#tsXR .bar'); if (!bar || !scenes.length || bar.querySelector('select')) return;
+  const sel = document.createElement('select'); sel.style.cssText = 'font:inherit;color:#f5f5f7;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 10px';
+  for (const s of scenes){ const o = document.createElement('option'); o.value = s.file; o.textContent = s.title[lang] || s.title.zh; o.selected = s.file === url; sel.append(o); }
+  sel.onchange = () => { const u = new URL(location.href); u.searchParams.set('scene', sel.value); location.href = u.href; };
+  bar.querySelector('h3').after(sel);
+}
+const url = q.get('scene') || 'data/hydro-lab-70km.scene.json';
+fetch('data/scenes.json').then(r => r.json()).then(j => { scenes = j.scenes || []; addPicker(); }).catch(() => {});
 fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(s => show(s, (s.source || url).split(' · ')[1] || url))
+  .then(s => show(s, url.split('/').pop()))
   .catch(e => { msg.textContent = (lang === 'zh' ? '无法载入 ' : 'Could not load ') + url + ' — ' + e.message; });
 // drag a scene file exported from Tensor Studio onto the page
 addEventListener('dragover', e => { e.preventDefault(); drop.style.display = 'grid'; });
