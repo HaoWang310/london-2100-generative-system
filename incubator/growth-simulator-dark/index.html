@@ -108,7 +108,7 @@ select { background:#1a1a1a; color:var(--ink); border:1px solid #363636; border-
 var SIZES = {"data/DMSans.ttf": 238984, "data/VEIN.z": 5031629, "data/SPUR.z": 44268, "data/layer-absorbed.png": 102199, "data/ZONE.z": 17993, "data/layer-roads.png": 777240, "data/final-idx.z": 4250905, "data/layer-aonb.png": 88691, "data/DRAIL.z": 9479870, "data/CAT.z": 24547, "data/BITS.z": 1160918, "data/layer-belt.png": 237219, "data/layer-towns.png": 347006, "data/FIELD.z": 5649243, "data/final-cls.z": 4175, "data/layer-water.png": 460446};
 </script>
 <script>/* EN | 中文: the page's words in Chinese. English is the key; anything missing stays English. */
-var I18N = { zh: { "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
+var I18N = { zh: { "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation.": "2025 年，起点：发布版本生长之前的状态。点击播放观看它生长到 2100 年，或调整设置后点击运行变体。", "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
   "Growth variations": "城市生长变体",
   "Loop City, 2025 to 2100. The final outcome, and what the same rules give when one of them is turned.": "环城，2025 至 2100 年。最终结果，以及调节其中一条规则时，同一套规则会给出什么。",
   "Final outcome": "最终结果", "Variation": "变体", "Final": "最终", "Run variation": "运行变体", "Reset to final": "恢复最终结果",
@@ -634,7 +634,7 @@ var GV = (function () {
     };
   }
   function doneLoad() { PROG.on = null; PROG.got = PROG.total = 0; $("prog").firstChild.style.width = "0"; }
-  var FINAL = null, VAR = null, mode = "final", yi = 75, playing = false, speed = 7, engineReady = null, layersImg = {};
+  var FINAL = null, VAR = null, mode = "final", yi = 0, playing = false, speed = 7, engineReady = null, layersImg = {};
   var P = Object.assign({}, GV.DEFAULTS), ranWith = null;
 
   function Replay(ev) {
@@ -1074,9 +1074,9 @@ var GV = (function () {
       ["BITS", "ZONE", "CAT", "SPUR", "FIELD", "VEIN", "DRAIL"].forEach(function (n) { fetchBin(D.arr[n], SIZES[D.arr[n]]).catch(function () {}); });
     }, 1500);
     applyLang(); fit(); resize();
-    var y = hashArg("year"); setYear(y ? +y - 2025 : 75);
+    var y = hashArg("year"); setYear(y ? +y - 2025 : 0);
     var zz = hashArg("zoom"); if (zz) { $("zoom").value = zz; zoomTo(zz); }
-    status(T("The final outcome: the release run, cell for cell. Turn a setting and press Run variation."));
+    status(T(y ? "The final outcome: the release run, cell for cell. Turn a setting and press Run variation." : "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation."));
     var lay = hashArg("layers"); if (lay) { lay.split(",").forEach(function (k) { if (LAY[k]) LAY[k].on = true; }); buildLayers(); overlays(true); }
     var test = hashArg("test");
     if (test !== null) {
