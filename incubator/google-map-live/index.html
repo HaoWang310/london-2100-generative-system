@@ -288,7 +288,7 @@
     /* The city sidebar is only the selection step; all simulation controls live
        in the independent site view. Source inputs stay mounted for backward
        compatibility with the existing simulation and 3D building pipeline. */
-    #localFloodSimItem > :not(#localFloodSelectHeader):not(#localFloodSelectActions):not(#parcelGeneratorEntry):not(#localFloodFocusEntry):not(#localFloodStatus){
+    #localFloodSimItem > :not(#localFloodSelectHeader):not(#localFloodSelectActions):not(#parcelGeneratorEntry):not(#tensorStudioEntry):not(#localFloodFocusEntry):not(#localFloodStatus){
       display:none!important;
     }
     #localFloodSelectActions{padding:3px 9px 10px}
@@ -1324,6 +1324,10 @@
           </div>
           <div class="simButtonRow" id="parcelGeneratorEntry" style="padding-top:0">
             <button id="parcelGeneratorOpen" class="secondary" style="width:100%;flex:1" type="button" disabled>Road &amp; Parcel Generator</button>
+          </div>
+          <div class="simButtonRow" id="tensorStudioEntry" style="padding-top:0">
+            <button id="tensorStudioOpen" class="secondary" style="width:100%;flex:1" type="button" disabled
+              title="Grow streets on the confirmed site with Tensor Studio: contour, wind and attractors">Tensor Studio · Street growth</button>
           </div>
           <div class="simParamRow">
             <span>Rainfall intensity</span>
@@ -3860,6 +3864,20 @@
             getBasemapTheme:()=>basemapTheme,
             setBasemapTheme,
             getContextBuildingColour:()=>cityBuildingColour(),
+            onOpenTensorStudio:async ({polygon})=>{
+              try {
+                const module=await import('./scripts/tensor_studio_site.js?v=3.34.5-english');
+                await module.openTensorStudio({
+                  map:osmMap,polygon,assetUrl,demBounds:DRAINAGE_3857,
+                  demWidth:DRAINAGE_3857.baseWidth50m,
+                  demHeight:DRAINAGE_3857.baseHeight50m,
+                  say
+                });
+              } catch(error) {
+                console.error('Tensor Studio failed to load',error);
+                say('Map is running, but Tensor Studio failed to load: '+(error.message||error),true);
+              }
+            },
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
