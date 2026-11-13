@@ -13,18 +13,19 @@
 // Hands: pinch = grab, two pinches = scale.
 
 const T = {
-  zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
+  zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['握持键 / 捏合：抓取模型', '双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X 现有街道 · Y 放回面前'] },
-  en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
+    hud: ['握持键 / 捏合：抓取模型', '双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前'] },
+  en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Grip / pinch: grab the model', 'Both hands: scale and turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X existing streets · Y bring it back'] }
+    hud: ['Grip / pinch: grab the model', 'Both hands: scale and turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back'] }
 };
 
 // ---------------------------------------------------------------- geometry (pure, testable in node)
 const FLOODC = [null, [156, 221, 234], [247, 211, 89], [242, 157, 56], [215, 55, 49]], FLOODA = [0, 0.22, 0.42, 0.62, 0.78];
 const LAND = [0.925, 0.918, 0.898], OFF = [0.30, 0.34, 0.37], PLINTH = [0.16, 0.16, 0.17];
-const ROADC = { 1: [0.10, 0.10, 0.11], 2: [0.36, 0.36, 0.39], fixed: [0.62, 0.62, 0.64], bridge: [0.04, 0.52, 1.0] };
+const ROADC = { 1: [0.10, 0.10, 0.11], 2: [0.36, 0.36, 0.39], fixed: [0.62, 0.62, 0.64], bridge: [0.04, 0.52, 1.0], outline: [0.08, 0.08, 0.09] };
+const DRAINC = [0.04, 0.45, 0.95], DRAINA = [0, 0.16, 0.42, 0.72, 0.92];   // ≥ 1 · 10 · 100 · 1000 km² upstream
 export const STRIDE = 12;   // pos 3 · side 2 · normal 3 · colour 3 · kind 1
 
 /** Heights on the site grid, bilinear, in metres above the lowest land (0 where there is no terrain). */
@@ -41,13 +42,14 @@ export function heightSampler(S){
 
 /** The terrain with its plinth. Model space: x east, y up (metres above the lowest land), z south; centred on the grid. */
 export function buildTerrain(S, opt = {}){
-  const { nx, ny, cell } = S, H = heightSampler(S), step = Math.max(1, Math.ceil(Math.max(nx, ny) / (opt.res || 220)));
+  const { nx, ny, cell } = S, H = heightSampler(S), step = Math.max(1, Math.ceil(Math.max(nx, ny) / (opt.res || 600)));
   const cx = (nx - 1) * cell / 2, cy = (ny - 1) * cell / 2, gx = Math.floor((nx - 1) / step) + 1, gy = Math.floor((ny - 1) / step) + 1;
-  const exag = opt.exag || 3, depth = opt.depth || 60, flood = opt.flood && S.flood;
+  const exag = opt.exag || 3, depth = opt.depth || Math.max(40, Math.max(nx, ny) * cell * 0.012), flood = opt.flood && S.flood, drain = opt.drain && S.drain;
   const v = [], idx = [];
   const colAt = (c, r) => { const i = r * nx + c, land = !S.mask || S.mask[i]; let col = land ? LAND.slice() : OFF.slice();
-    if (land && S.Z && H.hi > H.lo){ const t = (S.Z[i] - H.lo) / (H.hi - H.lo); for (let k = 0; k < 3; k++) col[k] *= 0.9 + 0.1 * t; }
+    if (land && S.Z && H.hi > H.lo){ const t = (S.Z[i] - H.lo) / (H.hi - H.lo); for (let k = 0; k < 3; k++) col[k] *= 0.84 + 0.16 * t; }
     if (flood){ const f = S.flood[i]; if (f){ const a = FLOODA[f] * (land ? 1 : 0.5); for (let k = 0; k < 3; k++) col[k] = col[k] * (1 - a) + FLOODC[f][k] / 255 * a; } }
+    if (drain){ const d = S.drain[i]; if (d){ const a = DRAINA[d]; for (let k = 0; k < 3; k++) col[k] = col[k] * (1 - a) + DRAINC[k] * a; } }
     return col; };
   for (let j = 0; j < gy; j++) for (let k = 0; k < gx; k++){
     const c = Math.min(nx - 1, k * step), r = Math.min(ny - 1, j * step), x = c * cell, y = r * cell, h = H.at(x, y);
@@ -73,7 +75,7 @@ export function buildTerrain(S, opt = {}){
 /** Streets as flat ribbons draped on the terrain. lines: [{ pts:[[x,y]…], w:[m…] | number, kind:1|2|'fixed'|'bridge' }] */
 export function buildRibbons(S, lines, terrain){
   const H = heightSampler(S), v = [], idx = [], { cx, cy } = terrain;
-  for (const l of lines){ const P = l.pts; if (!P || P.length < 2) continue; const col = ROADC[l.kind] || ROADC[2], kind = l.kind === 'fixed' ? 0.6 : l.kind === 'bridge' ? 1.4 : 1, o = v.length / STRIDE;
+  for (const l of lines){ const P = l.pts; if (!P || P.length < 2) continue; const col = ROADC[l.kind] || ROADC[2], kind = l.kind === 'fixed' ? 0.6 : l.kind === 'bridge' || l.kind === 'outline' ? 1.4 : 1, o = v.length / STRIDE;
     for (let i = 0; i < P.length; i++){ const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)]; let tx = b[0] - a[0], ty = b[1] - a[1]; const L = Math.hypot(tx, ty) || 1; tx /= L; ty /= L;
       const w = (Array.isArray(l.w) ? l.w[i] : l.w) || 8, nx_ = -ty * w / 2, ny_ = tx * w / 2, p = P[i], h = H.at(p[0], p[1]);
       // side vector in model x / z (z is south, so the plan's y flips)
@@ -85,13 +87,14 @@ export function buildRibbons(S, lines, terrain){
 
 /** What the engine has now, as plain data. */
 export function snapshot(api){
-  const D = api.D, S = { nx: api.nx, ny: api.ny, cell: api.cell, Z: api.ENV ? api.ENV.Z : null, mask: D.landMask || null, flood: api.FR || null };
+  const D = api.D, S = { nx: api.nx, ny: api.ny, cell: api.cell, Z: api.ENV ? api.ENV.Z : null, mask: D.landMask || null, flood: api.FR || null, drain: api.DR || null };
   const lines = [];
   try { for (const st of api.streets()) lines.push({ pts: st.pts, w: st.w, kind: st.level === 1 ? 1 : 2 }); }
   catch (e){ for (const l of api.lines()) if (!l.dead && l.level > 0) lines.push({ pts: l.pts, w: l.level === 1 ? 14 : 8, kind: l.level === 1 ? 1 : 2 }); }
   const fixed = (D.fixed?.streets || []).map(pts => ({ pts, w: 6, kind: 'fixed' }));
   const bridges = (D.fixed?.bridges || []).map(pts => ({ pts, w: 10, kind: 'bridge' }));
-  return { S, lines, fixed, bridges };
+  const outlines = (api.outlines || []).map(o => ({ pts: o.pts, w: o.w || 200, kind: 'outline' }));
+  return { S, lines, fixed, bridges: bridges.concat(outlines), hasFixed: fixed.length > 0, hasOutline: outlines.length > 0 };
 }
 
 // ---------------------------------------------------------------- small matrix kit (column-major)
@@ -142,6 +145,11 @@ let OPEN = null;
 export function open(api, lang = 'zh', opt = {}){
   if (OPEN) return OPEN;
   const L = T[lang] || T.zh;
+  const VW = api.view || {};
+  const st = { flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
+  const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
+  let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
+  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : fixedLabel;
   const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#111113;color:#f5f5f7;font:13px/1.4 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif}
 #tsXR canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #tsXR .bar{position:absolute;left:16px;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
@@ -155,7 +163,7 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR input[type=range]{width:90px;accent-color:#f5f5f7}`;
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
-<button data-k="flood">${L.flood}</button><button data-k="fixed" class="on">${L.existing}</button><label>${L.exag} <input type="range" min="1" max="8" step="0.5" value="3"><b>3</b></label>
+<button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
 <span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${L.close} ✕</button>`}</div><div class="note"></div>`;
   document.body.append(root);
   const cv = root.querySelector('canvas'), note = root.querySelector('.note');
@@ -164,19 +172,19 @@ export function open(api, lang = 'zh', opt = {}){
   const prog = program(gl, VS, FS), tex = program(gl, VT, FT);
 
   // state
-  const st = { flood: !!api.FR && api.floodShown?.() !== false, fixed: true, exag: 3, walk: false, sig: '', terrain: null };
-  let snap = snapshot(api), terrain = buildTerrain(snap.S, { exag: st.exag, flood: st.flood });
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
-  const status = () => { const n = snap.lines.length; note.textContent = L.streets(n) + ' · ' + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
+  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
-  const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, { exag: st.exag, flood: st.flood }); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
+  const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
   let lastCheck = 0; const follow = t => { if (t - lastCheck < 600) return; lastCheck = t; const s = sigOf(); if (s !== st.sig){ st.sig = s; refresh(false); } };
 
   // buttons
   const btn = k => root.querySelector(`button[data-k="${k}"]`);
-  const sync = () => { btn('flood').classList.toggle('on', st.flood); btn('fixed').classList.toggle('on', st.fixed); btn('flood').hidden = !api.FR; };
+  const sync = () => { btn('flood').classList.toggle('on', st.flood); btn('drain').classList.toggle('on', st.drain); btn('fixed').classList.toggle('on', st.fixed);
+    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; };
   btn('flood').onclick = () => { st.flood = !st.flood; refresh(true); sync(); };
+  btn('drain').onclick = () => { st.drain = !st.drain; refresh(true); sync(); };
   btn('fixed').onclick = () => { st.fixed = !st.fixed; sync(); };
   const rng = root.querySelector('input[type=range]'); rng.oninput = () => { st.exag = +rng.value; rng.nextElementSibling.textContent = rng.value; refresh(true); };
   if (!(terrain.hi > 0.5)) rng.parentElement.hidden = true;
@@ -221,8 +229,8 @@ export function open(api, lang = 'zh', opt = {}){
 
   function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 400; const g = c.getContext('2d');
     g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 400, r) : g.rect(0, 0, 1024, 400); g.fill();
-    g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText('Tensor Studio · ' + L.streets(snap.lines.length), 44, 76);
-    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(s, 44, 140 + i * 52));
+    g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
+    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(s.replace('{x}', xLabel), 44, 140 + i * 52));
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
   function quad(){ const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
@@ -235,15 +243,16 @@ export function open(api, lang = 'zh', opt = {}){
     try { session = await navigator.xr.requestSession(mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] }); }
     catch (e){ try { session = await navigator.xr.requestSession(mode, { optionalFeatures: ['local-floor', 'hand-tracking'] }); } catch (e2){ note.textContent = String(e2.message || e2); return; } }
     xrSession = session; await gl.makeXRCompatible();
-    session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true }), depthNear: 0.02, depthFar: 8000 });
+    session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true }), depthNear: 0.02, depthFar: 100 });
+    const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
     const tableScale = 0.9 / terrain.size;   // 90 cm across on the table
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = snap.lines.length; const hq = quad();
-    let head = [0, 1.6, 0], headF = [0, 0, -1];
+    let head = [0, 1.6, 0], headF = [0, 0, -1], hold = 0, Hs = null, Hg = null;
     const placeTable = () => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
-      M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; st.walk = false; };
-    const placeWalk = () => { const zc = heightSampler(snap.S).at(terrain.cx, terrain.cy); M.s = 1; M.pos = [head[0], -zc, head[2]]; st.walk = true; };
+      M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; if (st.walk) farFor(false); st.walk = false; };
+    const placeWalk = () => { const zc = heightSampler(snap.S).at(terrain.cx, terrain.cy); M.s = 1; M.pos = [head[0], -zc, head[2]]; st.walk = true; farFor(true); };
     const sources = () => [...grabs.keys()];
     const rebase = (frame) => { base = null; const ss = sources(); if (!ss.length) return; const P = ss.map(s => poseOf(frame, s)).filter(Boolean); if (P.length !== ss.length) return;
       if (P.length === 1) base = { one: true, h: P[0].p, hy: P[0].yaw, pos: M.pos.slice(), yaw: M.yaw, s: M.s };
@@ -262,9 +271,13 @@ export function open(api, lang = 'zh', opt = {}){
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
           else { if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], 0); void r; M.yaw += a; } if (dz(ay)){ const k = Math.exp(-dz(ay) * dt * 1.2); M.s = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k)); } } }
-        if (key === 'left'){ if (hit(4)){ st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(); grabs.clear(); base = null; }
-          if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = 9 * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
+        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(); grabs.clear(); base = null; }
+          const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
+          if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
+      // walk: keep the ground under your feet
+      if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
+        if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
       // grabbing
       if (base === 'pending') rebase(frame);
       if (base && base !== 'pending'){ const P = sources().map(s => poseOf(frame, s)).filter(Boolean);
