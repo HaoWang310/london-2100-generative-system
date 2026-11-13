@@ -59,6 +59,27 @@ import {
   assert.equal(g.links.length,1,'a road split by a tile edge must become one link');
 }
 
+// ---- crossing streets without a shared vertex become a junction ------------
+{
+  const cross=buildRoadGraph([
+    {coords:[[0,50],[100,50]],cls:'primary',oneway:0},
+    {coords:[[50,0],[50,100]],cls:'secondary',oneway:0},
+    {coords:[[20,48.4],[20,0]],cls:'minor',oneway:0}       // stops 1.6 m short of the primary
+  ],{metresPerUnit:1,origin:[0,0]});
+  const j=cross.nodes.find(n=>Math.hypot(n.x-50,n.y-50)<0.5);
+  assert.ok(j&&j.links.length===4,'crossing roads must meet in a 4-way junction');
+  const t=cross.nodes.find(n=>Math.hypot(n.x-20,n.y-50)<0.5);
+  assert.ok(t&&t.links.length===3,'a road ending just short of another must form a T-junction');
+  const sim=createTrafficSim({seed:2});
+  sim.setGraph(cross);
+  assert.equal(sim.signals.length,1,'primary x secondary junction gets signals');
+  const bridge=buildRoadGraph([
+    {coords:[[0,50],[100,50]],cls:'primary',oneway:0,bridge:true},
+    {coords:[[50,0],[50,100]],cls:'secondary',oneway:0}
+  ],{metresPerUnit:1,origin:[0,0]});
+  assert.ok(!bridge.nodes.some(n=>Math.hypot(n.x-50,n.y-50)<0.5),'a bridge must not join the road below');
+}
+
 // ---- synthetic grid ---------------------------------------------------------
 const SP=110,N=6;
 const lines=[];
