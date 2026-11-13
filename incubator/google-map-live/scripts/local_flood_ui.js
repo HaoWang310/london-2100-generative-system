@@ -1,10 +1,10 @@
-import {sameHydroGrid} from './hydro_tensor_grid.js?v=3.34.0-english';
-import {createLocalFloodSimulator} from './local_flood_sim.js?v=3.34.0-english';
-import {createHydroTensorRenderer} from './hydro_tensor_field.js?v=3.34.0-english';
-import {smoothWetDepths} from './flood_water_visual.js?v=3.34.0-english';
-import {sitePlanStorageKey,siteElementId,normalizeSiteDecisions,siteDecisionLabel} from './site_element_decisions.js?v=3.34.0-english';
-import {createParcelRoadUI} from './parcel_road_ui.js?v=3.34.0-english';
-import {HYDRO_TENSOR_RIBBON_GRADIENT} from './hydro_tensor_visual.js?v=3.34.0-english';
+import {sameHydroGrid} from './hydro_tensor_grid.js?v=3.34.1-english';
+import {createLocalFloodSimulator} from './local_flood_sim.js?v=3.34.1-english';
+import {createHydroTensorRenderer} from './hydro_tensor_field.js?v=3.34.1-english';
+import {smoothWetDepths} from './flood_water_visual.js?v=3.34.1-english';
+import {sitePlanStorageKey,siteElementId,normalizeSiteDecisions,siteDecisionLabel} from './site_element_decisions.js?v=3.34.1-english';
+import {createParcelRoadUI} from './parcel_road_ui.js?v=3.34.1-english';
+import {HYDRO_TENSOR_RIBBON_GRADIENT} from './hydro_tensor_visual.js?v=3.34.1-english';
 import * as polygonClippingModule from 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm';
 const polygonClipping=polygonClippingModule.default||polygonClippingModule;
 
@@ -876,6 +876,9 @@ export function createLocalFloodUI({
   setCityBuildingFloodSelection,setCityIsolateMode,
   getFocusAnalysisSettings,getFocusReferenceTile,
   getBasemapTheme=()=> 'planning',setBasemapTheme=()=>{},
+  // Colour of the context buildings around the site: the same colour as the
+  // city's 3D buildings for the current colour theme / lighting.
+  getContextBuildingColour=()=>'#ffffff',
   onOpenParcelGenerator
 }){
   let drawing=false;
@@ -4346,12 +4349,26 @@ export function createLocalFloodUI({
   }
 
   function buildingColourExpression(){
+    let context='#ffffff';
+    try{context=getContextBuildingColour()||context;}catch(error){}
     return [
       'case',
       ['boolean',['get','impacted'],false],'#ff3b30',
       ['boolean',['get','selected'],false],'#ff9f1a',
-      '#c6ced5'
+      context
     ];
+  }
+
+  /* Re-apply building colours after a colour theme or lighting change. */
+  function refreshBuildingColours(){
+    for(const [id,prop] of [[BUILDING_SCENE_FILL,'fill-color'],[BUILDING_SCENE_3D,'fill-extrusion-color']]){
+      if(map.getLayer(id))map.setPaintProperty(id,prop,buildingColourExpression());
+    }
+    // In the isolated site viewer only refresh when buildings show their
+    // normal colours (collision view); other analysis modes keep their own.
+    if(isolatedSelection&&isolateViewer&&hydroDisplay.collision&&!hydroDisplay.flow&&!hydroRoadActive){
+      updatePlanBuildingColours();
+    }
   }
 
   function ensureBuildingSceneLayers(){
@@ -5664,7 +5681,9 @@ export function createLocalFloodUI({
       // Only change local background/roads. Keep current simulation state,
       // uploaded textures, site camera and all tensor Worker jobs untouched.
       if(isolatedSelection&&isolateViewer)updateHydroLayerVisibility();
+      refreshBuildingColours();
     },
+    refreshBuildingColours,
     setFocusView(is3D){
       if(!isolatedSelection||!isolateViewer)return false;
       isolateViewer.easeTo(is3D?{
