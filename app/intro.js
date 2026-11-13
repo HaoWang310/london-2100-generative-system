@@ -15,7 +15,7 @@ const MIXKIT = id => ({
 
 export const INTRO_PANELS = [
   { key: 'london', ...MIXKIT(4265) },      // Buildings in the City of London (time-lapse zoom out)
-  { key: 'housing', ...MIXKIT(4009) },     // Houses of an English village
+  { key: 'housing', ...MIXKIT(4010) },     // Buildings under construction, aerial view (London)
   { key: 'agriculture', ...MIXKIT(824) }   // Aerial view of a greenhouse field
 ];
 
