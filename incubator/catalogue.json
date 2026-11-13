@@ -6,15 +6,27 @@
       "href": "#workspace",
       "cover": "assets/catalogue/workspace.webp",
       "status": "ready",
-      "title": { "zh": "多尺度城市生成系统", "en": "Multi-scale generative system" },
+      "title": {
+        "zh": "多尺度城市生成系统",
+        "en": "Multi-scale generative system"
+      },
       "desc": {
         "zh": "伦敦全域 → 区域划分 → Wool 区域路网 → Tensor 局部道路 → 路网整合与导出。",
         "en": "Greater London → regions → Wool regional network → Tensor local streets → integration & export."
       },
       "tags": [
-        { "zh": "区域划分", "en": "Regions" },
-        { "zh": "Wool", "en": "Wool" },
-        { "zh": "张量场", "en": "Tensor field" }
+        {
+          "zh": "区域划分",
+          "en": "Regions"
+        },
+        {
+          "zh": "Wool",
+          "en": "Wool"
+        },
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        }
       ],
       "owner": "HaoWang310"
     },
@@ -23,17 +35,36 @@
       "href": "incubator/google-map-live/",
       "cover": "assets/catalogue/london-map.webp",
       "status": "incubating",
-      "title": { "zh": "伦敦地图 · 水文实验室", "en": "London map · Hydro Lab" },
+      "title": {
+        "zh": "伦敦地图 · 水文实验室",
+        "en": "London map · Hydro Lab"
+      },
       "desc": {
         "zh": "EA LiDAR 地形、洪涝风险、汇水面积与排水网络，局部洪水模拟、水文张量场与地块路网。",
         "en": "EA LiDAR terrain, flood risk, contributing area and drainage network; local flood simulation, hydro tensor field and parcel roads."
       },
       "tags": [
-        { "zh": "地形", "en": "Terrain" },
-        { "zh": "洪涝", "en": "Flood" },
-        { "zh": "张量场", "en": "Tensor field" }
+        {
+          "zh": "地形",
+          "en": "Terrain"
+        },
+        {
+          "zh": "洪涝",
+          "en": "Flood"
+        },
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        }
       ],
-      "owner": "HaoWang310"
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "londonMap.uiLanguage",
+        "langButton": "#uiLanguageSwitch button[data-language=\"{lang}\"]",
+        "hide": [
+          "#uiLanguageSwitch"
+        ]
+      }
     }
   ]
 }

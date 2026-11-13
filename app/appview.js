@@ -3,7 +3,46 @@
 // into it on close. The app itself is untouched — it runs exactly as it does
 // at its own URL, just framed.
 
-import { pick, onLangChange } from '../shared/i18n/index.js';
+import { pick, getLang, onLangChange } from '../shared/i18n/index.js';
+
+// Language bridge for framed apps. Configured per app in catalogue.json:
+//   "embed": {
+//     "langStorageKey": "key the app reads its language from",
+//     "langButton": "CSS selector of the app's own zh/en button, with {lang}",
+//     "hide": ["selectors hidden while framed, e.g. the app's own switch"]
+//   }
+// Every framed app is also sent postMessage({ type: 'l2100:lang', lang }).
+// The app's own files are never modified; standalone it keeps its own switch.
+function prepareLanguage(item) {
+  const key = item.embed?.langStorageKey;
+  if (key) try { localStorage.setItem(key, getLang()); } catch { /* private mode */ }
+}
+
+function embed(frame, item) {
+  let doc;
+  try { doc = frame.contentDocument; } catch { return; }
+  if (!doc?.head || doc.getElementById('l2100-embed')) return;
+  const hide = item.embed?.hide || [];
+  if (hide.length) {
+    const style = doc.createElement('style');
+    style.id = 'l2100-embed';
+    style.textContent = `${hide.join(',')} { display: none !important; }`;
+    doc.head.append(style);
+  }
+}
+
+function pushLanguage(frame, item) {
+  if (!frame) return;
+  const lang = getLang();
+  try { frame.contentWindow?.postMessage({ type: 'l2100:lang', lang }, location.origin); } catch { /* ignore */ }
+  const sel = item?.embed?.langButton;
+  if (!sel) return;
+  try {
+    const doc = frame.contentDocument;
+    if (doc?.documentElement?.dataset.uiLanguage === lang) return;
+    doc?.querySelector(sel.replace('{lang}', lang))?.click();
+  } catch { /* not ready / cross-origin */ }
+}
 
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const EASE = 'cubic-bezier(.16,1,.3,1)';
@@ -27,7 +66,11 @@ export function createAppView(root) {
   let anim = null;
   let generation = 0;       // bumps on every open/close, so a late close never hides a newer open
 
-  onLangChange(() => { if (current) title.textContent = pick(current.title); });
+  onLangChange(() => {
+    if (!current) return;
+    title.textContent = pick(current.title);
+    pushLanguage(iframe, current);
+  });
 
   function animate(from, to, duration) {
     anim?.cancel();
@@ -51,6 +94,7 @@ export function createAppView(root) {
       iframe = document.createElement('iframe');
       iframe.title = pick(item.title);
       iframe.allow = 'fullscreen; clipboard-write; geolocation';
+      prepareLanguage(item);   // the app starts in the shell's language
       iframe.src = item.href;
       loading.classList.remove('done');
       // Reveal as soon as the app starts rendering. Waiting for the frame's
@@ -62,10 +106,12 @@ export function createAppView(root) {
       const reveal = () => {
         if (revealed || frame !== iframe) return;
         revealed = true;
+        embed(frame, item);
+        pushLanguage(frame, item);
         loading.classList.add('done');
         frame.classList.add('is-loaded');
       };
-      frame.addEventListener('load', reveal, { once: true });
+      frame.addEventListener('load', () => { reveal(); embed(frame, item); pushLanguage(frame, item); }, { once: true });
       const started = performance.now();
       const poll = () => {
         if (revealed || frame !== iframe) return;
