@@ -7,11 +7,13 @@
   <meta name="description" content="London 2100 — Multi-Scale Generative Urban System">
   <link rel="stylesheet" href="./shared/ui/theme.css">
   <link rel="stylesheet" href="./app/app.css">
+  <link rel="stylesheet" href="./app/intro.css">
+  <link rel="preconnect" href="https://assets.mixkit.co">
 </head>
 <body>
   <div class="app" id="app">
     <header class="topbar">
-      <div class="brand">
+      <div class="brand" id="brandHome" role="button" tabindex="0" data-i18n-title="intro.reopen">
         <span class="brand-mark" aria-hidden="true"></span>
         <span class="brand-name">London 2100</span>
         <span class="brand-sub" data-i18n="app.subtitle"></span>
@@ -41,6 +43,7 @@
 
     <main class="stage">
       <div id="map" class="map" aria-label="Map"></div>
+      <div class="map-loading" id="mapLoading"><span></span><em data-i18n="map.loading"></em></div>
       <div class="map-hint" id="mapHint" hidden></div>
       <div class="map-badge" id="mapBadge" hidden></div>
     </main>
@@ -79,6 +82,24 @@
   </div>
 
   <div class="popover" id="versionMenu" hidden></div>
+
+  <section class="intro" id="intro" aria-label="London 2100" hidden>
+    <div class="intro-top">
+      <span class="brand-mark" aria-hidden="true"></span><b>London 2100</b><span data-i18n="app.subtitle"></span>
+      <button class="btn ghost lang" id="introLang"></button>
+    </div>
+    <div class="intro-panels"></div>
+    <div class="intro-bar">
+      <div>
+        <h1 data-i18n="intro.title"></h1>
+        <p data-i18n="intro.tagline"></p>
+      </div>
+      <span class="sp"></span>
+      <span class="intro-credit"><span data-i18n="intro.credit"></span> <a href="https://mixkit.co" target="_blank" rel="noopener">Mixkit</a></span>
+      <span class="hint" data-i18n="intro.hint"></span>
+      <button class="btn primary intro-enter"><b data-i18n="intro.enter"></b> <span>→</span></button>
+    </div>
+  </section>
 
   <script type="module" src="./app/main.js"></script>
 </body>

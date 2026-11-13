@@ -10,10 +10,11 @@ export const PROVIDERS = {
     id: 'openfreemap',
     label: 'OpenStreetMap / OpenFreeMap',
     attribution: '© OpenStreetMap contributors · OpenFreeMap',
-    style(theme = 'dark') {
-      return theme === 'light'
-        ? 'https://tiles.openfreemap.org/styles/positron'
-        : 'https://tiles.openfreemap.org/styles/dark';
+    // 'liberty' is the style google-map-live uses in production. The dark
+    // monochrome look is applied after load by restyleDark() in palette.js,
+    // so we don't depend on a separate dark style existing upstream.
+    style() {
+      return 'https://tiles.openfreemap.org/styles/liberty';
     }
   },
   google: {

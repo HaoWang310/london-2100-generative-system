@@ -89,5 +89,18 @@ export const en = {
   'preview.input': 'Input: sample data',
   'preview.run': 'Run',
   'preview.valid': 'Output is a valid ScaleBundle',
-  'preview.invalid': 'Output is invalid: {msg}'
+  'preview.invalid': 'Output is invalid: {msg}',
+  "intro.london": "London 2100",
+  "intro.london.sub": "London towards 2100: climate, water and urban growth",
+  "intro.housing": "Housing Crisis",
+  "intro.housing.sub": "More homes on limited land",
+  "intro.agriculture": "Feeding Challenge",
+  "intro.agriculture.sub": "The city itself as a productive landscape",
+  "intro.title": "London 2100 · Multi-Scale Generative Urban System",
+  "intro.tagline": "From Greater London to regions, sites and buildings — generating a water-informed productive city",
+  "intro.credit": "Footage:",
+  "intro.hint": "Press Enter to begin",
+  "intro.enter": "Enter",
+  "intro.reopen": "Back to opening screen",
+  "map.loading": "Loading basemap…"
 };
