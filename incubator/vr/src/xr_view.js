@@ -158,7 +158,7 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR button{font:inherit;border:1px solid rgba(255,255,255,.16);background:rgba(44,44,46,.82);color:#f5f5f7;border-radius:999px;padding:7px 14px;cursor:pointer;backdrop-filter:blur(18px)}
 #tsXR button:hover{background:rgba(72,72,74,.9)}#tsXR button.on{background:#f5f5f7;color:#121214;border-color:#f5f5f7}
 #tsXR button.go{background:#0a84ff;border-color:#0a84ff;font-weight:600}#tsXR button.go:hover{background:#409cff}
-#tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;right:16px;color:rgba(235,235,245,.6);font-size:12px;pointer-events:none}
+#tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;max-width:calc(100% - 32px);color:rgba(235,235,245,.85);font-size:12px;pointer-events:none;background:rgba(28,28,30,.82);padding:6px 12px;border-radius:999px;backdrop-filter:blur(12px)}
 #tsXR label{display:flex;gap:6px;align-items:center;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px}
 #tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}`;
   const root = document.createElement('div'); root.id = 'tsXR';
@@ -173,10 +173,14 @@ export function open(api, lang = 'zh', opt = {}){
 
   // state
   const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
-  const streamInfo = () => { let n = 0, c = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; } return { tiles: n, count: c }; };
+  let failN = 0, lastErr = '';
+  const streamInfo = () => { let n = 0, c = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; } return { tiles: n, count: c, loading: loadingN, failed: failN, err: lastErr }; };
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
-  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? (lang === 'zh' ? `移动加载 · ${streamInfo().tiles} 块 · ${streamInfo().count} 栋建筑 · ` : `streaming · ${streamInfo().tiles} tiles · ${streamInfo().count} buildings · `) : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
+  const streamLine = () => { const i = streamInfo(); return lang === 'zh'
+      ? `移动加载 · 已加载 ${i.tiles} 块 · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '')
+      : `streaming · ${i.tiles} tiles · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : ''); };
+  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? streamLine() + ' · ' : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
   const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
@@ -216,13 +220,17 @@ export function open(api, lang = 'zh', opt = {}){
     const want = api.stream.near(fx, fy, r), keep = new Set(api.stream.near(fx, fy, r * 1.35 + 200));
     for (const [k, T] of tiles) if (!keep.has(k)){ freeTile(T); tiles.delete(k); }
     for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || tiles.size >= 40) break;
-      const T = { ready: false, count: 0 }; tiles.set(k, T); loadingN++;
+      const T = { ready: false, count: 0 }; tiles.set(k, T); loadingN++; status();
       api.stream.load(k).then(d => { loadingN--; if (tiles.get(k) !== T) return;
         T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status(); })
-        .catch(e => { loadingN--; console.warn(e); note.textContent = (lang === 'zh' ? 'OSM 瓦片读取失败：' : 'OSM tile failed: ') + (e.message || e);
+        .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
           setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
   }
+  const baseMesh = api.stream ? mesh(gl, prog, (() => { const E = 80000, c = [0.90, 0.89, 0.86];
+    return { v: new Float32Array([-E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, -E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0]), i: new Uint32Array([0, 1, 2, 1, 3, 2]) }; })()) : null;
   function drawTiles(P, V, M){
+    gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
+    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(4, 8); gl.bindVertexArray(baseMesh.vao); gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
     gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, clip);
     gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
     for (const T of tiles.values()) if (T.ready){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
@@ -249,7 +257,7 @@ export function open(api, lang = 'zh', opt = {}){
     gl.bindVertexArray(null); }
 
   // ---- page preview: orbit camera
-  const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 0.9 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
+  const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 1.25 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
   cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam } }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener('pointermove', e => { if (!drag) return; const dx = (e.clientX - drag.x) / cv.clientWidth, dy = (e.clientY - drag.y) / cv.clientHeight;
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
@@ -274,10 +282,11 @@ export function open(api, lang = 'zh', opt = {}){
       if (!ok) continue; const b = document.createElement('button'); b.className = 'go'; b.textContent = label; b.onclick = () => startXR(mode); xrBox.append(b); }
   })();
 
-  function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 400; const g = c.getContext('2d');
-    g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 400, r) : g.rect(0, 0, 1024, 400); g.fill();
+  function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 420; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 420, r) : g.rect(0, 0, 1024, 420); g.fill();
     g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
     g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(s.replace('{x}', xLabel), 44, 140 + i * 52));
+    if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 392 - 14); }
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
   function quad(){ const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
@@ -295,7 +304,7 @@ export function open(api, lang = 'zh', opt = {}){
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
     const tableScale = 0.9 / terrain.size;   // 90 cm across on the table
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
-    const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = snap.lines.length; const hq = quad();
+    const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
     let head = [0, 1.6, 0], headF = [0, 0, -1], hold = 0, Hs = null, Hg = null;
     const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
       M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; M.anchor = M.pos.slice();
@@ -344,7 +353,8 @@ export function open(api, lang = 'zh', opt = {}){
         updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(2500, 0.45 / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
-      if (snap.lines.length !== hudN){ hudN = snap.lines.length; gl.deleteTexture(hud); hud = hudTexture(); }
+      const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
+      if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         drawScene(P, V, Mm, o);
         // controller rays
@@ -354,7 +364,7 @@ export function open(api, lang = 'zh', opt = {}){
         const left = [...session.inputSources].find(s => s.handedness === 'left'), lp = left && poseOf(frame, left);
         if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
-          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.086]));
+          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.0903]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
           gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
         gl.bindVertexArray(null); } };

@@ -4,7 +4,7 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.7';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.8';
 
 const Z = 14, R = 6378137, WORLD = 2 * Math.PI * R, TILE = WORLD / 2 ** Z;
 
@@ -34,9 +34,13 @@ export function osmStream(lat, lon, opt = {}){
     async load(key){
       const [x, y] = key.split('/').map(Number);
       if (!tpl) tpl = await tileTemplate();
-      const res = await fetch(tpl.replace('{z}', Z).replace('{x}', x).replace('{y}', y));
+      const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 20000);
+      let res; try { res = await fetch(tpl.replace('{z}', Z).replace('{x}', x).replace('{y}', y), { signal: ac.signal }); } catch (e){ throw new Error(e.name === 'AbortError' ? 'timeout' : (e.message || 'network')); } finally { clearTimeout(timer); }
       if (!res.ok) throw new Error('OSM tile ' + key + ': HTTP ' + res.status);
-      const t = { x, y, layers: decodeMVT(await res.arrayBuffer()) };
+      let buf = new Uint8Array(await res.arrayBuffer());
+      if (buf[0] === 0x1f && buf[1] === 0x8b && typeof DecompressionStream !== 'undefined')   // gzip body without a Content-Encoding header
+        buf = new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+      const t = { x, y, layers: decodeMVT(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)) };
       // ground, tile-local: tile units → pixels (y down in both)
       const cv = document.createElement('canvas'); cv.width = cv.height = PX; const g = cv.getContext('2d');
       g.fillStyle = GROUND_COLOUR; g.fillRect(0, 0, PX, PX);
