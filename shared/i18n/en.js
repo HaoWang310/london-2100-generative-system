@@ -98,7 +98,6 @@ export const en = {
   "intro.agriculture.sub": "The city itself as a productive landscape",
   "intro.title": "London 2100 · Multi-Scale Generative Urban System",
   "intro.tagline": "From Greater London to regions, sites and buildings — generating a water-informed productive city",
-  "intro.credit": "Footage:",
   "intro.hint": "Press Enter to begin",
   "intro.enter": "Enter",
   "intro.reopen": "Back to opening screen",
