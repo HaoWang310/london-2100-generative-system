@@ -41,7 +41,7 @@ const STEPS = [
   { k: 1, zh: '选场地', en: 'The site', rows: [],
     note: () => L('场地红线、锚点（现有道路与边界的交点）和后面要用到的数据。', 'The boundary, the anchors (where existing streets meet the edge) and the data the steps use.') },
   { k: 2, zh: '看环境', en: 'Environment', rows: [],
-    note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。这一步只是查看，不设参数；这些数据在第 3、4 步参与道路计算（舒适度暂未参与）。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows. A reading only, nothing to set here; the data shapes the streets in steps 3 and 4 (comfort not yet).') },
+    note: () => L('点开每张图会循环播放它的动画：水位上升、雨水汇流、夏季风与冬季冷风吹过、舒适度叠合。这一步只是查看，不设参数；这些数据在第 3、4 步参与道路计算（舒适度暂未参与）。', 'Each map plays as a loop: the water rising, the rain running off, the summer and winter winds blowing through, comfort coming out of the two. A reading only, nothing to set here; the data shapes the streets in steps 3 and 4 (comfort not yet).') },
   { k: 3, zh: '定约束', en: 'Constraints', rows: ['fOn', 'fAvoid', 'gOn', 'gW', 'gQ'],
     note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入。主要汇水路径留成蓝绿走廊：道路不沿走廊内部走，只能近似垂直地跨过（涵洞）。', 'Water and the flood zones kept clear come out of the land; no street enters them. The main runoff paths are kept as blue-green corridors: no street runs inside one, streets only cross them, near square, on culverts.') },
   { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'wSum', 'wWin', 'wG', 'fW', 'smooth'],
@@ -83,7 +83,7 @@ for (const s of STEPS){
 // step 2: the five analysis maps as chips
 const ENVK = [['Z', '高程', 'Elevation'], ['Q', '汇水', 'Runoff'], ['V', '夏季通风', 'Summer air'], ['Cw', '冬季冷风', 'Winter cold'], ['C', '气候舒适', 'Comfort']];
 const chips = document.createElement('div'); chips.className = 'pmChips';
-for (const [k] of ENVK){ const b = document.createElement('button'); b.type = 'button'; b.dataset.env = k; b.onclick = () => { stopAuto(); PM.envTok++; T6.setEnv(k); ui(); }; chips.append(b); }
+for (const [k] of ENVK){ const b = document.createElement('button'); b.type = 'button'; b.dataset.env = k; b.onclick = () => { stopAuto(); PM.envTok++; envShow(k); ui(); }; chips.append(b); }
 const envTxt = document.createElement('p'); envTxt.className = 'pmOut';
 STEPS[1].extra.append(chips, envTxt);
 const siteTxt = document.createElement('div'); siteTxt.className = 'pmOut'; STEPS[0].extra.append(siteTxt);
@@ -141,7 +141,7 @@ function world(k){
   layers(k); }
 function layers(k){
   el('lWidth').checked = k === 8; el('lStreets').checked = true; el('lEvents').checked = k === 6 || k === 7; el('lWind').checked = false;
-  setField(k === 4 || k === 5 ? 'move' : 'off'); setUnder('off'); T6.setFlood(k === 3 && !!FR); T6.setGreen(k >= 3); if (k !== 2) T6.setEnv('off');
+  setField(k === 4 || k === 5 ? 'move' : 'off'); setUnder('off'); T6.setFlood(k === 3 && !!FR); T6.setGreen(k >= 3); if (k !== 2){ T6.setEnv('off'); window.ENVANIM && ENVANIM.stop(); }
   FROZEN = false; baseDirty = netDirty = widthDirty = true; syncTools(); }
 function go(k, auto){
   if (k < 1 || k > 8) return; PM.envTok++;
@@ -193,7 +193,10 @@ function togglePlay(){ stopAuto();
 
 /* ------------------------------------------------------------------ playing the whole process */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-async function envTour(tok){ if (!ENV) return; for (const [k] of ENVK){ if (tok !== PM.envTok) return; T6.setEnv(k); ui(); await sleep(PM.auto ? 1700 : 2200); } }
+// (v8.9) each map plays its animation (scripts/env_anim.js), looping; the tour shows each for one loop, the last keeps looping
+function envShow(k){ T6.setEnv(k); const A = window.ENVANIM; if (A){ if (PM.active && PM.cur === 2 && k !== 'off') A.start(k); else A.stop(); } }
+async function envTour(tok){ if (!ENV) return; const A = window.ENVANIM, anim = A && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  for (const [k] of ENVK){ if (tok !== PM.envTok) return; envShow(k); ui(); await sleep(anim ? A.period(k) * 1000 - 80 : (PM.auto ? 1700 : 2200)); } }
 function stepGrowth(target){ return new Promise(res => {
   if (target === 6 && PM.valid >= 6 && PM.b6 >= 0){ replay(0, PM.b6, res); return; }
   if (target === 7 && PM.valid >= 7){ setScrub(null); replay(Math.max(0, PM.b6), PM.frames.length - 1, res); return; }
@@ -231,7 +234,7 @@ function envConclusion(){ const st = T6.envStats, k = T6.env; if (!st) return L(
   if (k === 'Q') return L('亮蓝线是雨水汇集的路径。下一步把主要路径留成蓝绿走廊，道路只能跨过它们。', 'The bright lines are where rain gathers. The next step keeps the main paths as blue-green corridors, which streets only cross.');
   if (k === 'V'){ const i = argmax(st.summerEnergy); return L('夏季通风以' + dirName(i) + '风为主，占夏季风能的 ' + pct(st.summerEnergy, i) + '%。深色处风最强，第 4 步在那里让道路顺着风走。', 'Summer air comes mostly from the ' + dirName(i) + ', ' + pct(st.summerEnergy, i) + ' % of its energy. Step 4 runs the streets along it where it is strongest (dark).'); }
   if (k === 'Cw'){ const i = argmax(st.winterColdEnergy); return L('冬季冷风主要来自' + dirName(i) + '，占 ' + pct(st.winterColdEnergy, i) + '%。深色处最冷，第 4 步在那里让道路横切冷风。', 'The winter cold comes mostly from the ' + dirName(i) + ', ' + pct(st.winterColdEnergy, i) + ' %. Step 4 runs the streets across it where it bites (dark).'); }
-  if (k === 'C') return L('暖色处避开冬季冷风、又有夏季通风，适合布置公共空间。', 'Warm ground is out of the winter cold and open to summer air: good for public space.');
+  if (k === 'C') return L('暖色处避开冬季冷风、又有夏季通风，适合布置公共空间。圆圈标出最舒适的三处，作为广场候选（目前只是展示）。', 'Warm ground is out of the winter cold and open to summer air: good for public space. The rings mark the three best places, as plaza candidates (a showing only, for now).');
   return L('点击上面的图层，或播放分析。', 'Pick a map above, or play the analysis.'); }
 function siteText(){ const s = D.site, st = T6.envStats, list = [];
   list.push(L('地形：', 'Terrain: ') + (s ? 'OS Terrain 50' : (st && st.elevationFrom === 'contours' ? L('OS 1 米等高线', 'OS 1 m contours') : 'OS')));
@@ -293,7 +296,7 @@ function setMode(on, first){
   for (const x of freeOnly) x.style.display = on ? 'none' : '';
   if (on){ PM.active = true; moveRows(); el('auto').checked = false; MODE = 'B'; T6.setModeQuiet('B'); applySpeed();
     PM.valid = 0; PM.reached = 0; PM.frames = []; PM.marks = []; PM.b6 = -1; PM.atB = false; PM.target = 0; go(1); }
-  else { stopAuto(); stopPlay(); setScrub(null); PM.active = false; PM.cur = 0; giveBack(); el('auto').checked = true; el('speed').value = 6;
+  else { stopAuto(); stopPlay(); setScrub(null); window.ENVANIM && ENVANIM.stop(); PM.active = false; PM.cur = 0; giveBack(); el('auto').checked = true; el('speed').value = 6;
     if (!first){ if (GEN){ GEN = null; GROWING = false; } if (AMODE === 'hand' && !HAND && PM.saved) HAND = PM.saved; placeAttractors(); buildTarget(); settleField(); let sf = true; try { sf = localStorage.getItem('tensorStudio.showFlood') !== '0'; } catch (e) {} T6.setFlood(sf);
       el('lEvents').checked = true; setField('off'); setUnder('zones');
       if (!restoreFinal()) start(true); }
