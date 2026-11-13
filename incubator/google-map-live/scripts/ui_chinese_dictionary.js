@@ -889,4 +889,7 @@ export const CHINESE_UI = {
   "Ground shadows of the 3D buildings, following the lighting setting (none at night)": "三维建筑在地面上的阴影，随光照设置变化（夜晚没有阴影）",
   "Road & Parcel Generator": "道路地块生成器",
   "✓ Boundary confirmed": "✓ 边界已确认",
+  "Vector-field urban road division": "向量场划分城市道路",
+  "Expand vector-field urban road division": "展开向量场划分城市道路",
+  "Collapse vector-field urban road division": "收起向量场划分城市道路",
 };
