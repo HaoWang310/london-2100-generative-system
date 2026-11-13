@@ -26,6 +26,8 @@
 }
 
 * { box-sizing: border-box; }
+/* The hidden attribute must always win, even over components that set display (grid/flex). */
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.45 var(--font);
   -webkit-font-smoothing: antialiased; }
 button, select, input { font: inherit; color: inherit; }
