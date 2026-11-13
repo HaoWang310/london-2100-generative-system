@@ -21,8 +21,8 @@
 <button id="vr" type="button" title="VR / MR · Meta Quest">VR</button>
 <div id="err"></div>
 <script type="module">
-import { findMap } from './src/map_bridge.js?v=0.4';
-import { openFromMap } from './src/from_map.js?v=0.4';
+import { findMap } from './src/map_bridge.js?v=0.5';
+import { openFromMap } from './src/from_map.js?v=0.5';
 const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err');
 frame.src = '../google-map-live/' + location.search + location.hash;
 const lang = () => (frame.contentDocument?.documentElement?.dataset.uiLanguage === 'en' ? 'en' : 'zh');

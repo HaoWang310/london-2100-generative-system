@@ -108,6 +108,24 @@ async function tileTemplate(){
   return FALLBACK;
 }
 
+/** OSM buildings inside a lon/lat box, straight from the z14 tiles (for when a map has not loaded any).
+ *  plan([lon, lat]) → [x, y] metres. Returns [{ ring, h, h0 }] for buildingMesh. At most maxTiles tiles (the box's centre wins). */
+export async function osmBuildingsIn(west, south, east, north, plan, opt = {}){
+  const n = 2 ** Z, tx = lon => Math.floor((lon + 180) / 360 * n), ty = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n); };
+  let x0 = tx(west), x1 = tx(east), y0 = ty(north), y1 = ty(south); const max = opt.maxTiles || 16, side = Math.floor(Math.sqrt(max));
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > max){ const cx = (x0 + x1) >> 1, cy = (y0 + y1) >> 1, a = Math.floor((side - 1) / 2); x0 = Math.max(x0, cx - a); x1 = Math.min(x1, x0 + side - 1); y0 = Math.max(y0, cy - a); y1 = Math.min(y1, y0 + side - 1); }
+  const tpl = opt.tiles || await tileTemplate(), jobs = [];
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) jobs.push({ x, y });
+  let done = 0; opt.onProgress?.(0, jobs.length);
+  const toLL = (t, ext) => q => { const u = (t.x + q[0] / ext) / n, v = (t.y + q[1] / ext) / n; return [u * 360 - 180, Math.atan(Math.sinh(Math.PI * (1 - 2 * v))) * 180 / Math.PI]; };
+  const out = [];
+  await Promise.all(jobs.map(async t => { const res = await fetch(tpl.replace('{z}', Z).replace('{x}', t.x).replace('{y}', t.y)); if (!res.ok) throw new Error('OSM tile ' + t.x + '/' + t.y + ': HTTP ' + res.status);
+    const L = decodeMVT(await res.arrayBuffer()); opt.onProgress?.(++done, jobs.length);
+    for (const f of L.building || []){ if (f.type !== 3 || f.props.hide_3d) continue; const ll = toLL(t, f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0;
+      for (const part of f.parts){ if (part.length < 4) continue; const ring = part.map(q => plan(ll(q))); if (area2(ring) >= 0) continue; out.push({ ring, h, h0 }); } } }));
+  return { list: out, tiles: jobs.length, partial: (tx(east) - tx(west) + 1) * (ty(south) - ty(north) + 1) > jobs.length };
+}
+
 /** lat, lon: centre (WGS84) · r: half side in metres · opt.tiles: a tile URL template (tests) · opt.onProgress(text) */
 export async function osmScene(lat, lon, r = 900, opt = {}){
   r = Math.max(200, Math.min(2500, r));
