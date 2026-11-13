@@ -12,7 +12,7 @@
  *   in D's local metres: the parts the streets avoid, and the shore they turn along.
  * © Environment Agency copyright and/or database right 2025. Open Government Licence v3.0.
  */
-import { bngToWGS84 } from './site_builder.js?v=8.5.0';
+import { bngToWGS84 } from './site_builder.js?v=8.6.0';
 
 const SOURCES = ['surface_water', 'rivers_sea'];
 const COL = [[156, 221, 234, 1], [247, 211, 89, 2], [242, 157, 56, 3], [215, 55, 49, 4], [153, 156, 158, 5]];

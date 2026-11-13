@@ -1154,12 +1154,43 @@ function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillSty
   // the land: no colour of its own, a quiet ground under the field (no yellow)
   g.save(); g.shadowColor = bm ? 'rgba(0,0,0,0)' : P.landShadow; g.shadowBlur = 14; g.fillStyle = P.land; g.globalAlpha = bm ? (THEME === 'dark' ? 0.32 : 0.3) : THEME === 'dark' ? 0.9 : 0.82;
   g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.fill('evenodd'); g.restore();
-  drawFlood(g);
+  drawEnv(g); drawFlood(g);
   if (UNDER !== 'off') drawUnder(g);
   if ($('lCells').checked && CELLS) drawCells(g);
   if ($('lCross').checked) drawCrosses(g);
   if (FIELDMODE === 'lines') drawFieldLines(g);
   baseDirty = false; }
+/* ------------------------------------------------------------------ (v8.6) environmental fields (layer 1) */
+const ENV = D.env || null, ENVIMG = {};
+let ENVSEL = (() => { try { const v = localStorage.getItem('tensorStudio.envLayer'); return ENV && ['Z', 'Q', 'V', 'Cw', 'C'].includes(v) ? v : 'off'; } catch (e){ return 'off'; } })();
+const ENVRAMP = { Z: ['#24414f', '#5f7f6e', '#b5ad83', '#e6d8b0'], Q: ['#0a84ff', '#64d2ff'], V: ['#0d2b26', '#1f8a5b', '#30d158'], Cw: ['#14132b', '#4b48b8', '#9d9bff'], C: ['#5e5ce6', '#8e8e93', '#ff9f0a'] };
+function hex(c){ if (c.startsWith('rgba')) { const m = c.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m[3]]; } return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16), 1]; }
+function rampAt(stops, t){ const s = stops.map(hex), x = clamp(t, 0, 1) * (s.length - 1), i = Math.min(s.length - 2, Math.floor(x)), f = x - i; return s[i].map((v, k) => v + (s[i + 1][k] - v) * f); }
+function envRange(k){ const A = ENV[k], M = D.landMask; let lo = Infinity, hi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ lo = Math.min(lo, A[i]); hi = Math.max(hi, A[i]); } return [lo, hi]; }
+function envImg(k){ if (ENVIMG[k]) return ENVIMG[k]; const A = ENV[k], M = D.landMask, [lo, hi] = envRange(k), oc = mk(); oc.width = nx; oc.height = ny;
+  const gg = oc.getContext('2d'), im = gg.createImageData(nx, ny), Z = ENV.Z;
+  for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const i = r * nx + c, t = (A[i] - lo) / (hi - lo || 1), col = rampAt(ENVRAMP[k], t); let a = k === 'Q' ? Math.pow(clamp((t - 0.42) / 0.5, 0, 1), 1.3) : col[3];   // runoff: only the stronger flow paths, as lines
+    if (k === 'Z'){ // hillshade from the north-west, 45° up
+      const dzx = (Z[r * nx + Math.min(c + 1, nx - 1)] - Z[r * nx + Math.max(c - 1, 0)]) / (2 * cell), dzy = (Z[Math.min(r + 1, ny - 1) * nx + c] - Z[Math.max(r - 1, 0) * nx + c]) / (2 * cell);
+      const ex = 4, nxv = -dzx * ex, nyv = -dzy * ex, nz = 1, L = Math.hypot(nxv, nyv, nz), sh = clamp(0.55 + 0.75 * ((nxv * -0.5 + nyv * 0.5 + nz * 0.707) / L), 0.35, 1.25); for (let q = 0; q < 3; q++) col[q] = clamp(col[q] * sh, 0, 255); }
+    const o = 4 * ((ny - 1 - r) * nx + c); im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = Math.round(255 * a * (!M || M[i] ? 1 : 0.4)); }
+  gg.putImageData(im, 0, 0); return (ENVIMG[k] = oc); }
+function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
+  g.drawImage(envImg(ENVSEL), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
+function syncEnv(){ for (const b of document.querySelectorAll('#tgEnv button')){ b.classList.toggle('on', b.dataset.env === ENVSEL); if (!ENV && b.dataset.env !== 'off') b.disabled = true; }
+  const key = document.getElementById('envKey'); if (!key) return; key.hidden = !ENV || ENVSEL === 'off'; if (key.hidden) return;
+  const zh = TS_LANG === 'zh', [lo, hi] = envRange(ENVSEL), st = ENV.stats;
+  document.getElementById('envRamp').style.background = 'linear-gradient(90deg,' + ENVRAMP[ENVSEL].join(',') + ')';
+  const lab = { Z: [lo.toFixed(1) + ' m', hi.toFixed(1) + ' m'], Q: zh ? ['不汇水', '主汇水线'] : ['no runoff', 'main flow paths'], V: zh ? ['弱', '强'] : ['low', 'high'], Cw: zh ? ['少', '多'] : ['low', 'high'], C: zh ? ['冷、闷', '暖、通风'] : ['cold, still', 'mild, airy'] }[ENVSEL];
+  document.getElementById('envLo').textContent = lab[0]; document.getElementById('envHi').textContent = lab[1];
+  document.getElementById('envNote').textContent = {
+    Z: zh ? '高程（' + (st.elevationFrom === 'contours' ? '由 1 m 等高线重建' : 'OS Terrain 50') + '），叠加西北光照的山体阴影。' : 'Elevation (' + (st.elevationFrom === 'contours' ? 'rebuilt from the 1 m contours' : 'OS Terrain 50') + '), hill-shaded from the north-west.',
+    Q: zh ? '雨水汇集的路径：D8 流向的汇流面积（对数）。' : 'Where rain gathers: D8 flow accumulation (log scale).',
+    V: zh ? '6–8 月各风向的风能（占比 × 风速²），按每个方向吹进场地的强弱分布。' : 'Summer (Jun–Aug) wind energy, share × speed², by how each direction reaches the site.',
+    Cw: zh ? '12–2 月北、东北、东向冷风的风能分布。' : 'Winter (Dec–Feb) wind energy from the N, NE and E.',
+    C: zh ? '舒适 = 0.6 ×（1 − 冷风）+ 0.4 × 通风。' : 'Comfort = 0.6 × (1 − cold wind) + 0.4 × summer air.' }[ENVSEL]; }
+for (const b of document.querySelectorAll('#tgEnv button')) b.onclick = () => { ENVSEL = b.dataset.env; try { localStorage.setItem('tensorStudio.envLayer', ENVSEL); } catch (e) {} baseDirty = true; syncEnv(); };
+
 /* ------------------------------------------------------------------ (v8.5) flood risk layer and basemap tiles */
 let SHOWFLOOD = (() => { try { return localStorage.getItem('tensorStudio.showFlood') !== '0'; } catch (e){ return true; } })(), FLOODIMG = null;
 function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
@@ -1612,8 +1643,8 @@ document.getElementById('applyPreset').onclick=()=>{
       : 'The site you drew on the London map: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. The land is the site less the water' + (T.keepBuildings ? ' and the existing buildings' : '') + '; ' + m.anchors + ' anchors where existing streets meet the edge. Terrain: OS Terrain 50 (50 m). Streets, water, rail and buildings: OpenStreetMap via OpenFreeMap. Wind: London Luton typical year.' + warn; };
   // language: remembered between visits, and it follows the London 2100 framework's own switch when framed
   const orig = window.setInterfaceLanguage;
-  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); } catch (e) {} };
-  syncBase();
+  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); } catch (e) {} };
+  syncBase(); syncEnv();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
   if (s){
     $id('siteNav').hidden = false;
