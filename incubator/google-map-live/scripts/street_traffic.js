@@ -938,43 +938,134 @@ function lngLatToWorld(lng,lat){
   return [X,Y];
 }
 
-export function extractRoadLines(features){
-  const tiles=new Map();
-  for(const f of features){
-    if(f._z==null)continue;
-    tiles.set(f._z+'/'+f._x+'/'+f._y,{z:f._z,x:f._x,y:f._y});
+/* ---------------------------------------------- minimal vector-tile decoding
+ * MapLibre only loads tiles inside the camera view, which leaves no road network
+ * outside the screen for vehicles to enter from. The traffic layer therefore
+ * fetches its own z14 tiles around the view and reads only the `transportation`
+ * layer here (Mapbox Vector Tile protobuf). */
+
+function readVarint(bytes,pos){
+  let result=0,shift=0,b;
+  do{
+    b=bytes[pos.i++];
+    result+=(b&0x7f)*2**shift;
+    shift+=7;
+  }while(b&0x80);
+  return result;
+}
+function skipField(bytes,pos,wire){
+  if(wire===0)readVarint(bytes,pos);
+  else if(wire===1)pos.i+=8;
+  else if(wire===2){const len=readVarint(bytes,pos);pos.i+=len;}
+  else if(wire===5)pos.i+=4;
+  else throw new Error('Unsupported protobuf wire type '+wire);
+}
+const zigzag=n=>(n%2?-(n+1)/2:n/2);
+const UTF8=typeof TextDecoder!=='undefined'?new TextDecoder():null;
+function readString(bytes,start,len){return UTF8.decode(bytes.subarray(start,start+len));}
+
+function readValue(bytes,start,end){
+  const pos={i:start};
+  let value=null;
+  while(pos.i<end){
+    const h=readVarint(bytes,pos),f=Math.floor(h/8),w=h&7;
+    if(f===1&&w===2){const len=readVarint(bytes,pos);value=readString(bytes,pos.i,len);pos.i+=len;}
+    else if(f===2&&w===5){value=new DataView(bytes.buffer,bytes.byteOffset+pos.i,4).getFloat32(0,true);pos.i+=4;}
+    else if(f===3&&w===1){value=new DataView(bytes.buffer,bytes.byteOffset+pos.i,8).getFloat64(0,true);pos.i+=8;}
+    else if((f===4||f===5)&&w===0){value=readVarint(bytes,pos);if(f===4&&value>2**63)value-=2**64;}
+    else if(f===6&&w===0){value=zigzag(readVarint(bytes,pos));}
+    else if(f===7&&w===0){value=Boolean(readVarint(bytes,pos));}
+    else skipField(bytes,pos,w);
   }
-  // A parent tile still retained while its children load would duplicate roads.
-  const covered=new Set();
-  for(const t of tiles.values()){
-    let x=t.x,y=t.y;
-    for(let z=t.z-1;z>=0;z--){x=Math.floor(x/2);y=Math.floor(y/2);covered.add(z+'/'+x+'/'+y);}
+  return value;
+}
+
+function readPacked(bytes,start,end){
+  const pos={i:start},out=[];
+  while(pos.i<end)out.push(readVarint(bytes,pos));
+  return out;
+}
+
+/* Decode one named layer: {extent, features:[{type, properties, lines:[[[x,y],...],...]}]} */
+export function decodeVectorTileLayer(bytes,layerName){
+  const pos={i:0};
+  while(pos.i<bytes.length){
+    const h=readVarint(bytes,pos),f=Math.floor(h/8),w=h&7;
+    if(f!==3||w!==2){skipField(bytes,pos,w);continue;}
+    const len=readVarint(bytes,pos);
+    const start=pos.i,end=start+len;
+    pos.i=end;
+    const lp={i:start};
+    let name=null,extent=4096;
+    const keys=[],values=[],featureRanges=[];
+    while(lp.i<end){
+      const lh=readVarint(bytes,lp),lf=Math.floor(lh/8),lw=lh&7;
+      if(lf===1&&lw===2){
+        const l=readVarint(bytes,lp);name=readString(bytes,lp.i,l);lp.i+=l;
+        if(name!==layerName)break;
+      }else if(lf===2&&lw===2){const l=readVarint(bytes,lp);featureRanges.push([lp.i,lp.i+l]);lp.i+=l;}
+      else if(lf===3&&lw===2){const l=readVarint(bytes,lp);keys.push(readString(bytes,lp.i,l));lp.i+=l;}
+      else if(lf===4&&lw===2){const l=readVarint(bytes,lp);values.push(readValue(bytes,lp.i,lp.i+l));lp.i+=l;}
+      else if(lf===5&&lw===0){extent=readVarint(bytes,lp);}
+      else skipField(bytes,lp,lw);
+    }
+    if(name!==layerName)continue;
+    const features=[];
+    for(const [fs,fe] of featureRanges){
+      const fp={i:fs};
+      let type=0,tags=[],geometry=[];
+      while(fp.i<fe){
+        const fh=readVarint(bytes,fp),ff=Math.floor(fh/8),fw=fh&7;
+        if(ff===2&&fw===2){const l=readVarint(bytes,fp);tags=readPacked(bytes,fp.i,fp.i+l);fp.i+=l;}
+        else if(ff===3&&fw===0){type=readVarint(bytes,fp);}
+        else if(ff===4&&fw===2){const l=readVarint(bytes,fp);geometry=readPacked(bytes,fp.i,fp.i+l);fp.i+=l;}
+        else skipField(bytes,fp,fw);
+      }
+      const properties={};
+      for(let i=0;i+1<tags.length;i+=2)properties[keys[tags[i]]]=values[tags[i+1]];
+      const lines=[];
+      let x=0,y=0,line=null;
+      for(let i=0;i<geometry.length;){
+        const cmd=geometry[i]&7,count=Math.floor(geometry[i]/8);
+        i++;
+        if(cmd===7)continue;
+        for(let k=0;k<count&&i+1<geometry.length;k++){
+          x+=zigzag(geometry[i++]);y+=zigzag(geometry[i++]);
+          if(cmd===1){line=[{x,y}];lines.push(line);}
+          else if(cmd===2&&line)line.push({x,y});
+        }
+      }
+      features.push({type,properties,lines});
+    }
+    return {extent,features};
   }
-  const lines=[];
-  for(const f of features){
-    const p=f.properties||{};
-    if(!ROAD_TYPES[p.class])continue;
-    if(p.brunnel==='tunnel')continue;
-    if(f._z==null||f._z<14)continue;
-    if(covered.has(f._z+'/'+f._x+'/'+f._y))continue;
-    const vt=f._vectorTileFeature;
-    if(!vt||typeof vt.loadGeometry!=='function')continue;
-    const E=vt.extent||4096;
-    const scale=2**(WORLD_Z-f._z)*(WORLD_EXTENT/E);
-    let geometry;
-    try{geometry=vt.loadGeometry();}catch(error){continue;}
-    for(const ring of geometry){
-      for(const piece of clipPolylineToSquare(ring,E)){
-        lines.push({
-          coords:piece.map(([px,py])=>[(f._x*E+px)*scale,(f._y*E+py)*scale]),
+  return null;
+}
+
+/* Road lines of one decoded tile, clipped to the tile, in world units. */
+export function roadLinesFromTile(layer,z,x,y){
+  const out=[];
+  if(!layer)return out;
+  const E=layer.extent||4096;
+  const scale=2**(WORLD_Z-z)*(WORLD_EXTENT/E);
+  for(const f of layer.features){
+    const p=f.properties;
+    if(f.type!==2||!ROAD_TYPES[p.class]||p.brunnel==='tunnel')continue;
+    for(const ln of f.lines){
+      for(const piece of clipPolylineToSquare(ln,E)){
+        out.push({
+          coords:piece.map(([px,py])=>[(x*E+px)*scale,(y*E+py)*scale]),
           cls:p.class,
           oneway:Number(p.oneway)||0
         });
       }
     }
   }
-  return lines;
+  return out;
 }
+
+const ROAD_TILE_Z=14;
+const ROAD_TILE_CACHE=36;
 
 export function createStreetTraffic(map,{
   roadSourceId='openmaptiles',
@@ -1030,24 +1121,117 @@ export function createStreetTraffic(map,{
 
   const toLngLat=(x,y)=>worldToLngLat(x/mpu+origin[0],y/mpu+origin[1]);
 
+  const tileCache=new Map();
+  let lastSignature='';
+
+  function tileTemplate(){
+    const t=map.getSource(roadSourceId)?.tiles?.[0];
+    return typeof t==='string'&&t.includes('{z}')
+      ?t:'https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf';
+  }
+
+  /* Ground radius (m) from the view centre to the farthest visible screen edge. */
+  function viewRadiusMetres(){
+    const canvas=map.getCanvas();
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    const c=map.getCenter();
+    const kx=111320*Math.cos(c.lat*Math.PI/180),ky=110540;
+    let r=0;
+    for(const [px,py] of [[0,h],[w,h],[0,h*0.2],[w,h*0.2],[w/2,h*0.12],[0,h/2],[w,h/2]]){
+      let ll;
+      try{ll=map.unproject([px,py]);}catch(error){continue;}
+      if(!ll||!Number.isFinite(ll.lng)||!Number.isFinite(ll.lat))continue;
+      const d=Math.hypot((ll.lng-c.lng)*kx,(ll.lat-c.lat)*ky);
+      if(Number.isFinite(d))r=Math.max(r,d);
+    }
+    return Math.min(2200,Math.max(150,r));
+  }
+
+  function wantedTiles(){
+    const c=map.getCenter();
+    const [X,Y]=lngLatToWorld(c.lng,c.lat);
+    const m=EARTH_CIRCUMFERENCE*Math.cos(c.lat*Math.PI/180)/WORLD_SIZE;
+    const R=Math.min(2700,viewRadiusMetres()+380)/m;
+    const ts=WORLD_SIZE/2**ROAD_TILE_Z;
+    const tiles=[];
+    for(let x=Math.floor((X-R)/ts);x<=Math.floor((X+R)/ts);x++){
+      for(let y=Math.floor((Y-R)/ts);y<=Math.floor((Y+R)/ts);y++){
+        const d=Math.hypot((x+0.5)*ts-X,(y+0.5)*ts-Y);
+        tiles.push({x,y,key:ROAD_TILE_Z+'/'+x+'/'+y,d});
+      }
+    }
+    return tiles.sort((a,b)=>a.d-b.d).slice(0,16);
+  }
+
+  async function loadTile(t){
+    const entry={state:'loading',lines:null,used:performance.now()};
+    tileCache.set(t.key,entry);
+    try{
+      const url=tileTemplate().replace('{z}',ROAD_TILE_Z).replace('{x}',t.x).replace('{y}',t.y);
+      const res=await fetch(url);
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      let bytes=new Uint8Array(await res.arrayBuffer());
+      if(bytes[0]===0x1f&&bytes[1]===0x8b){
+        const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        bytes=new Uint8Array(await new Response(stream).arrayBuffer());
+      }
+      entry.lines=roadLinesFromTile(decodeVectorTileLayer(bytes,'transportation'),ROAD_TILE_Z,t.x,t.y);
+      entry.state='ready';
+    }catch(error){
+      entry.state='error';
+      entry.retryAt=performance.now()+15000;
+      console.warn('Street traffic road tile failed',t.key,error);
+    }
+    scheduleRebuild(120);
+  }
+
+  let lastEnsure=0;
+  function ensureTiles(){
+    const now=performance.now();
+    lastEnsure=now;
+    const want=wantedTiles();
+    for(const t of want){
+      const e=tileCache.get(t.key);
+      if(!e||(e.state==='error'&&now>e.retryAt))loadTile(t);
+      else e.used=now;
+    }
+    if(tileCache.size>ROAD_TILE_CACHE){
+      const keep=new Set(want.map(t=>t.key));
+      const old=[...tileCache.entries()]
+        .filter(([k,e])=>!keep.has(k)&&e.state!=='loading')
+        .sort((a,b)=>a[1].used-b[1].used);
+      for(const [k] of old.slice(0,tileCache.size-ROAD_TILE_CACHE))tileCache.delete(k);
+    }
+    return want;
+  }
+
   function rebuildGraph(){
     rebuildTimer=null;
-    if(!enabled||!map.getSource(roadSourceId))return;
-    if(map.getZoom()<14.2){sim.setGraph(null);sim.clear();paint();pendingPopulate=true;return;}
-    lastRebuild=performance.now();
-    let features;
-    try{features=map.querySourceFeatures(roadSourceId,{sourceLayer:'transportation'});}
-    catch(error){return;}
+    if(!enabled)return;
+    if(map.getZoom()<14.2){
+      sim.setGraph(null);sim.clear();paint();
+      pendingPopulate=true;lastSignature='';
+      return;
+    }
+    const want=ensureTiles();
+    const ready=want.filter(t=>tileCache.get(t.key)?.state==='ready');
     const c=map.getCenter();
     const cw=lngLatToWorld(c.lng,c.lat);
     if(!origin||Math.hypot(cw[0]-origin[0],cw[1]-origin[1])*mpu>15000){
       origin=cw;
       mpu=EARTH_CIRCUMFERENCE*Math.cos(c.lat*Math.PI/180)/WORLD_SIZE;
       sim.clear();
+      lastSignature='';
     }
-    const lines=extractRoadLines(features);
+    const signature=ready.map(t=>t.key).sort().join('|');
+    if(signature===lastSignature)return;
+    lastSignature=signature;
+    lastRebuild=performance.now();
+    const lines=[];
+    for(const t of ready)for(const l of tileCache.get(t.key).lines)lines.push(l);
     const graph=buildRoadGraph(lines,{metresPerUnit:mpu,origin});
     sim.setGraph(graph);
+    viewCache=null;
     if(pendingPopulate&&graph.links.length){pendingPopulate=false;sim.populate(5);}
   }
 
@@ -1055,7 +1239,7 @@ export function createStreetTraffic(map,{
     if(!enabled)return;
     if(rebuildTimer)return;
     const since=performance.now()-lastRebuild;
-    rebuildTimer=setTimeout(rebuildGraph,Math.max(delay,900-since));
+    rebuildTimer=setTimeout(rebuildGraph,Math.max(delay,600-since));
   }
 
   function computeView(now){
@@ -1065,17 +1249,7 @@ export function createStreetTraffic(map,{
     const center=map.getCenter();
     const cw=lngLatToWorld(center.lng,center.lat);
     const cx=(cw[0]-origin[0])*mpu,cy=(cw[1]-origin[1])*mpu;
-    let inner=0;
-    const probes=[[0,h],[w,h],[w/2,h],[0,h/2],[w,h/2],[0,h*0.2],[w,h*0.2],[w/2,h*0.12]];
-    for(const [px,py] of probes){
-      let ll;
-      try{ll=map.unproject([px,py]);}catch(error){continue;}
-      if(!ll||!Number.isFinite(ll.lng)||!Number.isFinite(ll.lat))continue;
-      const pw=lngLatToWorld(ll.lng,ll.lat);
-      const d=Math.hypot((pw[0]-origin[0])*mpu-cx,(pw[1]-origin[1])*mpu-cy);
-      if(Number.isFinite(d))inner=Math.max(inner,d);
-    }
-    inner=Math.min(2200,Math.max(150,inner));
+    const inner=viewRadiusMetres();
     const isVisible=(x,y,margin=0)=>{
       if(Math.hypot(x-cx,y-cy)>inner*1.25)return false;
       const p=map.project(toLngLat(x,y));
@@ -1162,9 +1336,10 @@ export function createStreetTraffic(map,{
     }
     lastCenter=c;lastZoom=z;
   }
-  function onMove(){viewCache=null;}
-  function onSourceData(e){
-    if(e.sourceId===roadSourceId&&e.isSourceLoaded)scheduleRebuild(250);
+  function onMove(){
+    viewCache=null;
+    // Long pans/flights: fetch road tiles ahead of the camera before it stops.
+    if(performance.now()-lastEnsure>1500){lastEnsure=performance.now();ensureTiles();}
   }
 
   function setEnabled(on){
@@ -1176,7 +1351,6 @@ export function createStreetTraffic(map,{
     if(on){
       map.on('moveend',onMoveEnd);
       map.on('move',onMove);
-      map.on('sourcedata',onSourceData);
       lastCenter=map.getCenter();lastZoom=map.getZoom();
       pendingPopulate=true;
       rebuildGraph();
@@ -1185,7 +1359,6 @@ export function createStreetTraffic(map,{
     }else{
       map.off('moveend',onMoveEnd);
       map.off('move',onMove);
-      map.off('sourcedata',onSourceData);
       if(raf!==null){cancelAnimationFrame(raf);raf=null;}
       clearTimeout(rebuildTimer);rebuildTimer=null;
       sim.clear();

@@ -8,8 +8,39 @@
    - tile pieces that meet at a tile edge join into one continuous road. */
 import assert from 'node:assert/strict';
 import {
-  buildRoadGraph,createTrafficSim,clipPolylineToSquare,vehicleParts,VEHICLE_SPECS
+  buildRoadGraph,createTrafficSim,clipPolylineToSquare,vehicleParts,VEHICLE_SPECS,
+  decodeVectorTileLayer,roadLinesFromTile
 } from '../scripts/street_traffic.js';
+
+// ---- vector-tile decoding (synthetic protobuf) ------------------------------
+{
+  const varint=n=>{const o=[];do{let b=n%128;n=Math.floor(n/128);if(n)b|=128;o.push(b);}while(n);return o;};
+  const zz=n=>n>=0?n*2:-n*2-1;
+  const field=(num,wire,payload)=>[...varint(num*8+wire),...(wire===2?varint(payload.length):[]),...payload];
+  const str=s=>[...new TextEncoder().encode(s)];
+  const layer=(name,feats,keys,values)=>field(3,2,[
+    ...field(15,0,[2]),...field(1,2,str(name)),
+    ...feats.flatMap(f=>field(2,2,f)),
+    ...keys.flatMap(k=>field(3,2,str(k))),
+    ...values.flatMap(v=>field(4,2,v)),
+    ...field(5,0,varint(4096))
+  ]);
+  const geom=[9,zz(10),zz(10),18,zz(90),zz(0),zz(0),zz(40)];
+  const feature=[...field(2,2,[0,0,1,1]),...field(3,0,[2]),...field(4,2,geom.flatMap(varint))];
+  const tile=new Uint8Array([
+    ...layer('water',[],[],[]),
+    ...layer('transportation',[feature],['class','oneway'],[field(1,2,str('minor')),field(4,0,varint(1))])
+  ]);
+  const decoded=decodeVectorTileLayer(tile,'transportation');
+  assert.equal(decoded.extent,4096);
+  assert.equal(decoded.features.length,1);
+  assert.deepEqual(decoded.features[0].properties,{class:'minor',oneway:1});
+  assert.deepEqual(decoded.features[0].lines[0].map(p=>[p.x,p.y]),[[10,10],[100,10],[100,50]]);
+  const roads=roadLinesFromTile(decoded,14,2,3);
+  assert.equal(roads.length,1);
+  assert.equal(roads[0].oneway,1);
+  assert.equal(decodeVectorTileLayer(tile,'building'),null);
+}
 
 // ---- tile clipping joins exactly at the tile edge ---------------------------
 {
