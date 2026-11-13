@@ -1,0 +1,22 @@
+/* Pop-out app viewer */
+.appview {
+  position: fixed; inset: 0; z-index: 58; background: #000; display: grid; grid-template-rows: 44px 1fr;
+  will-change: clip-path;
+}
+.appview-bar {
+  display: flex; align-items: center; gap: 8px; padding: 0 10px 0 8px;
+  background: rgba(0,0,0,.82); backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border-bottom: 1px solid var(--hairline);
+  opacity: 0; transition: opacity .3s cubic-bezier(.2,0,0,1) .25s;
+}
+.appview.is-open .appview-bar { opacity: 1; }
+.appview-back { gap: 6px; }
+.appview-title { font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appview-bar .sp { flex: 1; }
+.appview-external { text-decoration: none; font-size: 12px; }
+.appview-frame { position: relative; min-height: 0; background: #0b0b0c; }
+.appview-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #0b0b0c;
+  opacity: 0; transition: opacity .35s cubic-bezier(.2,0,0,1); }
+.appview-frame iframe.is-loaded { opacity: 1; }
+.appview-loading { z-index: 1; }
+@media (max-width: 760px) { .appview-external span { display: none; } }
