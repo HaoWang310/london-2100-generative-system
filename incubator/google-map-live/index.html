@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.32.2-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.33.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -1037,19 +1037,44 @@
     <div class="dpSection">
       <div class="dpTitle">Color theme</div>
       <div class="dpGrid" role="group" aria-label="Map style">
+        <button class="dpTile dpTheme" type="button" data-theme="default" aria-pressed="false"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#3d6cf0"></i><i style="background:#ffffff"></i><i style="background:#8fc98a"></i></span>
+          <span>Default</span>
+        </button>
+        <button class="dpTile dpTheme" type="button" data-theme="faded" aria-pressed="false"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#9aa6bd"></i><i style="background:#d9d2c3"></i><i style="background:#b8c4a8"></i></span>
+          <span>Faded</span>
+        </button>
         <button class="dpTile dpTheme" type="button" data-theme="planning" aria-pressed="true"
           title="Changes only map colors without replacing the original map style or reloading analysis layers">
-          <span class="dpDots" aria-hidden="true"><i style="background:#ffffff"></i><i style="background:#e6e6e6"></i><i style="background:#999999"></i></span>
-          <span>Architectural planning</span>
+          <span class="dpDots" aria-hidden="true"><i style="background:#5c5c5c"></i><i style="background:#a8a8a8"></i><i style="background:#d6d6d6"></i></span>
+          <span>Mono</span>
         </button>
-        <button class="dpTile dpTheme" type="button" data-theme="dark" aria-pressed="false"
+        <button class="dpTile dpTheme" type="button" data-theme="ocean" aria-pressed="false"
           title="Changes only map colors without replacing the original map style or reloading analysis layers">
-          <span class="dpDots" aria-hidden="true"><i style="background:#2b2f33"></i><i style="background:#62676c"></i><i style="background:#161616"></i></span>
-          <span>Dark tech</span>
+          <span class="dpDots" aria-hidden="true"><i style="background:#1f6a9e"></i><i style="background:#27a6b5"></i><i style="background:#7fd0c8"></i></span>
+          <span>Ocean</span>
+        </button>
+        <button class="dpTile dpTheme" type="button" data-theme="warm" aria-pressed="false"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#c97a3a"></i><i style="background:#d9a066"></i><i style="background:#8a5a3a"></i></span>
+          <span>Warm</span>
+        </button>
+        <button class="dpTile dpTheme" type="button" data-theme="vivid" aria-pressed="false"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#ff4d4d"></i><i style="background:#2ee07a"></i><i style="background:#3d7bff"></i></span>
+          <span>Vivid</span>
         </button>
       </div>
       <select id="osmVisualStyle" class="dpHidden" aria-label="OpenStreetMap basemap style" tabindex="-1" aria-hidden="true">
-        <option value="planning" selected>Architectural planning</option>
+        <option value="default">Default</option>
+        <option value="faded">Faded</option>
+        <option value="planning" selected>Mono</option>
+        <option value="ocean">Ocean</option>
+        <option value="warm">Warm</option>
+        <option value="vivid">Vivid</option>
         <option value="dark">Dark tech</option>
       </select>
     </div>
@@ -1076,7 +1101,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.32.2-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.33.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1439,11 +1464,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.32.2-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.32.2-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.32.2-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.32.2-english';
-  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette} from './scripts/osm_basemap_themes.js?v=3.32.2-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.33.0-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.33.0-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.33.0-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.33.0-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.33.0-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1464,7 +1489,7 @@
     }
   }
 
-  const APP_VERSION='3.32.2-english';
+  const APP_VERSION='3.33.0-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1700,7 +1725,8 @@
     }
   }
   function cityBuildingColour(theme=basemapTheme){
-    return tintPalette({building:theme==='dark'?'#2b2f33':'#ffffff'},atmosphereTints).building;
+    const base=(BASEMAP_THEMES[theme]||BASEMAP_THEMES.planning).extrusion;
+    return tintPalette({building:base},atmosphereTints).building;
   }
 
   function applyAtmosphereTints(tints){
@@ -3771,7 +3797,7 @@
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.32.2-english')
+      import('./scripts/local_flood_ui.js?v=3.33.0-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3796,7 +3822,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.32.2-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.33.0-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
