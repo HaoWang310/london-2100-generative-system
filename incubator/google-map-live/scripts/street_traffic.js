@@ -1,0 +1,1202 @@
+/* Street traffic for the London map.
+ *
+ * Self-contained replacement for the previous inline vehicle system.
+ *
+ *  1. Road graph   - built from the OpenFreeMap `transportation` layer of the
+ *                    tiles MapLibre has already loaded. Every line is clipped to
+ *                    its own tile so pieces from neighbouring tiles meet exactly
+ *                    at the tile edge and join into one continuous network.
+ *  2. Driving      - vehicles follow lanes (UK: keep left), turn through smooth
+ *                    Bezier curves at junctions and use the Intelligent Driver
+ *                    Model for car following.
+ *  3. No pop-in    - while the camera pans or zooms, vehicles are only created
+ *                    and removed OUTSIDE the visible screen, so traffic drives in
+ *                    and out of view. Only when traffic is first switched on, or
+ *                    after a long camera jump, does a starting population grow
+ *                    in on screen.
+ *  4. No jams      - density follows the visible road length, minor roads yield
+ *                    to major roads with a bounded wait, and a vehicle held for
+ *                    too long is released, so queues always clear.
+ *
+ * The simulation core (buildRoadGraph / createTrafficSim) has no DOM or MapLibre
+ * dependency so it can be tested in Node. createStreetTraffic() is the MapLibre
+ * adapter used by index.html.
+ */
+
+export const WORLD_Z=16;
+export const WORLD_EXTENT=4096;
+export const WORLD_SIZE=2**WORLD_Z*WORLD_EXTENT;
+const EARTH_CIRCUMFERENCE=40075016.686;
+
+export const ROAD_TYPES=Object.freeze({
+  motorway:{rank:6,speed:22,lanes:2,laneW:3.5},
+  trunk:{rank:5,speed:15,lanes:2,laneW:3.4},
+  primary:{rank:4,speed:12.5,lanes:1,laneW:3.3},
+  secondary:{rank:3,speed:11,lanes:1,laneW:3.2},
+  tertiary:{rank:2,speed:9.5,lanes:1,laneW:3.1},
+  minor:{rank:1,speed:8,lanes:1,laneW:2.9}
+});
+
+/* London vehicle catalogue. Dimensions in metres.
+ * New Routemaster 11.23 x 2.55 x 4.42 m; single-decker 10.8 x 2.47 x 2.9 m;
+ * LEVC TX taxi about 4.86 x 1.94 x 1.88 m. */
+export const VEHICLE_SPECS=Object.freeze({
+  hatch:{kind:'car',L:4.05,W:1.78,H:1.47,belt:0.86,wb:2.55,hood:1.15,speed:1.00,weight:30},
+  saloon:{kind:'car',L:4.70,W:1.82,H:1.44,belt:0.84,wb:2.80,hood:1.35,speed:1.03,weight:24},
+  suv:{kind:'car',L:4.60,W:1.88,H:1.68,belt:1.00,wb:2.75,hood:1.20,speed:1.00,weight:16},
+  cab:{kind:'cab',L:4.86,W:1.94,H:1.88,belt:0.98,wb:3.00,hood:1.05,speed:0.95,weight:9},
+  van:{kind:'van',L:5.30,W:2.00,H:2.45,belt:1.08,wb:3.40,hood:0.80,speed:0.90,weight:10},
+  bus1:{kind:'bus',L:10.80,W:2.47,H:2.90,wb:5.80,speed:0.76,weight:3,decks:1,busOnly:true},
+  bus2:{kind:'bus',L:11.23,W:2.55,H:4.42,wb:6.30,speed:0.72,weight:4,decks:2,busOnly:true}
+});
+
+const CAR_COLORS=[
+  ['#f2f2f3',18],['#c9cbd0',16],['#8d9096',12],['#4a4d53',10],['#1b1c1f',14],
+  ['#1f3a6b',8],['#8c1d1d',5],['#2f4a3a',3],['#6b4f3a',2],['#3b82c4',4]
+];
+const VAN_COLORS=[['#f4f4f5',60],['#d4d4d8',20],['#1f3a6b',10],['#b91c1c',5]];
+const BUS_RED='#cf161d';
+const CAB_BLACK='#151517';
+const GLASS='#26303b';
+const WHEEL='#121214';
+const HEADLIGHT='#fff6d5';
+const TAILLIGHT='#c41e1e';
+
+/* ---------------------------------------------------------------- utils */
+
+const TAU=Math.PI*2;
+function angleDiff(a,b){
+  let d=(a-b)%TAU;
+  if(d>Math.PI)d-=TAU;
+  if(d<-Math.PI)d+=TAU;
+  return d;
+}
+function pickWeighted(items,rand){
+  let total=0;
+  for(const [,w] of items)total+=w;
+  let r=rand()*total;
+  for(const [v,w] of items){r-=w;if(r<=0)return v;}
+  return items[items.length-1][0];
+}
+function makeRandom(seed){
+  // Small deterministic PRNG (mulberry32) so tests are repeatable.
+  let s=seed>>>0;
+  return ()=>{
+    s=(s+0x6D2B79F5)>>>0;
+    let t=s;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+
+/* Clip a polyline (array of {x,y}) to the square [0,E]x[0,E]. */
+export function clipPolylineToSquare(points,E){
+  const pieces=[];
+  let current=null;
+  const clipSeg=(x0,y0,x1,y1)=>{
+    let t0=0,t1=1;
+    const dx=x1-x0,dy=y1-y0;
+    const p=[-dx,dx,-dy,dy],q=[x0,E-x0,y0,E-y0];
+    for(let i=0;i<4;i++){
+      if(p[i]===0){if(q[i]<0)return null;continue;}
+      const r=q[i]/p[i];
+      if(p[i]<0){if(r>t1)return null;if(r>t0)t0=r;}
+      else{if(r<t0)return null;if(r<t1)t1=r;}
+    }
+    return [x0+t0*dx,y0+t0*dy,x0+t1*dx,y0+t1*dy];
+  };
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    const c=clipSeg(a.x,a.y,b.x,b.y);
+    if(!c){current=null;continue;}
+    const [ax,ay,bx,by]=c;
+    const last=current&&current[current.length-1];
+    if(last&&Math.abs(last[0]-ax)<1e-6&&Math.abs(last[1]-ay)<1e-6){
+      current.push([bx,by]);
+    }else{
+      current=[[ax,ay],[bx,by]];
+      pieces.push(current);
+    }
+    if(bx!==b.x||by!==b.y)current=null;
+  }
+  return pieces;
+}
+
+/* ---------------------------------------------------------------- graph */
+
+let LINK_UID=1;
+
+/**
+ * Build a road graph.
+ * lines: [{coords:[[X,Y],...] (world units), cls, oneway}]
+ * metresPerUnit, origin:[X,Y] -> local metres x=(X-ox)*mpu (east), y=(Y-oy)*mpu (south)
+ */
+export function buildRoadGraph(lines,{metresPerUnit,origin}){
+  const snapUnits=1.2/metresPerUnit;
+  const cell=snapUnits*2;
+  const nodes=[];
+  const grid=new Map();
+  const nodeAt=(X,Y)=>{
+    const cx=Math.floor(X/cell),cy=Math.floor(Y/cell);
+    for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+      const arr=grid.get((cx+i)+','+(cy+j));
+      if(!arr)continue;
+      for(const n of arr)if(Math.hypot(n.X-X,n.Y-Y)<=snapUnits)return n;
+    }
+    const n={
+      id:nodes.length,X,Y,
+      x:(X-origin[0])*metresPerUnit,
+      y:(Y-origin[1])*metresPerUnit,
+      edges:[],links:[]
+    };
+    nodes.push(n);
+    const key=cx+','+cy;
+    let arr=grid.get(key);
+    if(!arr){arr=[];grid.set(key,arr);}
+    arr.push(n);
+    return n;
+  };
+
+  const edgeKeys=new Set();
+  const edges=[];
+  for(const line of lines){
+    if(!ROAD_TYPES[line.cls]||!line.coords||line.coords.length<2)continue;
+    let prev=null;
+    for(const [X,Y] of line.coords){
+      const n=nodeAt(X,Y);
+      if(prev&&prev!==n){
+        const key=prev.id<n.id?prev.id+'-'+n.id:n.id+'-'+prev.id;
+        if(!edgeKeys.has(key)){
+          edgeKeys.add(key);
+          const e={a:prev,b:n,cls:line.cls,oneway:Math.sign(Number(line.oneway)||0),used:false};
+          edges.push(e);
+          prev.edges.push(e);
+          n.edges.push(e);
+        }
+      }
+      prev=n;
+    }
+  }
+
+  const isBreak=n=>{
+    if(n.edges.length!==2)return true;
+    const [e1,e2]=n.edges;
+    if(e1.cls!==e2.cls)return true;
+    const into=e1.oneway*(e1.b===n?1:-1);
+    const out=e2.oneway*(e2.a===n?1:-1);
+    return into!==out;
+  };
+
+  const links=[];
+  const makeLink=(seq,cls,flow)=>{
+    const pts=seq.map(n=>[n.x,n.y]);
+    const cum=[0];
+    for(let i=1;i<pts.length;i++){
+      cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+    }
+    const len=cum[cum.length-1];
+    if(len<0.8)return;
+    const type=ROAD_TYPES[cls];
+    const link={
+      uid:LINK_UID++,a:seq[0],b:seq[seq.length-1],
+      pts,cum,len,cls,type,oneway:flow,lanes:type.lanes
+    };
+    links.push(link);
+    link.a.links.push({link,atStart:true});
+    link.b.links.push({link,atStart:false});
+  };
+  const walk=(start,first)=>{
+    const seq=[start];
+    let cur=start,edge=first;
+    const flow=first.oneway*(first.a===start?1:-1);
+    for(;;){
+      edge.used=true;
+      const next=edge.a===cur?edge.b:edge.a;
+      seq.push(next);
+      if(next===start||isBreak(next))break;
+      const ne=next.edges[0]===edge?next.edges[1]:next.edges[0];
+      if(ne.used)break;
+      cur=next;edge=ne;
+    }
+    makeLink(seq,first.cls,flow);
+  };
+  for(const n of nodes)if(isBreak(n))for(const e of n.edges)if(!e.used)walk(n,e);
+  for(const e of edges)if(!e.used)walk(e.a,e);
+
+  const junctions=nodes.filter(n=>n.links.length);
+  for(const n of junctions){
+    n.key=Math.round(n.x)+','+Math.round(n.y);
+    n.maxRank=Math.max(...n.links.map(l=>l.link.type.rank));
+  }
+
+  // Spatial indices.
+  const SEG_CELL=30;
+  const segIndex=new Map();
+  let totalLength=0;
+  for(const link of links){
+    totalLength+=link.len;
+    for(let i=1;i<link.pts.length;i++){
+      const [x0,y0]=link.pts[i-1],[x1,y1]=link.pts[i];
+      const cx0=Math.floor(Math.min(x0,x1)/SEG_CELL),cx1=Math.floor(Math.max(x0,x1)/SEG_CELL);
+      const cy0=Math.floor(Math.min(y0,y1)/SEG_CELL),cy1=Math.floor(Math.max(y0,y1)/SEG_CELL);
+      for(let cx=cx0;cx<=cx1;cx++)for(let cy=cy0;cy<=cy1;cy++){
+        const key=cx+','+cy;
+        let arr=segIndex.get(key);
+        if(!arr){arr=[];segIndex.set(key,arr);}
+        arr.push([link,i-1]);
+      }
+    }
+  }
+  const NODE_CELL=20;
+  const nodeIndex=new Map();
+  for(const n of junctions){
+    const key=Math.floor(n.x/NODE_CELL)+','+Math.floor(n.y/NODE_CELL);
+    let arr=nodeIndex.get(key);
+    if(!arr){arr=[];nodeIndex.set(key,arr);}
+    arr.push(n);
+  }
+
+  const cumulative=[];
+  let acc=0;
+  for(const link of links){acc+=link.len;cumulative.push(acc);}
+  // Road samples every ~30 m, used to measure visible street length.
+  const samples=[];
+  for(const link of links){
+    const n=Math.max(1,Math.round(link.len/30));
+    for(let i=0;i<n;i++){
+      const p=pointAtArc(link,(i+0.5)*link.len/n);
+      samples.push([p[0],p[1],link.len/n*(link.oneway?1:2)]);
+    }
+  }
+
+  return {
+    links,nodes:junctions,totalLength,samples,
+    pickLink(rand){
+      if(!links.length)return null;
+      const r=rand()*acc;
+      let lo=0,hi=cumulative.length-1;
+      while(lo<hi){const mid=(lo+hi)>>1;if(cumulative[mid]<r)lo=mid+1;else hi=mid;}
+      return links[lo];
+    },
+    nodeNear(x,y,maxDist=2.5){
+      const cx=Math.floor(x/NODE_CELL),cy=Math.floor(y/NODE_CELL);
+      let best=null,bestD=maxDist;
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+        for(const n of nodeIndex.get((cx+i)+','+(cy+j))||[]){
+          const d=Math.hypot(n.x-x,n.y-y);
+          if(d<=bestD){bestD=d;best=n;}
+        }
+      }
+      return best;
+    },
+    /* Find the link under (x,y) whose travel direction matches heading. */
+    locate(x,y,heading,maxDist=3,maxAngle=0.6){
+      const cx=Math.floor(x/SEG_CELL),cy=Math.floor(y/SEG_CELL);
+      let best=null,bestD=maxDist;
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+        for(const [link,k] of segIndex.get((cx+i)+','+(cy+j))||[]){
+          const [x0,y0]=link.pts[k],[x1,y1]=link.pts[k+1];
+          const dx=x1-x0,dy=y1-y0,l2=dx*dx+dy*dy;
+          if(!l2)continue;
+          const t=Math.max(0,Math.min(1,((x-x0)*dx+(y-y0)*dy)/l2));
+          const d=Math.hypot(x0+t*dx-x,y0+t*dy-y);
+          if(d>bestD)continue;
+          const hs=Math.atan2(dy,dx);
+          let dir=0;
+          if(Math.abs(angleDiff(heading,hs))<maxAngle&&link.oneway!==-1)dir=1;
+          else if(Math.abs(angleDiff(heading,hs+Math.PI))<maxAngle&&link.oneway!==1)dir=-1;
+          if(!dir)continue;
+          const arc=link.cum[k]+t*Math.sqrt(l2);
+          bestD=d;
+          best={link,d:dir,s:dir>0?arc:link.len-arc};
+        }
+      }
+      return best;
+    }
+  };
+}
+
+/* -------------------------------------------------------- link geometry */
+
+function pointAtArc(link,arc){
+  const {pts,cum,len}=link;
+  if(arc<=0)return [pts[0][0],pts[0][1]];
+  if(arc>=len){const p=pts[pts.length-1];return [p[0],p[1]];}
+  let lo=0,hi=cum.length-1;
+  while(hi-lo>1){const mid=(lo+hi)>>1;if(cum[mid]<=arc)lo=mid;else hi=mid;}
+  const t=(arc-cum[lo])/((cum[hi]-cum[lo])||1);
+  return [pts[lo][0]+(pts[hi][0]-pts[lo][0])*t,pts[lo][1]+(pts[hi][1]-pts[lo][1])*t];
+}
+export function laneOffset(link,lane){
+  const w=link.type.laneW;
+  if(link.oneway)return((link.lanes-1)/2-lane)*w;
+  return(lane+0.5)*w;
+}
+/* Pose of a vehicle centre at distance s (travel direction d) in a lane. */
+export function lanePose(link,d,lane,s){
+  const arc=d>0?s:link.len-s;
+  const look=Math.min(2.5,link.len/2);
+  const a=pointAtArc(link,arc-look*d);
+  const b=pointAtArc(link,arc+look*d);
+  const h=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  const c=pointAtArc(link,arc);
+  const off=laneOffset(link,lane);
+  // Left of travel in an x-east / y-south frame is (sin h, -cos h).
+  return {x:c[0]+Math.sin(h)*off,y:c[1]-Math.cos(h)*off,h};
+}
+
+function bezierPath(p0,h0,p2,h2,uTurn){
+  const dist=Math.hypot(p2.x-p0.x,p2.y-p0.y);
+  const k=uTurn?Math.max(dist,3.5)*0.95:Math.max(0.6,dist*0.42);
+  const c1={x:p0.x+Math.cos(h0)*k,y:p0.y+Math.sin(h0)*k};
+  const c2={x:p2.x-Math.cos(h2)*k,y:p2.y-Math.sin(h2)*k};
+  const N=16,pts=[],cum=[0];
+  for(let i=0;i<=N;i++){
+    const t=i/N,u=1-t;
+    const x=u*u*u*p0.x+3*u*u*t*c1.x+3*u*t*t*c2.x+t*t*t*p2.x;
+    const y=u*u*u*p0.y+3*u*u*t*c1.y+3*u*t*t*c2.y+t*t*t*p2.y;
+    pts.push([x,y]);
+    if(i)cum.push(cum[i-1]+Math.hypot(x-pts[i-1][0],y-pts[i-1][1]));
+  }
+  return {pts,cum,len:cum[N]};
+}
+function curvePose(curve,pos){
+  const {pts,cum,len}=curve;
+  const arc=Math.max(0,Math.min(len,pos));
+  let lo=0,hi=cum.length-1;
+  while(hi-lo>1){const mid=(lo+hi)>>1;if(cum[mid]<=arc)lo=mid;else hi=mid;}
+  const t=(arc-cum[lo])/((cum[hi]-cum[lo])||1);
+  const x=pts[lo][0]+(pts[hi][0]-pts[lo][0])*t;
+  const y=pts[lo][1]+(pts[hi][1]-pts[lo][1])*t;
+  const h=Math.atan2(pts[hi][1]-pts[lo][1],pts[hi][0]-pts[lo][0]);
+  return {x,y,h};
+}
+
+/* ----------------------------------------------------------- simulation */
+
+const IDM={a:1.4,b:2.6,T:1.15,s0:2.4};
+const LOOKAHEAD_M=70;
+const SPAWN_TRACK_GAP_M=16;
+const SPAWN_CLEAR_M=9;
+const GROW_S=0.7;
+
+function idmAccel(v,v0,gap,dv){
+  const sStar=IDM.s0+Math.max(0,v*IDM.T+v*dv/(2*Math.sqrt(IDM.a*IDM.b)));
+  const free=1-Math.pow(v/Math.max(0.3,v0),4);
+  const inter=gap<400?Math.pow(sStar/Math.max(0.2,gap),2):0;
+  return Math.max(-8,Math.min(IDM.a,IDM.a*(free-inter)));
+}
+
+function trackKey(link,d,lane){return link.uid+':'+d+':'+lane;}
+
+/**
+ * view: {
+ *   isVisible(x,y,marginPx) -> bool,
+ *   distance(x,y) -> metres from the view centre on the ground,
+ *   outerRadius   -> metres; vehicles beyond this (off screen) are removed,
+ *   targetVisible -> desired number of vehicles inside the screen
+ * }
+ */
+export function createTrafficSim({seed=1}={}){
+  const rand=makeRandom(seed);
+  let graph=null;
+  let vehicles=[];
+  let nextId=1;
+  let populateUntil=0;
+  let simTime=0;
+  let spawnClock=0;
+  let densityClock=1e9;
+  let targetVisible=0,targetTotal=0;
+  const junctionOcc=new Map();
+  const stats={spawned:0,removed:0,spawnedVisible:0,removedVisible:0,released:0};
+
+  function chooseSpec(link){
+    const allowBus=link.type.rank>=2;
+    const items=Object.entries(VEHICLE_SPECS)
+      .filter(([,s])=>allowBus||!s.busOnly)
+      .map(([k,s])=>[k,s.weight]);
+    const key=pickWeighted(items,rand);
+    const spec=VEHICLE_SPECS[key];
+    let color;
+    if(spec.kind==='bus')color=BUS_RED;
+    else if(spec.kind==='cab')color=CAB_BLACK;
+    else if(spec.kind==='van')color=pickWeighted(VAN_COLORS,rand);
+    else color=pickWeighted(CAR_COLORS,rand);
+    return {key,spec,color};
+  }
+
+  function endPointOf(link,d){
+    const n=d>0?link.b:link.a;
+    return n;
+  }
+
+  /* Plan the movement after the current link. */
+  function planNext(v){
+    const {link,d,lane}=v.seg;
+    const end=endPointOf(link,d);
+    const arrive=lanePose(link,d,0,link.len);
+    const node=(graph&&graph.nodeNear(end.x,end.y,2.5))||end;
+    const exits=[];
+    let uTurn=null;
+    for(const {link:l,atStart} of node.links){
+      const dd=atStart?1:-1;
+      if(l.oneway&&l.oneway!==dd)continue;
+      const p=lanePose(l,dd,0,Math.min(4,l.len/2));
+      const dh=angleDiff(p.h,arrive.h);
+      if(l===link&&dd===-d){uTurn={link:l,d:dd,dh};continue;}
+      if(Math.abs(dh)>2.75){uTurn=uTurn||{link:l,d:dd,dh};continue;}
+      let w=Math.abs(dh)<0.5?3.2:Math.abs(dh)<1.9?1.25:0.35;
+      w*=1+0.25*l.type.rank;
+      const far=dd>0?l.b:l.a;
+      if(far.links.length===1&&l.len<60)w*=0.15;
+      exits.push([{link:l,d:dd,dh},w]);
+    }
+    let choice;
+    let deadEnd=false;
+    if(exits.length)choice=pickWeighted(exits,rand);
+    else{
+      deadEnd=true;
+      choice=uTurn||{link,d:-d,dh:Math.PI};
+      if(choice.link.oneway&&choice.link.oneway!==choice.d)choice={link,d:-d,dh:Math.PI};
+    }
+    const nl=choice.link;
+    const isU=Math.abs(choice.dh)>2.4;
+    const lanes=nl.lanes;
+    let nlane=Math.floor(rand()*lanes);
+    if(lanes>1){
+      // UK: left turns from the left lane (0), right turns from the right lane.
+      if(choice.dh<-0.6)nlane=0;
+      else if(choice.dh>0.6)nlane=lanes-1;
+    }
+    const r0=isU?Math.min(link.len*0.3,4):Math.max(1.2,Math.min(link.len*0.35,3+link.type.laneW));
+    const r1=isU?Math.min(nl.len*0.3,4):Math.max(1.2,Math.min(nl.len*0.35,3+nl.type.laneW));
+    const absTurn=Math.abs(choice.dh);
+    const maxV=isU?2.6:absTurn<0.35?99:absTurn<1.0?7.5:absTurn<2.0?5.2:3.5;
+    v.plan={link:nl,d:choice.d,lane:Math.min(nlane,lanes-1),r0,r1,maxV,uTurn:isU,deadEnd,
+      nodeKey:node.key||(Math.round(node.x)+','+Math.round(node.y)),
+      // Only real junctions (3+ roads) need right-of-way; a plain class change does not.
+      controlled:node.links.length>=3};
+  }
+
+  function buildCurve(v){
+    const {link,d,lane}=v.seg;
+    const p=v.plan;
+    const start=Math.max(v.pos,link.len-p.r0);
+    const a=lanePose(link,d,lane,start);
+    const b=lanePose(p.link,p.d,p.lane,p.r1);
+    const path=bezierPath(a,a.h,b,b.h,p.uTurn);
+    return {type:'curve',...path,from:{link,d,lane,s0:start},to:{link:p.link,d:p.d,lane:p.lane,s:p.r1},
+      maxV:p.maxV,nodeKey:p.controlled?p.nodeKey:null,deadEnd:p.deadEnd};
+  }
+
+  function pose(v){
+    if(v.seg.type==='curve')return curvePose(v.seg,v.pos);
+    return lanePose(v.seg.link,v.seg.d,v.seg.lane,v.pos);
+  }
+
+  function addVehicle(link,d,lane,s,{visible=false}={}){
+    const {key,spec,color}=chooseSpec(link);
+    const v={
+      id:nextId++,key,spec,color,
+      seg:{type:'link',link,d,lane},pos:s,
+      v:link.type.speed*0.55,
+      driver:0.88+rand()*0.22,
+      wait:0,stopped:0,releaseUntil:0,
+      scale:visible?0.05:1,growing:visible,removing:false,
+      plan:null,occKey:null
+    };
+    planNext(v);
+    vehicles.push(v);
+    stats.spawned++;
+    if(visible)stats.spawnedVisible++;
+    return v;
+  }
+
+  function removeVehicle(v){
+    if(v.occKey)junctionOcc.get(v.occKey)?.delete(v.id);
+    v.dead=true;
+  }
+
+  /* Track tables: per lane track, vehicles sorted by position along it. */
+  function buildTracks(){
+    const tracks=new Map();
+    const put=(key,s,v)=>{
+      let arr=tracks.get(key);
+      if(!arr){arr=[];tracks.set(key,arr);}
+      arr.push({s,v});
+    };
+    for(const v of vehicles){
+      if(v.dead)continue;
+      if(v.seg.type==='link'){
+        put(trackKey(v.seg.link,v.seg.d,v.seg.lane),v.pos,v);
+      }else{
+        const c=v.seg;
+        put(trackKey(c.from.link,c.from.d,c.from.lane),c.from.s0+v.pos,v);
+        put(trackKey(c.to.link,c.to.d,c.to.lane),c.to.s-(c.len-v.pos),v);
+      }
+    }
+    for(const arr of tracks.values())arr.sort((a,b)=>a.s-b.s);
+    return tracks;
+  }
+
+  function leaderOn(tracks,key,s,self,maxAhead){
+    const arr=tracks.get(key);
+    if(!arr)return null;
+    let best=null;
+    for(const e of arr){
+      if(e.v===self)continue;
+      const ahead=e.s-s;
+      if(ahead<=0.01||ahead>maxAhead)continue;
+      if(!best||ahead<best.ahead)best={ahead,v:e.v};
+    }
+    return best;
+  }
+
+  function canEnterJunction(v){
+    const p=v.plan;
+    if(!p.controlled)return true;
+    const occ=junctionOcc.get(p.nodeKey);
+    if(!occ||!occ.size)return true;
+    const fromKey=trackKey(v.seg.link,v.seg.d,v.seg.lane);
+    let otherRank=-1;
+    for(const o of occ.values())if(o.fromKey!==fromKey)otherRank=Math.max(otherRank,o.rank);
+    if(otherRank<0)return true;
+    const myRank=v.seg.link.type.rank;
+    if(myRank>otherRank)return true;
+    // Bounded wait: a queue at a junction always clears.
+    return v.wait>(myRank>=3?1.0:2.2);
+  }
+
+  function step(dt,view){
+    if(!graph)return;
+    simTime+=dt;
+    const tracks=buildTracks();
+
+    for(const v of vehicles){
+      if(v.dead)continue;
+      if(v.growing){
+        v.scale=Math.min(1,v.scale+dt/GROW_S);
+        if(v.scale>=1)v.growing=false;
+      }
+      if(v.removing){
+        v.scale-=dt/GROW_S;
+        if(v.scale<=0){removeVehicle(v);stats.removed++;stats.removedVisible++;}
+        continue;
+      }
+
+      const released=simTime<v.releaseUntil;
+      const halfL=v.spec.L/2;
+      let v0=v.seg.type==='curve'
+        ?Math.min(v.seg.to.link.type.speed,v.seg.maxV)
+        :v.seg.link.type.speed;
+      v0*=v.driver*v.spec.speed;
+
+      let gap=999,dv=0,heldByJunction=false;
+      const consider=(ahead,leader)=>{
+        const g=ahead-halfL-leader.spec.L/2;
+        if(g<gap){gap=g;dv=v.v-leader.v;}
+      };
+
+      if(v.seg.type==='link'){
+        const {link,d,lane}=v.seg;
+        const key=trackKey(link,d,lane);
+        if(!released){
+          const l=leaderOn(tracks,key,v.pos,v,LOOKAHEAD_M);
+          if(l)consider(l.ahead,l.v);
+        }
+        const p=v.plan;
+        const toCurve=link.len-p.r0-v.pos;
+        // Slow down for the turn ahead.
+        if(p.maxV<99)v0=Math.min(v0,Math.sqrt(p.maxV*p.maxV+2*1.8*Math.max(0,toCurve)));
+        if(!released&&toCurve<LOOKAHEAD_M){
+          const nk=trackKey(p.link,p.d,p.lane);
+          const l=leaderOn(tracks,nk,-1e9,v,1e9);
+          if(l){
+            // Distance ahead along our path to that vehicle.
+            const entry=tracks.get(nk).find(e=>e.v===l.v);
+            const ahead=Math.max(0,toCurve)+p.r0+p.r1+(entry.s-p.r1);
+            if(ahead>0&&ahead<LOOKAHEAD_M)consider(ahead,l.v);
+          }
+          if(toCurve<12&&!canEnterJunction(v)){
+            heldByJunction=true;
+            const g=Math.max(0,toCurve-0.3);
+            if(g<gap){gap=g;dv=v.v;}
+          }
+        }
+      }else{
+        const c=v.seg;
+        if(!released){
+          const key=trackKey(c.to.link,c.to.d,c.to.lane);
+          const myS=c.to.s-(c.len-v.pos);
+          const l=leaderOn(tracks,key,myS,v,LOOKAHEAD_M);
+          if(l)consider(l.ahead,l.v);
+        }
+      }
+
+      const acc=idmAccel(v.v,v0,Math.max(0.05,gap),dv);
+      v.v=Math.max(0,v.v+acc*dt);
+      let travel=v.v*dt;
+      // Never drive into the vehicle (or stop line) ahead.
+      if(gap<900)travel=Math.min(travel,Math.max(0,gap-0.6));
+      if(travel<v.v*dt*0.5&&gap<900)v.v=Math.min(v.v,travel/Math.max(dt,1e-3));
+
+      if(heldByJunction)v.wait+=dt;
+      if(v.v<0.25){v.stopped+=dt;}else{v.stopped=0;}
+
+      advance(v,travel,view);
+    }
+
+    // Long stops: off screen -> remove; on screen -> release for a moment.
+    for(const v of vehicles){
+      if(v.dead||v.removing)continue;
+      if(v.stopped>6){
+        const p=pose(v);
+        if(!view.isVisible(p.x,p.y,60)){removeVehicle(v);stats.removed++;continue;}
+        if(v.stopped>12&&simTime>v.releaseUntil){
+          v.releaseUntil=simTime+2.5;
+          v.stopped=0;
+          stats.released++;
+        }
+      }
+    }
+    vehicles=vehicles.filter(v=>!v.dead);
+
+    manageDensity(dt,view);
+  }
+
+  function advance(v,travel,view){
+    let remaining=travel;
+    for(let guard=0;guard<4&&remaining>=0;guard++){
+      if(v.seg.type==='link'){
+        const link=v.seg.link;
+        const curveStart=link.len-v.plan.r0;
+        if(v.pos+remaining<curveStart){v.pos+=remaining;return;}
+        remaining-=Math.max(0,curveStart-v.pos);
+        v.pos=Math.max(v.pos,curveStart);
+        if(v.plan.deadEnd){
+          const p=lanePose(link,v.seg.d,v.seg.lane,v.pos);
+          if(!view.isVisible(p.x,p.y,60)){removeVehicle(v);stats.removed++;return;}
+        }
+        const curve=buildCurve(v);
+        v.seg=curve;
+        v.pos=0;
+        v.wait=0;
+        v.occKey=curve.nodeKey;
+        if(curve.nodeKey){
+          let occ=junctionOcc.get(curve.nodeKey);
+          if(!occ){occ=new Map();junctionOcc.set(curve.nodeKey,occ);}
+          occ.set(v.id,{fromKey:trackKey(curve.from.link,curve.from.d,curve.from.lane),rank:curve.from.link.type.rank});
+        }
+      }else{
+        const c=v.seg;
+        if(v.pos+remaining<c.len){v.pos+=remaining;return;}
+        remaining-=c.len-v.pos;
+        if(c.nodeKey)junctionOcc.get(c.nodeKey)?.delete(v.id);
+        v.occKey=null;
+        v.seg={type:'link',link:c.to.link,d:c.to.d,lane:c.to.lane};
+        v.pos=c.to.s;
+        planNext(v);
+        if(remaining<=0)return;
+      }
+    }
+  }
+
+  function updateTargets(view,outer){
+    // Vehicles per lane-direction metre follow the street length on screen; the
+    // ring outside the screen gets the same density so traffic flows in and out.
+    let visLen=0,outerLen=0;
+    for(const [x,y,w] of graph.samples){
+      if(view.distance(x,y)>outer)continue;
+      outerLen+=w;
+      if(view.isVisible(x,y,0))visLen+=w;
+    }
+    const spacing=view.spacingM||85;
+    const maxVisible=view.maxVisible||70;
+    targetVisible=Math.max(visLen>0?3:0,Math.min(maxVisible,Math.round(visLen/spacing)));
+    const ratio=visLen>0?Math.min(3.5,outerLen/visLen):1;
+    targetTotal=Math.min(160,Math.round(targetVisible*ratio));
+  }
+
+  function manageDensity(dt,view){
+    const outer=view.outerRadius||600;
+    densityClock+=dt;
+    if(densityClock>=2||view.forceTargets){densityClock=0;view.forceTargets=false;updateTargets(view,outer);}
+
+    // Remove off-screen vehicles that are too far away or surplus.
+    const off=[];
+    for(const v of vehicles){
+      if(v.removing)continue;
+      const p=pose(v);
+      if(view.isVisible(p.x,p.y,80))continue;
+      const dist=view.distance(p.x,p.y);
+      if(dist>outer+60){removeVehicle(v);stats.removed++;continue;}
+      off.push([v,dist]);
+    }
+    vehicles=vehicles.filter(v=>!v.dead);
+    let surplus=vehicles.length-(targetTotal+4);
+    if(surplus>0){
+      off.sort((a,b)=>b[1]-a[1]);
+      for(const [v] of off){
+        if(surplus<=0)break;
+        if(v.dead)continue;
+        removeVehicle(v);stats.removed++;surplus--;
+      }
+      vehicles=vehicles.filter(v=>!v.dead);
+    }
+
+    spawnClock+=dt;
+    if(spawnClock<0.2)return;
+    spawnClock=0;
+    if(vehicles.length>=targetTotal)return;
+
+    const populating=simTime<populateUntil;
+    let toSpawn=Math.min(populating?12:3,targetTotal-vehicles.length);
+    const positions=vehicles.map(v=>pose(v));
+    const tracks=buildTracks();
+    for(let attempt=0;attempt<40&&toSpawn>0;attempt++){
+      const link=graph.pickLink(rand);
+      if(!link||link.len<14)continue;
+      let d=rand()<0.5?1:-1;
+      if(link.oneway)d=link.oneway;
+      const lane=Math.floor(rand()*link.lanes);
+      const s=7+rand()*(link.len-14);
+      const p=lanePose(link,d,lane,s);
+      const visible=view.isVisible(p.x,p.y,40);
+      if(visible&&!populating)continue;
+      if(view.distance(p.x,p.y)>outer)continue;
+      const arr=tracks.get(trackKey(link,d,lane))||[];
+      if(arr.some(e=>Math.abs(e.s-s)<SPAWN_TRACK_GAP_M))continue;
+      if(positions.some(q=>Math.hypot(q.x-p.x,q.y-p.y)<SPAWN_CLEAR_M))continue;
+      const nv=addVehicle(link,d,lane,s,{visible});
+      positions.push(p);
+      let t=tracks.get(trackKey(link,d,lane));
+      if(!t){t=[];tracks.set(trackKey(link,d,lane),t);}
+      t.push({s,v:nv});
+      toSpawn--;
+    }
+    // Starting population done once the screen is reasonably full.
+    if(populating){
+      let visibleCount=0;
+      for(const q of positions)if(view.isVisible(q.x,q.y,0))visibleCount++;
+      if(visibleCount>=targetVisible*0.8)populateUntil=0;
+    }
+  }
+
+  /* Map vehicles onto a rebuilt graph so they keep driving smoothly. */
+  function setGraph(next){
+    graph=next;
+    densityClock=1e9;
+    if(!next)return;
+    for(const v of vehicles){
+      if(v.seg.type==='link'){
+        const c=lanePose(v.seg.link,v.seg.d,0,v.pos);
+        const back=laneOffset(v.seg.link,0);
+        const cx=c.x-Math.sin(c.h)*back,cy=c.y+Math.cos(c.h)*back;
+        const hit=next.locate(cx,cy,c.h,3,0.6);
+        if(hit&&hit.link.len>0.5){
+          v.seg={type:'link',link:hit.link,d:hit.d,lane:Math.min(v.seg.lane,hit.link.lanes-1)};
+          v.pos=hit.s;
+          planNext(v);
+        }
+      }else{
+        const c=v.seg;
+        const end=lanePose(c.to.link,c.to.d,0,c.to.s);
+        const back=laneOffset(c.to.link,0);
+        const hit=next.locate(end.x-Math.sin(end.h)*back,end.y+Math.cos(end.h)*back,end.h,3,0.6);
+        if(hit)c.to={link:hit.link,d:hit.d,lane:Math.min(c.to.lane,hit.link.lanes-1),s:hit.s};
+        const start=lanePose(c.from.link,c.from.d,0,c.from.s0);
+        const fb=laneOffset(c.from.link,0);
+        const fh=next.locate(start.x-Math.sin(start.h)*fb,start.y+Math.cos(start.h)*fb,start.h,3,0.6);
+        if(fh)c.from={link:fh.link,d:fh.d,lane:Math.min(c.from.lane,fh.link.lanes-1),s0:fh.s};
+      }
+    }
+  }
+
+  return {
+    setGraph,
+    getGraph:()=>graph,
+    step,
+    pose,
+    populate(seconds=4){populateUntil=simTime+seconds;},
+    clear(){vehicles=[];junctionOcc.clear();},
+    get vehicles(){return vehicles;},
+    get time(){return simTime;},
+    get targets(){return {visible:targetVisible,total:targetTotal};},
+    stats
+  };
+}
+
+/* ------------------------------------------------------------- geometry */
+
+/* Model parts of one vehicle in its local frame: forward f, left l (metres). */
+function rect(f0,f1,l0,l1){return [[f0,l0],[f1,l0],[f1,l1],[f0,l1]];}
+function chamferRect(L,W,cf,cr){
+  const f=L/2,l=W/2;
+  return [
+    [f-cf,l],[f,l-cf*0.8],[f,-l+cf*0.8],[f-cf,-l],
+    [-f+cr,-l],[-f,-l+cr*0.8],[-f,l-cr*0.8],[-f+cr,l]
+  ];
+}
+
+const ORDER={wheel:0,body:1,glass:2,roof:3,light:4};
+
+export function vehicleParts(v,lod){
+  const s=v.spec,c=v.color;
+  const L=s.L,W=s.W,H=s.H;
+  const parts=[];
+  const add=(ring,base,top,color,kind)=>parts.push({ring,base,top,color,kind});
+
+  if(lod==='tiny'){
+    add(rect(-L/2,L/2,-W/2,W/2),0,H*0.85,c,'body');
+    return parts;
+  }
+  const detail=lod==='detail';
+  const flat=lod==='flat';
+
+  if(s.kind==='bus'){
+    const body=chamferRect(L,W,0.35,0.25);
+    if(detail){
+      const fa=L/2-2.55,ra=-L/2+3.05,wy=W/2-0.2;
+      for(const fx of [fa,ra])for(const side of [1,-1]){
+        add(rect(fx-0.5,fx+0.5,side*wy-0.15,side*wy+0.15),0,0.98,WHEEL,'wheel');
+      }
+    }
+    if(flat){
+      add(body,0,H,c,'body');
+      add(rect(-L/2+0.6,L/2-0.4,-W/2+0.3,W/2-0.3),H,H,'#b3141a','roof');
+      return parts;
+    }
+    const slices=s.decks===2
+      ?[[0.28,1.15,c],[1.15,2.05,GLASS],[2.05,2.5,c],[2.5,3.85,GLASS],[3.85,H,c]]
+      :[[0.28,1.05,c],[1.05,2.35,GLASS],[2.35,H,c]];
+    slices.forEach(([b,t,col],i)=>add(body,b,t,col,i===slices.length-1?'roof':col===GLASS?'glass':'body'));
+    if(detail){
+      for(const side of [1,-1]){
+        add(rect(L/2-0.06,L/2+0.02,side*(W/2-0.42)-0.18,side*(W/2-0.42)+0.18),0.55,0.75,HEADLIGHT,'light');
+        add(rect(-L/2-0.02,-L/2+0.06,side*(W/2-0.3)-0.12,side*(W/2-0.3)+0.12),0.7,1.0,TAILLIGHT,'light');
+      }
+    }
+    return parts;
+  }
+
+  const body=chamferRect(L,W,0.34,0.2);
+  if(detail){
+    const wy=W/2-0.15;
+    for(const fx of [s.wb/2,-s.wb/2])for(const side of [1,-1]){
+      add(rect(fx-0.33,fx+0.33,side*wy-0.12,side*wy+0.12),0,0.64,WHEEL,'wheel');
+    }
+  }
+
+  if(s.kind==='van'){
+    const cabFront=L/2-s.hood;
+    const cabRear=L/2-1.55;
+    add(body,0.3,s.belt,c,'body');
+    if(flat){
+      add(rect(-L/2,cabRear,-W/2,W/2),s.belt,H,c,'roof');
+      add(rect(cabRear,cabFront,-W/2+0.1,W/2-0.1),s.belt,H-0.3,GLASS,'glass');
+    }else{
+      add(rect(-L/2,cabRear,-W/2,W/2),s.belt,H,c,'body');
+      add(rect(cabRear,cabFront,-W/2+0.06,W/2-0.06),s.belt,H-0.32,GLASS,'glass');
+      add(rect(cabRear,cabFront-0.45,-W/2+0.16,W/2-0.16),H-0.4,H-0.3,c,'roof');
+    }
+  }else{
+    const glassRear=-L/2+0.42;
+    const glassFront=L/2-s.hood;
+    add(body,0.3,s.belt,c,'body');
+    add(rect(glassRear,glassFront,-W/2+0.08,W/2-0.08),s.belt,H-0.06,GLASS,'glass');
+    add(rect(glassRear+0.3,glassFront-0.5,-W/2+0.22,W/2-0.22),H-0.08,H,c,'roof');
+    if(s.kind==='cab'){
+      const mid=(glassRear+glassFront)/2+0.2;
+      add(rect(mid-0.11,mid+0.11,-0.26,0.26),H,H+0.13,'#f2b200','light');
+    }
+  }
+  if(detail){
+    for(const side of [1,-1]){
+      add(rect(L/2-0.06,L/2+0.03,side*(W/2-0.33)-0.17,side*(W/2-0.33)+0.17),0.58,0.74,HEADLIGHT,'light');
+      add(rect(-L/2-0.03,-L/2+0.06,side*(W/2-0.25)-0.14,side*(W/2-0.25)+0.14),0.7,0.86,TAILLIGHT,'light');
+    }
+  }
+  return parts;
+}
+
+/* ------------------------------------------------------ MapLibre adapter */
+
+const SOURCE_ID='street-traffic-source';
+const LAYER_3D='street-traffic-3d';
+const LAYER_2D='street-traffic-2d';
+
+function worldToLngLat(X,Y){
+  const lng=X/WORLD_SIZE*360-180;
+  const lat=Math.atan(Math.sinh(Math.PI*(1-2*Y/WORLD_SIZE)))*180/Math.PI;
+  return [lng,lat];
+}
+function lngLatToWorld(lng,lat){
+  const X=(lng+180)/360*WORLD_SIZE;
+  const s=Math.sin(lat*Math.PI/180);
+  const Y=(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*WORLD_SIZE;
+  return [X,Y];
+}
+
+export function extractRoadLines(features){
+  const tiles=new Map();
+  for(const f of features){
+    if(f._z==null)continue;
+    tiles.set(f._z+'/'+f._x+'/'+f._y,{z:f._z,x:f._x,y:f._y});
+  }
+  // A parent tile still retained while its children load would duplicate roads.
+  const covered=new Set();
+  for(const t of tiles.values()){
+    let x=t.x,y=t.y;
+    for(let z=t.z-1;z>=0;z--){x=Math.floor(x/2);y=Math.floor(y/2);covered.add(z+'/'+x+'/'+y);}
+  }
+  const lines=[];
+  for(const f of features){
+    const p=f.properties||{};
+    if(!ROAD_TYPES[p.class])continue;
+    if(p.brunnel==='tunnel')continue;
+    if(f._z==null||f._z<14)continue;
+    if(covered.has(f._z+'/'+f._x+'/'+f._y))continue;
+    const vt=f._vectorTileFeature;
+    if(!vt||typeof vt.loadGeometry!=='function')continue;
+    const E=vt.extent||4096;
+    const scale=2**(WORLD_Z-f._z)*(WORLD_EXTENT/E);
+    let geometry;
+    try{geometry=vt.loadGeometry();}catch(error){continue;}
+    for(const ring of geometry){
+      for(const piece of clipPolylineToSquare(ring,E)){
+        lines.push({
+          coords:piece.map(([px,py])=>[(f._x*E+px)*scale,(f._y*E+py)*scale]),
+          cls:p.class,
+          oneway:Number(p.oneway)||0
+        });
+      }
+    }
+  }
+  return lines;
+}
+
+export function createStreetTraffic(map,{
+  roadSourceId='openmaptiles',
+  beforeLayerId=()=>undefined
+}={}){
+  const sim=createTrafficSim({seed:(Date.now()&0xffff)+1});
+  let enabled=false;
+  let raf=null;
+  let lastFrame=0,lastPaint=0;
+  let origin=null,mpu=0;
+  let rebuildTimer=null,lastRebuild=0;
+  let viewCache=null,viewCacheAt=0;
+  let lastCenter=null,lastZoom=null;
+  let pendingPopulate=false;
+
+  function ensureLayers(){
+    if(!map.getSource(SOURCE_ID)){
+      map.addSource(SOURCE_ID,{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    }
+    const before=beforeLayerId();
+    if(!map.getLayer(LAYER_3D)){
+      map.addLayer({
+        id:LAYER_3D,type:'fill-extrusion',source:SOURCE_ID,minzoom:13.5,
+        layout:{visibility:'none'},
+        paint:{
+          'fill-extrusion-color':['get','color'],
+          'fill-extrusion-base':['get','base'],
+          'fill-extrusion-height':['get','top'],
+          'fill-extrusion-opacity':1,
+          'fill-extrusion-vertical-gradient':true
+        }
+      },before);
+    }
+    if(!map.getLayer(LAYER_2D)){
+      map.addLayer({
+        id:LAYER_2D,type:'fill',source:SOURCE_ID,minzoom:13.5,
+        layout:{visibility:'none'},
+        paint:{'fill-color':['get','color'],'fill-opacity':1}
+      },before);
+    }
+  }
+
+  function syncView(){
+    if(!map.getLayer(LAYER_3D))return;
+    const is3D=map.getPitch()>0.5;
+    const before=beforeLayerId();
+    if(before){
+      try{map.moveLayer(LAYER_3D,before);map.moveLayer(LAYER_2D,before);}catch(error){}
+    }
+    map.setLayoutProperty(LAYER_3D,'visibility',enabled&&is3D?'visible':'none');
+    map.setLayoutProperty(LAYER_2D,'visibility',enabled&&!is3D?'visible':'none');
+  }
+
+  const toLngLat=(x,y)=>worldToLngLat(x/mpu+origin[0],y/mpu+origin[1]);
+
+  function rebuildGraph(){
+    rebuildTimer=null;
+    if(!enabled||!map.getSource(roadSourceId))return;
+    if(map.getZoom()<14.2){sim.setGraph(null);sim.clear();paint();pendingPopulate=true;return;}
+    lastRebuild=performance.now();
+    let features;
+    try{features=map.querySourceFeatures(roadSourceId,{sourceLayer:'transportation'});}
+    catch(error){return;}
+    const c=map.getCenter();
+    const cw=lngLatToWorld(c.lng,c.lat);
+    if(!origin||Math.hypot(cw[0]-origin[0],cw[1]-origin[1])*mpu>15000){
+      origin=cw;
+      mpu=EARTH_CIRCUMFERENCE*Math.cos(c.lat*Math.PI/180)/WORLD_SIZE;
+      sim.clear();
+    }
+    const lines=extractRoadLines(features);
+    const graph=buildRoadGraph(lines,{metresPerUnit:mpu,origin});
+    sim.setGraph(graph);
+    if(pendingPopulate&&graph.links.length){pendingPopulate=false;sim.populate(5);}
+  }
+
+  function scheduleRebuild(delay=350){
+    if(!enabled)return;
+    if(rebuildTimer)return;
+    const since=performance.now()-lastRebuild;
+    rebuildTimer=setTimeout(rebuildGraph,Math.max(delay,900-since));
+  }
+
+  function computeView(now){
+    if(viewCache&&now-viewCacheAt<400)return viewCache;
+    const canvas=map.getCanvas();
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    const center=map.getCenter();
+    const cw=lngLatToWorld(center.lng,center.lat);
+    const cx=(cw[0]-origin[0])*mpu,cy=(cw[1]-origin[1])*mpu;
+    let inner=0;
+    const probes=[[0,h],[w,h],[w/2,h],[0,h/2],[w,h/2],[0,h*0.2],[w,h*0.2],[w/2,h*0.12]];
+    for(const [px,py] of probes){
+      let ll;
+      try{ll=map.unproject([px,py]);}catch(error){continue;}
+      if(!ll||!Number.isFinite(ll.lng)||!Number.isFinite(ll.lat))continue;
+      const pw=lngLatToWorld(ll.lng,ll.lat);
+      const d=Math.hypot((pw[0]-origin[0])*mpu-cx,(pw[1]-origin[1])*mpu-cy);
+      if(Number.isFinite(d))inner=Math.max(inner,d);
+    }
+    inner=Math.min(2200,Math.max(150,inner));
+    const isVisible=(x,y,margin=0)=>{
+      if(Math.hypot(x-cx,y-cy)>inner*1.25)return false;
+      const p=map.project(toLngLat(x,y));
+      return p.x>=-margin&&p.x<=w+margin&&p.y>=-margin&&p.y<=h+margin;
+    };
+    viewCache={
+      isVisible,
+      distance:(x,y)=>Math.hypot(x-cx,y-cy),
+      outerRadius:inner+220,
+      spacingM:85,
+      maxVisible:70,
+      width:w,height:h
+    };
+    viewCacheAt=now;
+    return viewCache;
+  }
+
+  function paint(){
+    const src=map.getSource(SOURCE_ID);
+    if(!src)return;
+    const g=sim.getGraph();
+    if(!g||!enabled){src.setData({type:'FeatureCollection',features:[]});return;}
+    const canvas=map.getCanvas();
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    const flat=map.getPitch()<=0.5;
+    const groups=new Map();
+    for(const v of sim.vehicles){
+      const p=sim.pose(v);
+      const ll=toLngLat(p.x,p.y);
+      const sp=map.project(ll);
+      if(sp.x<-120||sp.x>w+120||sp.y<-120||sp.y>h+120)continue;
+      // Screen size decides the model detail.
+      const tip=map.project(toLngLat(p.x+Math.cos(p.h)*v.spec.L,p.y+Math.sin(p.h)*v.spec.L));
+      const px=Math.hypot(tip.x-sp.x,tip.y-sp.y);
+      const lod=flat?(px<5?'tiny':'flat'):px>30?'detail':px>7?'medium':'tiny';
+      const k=v.scale;
+      const cos=Math.cos(p.h),sin=Math.sin(p.h);
+      for(const part of vehicleParts(v,lod)){
+        const ring=part.ring.map(([f,l])=>{
+          const x=p.x+(f*cos+l*sin)*k,y=p.y+(f*sin-l*cos)*k;
+          return toLngLat(x,y);
+        });
+        ring.push(ring[0]);
+        const base=+(part.base*k).toFixed(2),top=+(part.top*k).toFixed(2);
+        const key=part.color+'|'+base+'|'+top+'|'+part.kind;
+        let gr=groups.get(key);
+        if(!gr){gr={color:part.color,base,top,kind:part.kind,polys:[]};groups.set(key,gr);}
+        gr.polys.push([ring]);
+      }
+    }
+    const features=[...groups.values()]
+      .sort((a,b)=>ORDER[a.kind]-ORDER[b.kind]||a.base-b.base)
+      .map(gr=>({
+        type:'Feature',
+        properties:{color:gr.color,base:gr.base,top:gr.top},
+        geometry:{type:'MultiPolygon',coordinates:gr.polys}
+      }));
+    src.setData({type:'FeatureCollection',features});
+  }
+
+  function frame(time){
+    raf=requestAnimationFrame(frame);
+    if(!enabled||document.hidden){lastFrame=time;return;}
+    if(!lastFrame){lastFrame=time;return;}
+    const dt=Math.min(0.1,(time-lastFrame)/1000);
+    lastFrame=time;
+    if(!sim.getGraph()||!origin)return;
+    const view=computeView(time);
+    sim.step(dt,view);
+    const interval=map.isMoving()?45:33;
+    if(time-lastPaint>=interval){lastPaint=time;paint();}
+  }
+
+  function onMoveEnd(){
+    viewCache=null;
+    scheduleRebuild(300);
+    const c=map.getCenter(),z=map.getZoom();
+    if(lastCenter&&origin){
+      const a=lngLatToWorld(lastCenter.lng,lastCenter.lat),b=lngLatToWorld(c.lng,c.lat);
+      const moved=Math.hypot(a[0]-b[0],a[1]-b[1])*mpu;
+      const view=computeView(performance.now());
+      // A long jump (search result, "London" button) lands on empty streets.
+      if(moved>view.outerRadius*1.1||Math.abs(z-lastZoom)>1.6)pendingPopulate=true;
+    }
+    lastCenter=c;lastZoom=z;
+  }
+  function onMove(){viewCache=null;}
+  function onSourceData(e){
+    if(e.sourceId===roadSourceId&&e.isSourceLoaded)scheduleRebuild(250);
+  }
+
+  function setEnabled(on){
+    on=Boolean(on);
+    if(on===enabled)return;
+    enabled=on;
+    ensureLayers();
+    syncView();
+    if(on){
+      map.on('moveend',onMoveEnd);
+      map.on('move',onMove);
+      map.on('sourcedata',onSourceData);
+      lastCenter=map.getCenter();lastZoom=map.getZoom();
+      pendingPopulate=true;
+      rebuildGraph();
+      lastFrame=0;
+      if(raf===null)raf=requestAnimationFrame(frame);
+    }else{
+      map.off('moveend',onMoveEnd);
+      map.off('move',onMove);
+      map.off('sourcedata',onSourceData);
+      if(raf!==null){cancelAnimationFrame(raf);raf=null;}
+      clearTimeout(rebuildTimer);rebuildTimer=null;
+      sim.clear();
+      paint();
+    }
+  }
+
+  return {
+    setEnabled,
+    syncView,
+    get enabled(){return enabled;},
+    get sim(){return sim;}
+  };
+}

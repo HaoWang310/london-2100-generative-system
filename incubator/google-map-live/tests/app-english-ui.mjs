@@ -12,6 +12,7 @@ const paths=[
  'scripts/terrain_local.js',
  'scripts/terrain_worker.js',
  'scripts/osm_basemap_themes.js',
+ 'scripts/street_traffic.js',
  'scripts/local_flood_ui.js',
  'scripts/local_flood_sim.js',
  'scripts/local_flood_worker.js',
@@ -49,7 +50,7 @@ for(const path of paths){
 }
 const html=readFileSync('index.html','utf8');
 assert.match(html,/<html\s+lang="en"/i,'HTML document language must be English');
-assert.match(html,/APP_VERSION='3\.30\.1-english'/,'page must use English module build');
-assert.match(html,/ui_language\.js\?v=3\.30\.1-english/,
+assert.match(html,/APP_VERSION='3\.31\.0-english'/,'page must use English module build');
+assert.match(html,/ui_language\.js\?v=3\.31\.0-english/,
  'bidirectional language layer must use current version');
 console.log('PASS English London Map: '+paths.length+' active HTML/JS files; no visible Chinese source strings');
