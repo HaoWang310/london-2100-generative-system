@@ -86,8 +86,6 @@
 .intro-enter { height: 36px; padding: 0 18px; border-radius: 999px; font-size: 13px; }
 .intro-enter span { transition: transform .25s cubic-bezier(.2,0,0,1); display: inline-block; }
 .intro-enter:hover span { transform: translateX(3px); }
-.intro-credit { color: rgba(245,245,247,.35); font-size: 11px; }
-.intro-credit a { color: inherit; }
 
 @media (max-width: 760px) {
   .intro-panels { flex-direction: column; }
@@ -96,7 +94,7 @@
   .intro.is-in .intro-label { transform: translateY(50%); }
   .intro-sub { display: none; }
   .intro-bar { flex-wrap: wrap; gap: 10px 16px; padding: 14px 16px; }
-  .intro-bar .hint, .intro-credit { display: none; }
+  .intro-bar .hint { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

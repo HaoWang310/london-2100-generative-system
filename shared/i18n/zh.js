@@ -98,7 +98,6 @@ export const zh = {
   "intro.agriculture.sub": "让城市本身成为生产性景观",
   "intro.title": "London 2100 · 多尺度城市生成系统",
   "intro.tagline": "从伦敦全域到区域、场地与建筑，逐级生成水系引导的生产性城市",
-  "intro.credit": "视频素材：",
   "intro.hint": "按 Enter 进入",
   "intro.enter": "进入系统",
   "intro.reopen": "返回开场",
