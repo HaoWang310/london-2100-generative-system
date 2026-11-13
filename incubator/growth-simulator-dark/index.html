@@ -151,6 +151,12 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 <aside id="right" class="panel"><div class="rz rz-x" title="Drag to resize · double-click to reset"></div><div class="rz rz-y" title="Drag to resize · double-click to reset"></div>
   <div class="head"><span class="rh" data-t>Display</span><button class="icon" id="colR" title="Collapse" style="width:36px;height:36px;border-radius:13px;font-size:18px">–</button></div>
   <div class="scroll">
+    <div class="sec" id="bar">
+      <h2 data-t>Playback</h2>
+      <button id="play" class="big" data-t>Play</button>
+      <div class="yrow"><span id="ylab">2025</span><input type="range" id="yslider" min="0" max="75" value="0"></div>
+      <div class="tiles"><button data-s="3" data-t>Slow</button><button data-s="7" class="on" data-t>Normal</button><button data-s="16" data-t>Fast</button></div>
+    </div>
     <div class="sec">
       <h2 data-t>Readout</h2>
       <div id="year">2025</div>
@@ -161,12 +167,6 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       <table id="land"></table>
       <h2 style="margin-top:18px" data-t>Against the final</h2>
       <div id="cmp"></div>
-    </div>
-    <div class="sec" id="bar">
-      <h2 data-t>Playback</h2>
-      <button id="play" class="big" data-t>Play</button>
-      <div class="yrow"><span id="ylab">2025</span><input type="range" id="yslider" min="0" max="75" value="0"></div>
-      <div class="tiles"><button data-s="3" data-t>Slow</button><button data-s="7" class="on" data-t>Normal</button><button data-s="16" data-t>Fast</button></div>
     </div>
     <div class="sec">
       <h2 data-t>View</h2>
