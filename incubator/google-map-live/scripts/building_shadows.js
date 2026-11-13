@@ -104,6 +104,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
   let dirty=true;
   let rebuildTimer=null,lastBuild=0;
   let gl=null,prog=null,comp=null,buf=null,quad=null,tex=null,fb=null,texW=0,texH=0;
+  let vaoApi=null,vaoMesh=null,vaoQuad=null;
 
   function readBuildings(){
     let features=[];
@@ -192,12 +193,35 @@ export function createBuildingShadowLayer(map,maplibregl,{
       tex=gl.createTexture();
       fb=gl.createFramebuffer();
       texW=texH=0;
+      // Own vertex-array objects: MapLibre keeps its own VAO bound, and drawing
+      // through it (with its other attributes enabled) fails with INVALID_OPERATION.
+      if(typeof gl.createVertexArray==='function'){
+        vaoApi={create:()=>gl.createVertexArray(),bind:v=>gl.bindVertexArray(v),
+          current:()=>gl.getParameter(gl.VERTEX_ARRAY_BINDING),del:v=>gl.deleteVertexArray(v)};
+      }else{
+        const ext=gl.getExtension('OES_vertex_array_object');
+        if(ext)vaoApi={create:()=>ext.createVertexArrayOES(),bind:v=>ext.bindVertexArrayOES(v),
+          current:()=>gl.getParameter(ext.VERTEX_ARRAY_BINDING_OES),del:v=>ext.deleteVertexArrayOES(v)};
+      }
+      const previous=vaoApi?.current();
+      if(vaoApi){
+        vaoMesh=vaoApi.create();vaoApi.bind(vaoMesh);
+        gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+        const a1=gl.getAttribLocation(prog,'a_pos');
+        gl.enableVertexAttribArray(a1);gl.vertexAttribPointer(a1,2,gl.FLOAT,false,0,0);
+        vaoQuad=vaoApi.create();vaoApi.bind(vaoQuad);
+        gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+        const a2=gl.getAttribLocation(comp,'a_pos');
+        gl.enableVertexAttribArray(a2);gl.vertexAttribPointer(a2,2,gl.FLOAT,false,0,0);
+        vaoApi.bind(previous||null);
+      }
       upload();
     },
     onRemove(){
       if(!gl)return;
       gl.deleteBuffer(buf);gl.deleteBuffer(quad);gl.deleteTexture(tex);gl.deleteFramebuffer(fb);
       gl.deleteProgram(prog);gl.deleteProgram(comp);
+      if(vaoApi){vaoApi.del(vaoMesh);vaoApi.del(vaoQuad);}
       gl=null;
     },
     render(context,args){
@@ -214,6 +238,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
       }
       const prevFb=gl.getParameter(gl.FRAMEBUFFER_BINDING);
       const vp=gl.getParameter(gl.VIEWPORT);
+      const prevVao=vaoApi?vaoApi.current():null;
       // MapLibre 6: modelViewProjectionMatrix takes world-pixel coordinates
       // (mercator x 512 x 2^zoom). Vertices are relative to `origin`; scale and
       // translation are folded in at double precision.
@@ -230,10 +255,13 @@ export function createBuildingShadowLayer(map,maplibregl,{
       gl.disable(gl.DEPTH_TEST);gl.disable(gl.STENCIL_TEST);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
       gl.useProgram(prog);
       gl.uniformMatrix4fv(gl.getUniformLocation(prog,'u_matrix'),false,matrix);
-      gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-      const a1=gl.getAttribLocation(prog,'a_pos');
-      gl.enableVertexAttribArray(a1);
-      gl.vertexAttribPointer(a1,2,gl.FLOAT,false,0,0);
+      if(vaoApi)vaoApi.bind(vaoMesh);
+      else{
+        gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+        const a1=gl.getAttribLocation(prog,'a_pos');
+        gl.enableVertexAttribArray(a1);
+        gl.vertexAttribPointer(a1,2,gl.FLOAT,false,0,0);
+      }
       gl.drawArrays(gl.TRIANGLES,0,mesh.length/2);
 
       // Pass 2: lay the mask over the map with one uniform transparency.
@@ -247,12 +275,15 @@ export function createBuildingShadowLayer(map,maplibregl,{
       gl.uniform1i(gl.getUniformLocation(comp,'u_tex'),0);
       const a=strength;
       gl.uniform4f(gl.getUniformLocation(comp,'u_color'),0.10*a,0.11*a,0.16*a,a);
-      gl.bindBuffer(gl.ARRAY_BUFFER,quad);
-      const a2=gl.getAttribLocation(comp,'a_pos');
-      gl.enableVertexAttribArray(a2);
-      gl.vertexAttribPointer(a2,2,gl.FLOAT,false,0,0);
+      if(vaoApi)vaoApi.bind(vaoQuad);
+      else{
+        gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+        const a2=gl.getAttribLocation(comp,'a_pos');
+        gl.enableVertexAttribArray(a2);
+        gl.vertexAttribPointer(a2,2,gl.FLOAT,false,0,0);
+      }
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
-      gl.disableVertexAttribArray(a2);
+      if(vaoApi)vaoApi.bind(prevVao||null);
     }
   };
 
