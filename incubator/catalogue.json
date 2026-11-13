@@ -108,16 +108,16 @@
       "cover": "assets/catalogue/slime-mould-quadrant.webp",
       "status": "incubating",
       "title": {
-        "zh": "黏菌模拟 · 西北象限车站单元",
-        "en": "Slime mould · station cells, north-west quadrant"
+        "zh": "黏菌象限 · 车站单元",
+        "en": "Slime mould · station cells"
       },
       "desc": {
-        "zh": "智能体从五个车站出发，轨迹沿铁路走廊加粗成脉络，并在每个车站周围围合成单元；第 900 步暂停并识别单元。",
-        "en": "Agents leave five stations; their trails thicken into veins along the rail corridor and close into a cell around each station. Pauses at step 900 and finds the cells."
+        "zh": "Loop City 西北象限（05–06 区）黏菌模型：智能体从五个车站出发，轨迹沿铁路走廊加粗成脉络，并在每个车站周围围合成单元。",
+        "en": "Loop City's north-west quadrant (zones 05–06): agents leave five stations, their trails thicken into veins along the rail corridor and close into a cell around each station."
       },
       "tags": [
         {
-          "zh": "黏菌",
+          "zh": "黏菌模拟",
           "en": "Slime mould"
         },
         {
@@ -125,8 +125,8 @@
           "en": "Station cells"
         },
         {
-          "zh": "智能体",
-          "en": "Agents"
+          "zh": "铁路走廊",
+          "en": "Rail corridor"
         }
       ],
       "owner": "sawhneyshreyadesign-1602",
