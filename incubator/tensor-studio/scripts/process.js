@@ -41,7 +41,7 @@ const STEPS = [
   { k: 1, zh: '选场地', en: 'The site', rows: [],
     note: () => L('场地红线、锚点（现有道路与边界的交点）和后面要用到的数据。', 'The boundary, the anchors (where existing streets meet the edge) and the data the steps use.') },
   { k: 2, zh: '看环境', en: 'Environment', rows: [],
-    note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows.') },
+    note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。这一步只是查看，选哪张图都不会改变道路。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows. Only a reading: the map you pick does not change the streets.') },
   { k: 3, zh: '定约束', en: 'Constraints', rows: ['fOn', 'fAvoid'],
     note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入；它们的边界成为岸线。', 'Water and the flood zones kept clear come out of the land; no street enters them, their edges become shores.') },
   { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'windOn', 'wWind', 'month', 'fW', 'smooth'],

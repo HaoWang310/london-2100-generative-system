@@ -1170,13 +1170,28 @@ const ENVRAMP = { Z: ['#24414f', '#5f7f6e', '#b5ad83', '#e6d8b0'], Q: ['#0a84ff'
 function hex(c){ if (c.startsWith('rgba')) { const m = c.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m[3]]; } return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16), 1]; }
 function rampAt(stops, t){ const s = stops.map(hex), x = clamp(t, 0, 1) * (s.length - 1), i = Math.min(s.length - 2, Math.floor(x)), f = x - i; return s[i].map((v, k) => v + (s[i + 1][k] - v) * f); }
 function envRange(k){ const A = ENV[k], M = D.landMask; let lo = Infinity, hi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ lo = Math.min(lo, A[i]); hi = Math.max(hi, A[i]); } return [lo, hi]; }
-function envImg(k){ if (ENVIMG[k]) return ENVIMG[k]; const A = ENV[k], M = D.landMask, [lo, hi] = envRange(k), oc = mk(); oc.width = nx; oc.height = ny;
-  const gg = oc.getContext('2d'), im = gg.createImageData(nx, ny), Z = ENV.Z;
-  for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const i = r * nx + c, t = (A[i] - lo) / (hi - lo || 1), col = rampAt(ENVRAMP[k], t); let a = k === 'Q' ? Math.pow(clamp((t - 0.42) / 0.5, 0, 1), 1.3) : col[3];   // runoff: only the stronger flow paths, as lines
-    if (k === 'Z'){ // hillshade from the north-west, 45° up
+// (v8.7) drawn 4 times finer than the 10 m grid, each value read between the cells (bilinear), so the maps are smooth
+// instead of a mosaic of 10 m squares; the runoff is lightly smoothed first, so its flow paths come out as soft lines
+const ENV_UP = 4;
+function envImg(k){ if (ENVIMG[k]) return ENVIMG[k];
+  const M = D.landMask, Z = ENV.Z, [lo, hi] = envRange(k), A = k === 'Q' ? blur(ENV.Q, 0.8) : ENV[k];
+  let qlo = lo, qhi = hi; if (k === 'Q'){ qlo = Infinity; qhi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ qlo = Math.min(qlo, A[i]); qhi = Math.max(qhi, A[i]); } }
+  // per cell: the value (0..1), the hill shade (elevation only), the land (1) or not
+  const T = new Float32Array(N), SH = k === 'Z' ? new Float32Array(N) : null, LM = new Float32Array(N);
+  for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const i = r * nx + c; T[i] = k === 'Q' ? (A[i] - qlo) / (qhi - qlo || 1) : (A[i] - lo) / (hi - lo || 1); LM[i] = !M || M[i] ? 1 : 0;
+    if (SH){ // hillshade from the north-west, 45° up
       const dzx = (Z[r * nx + Math.min(c + 1, nx - 1)] - Z[r * nx + Math.max(c - 1, 0)]) / (2 * cell), dzy = (Z[Math.min(r + 1, ny - 1) * nx + c] - Z[Math.max(r - 1, 0) * nx + c]) / (2 * cell);
-      const ex = 4, nxv = -dzx * ex, nyv = -dzy * ex, nz = 1, L = Math.hypot(nxv, nyv, nz), sh = clamp(0.55 + 0.75 * ((nxv * -0.5 + nyv * 0.5 + nz * 0.707) / L), 0.35, 1.25); for (let q = 0; q < 3; q++) col[q] = clamp(col[q] * sh, 0, 255); }
-    const o = 4 * ((ny - 1 - r) * nx + c); im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = Math.round(255 * a * (!M || M[i] ? 1 : 0.4)); }
+      const ex = 4, nxv = -dzx * ex, nyv = -dzy * ex, nz = 1, L = Math.hypot(nxv, nyv, nz); SH[i] = clamp(0.55 + 0.75 * ((nxv * -0.5 + nyv * 0.5 + nz * 0.707) / L), 0.35, 1.25); } }
+  const W = nx * ENV_UP, H = ny * ENV_UP, oc = mk(); oc.width = W; oc.height = H; const gg = oc.getContext('2d'), im = gg.createImageData(W, H), d = im.data;
+  const bil = (F, u, w) => { const c0 = clamp(Math.floor(u), 0, nx - 1), r0 = clamp(Math.floor(w), 0, ny - 1), c1 = Math.min(c0 + 1, nx - 1), r1 = Math.min(r0 + 1, ny - 1), fu = clamp(u - c0, 0, 1), fw = clamp(w - r0, 0, 1);
+    return (F[r0 * nx + c0] * (1 - fu) + F[r0 * nx + c1] * fu) * (1 - fw) + (F[r1 * nx + c0] * (1 - fu) + F[r1 * nx + c1] * fu) * fw; };
+  const ramp = ENVRAMP[k];
+  for (let py = 0; py < H; py++){ const w = ny - 1 - ((py + 0.5) / ENV_UP - 0.5);
+    for (let px = 0; px < W; px++){ const u = (px + 0.5) / ENV_UP - 0.5, t = bil(T, u, w), col = rampAt(ramp, t);
+      let a = k === 'Q' ? Math.pow(clamp((t - 0.42) / 0.5, 0, 1), 1.3) : col[3];   // runoff: only the stronger flow paths, as lines
+      if (SH){ const sh = bil(SH, u, w); col[0] = clamp(col[0] * sh, 0, 255); col[1] = clamp(col[1] * sh, 0, 255); col[2] = clamp(col[2] * sh, 0, 255); }
+      const lm = bil(LM, u, w), o = 4 * (py * W + px);
+      d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a * (0.4 + 0.6 * lm)); } }
   gg.putImageData(im, 0, 0); return (ENVIMG[k] = oc); }
 function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
   g.drawImage(envImg(ENVSEL), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
