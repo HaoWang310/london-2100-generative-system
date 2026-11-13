@@ -911,6 +911,61 @@
       margin-top:7px;padding-top:9px;border-top:1px solid #333438;
     }
 
+
+    /* Right-hand map display panel (view, colour theme, labels, vehicles) */
+    .displayPanel{
+      position:absolute;z-index:20;top:14px;right:52px;width:200px;
+      max-height:calc(100dvh - 80px);overflow-y:auto;scrollbar-width:thin;
+      background:rgba(14,14,16,.94);color:#f5f5f7;
+      border:1px solid #2f2f34;border-radius:14px;
+      box-shadow:0 16px 45px rgba(0,0,0,.28);backdrop-filter:blur(12px);
+      font-size:12px;box-sizing:border-box
+    }
+    .displayPanel .dpSection{padding:14px 14px 12px;border-top:1px solid #2a2a2e}
+    .displayPanel .dpSection:first-child{border-top:0}
+    .displayPanel .dpTitle{
+      font-size:10px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;
+      color:#8e8e94;margin-bottom:10px
+    }
+    .displayPanel .dpGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .displayPanel .dpTile{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      min-height:54px;padding:8px 6px;margin:0;
+      background:#1f1f22;color:#c7c7cc;border:1px solid #38383d;border-radius:8px;
+      font:inherit;font-size:11px;line-height:1.25;text-align:center;cursor:pointer
+    }
+    .displayPanel .dpTile:hover:not(:disabled):not([aria-pressed="true"]){background:#29292d;color:#f5f5f7}
+    .displayPanel .dpTile[aria-pressed="true"]{background:#2c2c31;color:#fff;border-color:#d1d1d6}
+    .displayPanel .dpTile:disabled{opacity:.45;cursor:not-allowed}
+    .displayPanel .dpTile:focus-visible,.displayPanel .dpSwitch:focus-visible{outline:2px solid #4c8dff;outline-offset:2px}
+    .displayPanel svg{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+    .displayPanel .dpDots{display:flex;gap:4px}
+    .displayPanel .dpDots i{width:9px;height:9px;border-radius:50%;border:1px solid #5a5a60}
+    .displayPanel .dpHidden{display:none}
+    .displayPanel .dpSwitchRow{
+      display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:#e5e5ea
+    }
+    .displayPanel .dpSwitchRow span{flex:1}
+    .displayPanel .dpSwitch{
+      appearance:none;-webkit-appearance:none;flex:0 0 30px;width:30px;height:18px;margin:0;
+      border-radius:999px;background:#48484e;position:relative;cursor:pointer;transition:background .15s
+    }
+    .displayPanel .dpSwitch::after{
+      content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+      background:#d1d1d6;transition:transform .15s,background .15s
+    }
+    /* "Place labels" is shown ON when the underlying hide-labels checkbox is unchecked. */
+    .displayPanel .dpSwitch:checked,.displayPanel .dpSwitch.dpInvert:not(:checked){background:#2f7bff}
+    .displayPanel .dpSwitch:checked::after,.displayPanel .dpSwitch.dpInvert:not(:checked)::after{transform:translateX(12px);background:#fff}
+    .displayPanel .dpSwitch.dpInvert:checked{background:#48484e}
+    .displayPanel .dpSwitch.dpInvert:checked::after{transform:none;background:#d1d1d6}
+    .displayPanel .dpSwitch:disabled{opacity:.45;cursor:not-allowed}
+    @media(max-width:600px){
+      .displayPanel{top:auto;bottom:52px;right:8px;width:180px;max-height:45dvh}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .displayPanel .dpSwitch,.displayPanel .dpSwitch::after{transition:none}
+    }
 </style>
 </head>
 <body>
@@ -919,6 +974,54 @@
   <div id="osmRecovery" class="osmRecovery" role="alert">Map loading slowly. <a href="./map-safe.html">Open 2D map without WebGL</a></div>
   <div id="terrainScreenOverlay" aria-hidden="true">
     <img id="terrainScreenImage" alt="">
+  </div>
+
+  <div class="displayPanel" id="displayPanel" role="region" aria-label="Map display">
+    <div class="dpSection">
+      <div class="dpTitle">View</div>
+      <div class="dpGrid viewButtons" role="group" aria-label="Map view">
+        <button id="view2D" class="dpTile" type="button" aria-pressed="true" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l8-4 8 4-8 4-8-4z"/></svg>
+          <span>2D plan</span>
+        </button>
+        <button id="view3D" class="dpTile" type="button" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg>
+          <span>3D city</span>
+        </button>
+      </div>
+    </div>
+    <div class="dpSection">
+      <div class="dpTitle">Color theme</div>
+      <div class="dpGrid" role="group" aria-label="Map style">
+        <button class="dpTile dpTheme" type="button" data-theme="planning" aria-pressed="true"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#ffffff"></i><i style="background:#e6e6e6"></i><i style="background:#999999"></i></span>
+          <span>Architectural planning</span>
+        </button>
+        <button class="dpTile dpTheme" type="button" data-theme="dark" aria-pressed="false"
+          title="Changes only map colors without replacing the original map style or reloading analysis layers">
+          <span class="dpDots" aria-hidden="true"><i style="background:#2b2f33"></i><i style="background:#62676c"></i><i style="background:#161616"></i></span>
+          <span>Dark tech</span>
+        </button>
+      </div>
+      <select id="osmVisualStyle" class="dpHidden" aria-label="OpenStreetMap basemap style" tabindex="-1" aria-hidden="true">
+        <option value="planning" selected>Architectural planning</option>
+        <option value="dark">Dark tech</option>
+      </select>
+    </div>
+    <div class="dpSection">
+      <div class="dpTitle">Display</div>
+      <label class="dpSwitchRow" title="Hide OSM road names, place labels, POIs, transit icons and stations; keep roads, buildings, 3D geometry and analysis layers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v14"/></svg>
+        <span>Place labels / POIs</span>
+        <input id="osmStructureToggle" class="dpSwitch dpInvert" type="checkbox" autocomplete="off" aria-label="Hide OSM labels / POIs" disabled>
+      </label>
+      <label class="dpSwitchRow" title="Vehicle display is controlled independently of the OSM labels / POIs toggle">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5H5z"/><path d="M5 11h14"/><circle cx="8" cy="16.5" r="1.6"/><circle cx="16" cy="16.5" r="1.6"/></svg>
+        <span>Street vehicles</span>
+        <input id="streetVehicleToggle" class="dpSwitch" type="checkbox" autocomplete="off" disabled>
+      </label>
+    </div>
   </div>
 
   <div id="layerHintTooltip" class="layerHintTooltip" role="tooltip" aria-hidden="true"></div>
@@ -958,37 +1061,6 @@
       <div class="layerRow">
         <span>OpenStreetMap / OpenFreeMap</span>
         <span style="font-size:9px;color:#9fb0c4">Development mode</span>
-      </div>
-      <label class="layerRow" title="Changes only map colors without replacing the original map style or reloading analysis layers">
-        <span class="layerName">
-          <strong>Map style</strong>
-          <small>Visual colors only · coordinates and analysis remain unchanged</small>
-        </span>
-        <select id="osmVisualStyle" aria-label="OpenStreetMap basemap style"
-          style="min-width:132px;width:132px;background:#26292c;color:#f4f5f6;border:1px solid #565b63;border-radius:8px;padding:7px 5px;font-size:11px">
-          <option value="planning" selected>Architectural planning</option>
-          <option value="dark">Dark tech</option>
-        </select>
-      </label>
-      <label class="layerRow" title="Hide OSM road names, place labels, POIs, transit icons and stations; keep roads, buildings, 3D geometry and analysis layers">
-        <span class="layerName">
-          <strong>Hide OSM labels / POIs</strong>
-          <small>Hide only OSM text and POIs; preserve roads, buildings, red boundary, anchors, dimensions and analysis</small>
-        </span>
-        <input id="osmStructureToggle" type="checkbox" autocomplete="off" disabled>
-      </label>
-
-      <label class="layerRow" title="Vehicle display is controlled independently of the OSM labels / POIs toggle">
-        <span class="layerName">
-          <strong>Show street vehicles</strong>
-          <small>Independent toggle; unaffected by OSM label visibility</small>
-        </span>
-        <input id="streetVehicleToggle" type="checkbox" autocomplete="off" disabled>
-      </label>
-
-      <div class="row viewButtons" role="group" aria-label="Map view">
-        <button id="view2D" class="secondary" type="button" aria-pressed="true" disabled>2D plan</button>
-        <button id="view3D" class="secondary" type="button" aria-pressed="false" disabled>3D city</button>
       </div>
       <select id="provider" class="googleOnly">
         <option value="osm" selected>OpenStreetMap / OpenFreeMap</option>
@@ -1716,12 +1788,18 @@
   // "OSM labels / POIs hidden", not road/building geometry hidden.
   let osmStructuresHidden=false; // OSM road/place/POI labels are visible by default.
   const osmBaseLayerVisibility=new Map();
+  function syncThemeTiles(mode){
+    for(const tile of document.querySelectorAll('#displayPanel .dpTheme')){
+      tile.setAttribute('aria-pressed',String(tile.dataset.theme===mode));
+    }
+  }
   function setBasemapTheme(mode){
     const next=normaliseBasemapTheme(mode);
     if(basemapTheme===next&&basemapThemeController?.getMode()===next)return;
     basemapTheme=next;
     const select=$('osmVisualStyle');
     if(select)select.value=next;
+    syncThemeTiles(next);
     if(osmMap&&osmStyleReady){
       // Paint-only; never setStyle() or lose EA/DEM/tensor/site layers.
       basemapThemeController?.apply(next);
@@ -8771,6 +8849,10 @@
   $('osmVisualStyle').addEventListener('change',e=>{
     setBasemapTheme(e.target.value);
   });
+  for(const tile of document.querySelectorAll('#displayPanel .dpTheme')){
+    tile.addEventListener('click',()=>setBasemapTheme(tile.dataset.theme));
+  }
+  syncThemeTiles(basemapTheme);
   $('osmStructureToggle').addEventListener('change',e=>{
     osmStructuresHidden=e.target.checked;
     syncOsmStructureVisibility();

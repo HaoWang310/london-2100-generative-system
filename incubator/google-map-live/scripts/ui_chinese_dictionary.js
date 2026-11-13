@@ -859,4 +859,10 @@ export const CHINESE_UI = {
   "Off": "已关闭",
   "Run": "运行",
   "km²": "平方千米",
+  "Map display": "地图显示",
+  "View": "视图",
+  "Color theme": "颜色主题",
+  "Display": "显示",
+  "Place labels / POIs": "地名标注 / POI",
+  "Street vehicles": "街道小车",
 };
