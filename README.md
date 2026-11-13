@@ -16,7 +16,7 @@
 **在线预览**：https://haowang310.github.io/london-2100-generative-system/
 （各模块独立预览：`/modules/<模块>/preview.html`）
 
-架构、数据接口与分阶段计划见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+架构、数据接口与分阶段计划见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)；UI 设计参考与 Design / Motion System 草案见 [docs/DESIGN-REFERENCES.md](docs/DESIGN-REFERENCES.md)。
 
 ## 仓库结构
 
