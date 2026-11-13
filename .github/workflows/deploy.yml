@@ -65,6 +65,26 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
     steps:
+      # While the Pages source is still "Deploy from a branch", GitHub also runs
+      # its own branch build for every push, which publishes the raw files
+      # without version stamps. Wait for it, so this stamped build is published
+      # last and wins. (Once Settings → Pages → Source is "GitHub Actions",
+      # there is no branch build and this step finishes immediately.)
+      - name: Wait for GitHub's branch build, if any
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 36); do
+            pending=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name == "pages build and deployment" and .status != "completed")] | length')
+            [ "$pending" = "0" ] && [ "$i" -gt 3 ] && break
+            sleep 5
+          done
+          echo "branch build settled"
       - id: deployment
         uses: actions/deploy-pages@v4
