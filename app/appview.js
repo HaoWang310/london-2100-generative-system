@@ -51,8 +51,31 @@ export function createAppView(root) {
       iframe.allow = 'fullscreen; clipboard-write; geolocation';
       iframe.src = item.href;
       loading.classList.remove('done');
-      iframe.addEventListener('load', () => { loading.classList.add('done'); iframe.classList.add('is-loaded'); }, { once: true });
+      // Reveal as soon as the app starts rendering. Waiting for the frame's
+      // `load` event is not enough: an app whose module script awaits a CDN
+      // download (google-map-live awaits MapLibre) delays `load` until that
+      // finishes, and a slow CDN would leave the loader up indefinitely.
+      const frame = iframe;
+      let revealed = false;
+      const reveal = () => {
+        if (revealed || frame !== iframe) return;
+        revealed = true;
+        loading.classList.add('done');
+        frame.classList.add('is-loaded');
+      };
+      frame.addEventListener('load', reveal, { once: true });
+      const started = performance.now();
+      const poll = () => {
+        if (revealed || frame !== iframe) return;
+        let state = '';
+        try { state = frame.contentDocument?.readyState || ''; } catch { /* cross-origin: rely on load/timeout */ }
+        const hasBody = (() => { try { return frame.contentDocument?.body?.childElementCount > 0; } catch { return false; } })();
+        if ((state === 'interactive' || state === 'complete') && hasBody) setTimeout(reveal, 150);
+        else if (performance.now() - started > 2500) reveal();
+        else setTimeout(poll, 100);
+      };
       frameWrap.append(iframe);
+      setTimeout(poll, 100);
 
       root.hidden = false;
       root.classList.add('is-open');

@@ -533,6 +533,7 @@ async function boot() {
   };
   window.addEventListener('hashchange', route);
   route();
+  document.documentElement.dataset.ready = '1';   // tells the safety net in index.html we started
   applyI18n(document);
 
   viewer = await createMapViewer($('map'), {
