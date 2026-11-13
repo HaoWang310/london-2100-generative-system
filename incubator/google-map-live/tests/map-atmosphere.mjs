@@ -66,4 +66,15 @@ assert.ok(lum(nightPalette.road)>lum(nightPalette.land)+40,'streets lighter than
 const mid=blendLighting(P.day,P.night,0.5).tint;
 assert.ok(mid.roles.ground>mid.roles.vehicle,'blended tint keeps per-role strengths');
 
+// Colour themes: six panel themes, each complete and hex-valued.
+const PANEL=['default','faded','planning','ocean','warm','vivid'];
+const KEYS=['background','land','residential','park','water','building','buildingEdge','motorway','primaryRoad','road','rail','boundary','text','textHalo','poi','extrusion'];
+for(const id of PANEL){
+  const t=BASEMAP_THEMES[id];
+  assert.ok(t,'theme '+id);
+  for(const k of KEYS)assert.match(t[k],/^#[0-9a-f]{6}$/i,id+'.'+k);
+  assert.equal(t.dots.length,3,id+' dots');
+}
+assert.equal(BASEMAP_THEMES.planning.name,'Mono');
+
 console.log('PASS map atmosphere: sun position, live lighting, presets and tints');

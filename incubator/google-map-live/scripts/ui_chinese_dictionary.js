@@ -879,4 +879,10 @@ export const CHINESE_UI = {
   "Follows the real sun position over the map centre, updated every minute": "按地图中心的真实太阳位置显示光照，每分钟更新",
   "Lighting and weather could not load:": "光照与天气无法加载：",
   "Clear sky": "晴天",
+  "Default": "默认",
+  "Faded": "淡雅",
+  "Mono": "单色",
+  "Ocean": "海洋",
+  "Warm": "暖色",
+  "Vivid": "鲜艳",
 };

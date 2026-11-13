@@ -4,29 +4,41 @@
  * neutralise Liberty's wetland / pavement sprite textures and park outlines
  * while preserving true feature positions, filters, DEM, EA, flood and tensor.
  * Neither mode resets MapLibre sources or calls setStyle(). */
+/* Colour themes (paint-only). "planning" is the Mono white/light-grey
+   architectural reference and stays the default on every first load; "dark"
+   is kept for the local-flood viewer's own theme switch. */
 export const BASEMAP_THEMES=Object.freeze({
+  default:Object.freeze({
+    id:'default',name:'Default',dots:['#3d6cf0','#ffffff','#8fc98a'],extrusion:'#e9e6e0',
+    background:'#f2f1ec',land:'#f2f1ec',residential:'#ecebe5',park:'#cfe8c4',water:'#9ccbf0',building:'#e2e0da',buildingEdge:'#cfccc4',motorway:'#f7d38c',primaryRoad:'#ffffff',road:'#ffffff',rail:'#c9c6bf',boundary:'#b8b2c8',text:'#4a4a4a',textHalo:'#ffffff',poi:'#7a7a7a'
+  }),
+  faded:Object.freeze({
+    id:'faded',name:'Faded',dots:['#9aa6bd','#d9d2c3','#b8c4a8'],extrusion:'#eae7e0',
+    background:'#ecebe6',land:'#ecebe6',residential:'#e6e4de',park:'#dbe3d2',water:'#c6d4dc',building:'#e3e0d8',buildingEdge:'#d4d0c6',motorway:'#e9dfca',primaryRoad:'#f7f6f2',road:'#f7f6f2',rail:'#d2cfc8',boundary:'#c9c4cc',text:'#7a7a78',textHalo:'#f4f3ef',poi:'#a3a29d'
+  }),
   planning:Object.freeze({
-    id:'planning',name:'Architectural planning',
-    // Matched to the user's white/very-light-gray architectural reference.
-    background:'#f9f9f9',land:'#f9f9f9',residential:'#fafafa',
-    park:'#f6f6f6',water:'#f4f4f4',
-    building:'#ffffff',buildingEdge:'#e8e8e8',
-    motorway:'#e6e6e6',primaryRoad:'#eaeaea',road:'#eeeeee',
-    rail:'#dcdcdc',boundary:'#e5e5e5',
-    text:'#999999',textHalo:'#ffffff',poi:'#b5b5b5'
+    id:'planning',name:'Mono',dots:['#5c5c5c','#a8a8a8','#d6d6d6'],extrusion:'#ffffff',
+    background:'#f9f9f9',land:'#f9f9f9',residential:'#fafafa',park:'#f6f6f6',water:'#f4f4f4',building:'#ffffff',buildingEdge:'#e8e8e8',motorway:'#e6e6e6',primaryRoad:'#eaeaea',road:'#eeeeee',rail:'#dcdcdc',boundary:'#e5e5e5',text:'#999999',textHalo:'#ffffff',poi:'#b5b5b5'
+  }),
+  ocean:Object.freeze({
+    id:'ocean',name:'Ocean',dots:['#1f6a9e','#27a6b5','#7fd0c8'],extrusion:'#eef4f7',
+    background:'#d9e6ec',land:'#dde8ee',residential:'#d4e1e8',park:'#c3ddd8',water:'#3e7ea8',building:'#e6eef2',buildingEdge:'#c7d6de',motorway:'#9cc7d4',primaryRoad:'#f2f7f9',road:'#f2f7f9',rail:'#a9c0cc',boundary:'#8fb0c2',text:'#2f5568',textHalo:'#eef5f8',poi:'#5f8ea3'
+  }),
+  warm:Object.freeze({
+    id:'warm',name:'Warm',dots:['#c97a3a','#d9a066','#8a5a3a'],extrusion:'#f5e9da',
+    background:'#f3e6d6',land:'#f3e7d8',residential:'#eedfcc',park:'#dfdcb8',water:'#b9cdd0',building:'#f1e2cf',buildingEdge:'#dcc7ab',motorway:'#e5a868',primaryRoad:'#fbf3e8',road:'#fbf3e8',rail:'#cdb79c',boundary:'#c9a98a',text:'#6b4a32',textHalo:'#fbf3e8',poi:'#a5764f'
+  }),
+  vivid:Object.freeze({
+    id:'vivid',name:'Vivid',dots:['#ff4d4d','#2ee07a','#3d7bff'],extrusion:'#f3f0ea',
+    background:'#f4f4ef',land:'#f4f4ef',residential:'#efefe8',park:'#9fe0a6',water:'#5aa9ff',building:'#eeeae2',buildingEdge:'#d6d0c4',motorway:'#ff8a5c',primaryRoad:'#ffd35a',road:'#ffffff',rail:'#b5b0aa',boundary:'#c58ef0',text:'#2b2b2b',textHalo:'#ffffff',poi:'#e2504a'
   }),
   dark:Object.freeze({
-    id:'dark',name:'Dark tech',
-    background:'#161616',land:'#1f1f1f',residential:'#242424',
-    park:'#202020',water:'#0f0f10',
-    building:'#2b2f33',buildingEdge:'#3b4045',
-    motorway:'#6e7378',primaryRoad:'#62676c',road:'#555a5f',
-    rail:'#4a4f54',boundary:'#34383c',
-    text:'#9a9a9a',textHalo:'#161616',poi:'#8a8a8a'
-  })
+    id:'dark',name:'Dark tech',dots:['#161616','#555a5f','#9a9a9a'],extrusion:'#2b2f33',
+    background:'#161616',land:'#1f1f1f',residential:'#242424',park:'#202020',water:'#0f0f10',building:'#2b2f33',buildingEdge:'#3b4045',motorway:'#6e7378',primaryRoad:'#62676c',road:'#555a5f',rail:'#4a4f54',boundary:'#34383c',text:'#9a9a9a',textHalo:'#161616',poi:'#8a8a8a'
+  }),
 });
 export const normaliseBasemapTheme=value=>
-  value==='dark'?'dark':'planning';
+  Object.prototype.hasOwnProperty.call(BASEMAP_THEMES,value)?value:'planning';
 // MapLibre expression values are JSON-compatible; avoid structuredClone so
 // style capture works in older browsers and lightweight test environments.
 const clonePaintValue=value=>
