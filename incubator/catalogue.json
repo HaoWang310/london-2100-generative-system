@@ -137,6 +137,42 @@
           "#langbar"
         ]
       }
+    },
+    {
+      "id": "growth-simulator-dark",
+      "href": "incubator/growth-simulator-dark/",
+      "cover": "assets/catalogue/growth-simulator-dark.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "城市生长模拟 · 整条环线",
+        "en": "Growth Simulator · the whole loop"
+      },
+      "desc": {
+        "zh": "2025–2100 年沿 412 公里环线的城市生长，50 米地块，2100 年 12,222,179 人；用滑块改变吸引点、噪声场与农业规则，以相同目标重新生长并对比。",
+        "en": "City growth along the 412 km loop, 2025–2100, on 50 m parcels: 12,222,179 people by 2100. Sliders change the magnets, noise fields and farming, and the city grows again to the same targets."
+      },
+      "tags": [
+        {
+          "zh": "城市生长",
+          "en": "City growth"
+        },
+        {
+          "zh": "吸引点",
+          "en": "Magnets"
+        },
+        {
+          "zh": "农业",
+          "en": "Farming"
+        }
+      ],
+      "owner": "sawhneyshreyadesign-1602",
+      "embed": {
+        "langStorageKey": "gv.lang",
+        "langButton": "#lang button[data-l=\"{lang}\"]",
+        "hide": [
+          "#lang"
+        ]
+      }
     }
   ]
 }
