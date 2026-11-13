@@ -865,4 +865,5 @@ export const CHINESE_UI = {
   "Display": "显示",
   "Place labels / POIs": "地名标注 / POI",
   "Street vehicles": "街道小车",
+  "Street vehicles could not load:": "街道小车无法加载：",
 };
