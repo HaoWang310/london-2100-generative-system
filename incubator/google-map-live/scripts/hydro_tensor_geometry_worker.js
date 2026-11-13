@@ -1,5 +1,5 @@
 // Static geometry runs off the UI thread; the validated tensor worker is untouched.
-import {buildTensorGeometryPacket} from './hydro_tensor_geometry.js?v=3.34.5-english';
+import {buildTensorGeometryPacket} from './hydro_tensor_geometry.js?v=3.35.0-english';
 self.onmessage=({data})=>{
   if(data?.type!=='build-geometry')return;
   try{

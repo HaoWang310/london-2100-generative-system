@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.34.5-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.35.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -1106,7 +1106,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.34.5-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.35.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1469,11 +1469,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.34.5-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.34.5-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.34.5-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.34.5-english';
-  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.34.5-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.35.0-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.35.0-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.35.0-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.35.0-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.35.0-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1494,7 +1494,7 @@
     }
   }
 
-  const APP_VERSION='3.34.5-english';
+  const APP_VERSION='3.35.0-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -2644,6 +2644,69 @@
   function getFirstSymbolLayerId(){
     if(!osmMap)return undefined;
     return (osmMap.getStyle()?.layers||[]).find(layer=>layer.type==='symbol')?.id;
+  }
+
+  /* Overview (zoomed far out): a simplified map of the whole of London.
+     Greater London's outline (OSM admin_level 5 in the OpenFreeMap tiles) is
+     drawn boldly with a label, the street network fades back and road-number
+     shields are hidden. Everything returns to normal while zooming back in;
+     buildings, vehicles and shadows already disappear at these zooms. */
+  const OVERVIEW_MAX_ZOOM=10.8;
+  const OVERVIEW_OUTLINE_CASING='london-overview-outline-casing';
+  const OVERVIEW_OUTLINE='london-overview-outline';
+  const OVERVIEW_LABEL='london-overview-label';
+  function ensureOverviewLayers(){
+    if(!osmMap||!osmStyleReady)return;
+    const sources=osmMap.getStyle()?.sources||{};
+    const src=sources.openmaptiles?'openmaptiles':null;
+    if(!src)return;
+    const before=getFirstSymbolLayerId();
+    const fade=(full)=>['interpolate',['linear'],['zoom'],OVERVIEW_MAX_ZOOM-0.6,full,OVERVIEW_MAX_ZOOM+0.4,0];
+    const filter=['all',['==',['get','admin_level'],5],['!=',['get','maritime'],1]];
+    if(!osmMap.getLayer(OVERVIEW_OUTLINE_CASING)){
+      osmMap.addLayer({id:OVERVIEW_OUTLINE_CASING,type:'line',source:src,'source-layer':'boundary',
+        maxzoom:OVERVIEW_MAX_ZOOM+0.5,filter,
+        layout:{'line-join':'round','line-cap':'round'},
+        paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],7,4,11,7],'line-opacity':fade(0.85)}
+      },before);
+    }
+    if(!osmMap.getLayer(OVERVIEW_OUTLINE)){
+      osmMap.addLayer({id:OVERVIEW_OUTLINE,type:'line',source:src,'source-layer':'boundary',
+        maxzoom:OVERVIEW_MAX_ZOOM+0.5,filter,
+        layout:{'line-join':'round','line-cap':'round'},
+        paint:{'line-color':'#5f6672','line-width':['interpolate',['linear'],['zoom'],7,1.4,11,2.6],'line-opacity':fade(0.95)}
+      },before);
+    }
+    if(!osmMap.getSource(OVERVIEW_LABEL)){
+      osmMap.addSource(OVERVIEW_LABEL,{type:'geojson',data:{type:'FeatureCollection',features:[
+        {type:'Feature',properties:{name:'GREATER LONDON'},geometry:{type:'Point',coordinates:[-0.118,51.43]}}
+      ]}});
+    }
+    if(!osmMap.getLayer(OVERVIEW_LABEL)){
+      const cityLabel=(osmMap.getStyle()?.layers||[]).find(l=>l.type==='symbol'&&/label_city|place/i.test(l.id));
+      const font=cityLabel?.layout?.['text-font']||['Noto Sans Regular'];
+      osmMap.addLayer({id:OVERVIEW_LABEL,type:'symbol',source:OVERVIEW_LABEL,maxzoom:OVERVIEW_MAX_ZOOM+0.5,
+        layout:{'text-field':['get','name'],'text-font':font,'text-size':['interpolate',['linear'],['zoom'],7,11,10,15],
+          'text-letter-spacing':0.35,'text-allow-overlap':false},
+        paint:{'text-color':'#5f6672','text-halo-color':'rgba(255,255,255,0.85)','text-halo-width':1.6,'text-opacity':fade(1)}
+      });
+    }
+    for(const layer of osmMap.getStyle()?.layers||[]){
+      if(layer.source!==src)continue;
+      // Road-number shields only clutter the overview.
+      if(layer.type==='symbol'&&/shield/i.test(layer.id)){
+        osmMap.setLayerZoomRange(layer.id,Math.max(layer.minzoom||0,OVERVIEW_MAX_ZOOM),layer.maxzoom??24);
+        continue;
+      }
+      // Streets fade back in the overview (only layers with default opacity).
+      if(layer.type==='line'&&layer['source-layer']==='transportation'){
+        const current=osmMap.getPaintProperty(layer.id,'line-opacity');
+        if(current===undefined||current===1){
+          osmMap.setPaintProperty(layer.id,'line-opacity',
+            ['interpolate',['linear'],['zoom'],8,0.4,OVERVIEW_MAX_ZOOM+0.4,1]);
+        }
+      }
+    }
   }
 
   function keepDrainageAboveTerrain(){
@@ -3838,10 +3901,11 @@
       tuneCityBuildingFarField();
       syncCityView();
       initAtmosphere();
+      ensureOverviewLayers();
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.34.5-english')
+      import('./scripts/local_flood_ui.js?v=3.35.0-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3881,7 +3945,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.34.5-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.35.0-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
