@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Tensor Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root{
+ --shell-height:52px;
+ --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+ --bg:#f2f2f4;--side:#f5f5f7;--card:#ffffff;--ink:#1d1d1f;--grey:#6e6e73;--grey2:#aeaeb2;
+ --line:rgba(0,0,0,.09);--fill:rgba(118,118,128,.12);--fill2:rgba(118,118,128,.08);--raise:#ffffff;
+ --track:#e3e3e8;--knob:#ffffff;--accent:#0071e3;--hot:#ff9500;
+ --glass:rgba(255,255,255,.72);--shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+ --raise-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04);
+ --panel:var(--side);--chip:var(--fill);
+}
+[data-theme="dark"]{
+ --bg:#000000;--side:#000000;--card:#1c1c1e;--ink:#f5f5f7;--grey:#98989d;--grey2:#636366;
+ --line:rgba(255,255,255,.1);--fill:rgba(118,118,128,.24);--fill2:rgba(118,118,128,.16);--raise:#636366;
+ --track:#3a3a3c;--knob:#ffffff;--accent:#0a84ff;--hot:#ff9f0a;
+ --glass:rgba(28,28,30,.72);--shadow:0 0 0 .5px rgba(255,255,255,.08),0 8px 24px rgba(0,0,0,.5);
+ --raise-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.45 var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.003em}
+body{overflow:hidden}
+button,select,input{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- top bar */
+#package-bar{height:var(--shell-height);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;gap:12px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line);position:relative;z-index:20}
+.brand{display:flex;align-items:baseline;gap:8px;white-space:nowrap;min-width:0}
+.brand strong{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.brand small{font-size:11px;color:var(--grey)}
+.site-nav[hidden]{display:none!important}
+.site-nav .site-label{font-size:11.5px;color:var(--grey);padding:0 4px 0 12px;align-self:center}
+.bar-right{display:flex;justify-content:flex-end;gap:8px;align-items:center}
+
+/* segmented controls: nav, theme, language */
+.package-nav,.seg,.language-switch{display:inline-flex;gap:2px;padding:2px;border-radius:9px;background:var(--fill);border:0}
+.package-nav button,.seg button,.language-switch button{border:0;background:transparent;color:var(--ink);font:inherit;font-size:12.5px;font-weight:500;padding:5px 14px;border-radius:7px;cursor:pointer;white-space:nowrap;opacity:.72}
+.seg button,.language-switch button{padding:4px 10px;font-size:12px}
+.package-nav button:hover,.seg button:hover,.language-switch button:hover{opacity:1}
+.package-nav button.active,.seg button.on,.language-switch button.active{background:var(--raise);box-shadow:var(--raise-shadow);opacity:1}
+
+/* ---------- layout */
+#wrap{display:flex;height:calc(100% - var(--shell-height))}
+#view{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+#view canvas{position:absolute;inset:0;width:100%;height:100%}
+#panel{width:368px;flex-shrink:0;background:var(--side);border-left:.5px solid var(--line);padding:14px 16px 40px;overflow:auto}
+
+/* ---------- map toolbar */
+#tools{position:absolute;left:12px;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;pointer-events:none}
+#tools > *{pointer-events:auto}
+.tg{display:inline-flex;align-items:center;gap:1px;padding:3px;border-radius:10px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:var(--shadow)}
+.tg span{font-size:11px;color:var(--grey);padding:0 4px 0 7px;font-weight:500}
+.tg button{border:0;background:transparent;color:var(--ink);padding:4px 8px;border-radius:7px;font:inherit;font-size:12px;cursor:pointer;opacity:.75;white-space:nowrap}
+.tg button:hover{opacity:1;background:var(--fill2)}
+.tg button.on{background:var(--ink);color:var(--card);opacity:1}
+.tg button.go{background:var(--ink);color:var(--card);opacity:1;font-weight:500;padding:4px 12px}
+#hud{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;max-width:calc(100% - 48px);min-width:220px;text-align:center;font-size:12px;color:var(--grey);background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);padding:7px 14px;border-radius:999px;box-shadow:var(--shadow)}
+#hud b{color:var(--ink);font-weight:600}
+
+/* ---------- panel: grouped lists */
+.grp{margin:0 0 22px}
+#panel h2{font-size:13px;font-weight:600;color:var(--ink);margin:0 4px 8px;letter-spacing:-.01em;text-transform:none}
+.card{background:var(--card);border-radius:12px;padding:2px 14px}
+.card > .row,.card > label.lay{border-bottom:.5px solid var(--line)}
+.card > .row:last-child,.card > label.lay:last-child{border-bottom:0}
+.row{display:flex;gap:10px;align-items:center;margin:0;padding:9px 0;min-height:22px}
+.row label,.row > span{flex:1;min-width:0;color:var(--ink);font-size:12.5px}
+.row output{width:54px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--grey)}
+.row select{width:180px;padding:5px 26px 5px 9px;border:0;border-radius:7px;background:var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center;color:var(--ink);font:inherit;font-size:12px;appearance:none;-webkit-appearance:none;cursor:pointer}
+
+/* range: hairline track, white knob */
+input[type=range]{-webkit-appearance:none;appearance:none;width:124px;height:20px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--track)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--track)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-7px;border-radius:50%;background:var(--knob);box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.08)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:50%;background:var(--knob);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+/* checkboxes as switches */
+label.lay{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;cursor:pointer;font-size:12.5px}
+label.lay input[type=checkbox]{order:2;-webkit-appearance:none;appearance:none;flex-shrink:0;width:36px;height:22px;margin:0;border-radius:11px;background:var(--track);position:relative;cursor:pointer;transition:background .18s}
+label.lay input[type=checkbox]::before{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s}
+label.lay input[type=checkbox]:checked{background:var(--ink)}
+[data-theme="dark"] label.lay input[type=checkbox]:checked{background:#f5f5f7}
+[data-theme="dark"] label.lay input[type=checkbox]:checked::before{background:#1c1c1e}
+label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
+
+/* buttons */
+.btns{display:flex;gap:6px;padding:10px 0}
+.btns button{flex:1;padding:7px 8px;border:0;background:var(--fill);color:var(--ink);border-radius:8px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btns button:hover{background:var(--fill2)}
+.btns button.primary{background:var(--ink);color:var(--card)}
+.btns button.primary:hover{opacity:.88}
+
+/* build-up steps */
+.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:10px 0}
+.steps button{border:0;background:var(--fill2);color:var(--grey);border-radius:10px;padding:9px 7px;font:inherit;font-size:11px;line-height:1.35;cursor:pointer;text-align:left;box-shadow:inset 0 0 0 1px transparent}
+.steps button b{display:block;font-size:11.5px;white-space:nowrap;font-weight:600;color:var(--ink);margin-bottom:2px}
+.steps button.on{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink)}
+.modes{display:none}
+
+/* disclosure notes */
+details.info{border-top:.5px solid var(--line);padding:0}
+.card > details.info:first-child{border-top:0}
+details.info summary{list-style:none;cursor:pointer;padding:9px 0;font-size:12.5px;color:var(--accent);display:flex;align-items:center;gap:6px}
+details.info summary::-webkit-details-marker{display:none}
+details.info summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .18s;margin-left:2px}
+details.info[open] summary::before{transform:rotate(45deg) translate(-1px,-1px)}
+details.info > div,details.info > p{margin:0 0 12px;font-size:12px;line-height:1.6;color:var(--grey)}
+.how,.note,.sub{color:var(--grey);font-size:12px;line-height:1.6}
+.how b,.note b{color:var(--ink);font-weight:600}
+p.note{margin:6px 0 10px}
+
+/* readouts */
+.ramp{height:6px;border-radius:3px;margin:12px 0 4px}
+.rampl{display:flex;justify-content:space-between;font-size:11px;color:var(--grey);padding-bottom:6px}
+#wnum,#num{color:var(--grey);font-size:12px;white-space:pre-line;line-height:1.55;padding:10px 0;font-variant-numeric:tabular-nums}
+#wnum b,#num b{color:var(--ink);font-weight:600}
+#num{border-top:.5px solid var(--line)}
+.key{display:grid;grid-template-columns:22px 1fr;gap:4px 10px;align-items:center;font-size:11.5px;color:var(--grey);padding:10px 0;border-top:.5px solid var(--line)}
+.key:empty{display:none}
+.key i{display:block;height:0;border-top:3px solid var(--ink)}
+.grad{height:6px;border-radius:3px;margin-top:2px}
+#cmp{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 0;font-variant-numeric:tabular-nums}
+#cmp td,#cmp th{padding:5px 2px;border-bottom:.5px solid var(--line);text-align:right}
+#cmp tr:last-child td{border-bottom:0}
+#cmp td:first-child{text-align:left;color:var(--grey)}
+#cmp th{font-weight:500;color:var(--grey);font-size:11.5px}
+#cmp th.cur{color:var(--ink);font-weight:600}
+#cmp td.stale{color:var(--grey2)}
+#cmp tr.gap td{border-bottom:0;padding-top:12px;font-size:11.5px;font-weight:600;color:var(--ink)}
+#cmpNote:empty{display:none}
+
+/* preset card */
+.preset-box{background:var(--card);border-radius:12px;padding:14px;margin:0 0 22px}
+.preset-box h2{margin:0 0 10px!important}
+.preset-box select{width:100%;background:var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center;color:var(--ink);border:0;border-radius:8px;padding:8px 30px 8px 10px;font:inherit;font-size:12.5px;appearance:none;-webkit-appearance:none;cursor:pointer}
+.preset-box button{width:100%;margin-top:8px;padding:8px;border:0;border-radius:8px;background:var(--ink);color:var(--card);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.preset-box button:hover{opacity:.88}
+.preset-box p{font-size:11.5px;color:var(--grey);margin:8px 2px 0}
+
+/* ---------- package pages */
+#package-overlay{position:absolute;inset:var(--shell-height) 0 0;background:var(--side);z-index:15;overflow:auto}
+#package-overlay[hidden]{display:none}
+.package-page{max-width:1120px;margin:auto;padding:48px 32px 80px}
+.package-page h1{font-size:34px;font-weight:700;letter-spacing:-.025em;margin:0 0 10px;line-height:1.15}
+.package-page .intro{color:var(--grey);font-size:15px;margin:0 0 36px;max-width:640px;line-height:1.6}
+.package-page h2{font-size:19px;font-weight:600;letter-spacing:-.015em;color:var(--ink);margin:36px 0 14px}
+.package-page button,.package-page a.download{font:inherit;font-size:12.5px;cursor:pointer;border:0;background:var(--fill);color:var(--ink);border-radius:999px;padding:6px 14px;text-decoration:none;font-weight:500}
+.package-page button:hover{background:var(--fill2)}
+.media-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.media-card{border-radius:16px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
+.media-card .thumb{height:180px;background:var(--fill2);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.media-card img{width:100%;height:100%;object-fit:contain}
+.pdf-icon{font-size:22px;font-weight:600;color:var(--grey)}
+.media-card .card-info{padding:16px}
+.media-card h3{font-size:14px;font-weight:600;margin:0 0 10px;letter-spacing:-.01em}
+.media-card small{display:block;color:var(--grey);font-size:11.5px;margin:0 0 12px}
+.media-card .actions{display:flex;gap:6px}
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.guide-card{padding:26px;border-radius:16px;background:var(--card);line-height:1.75;box-shadow:var(--shadow)}
+.guide-card h2{margin:0 0 10px!important;font-size:17px!important}
+.guide-card p{margin:8px 0;color:var(--grey)}
+.guide-card ol{padding-left:20px;color:var(--grey)}
+.file-row{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:12px 0;border-bottom:.5px solid var(--line)}
+.file-row:last-child{border-bottom:0}
+.file-name{word-break:break-word;font-size:12.5px}
+.file-row small{color:var(--grey);white-space:nowrap}
+.package-page details{margin:14px 0;border-radius:14px;padding:4px 18px;background:var(--card)}
+.package-page summary{cursor:pointer;font-weight:600;padding:12px 0}
+
+/* ---------- media viewer */
+#media-dialog{position:fixed;inset:24px;z-index:100;border:0;border-radius:16px;background:var(--card);padding:0;color:var(--ink);width:calc(100% - 48px);height:calc(100% - 48px);max-width:none;max-height:none;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+#media-dialog::backdrop{background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.viewer-head{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:14px;border-bottom:.5px solid var(--line)}
+.viewer-head strong{font-size:13.5px;font-weight:600}
+.viewer-head button{background:var(--fill);border:0;color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:500}
+.viewer-body{height:calc(100% - 53px);display:flex;align-items:center;justify-content:center;overflow:auto}
+.viewer-body img,.viewer-body video{max-width:100%;max-height:100%;object-fit:contain}
+.viewer-body object{width:100%;height:100%;border:0}
+.viewer-body pre{white-space:pre-wrap;overflow-wrap:anywhere;align-self:flex-start;padding:24px;max-width:1000px;font:12px/1.7 ui-monospace,"SF Mono",Menlo,monospace}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:1100px){.brand small{display:none}#panel{width:330px}.media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){:root{--shell-height:96px}#package-bar{grid-template-columns:1fr auto;grid-template-rows:auto auto;padding:8px 10px;row-gap:6px}.package-nav{grid-column:1/-1;grid-row:2;justify-self:center}#panel{width:290px}#view{min-width:260px}#wrap{overflow:auto}.package-page{padding:28px 16px}.media-grid,.guide-grid{grid-template-columns:1fr}#tools{left:8px;right:8px;gap:4px}.tg span{display:none}.tg button{padding:4px 7px}}
+</style><script>// Presentation-only localization; simulation values and export schema remain unchanged.
+window.TS_LANG='zh';
+window.TS_DICT={"Tensor Studio v8 · station window": "张量场工作室 v8 · 站点研究范围", "Mode": "模式", "A · today": "A · 流线", "B · branching": "B · 分叉", "Read": "场分析", "off": "关闭", "clarity": "方向清晰度", "conflict": "方向冲突", "both": "两者", "Events": "生长事件", "on": "开启", "Field": "张量场", "moving": "动态流线", "still lines": "静态线条", "Wind": "风", "Streets": "道路", "lines": "中心线", "at width": "实际宽度", "❚❚ Freeze motion": "❚❚ 暂停动态", "Show result": "显示结果", "loading…": "正在加载…", "Tensor Studio v8": "张量场工作室 v8", "Light": "浅色", "Dark": "深色", "The station window round P2 (22 Oct): the chosen cells of the final wool network, its roads fixed as they are. Water bodies and the station's 250 m ring are holes no street enters; streets cross watercourses square, on culverts; a street that runs into water or the ring goes back to its last junction. Main streets grow from the wool junctions on the edge, completed first; second streets as in v6. The app places 1 to 4 attractors from the field, near the centre, near the corners, on the edge or spread out, all draggable.": "P2 站点周边研究范围（10 月 22 日）：选取最终羊毛路网中的地块，保留既有道路。水体与车站周边 250 米环形范围为道路禁入区域；道路通过涵洞正交穿越水道，遇到水体或车站环形区域时退回上一个路口。主路从边界上的羊毛路网交点向内生长，并优先完成；次路沿用 v6 逻辑。系统可依据张量场、中心、角点、边界或分散布局放置 1–4 个吸引点，均可拖动。", "1 · Contour": "1 · 等高线", "streets along the slope only": "道路仅沿地形等高线生长", "2 · + Attractors": "2 · 加入吸引点", "streets ring the calm points": "道路围绕低风速点形成环路", "3 · + Wind": "3 · 加入风场", "plays the year, bends them": "播放全年气象，调整道路方向", "How the roads come from the field.": "道路如何由张量场生成。", "The field holds, at every point, one direction a street should run (the contour, bent by the attractors and the wind).": "场中每个位置都有一个建议道路方向：以等高线为基础，由吸引点和风场共同调整。", "Field · moving": "张量场 · 动态流线", "draws those directions as drifting streaks;": "以流动轨迹显示这些方向；", "draws them as fixed lines. Each street starts at one of your anchors (or 300 m / 115 m from the last) and simply follows the field until it meets another street: so every street lies on one of those lines. The": "则显示固定方向线。道路从锚点出发，或按距上一条道路 300 米 / 115 米的位置起步，沿场方向前进，直至与另一条道路相交。因此每条道路均沿场线生成。", "wind": "风", "layer is the weather itself; it builds nothing, it only bends the field.": "图层仅显示气象运动，本身不生成道路，而是改变张量场方向。", "Growth mode": "生长模式", "A · Today": "A · 流线", "streamlines in two families, as v5.2": "两组方向流线，沿用 v5.2", "B · Branching": "B · 分叉", "grows from your anchors, branching as it goes": "从锚点出发，边生长边分叉", "Grow both and compare": "生成两种模式并比较", "How B grows.": "B 模式如何生长。", "Main streets start at your anchors and grow inward, 5 m at a time, all at once. Each turns toward the field's direction quickly where one direction rules (": "主路从锚点同时向内生长，每次前进 5 米。当某个方向占主导（", "high) and keeps its heading where the parts cancel. As it grows it puts out side streets, one side then the other, so they meet it as staggered T's: further apart on clear ground, closer where the field is weak. Where the contour and the wind (with the attractors and streams) pull hard in different directions (": "较高）时，道路迅速转向场方向；当不同作用互相抵消时，道路保持当前方向。生长过程中，道路交替向两侧分出支路，形成错位 T 形路口：场方向清晰处间距较大，场较弱处间距较小。当等高线、风场、吸引点与水道作用产生较强方向分歧（", "), a street forks into the two directions: a Y. A street stops where it meets another: square on, a T; at a shallow angle, it merges (a Y); head on, the two become one street. Then the land's edge road puts out side streets where there is room, and any empty ground left is reached from the nearest street.": "）时，道路沿两个方向分叉，形成 Y 形路口。道路遇到另一条道路时停止：正交相遇形成 T 形，小角度汇入形成 Y 形，迎面相遇则合并。随后边界道路在有空间处伸出支路，并从最近道路连接剩余空白区域。", "Complete the main streets first": "优先完成主路", "(v6.1): before anything branches, contour avenues run from edge to edge, each circus is tied in by up to three main streets, and a main street crosses another as a crossroads; at the end, a long second street running from a main street (or the edge) to another becomes a main street. The X's that remain are main on main.": "（v6.1）：分支生成前，沿等高线的主路贯通地块，每个环形广场最多通过三条主路接入路网，主路之间可形成十字路口。最后，将连接两条主路或边界的较长次路升级为主路。保留的 X 形路口为主路之间的交叉。", "1 · The field": "1 · 张量场", "contour": "等高线权重", "the wind bends the streets": "风场改变道路方向", "by, against the contour": "风场权重（相对等高线）", "the wind of": "风场月份", "smoothing, m": "平滑尺度，米", "2 · Wind simulation": "2 · 风场模拟", "▶ Play the year": "▶ 播放全年", "Pause": "暂停", "■ Stop · result": "■ 停止并显示结果", "the streets reshape as it plays": "播放时同步重塑道路", "From the streets along the contour, the weather year plays month by month (London Luton, hour by hour): each month's winds blow over the site as moving vectors, as often and as strong as they were, and bend the field; the streets regrow in it, the month before fading out. It ends on the whole year. Winds from the south-east round to the west ask for streets along them (air through); from the north-west round to the east, across them (shelter).": "从沿等高线生长的道路开始，按月播放伦敦卢顿逐小时气象年数据。各月风向以动态矢量显示，保留其出现频率与强度，并改变张量场；道路随场重新生成，上个月的道路逐渐淡出，最后采用全年综合风场。来自东南至西侧的风引导道路顺风布置以利通风；来自西北至东侧的风引导道路横风布置以利避风。", "3 · Attractors": "3 · 吸引点", "where": "布局方式", "from the field: the wind's calm points": "根据风场：低风速点", "near the centre": "靠近中心", "near the corners": "靠近角点", "on the edge (semicircles)": "位于边界（半圆）", "your placement (sketch, 21 Oct)": "自定义布局（10 月 21 日草图）", "spread out over the land": "在场地内分散布置", "your placement (by hand): double-click to add": "手动布置：双击添加", "how many (main)": "主吸引点数量", "secondary": "次吸引点数量", "on the edge": "边界吸引点数量", "pull": "吸引强度", "Add one by hand (v8):": "手动添加（v8）：", "double-click on the land for a main attractor, shift + double-click for a secondary one, alt + double-click for one on the edge; right-click an attractor to remove it. This switches to": "在陆地上双击添加主吸引点，Shift + 双击添加次吸引点，Alt + 双击添加边界吸引点；右键点击吸引点可删除。系统会切换到", "your placement (by hand)": "手动布置", ", keeping the ones already there; your points stay while you change other settings, and come back if you pick another placement and then this one again.": "，并保留已有吸引点。调整其他设置时这些点仍然保留；临时切换布局后，再返回手动布置也可恢复。", "Drag an attractor": "拖动吸引点", "on the map to move it; one on the edge slides along the edge.": "可改变位置；边界吸引点沿边界滑动。", "From the field:": "根据风场：", "where the year's winds cancel, the calmest first, at least 450 m apart (the first two as v6, close together in the centre-east).": "选择全年风作用相互抵消的位置，优先最平静处，点间距至少 450 米（前两个沿用 v6，位于中东部，距离较近）。", "Near the centre:": "靠近中心：", "one at the land's deepest middle; two to four on a ring round it, a fifth of the land's size out, turned along its length.": "一个点位于场地最深的内部；2–4 个点分布在其周围约场地尺度五分之一的环上，并沿场地长轴旋转对齐。", "Near the corners:": "靠近角点：", "at the land's farthest corners, spread apart, each moved in until it is 150 m from the edge.": "选取相互分散的最远角点，再向内移动至距边界 150 米。", "Your placement:": "自定义布局：", "the two main ones where you put them on 21 Oct, north-centre and south-east, about 1 km apart (the secondary ones stay at the calm points).": "使用 10 月 21 日布置的两个主吸引点，位于中北部和东南部，间距约 1 千米；次吸引点保留在低风速位置。", "Spread out:": "分散布置：", "each takes its own share of the land (calmer land weighs more), the main ones far apart.": "各点分别服务一片场地，较平静区域权重更高，主吸引点彼此保持较大距离。", "On the edge:": "位于边界：", "the first three where you drew them on 21 Oct (north, east, south-west), any more along straight stretches of the edge with deep land behind them, spread along it; the half of the ring field outside the land falls away, leaving semicircles whose radial streets converge on a half circus at the edge road, a square at the gate.": "前三个点采用 10 月 21 日草图中的北、东、西南位置；其他点分散在背后具有较深陆地的直线边界上。场地外的一半环形场被裁去，留下半圆，径向道路汇聚到边界路上的半环形广场，形成入口广场。", "4 · The streets": "4 · 道路", "main streets apart, m": "主路间距，米", "second streets apart, m": "次路间距，米", "A · through streets (X), %": "A · 贯通道路（X），%", "A · staggered (T), %": "A · 错位路口（T），%", "A · streets merge where they converge (Y)": "A · 道路汇聚时合并（Y）", "4b · Mode B, branching": "4b · B 模式：分叉生长", "keeps its heading": "方向保持程度", "side streets apart (× second)": "支路间距（× 次路间距）", "forks where conflict is over": "分叉冲突阈值", "complete the main streets first": "优先完成主路", "reach empty ground from the nearest street": "从最近道路连接空白区域", "second streets as in v6 (off: v6.2's, cleaned)": "次路采用 v6 逻辑（关闭：v6.2 清理版）", "Main streets apart (above) sets how close two main streets may run side by side; second streets apart sets the side streets' spacing: along the field's main direction, second × (0.7 + 0.9 × clarity) × this slider (long blocks on clear ground); across it, second × 0.75 × this slider. Only second streets fork (with the main streets completed first, main streets stay single). A fork needs the contour's and the other forces' street directions at least 35° apart: a shallower fork reads as two streets side by side; where they are square to each other, one grid serves both, so no fork.": "主路间距控制相邻平行主路的最小距离；次路间距控制支路疏密：沿场主方向为“次路间距 ×（0.7 + 0.9 × 方向清晰度）× 本滑块值”，垂直方向为“次路间距 × 0.75 × 本滑块值”。仅次路发生分叉；启用主路优先后，主路保持单线生长。等高线与其他作用建议的道路方向至少相差 35° 才分叉；角度过小会产生并行道路，接近正交时则由同一网格适应两种方向，无需分叉。", "5 · Street widths: a domain": "5 · 道路宽度范围", "narrowest, m": "最小宽度，米", "widest, m": "最大宽度，米", "driven by": "宽度依据", "the hierarchy (level + connections)": "道路等级与连接数量", "level only (main wide, second narrow)": "仅等级（主路宽、次路窄）", "how many streets meet it": "相交道路数量", "near the cell's roads (tapers inward)": "靠近地块边界路（向内收窄）", "near the attractors (tapers away)": "靠近吸引点（向外收窄）", "the wind: narrow where exposed": "风场：暴露处收窄", "the longest streets widest": "道路越长越宽", "in steps of 3 m": "按 3 米递增", "6 m": "6 m", "18 m": "18 m", "6 · Growth": "6 · 生长控制", "Grow": "开始生长", "Instant": "立即生成", "growth speed": "生长速度", "regrow when the field changes": "场变化时自动重新生成", "7 · Layers": "7 · 图层", "the field, flowing": "张量场动态流线", "the wind, blowing (vectors)": "风场动态矢量", "the wind rose": "风玫瑰图", "terrain contours": "地形等高线", "the field as crosses": "张量场十字标记", "streets as lines": "道路中心线", "growth events (branch, fork, join, merge, cross)": "生长事件（分支、分叉、连接、汇合、交叉）", "the other mode, dashed (to compare)": "另一模式（虚线对比）", "roads at width, filleted (the width domain)": "实际宽度道路与圆角", "cells by size": "按面积显示地块", "buildings, roads, water": "建筑、道路与水体", "8 · Export": "8 · 导出", "GeoJSON": "GeoJSON", "PNG": "PNG", "British National Grid metres, north up. Drag to pan, wheel to zoom. The flow shows the field's main direction moving: bright where one direction rules, faint where the parts cancel. The winds blow from the side each comes in, strongest there.": "坐标为英国国家格网，单位为米，北向朝上。拖动平移，滚轮缩放。流线展示场的主方向：主导方向明确处较亮，作用相互抵消处较暗。风从其来向一侧吹入，在该侧最强。", "Resume": "继续", "▶ Resume motion": "▶ 恢复动态", "the streets": "道路指标", "main, km": "主路，千米", "second, km": "次路，千米", "km per km²": "路网密度，千米/平方千米", "land in streets, %": "道路占地比例，%", "sinuosity (length ÷ chord)": "曲折度（路径长度 ÷ 弦长）", "off the field, ° (mean)": "偏离场方向均值，°", "the junctions": "路口指标", "dead ends": "断头路", "the cells": "地块指标", "cells": "地块数量", "median, ha": "面积中位数，公顷", "3 junctions round (or fewer), %": "周边不超过 3 个路口，%", "4, %": "4 个路口，%", "5, %": "5 个路口，%", "6, %": "6 个路口，%", "7 or more, %": "至少 7 个路口，%", "Grey: grown with other settings. \"Grow both and compare\" grows both in the same field.": "灰色数据来自其他参数设置。点击“生成两种模式并比较”，可在同一张量场中对比。", "Both grown in the same field. Junctions round a cell are counted from the raster: close, not exact.": "两种模式在同一张量场中生成。地块周边路口数量由栅格估算，为近似值。", "main street (level 1)": "主路（一级）", "second street (level 2)": "次路（二级）", "the land's edge, a road": "场地边界道路", "your anchor": "道路锚点", "attractor (main · secondary · on the edge): drag to move, double-click to add, right-click to remove": "吸引点（主 / 次 / 边界）：拖动移动、双击添加、右键删除", "bridge": "桥梁", "the field flowing: faint where its parts cancel, bright where one rules": "场流线：作用抵消处暗，主方向明确处亮", "the wind blowing from south-east to west: streets along it (air through)": "来自东南至西侧的风：顺风道路（通风）", "blowing from north-west to east: streets across it (shelter)": "来自西北至东侧的风：横风道路（避风）", "the month before, fading": "上个月道路，逐渐淡出", "the other mode (to compare)": "另一模式（对比）", "B: a side street branches off (T)": "B：支路分出（T）", "B: a street forks, contour against wind": "B：等高线与风场冲突，道路分叉", "merges into another (Y)": "汇入另一条道路（Y）", "ends on another street (T)": "连接另一条道路（T）", "two streets cross (X)": "两条道路交叉（X）", "B: empty ground reached": "B：连接空白区域", "read: clear, one direction rules": "分析：方向明确，单一方向主导", "read: conflict, contour against wind": "分析：等高线与风场方向冲突", "every end meets a street": "连接所有道路端点", "main streets from your anchors": "从锚点生成主路", "main streets along the contours": "沿等高线生成主路", "second streets": "生成次路", "done": "完成", "no open ends": "清理未连接端点", "main streets grow from your anchors": "主路从锚点生长", "main streets along the contour, edge to edge": "沿等高线贯通地块主路", "each circus tied into the main streets": "将环形广场接入主路", "ring streets round the circuses": "生成广场外围环路", "the main streets carried on across the road between the cells": "跨越地块间道路，延续主路", "second streets branch off them": "从主路分出次路", "side streets off the land's edge, where there is room": "在边界有空间处生成支路", "empty ground reached from the nearest street": "从最近道路连接空白区域", "the second streets carried on across the road between the cells": "跨越地块间道路，延续次路", "no two streets side by side": "清理过近的并行道路", "every main street ends on a main street": "将主路端点接入主路", "ready": "就绪", "streets along it": "道路顺风布置", "streets across it": "道路横风布置", "N": "北", "S": "南", "E": "东", "W": "西", "Jan": "1月", "Feb": "2月", "Mar": "3月", "Apr": "4月", "May": "5月", "Jun": "6月", "Jul": "7月", "Aug": "8月", "Sep": "9月", "Oct": "10月", "Nov": "11月", "Dec": "12月", "January": "1月", "February": "2月", "March": "3月", "April": "4月", "June": "6月", "July": "7月", "August": "8月", "September": "9月", "October": "10月", "November": "11月", "December": "12月", "the year": "全年", "year": "全年", "Year": "全年", "Whole year": "全年", "whole year": "全年", "Contour only": "仅等高线", "Wind only": "仅风场", "Contour 30, wind 70": "等高线 30 / 风场 70", "Contour 50, wind 50": "等高线 50 / 风场 50", "Contour 70, wind 40 (chosen)": "等高线 70 / 风场 40（选定）", "Contour 90, wind 20": "等高线 90 / 风场 20", "80 m apart": "间距 80 米", "95 m apart (chosen)": "间距 95 米（选定）", "115 m apart": "间距 115 米", "140 m apart": "间距 140 米", "170 m apart": "间距 170 米", "200 m apart": "间距 200 米", "Four at the wind's calm points": "四个低风速吸引点", "Four near the corners": "四个角部吸引点", "Three on the edge": "三个边界吸引点", "Four spread out": "四个分散吸引点", "Two, placed by hand": "两个手动吸引点", "Four, placed by hand (chosen: the final pattern)": "四个手动吸引点（最终方案）", "Generating…": "正在生成…", "1.1 · Contour only": "1.1 · 仅等高线", "1.2 · Wind only": "1.2 · 仅风场", "1.3 · Contour 30, wind 70": "1.3 · 等高线 30 / 风场 70", "1.4 · Contour 50, wind 50": "1.4 · 等高线 50 / 风场 50", "1.5 · Contour 70, wind 40 (chosen)": "1.5 · 等高线 70 / 风场 40（选定）", "1.6 · Contour 90, wind 20": "1.6 · 等高线 90 / 风场 20", "2.1 · 80 m apart": "2.1 · 间距 80 米", "2.2 · 95 m apart (chosen)": "2.2 · 间距 95 米（选定）", "2.3 · 115 m apart": "2.3 · 间距 115 米", "2.4 · 140 m apart": "2.4 · 间距 140 米", "2.5 · 170 m apart": "2.5 · 间距 170 米", "2.6 · 200 m apart": "2.6 · 间距 200 米", "3.1 · Four at the wind's calm points": "3.1 · 四个低风速吸引点", "3.2 · Four near the corners": "3.2 · 四个角部吸引点", "3.3 · Three on the edge": "3.3 · 三个边界吸引点", "3.4 · Four spread out": "3.4 · 四个分散吸引点", "3.5 · Two, placed by hand": "3.5 · 两个手动吸引点", "3.6 · Four, placed by hand (chosen: the final pattern)": "3.6 · 四个手动吸引点（最终方案）"};
+window.TS_FRAGMENTS=[
+ ['Applied preset ','已应用方案 '],['Generation failed: ','生成失败：'],
+ ['km/km² (towns 12–16)','千米/平方千米（城镇参考 12–16）'],
+ ['km main','千米主路'],['km second','千米次路'],['junctions: T','路口：T'],
+ ['loose ends','未连接端点'],['cells, median','个地块，面积中位数'],['culverts','处涵洞'],['circuses','处环形广场'],
+ ['wind simulation','风场模拟'],['wind of','风场：'],['along the contour','沿等高线'],['growing:','正在生成：'],['streets','条道路'],
+ ['average','平均宽度'],['the inside streets take','内部道路占'],['of the land','场地面积'],['wind,','风场，'],['calm ','静风 '],[' · from ',' · 来自 ']
+];
+window.TS_TR=function(value){
+ const s=String(value), core=s.trim(); if(TS_LANG==='en'||!core)return s;
+ if(Object.hasOwn(TS_DICT,core))return s.replace(core,TS_DICT[core]);
+ let out=s; for(const [a,b] of TS_FRAGMENTS)out=out.split(a).join(b);
+ out=out.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec|whole year|the year)\b/g,k=>TS_DICT[k]||k);
+ return out;
+};
+for(const method of ['fillText','strokeText','measureText']){
+ const native=CanvasRenderingContext2D.prototype[method];
+ CanvasRenderingContext2D.prototype[method]=function(text,...args){return native.call(this,TS_TR(text),...args);};
+}
+window.addEventListener('DOMContentLoaded',()=>{
+ const originals=new WeakMap();
+ function localizeText(n){
+  if(!n.parentElement||n.parentElement.closest('script,style,[data-no-translate]'))return;
+  const saved=originals.get(n);let original=n.nodeValue;
+  if(saved&&(original===saved.translated||original===saved.original))original=saved.original;
+  const translated=TS_TR(original);originals.set(n,{original,translated});
+  if(n.nodeValue!==translated)n.nodeValue=translated;
+ }
+ function walk(root){
+  if(root.nodeType===3){localizeText(root);return;}
+  if(root.nodeType!==1&&root!==document.body)return;
+  if(root.matches?.('script,style,[data-no-translate]'))return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode())localizeText(n);
+ }
+ const observer=new MutationObserver(records=>{
+  observer.disconnect();
+  for(const r of records){if(r.type==='characterData')localizeText(r.target);else for(const n of r.addedNodes)walk(n);}
+  observe();
+ });
+ function observe(){observer.observe(document.body,{subtree:true,childList:true,characterData:true});}
+ window.setInterfaceLanguage=function(lang){
+  TS_LANG=lang==='en'?'en':'zh';document.documentElement.lang=TS_LANG==='zh'?'zh-CN':'en';
+  document.title=TS_LANG==='zh'?'张量场工作室 · 单文件整合版':'Tensor Studio · All-in-one';
+  observer.disconnect();walk(document.body);observe();
+  document.querySelectorAll('[data-language]').forEach(b=>{b.classList.toggle('active',b.dataset.language===TS_LANG);b.setAttribute('aria-pressed',b.dataset.language===TS_LANG);});
+  document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=TS_LANG==='zh'?e.dataset.zh:e.dataset.en);
+  try{baseDirty=true;netDirty=true;window.__ts6?.setTheme(document.documentElement.dataset.theme||document.body.dataset.theme||'dark');}catch(e){}
+  window.renderPackage?.();
+ };
+ document.querySelectorAll('[data-language]').forEach(b=>b.addEventListener('click',()=>setInterfaceLanguage(b.dataset.language)));
+ setInterfaceLanguage(window.__TS_LANG0 || 'zh');
+});
+</script></head><body><header id="package-bar"><div class="brand"><strong data-no-translate>Tensor Studio</strong><small><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.2" data-en="Station P2 example · v8.2">车站 P2 示例 · v8.2</span></small></div><nav class="package-nav site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="bar-right"><div class="seg" id="theme" aria-label="Theme"><button data-t="light">Light</button><button data-t="dark">Dark</button></div><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div></div></header>
+<div id="wrap">
+ <div id="view"><canvas id="c"></canvas>
+  <div id="tools">
+   <div class="tg" id="tgMode"><span>Mode</span><button data-m="A">A · today</button><button data-m="B">B · branching</button></div>
+   <div class="tg" id="tgUnder"><span>Read</span><button data-u="off">off</button><button data-u="clarity">clarity</button><button data-u="conflict">conflict</button><button data-u="zones">both</button></div>
+   <div class="tg"><span>Events</span><button id="tEvents">on</button></div>
+   <div class="tg" id="tgField"><span>Field</span><button data-v="move">moving</button><button data-v="lines">still lines</button><button data-v="off">off</button></div>
+   <div class="tg"><span>Wind</span><button id="tWind">on</button></div>
+   <div class="tg"><span>Streets</span><button id="tStreets">lines</button><button id="tWidth">at width</button></div>
+   <div class="tg"><button id="tFreeze">&#10074;&#10074; Freeze motion</button></div>
+   <div class="tg"><button id="tResult" class="go">Show result</button></div>
+  </div>
+  <div id="hud">loading…</div></div>
+ <div id="panel">
+<section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
+<section class="grp"><h2><span data-i18n data-zh="生成步骤" data-en="Build-up">生成步骤</span></h2><div class="card"><details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><div class="sub" id="siteInfo"></div></details>
+  <div class="steps">
+   <button data-s="1"><b>1 · Contour</b>streets along the slope only</button>
+   <button data-s="2"><b>2 · + Attractors</b>streets ring the calm points</button>
+   <button data-s="3"><b>3 · + Wind</b>plays the year, bends them</button>
+  </div>
+  <details class="info"><summary>How the roads come from the field.</summary><div class="how">The field holds, at every point, one direction a street should run (the contour, bent by the attractors and the wind). <b>Field · moving</b> draws those directions as drifting streaks; <b>still lines</b> draws them as fixed lines. Each street starts at one of your anchors (or 300 m / 115 m from the last) and simply follows the field until it meets another street: so every street lies on one of those lines. The <b>wind</b> layer is the weather itself; it builds nothing, it only bends the field.</div></details></div></section>
+<section class="grp"><h2>Growth mode</h2><div class="card">
+<div class="btns"><button id="bBoth" class="primary">Grow both and compare</button></div>
+  <table id="cmp"></table>
+  <p class="note" id="cmpNote"></p>
+  <details class="info"><summary>How B grows.</summary><div class="how">Main streets start at your anchors and grow inward, 5 m at a time, all at once. Each turns toward the field's direction quickly where one direction rules (<b>clarity</b> high) and keeps its heading where the parts cancel. As it grows it puts out side streets, one side then the other, so they meet it as staggered T's: further apart on clear ground, closer where the field is weak. Where the contour and the wind (with the attractors and streams) pull hard in different directions (<b>conflict</b>), a street forks into the two directions: a Y. A street stops where it meets another: square on, a T; at a shallow angle, it merges (a Y); head on, the two become one street. Then the land's edge road puts out side streets where there is room, and any empty ground left is reached from the nearest street. <b>Complete the main streets first</b> (v6.1): before anything branches, contour avenues run from edge to edge, each circus is tied in by up to three main streets, and a main street crosses another as a crossroads; at the end, a long second street running from a main street (or the edge) to another becomes a main street. The X's that remain are main on main.</div></details>
+</div></section>
+<section class="grp"><h2>1 · The field</h2><div class="card">
+<div class="row"><label>contour</label><input type="range" id="wC" min="0" max="100" value="70"><output></output></div>
+  <label class="lay"><input type="checkbox" id="windOn"> the wind bends the streets</label>
+  <div class="row"><label>by, against the contour</label><input type="range" id="wWind" min="0" max="100" value="40"><output></output></div>
+  <div class="row"><label>the wind of</label><input type="range" id="month" min="0" max="12" value="12"><output></output></div>
+  <div class="row"><label>smoothing, m</label><input type="range" id="smooth" min="10" max="120" step="10" value="40"><output></output></div>
+</div></section>
+<section class="grp"><h2>2 · Wind simulation</h2><div class="card">
+<div class="btns"><button id="bSim" class="primary">&#9654; Play the year</button><button id="bSimPause">Pause</button><button id="bSimStop">&#9632; Stop · result</button></div>
+  <label class="lay"><input type="checkbox" id="simGrow" checked> the streets reshape as it plays</label>
+  <details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><p class="note">From the streets along the contour, the weather year plays month by month (London Luton, hour by hour): each month's winds blow over the site as moving vectors, as often and as strong as they were, and bend the field; the streets regrow in it, the month before fading out. It ends on the whole year. Winds from the south-east round to the west ask for streets along them (air through); from the north-west round to the east, across them (shelter).</p></details>
+</div></section>
+<section class="grp"><h2>3 · Attractors</h2><div class="card">
+<div class="row"><label>where</label><select id="aMode"><option value="calm" selected>from the field: the wind's calm points</option><option value="centre">near the centre</option><option value="corners">near the corners</option><option value="edge">on the edge (semicircles)</option><option value="sketch">your placement (sketch, 21 Oct)</option><option value="spread">spread out over the land</option><option value="hand">your placement (by hand): double-click to add</option></select></div>
+  <div class="row" id="rMain"><label>how many (main)</label><input type="range" id="nMain" min="0" max="4" value="2"><output></output></div>
+  <div class="row" id="rSec"><label>secondary</label><input type="range" id="nSec" min="0" max="3" value="2"><output></output></div>
+  <div class="row" id="rEdge" style="display:none"><label>on the edge</label><input type="range" id="nEdge" min="0" max="5" value="3"><output></output></div>
+  <div class="row"><label>pull</label><input type="range" id="pull" min="0" max="3" step="0.1" value="2.4"><output></output></div>
+  <details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><p class="note"><b>Add one by hand (v8):</b> double-click on the land for a main attractor, shift + double-click for a secondary one, alt + double-click for one on the edge; right-click an attractor to remove it. This switches to <b>your placement (by hand)</b>, keeping the ones already there; your points stay while you change other settings, and come back if you pick another placement and then this one again. <b>Drag an attractor</b> on the map to move it; one on the edge slides along the edge. <b>From the field:</b> where the year's winds cancel, the calmest first, at least 450 m apart (the first two as v6, close together in the centre-east). <b>Near the centre:</b> one at the land's deepest middle; two to four on a ring round it, a fifth of the land's size out, turned along its length. <b>Near the corners:</b> at the land's farthest corners, spread apart, each moved in until it is 150 m from the edge. <b>Your placement:</b> the two main ones where you put them on 21 Oct, north-centre and south-east, about 1 km apart (the secondary ones stay at the calm points). <b>Spread out:</b> each takes its own share of the land (calmer land weighs more), the main ones far apart. <b>On the edge:</b> the first three where you drew them on 21 Oct (north, east, south-west), any more along straight stretches of the edge with deep land behind them, spread along it; the half of the ring field outside the land falls away, leaving semicircles whose radial streets converge on a half circus at the edge road, a square at the gate.</p></details>
+</div></section>
+<section class="grp"><h2>4 · The streets</h2><div class="card">
+<div class="row"><label>main streets apart, m</label><input type="range" id="d1" min="180" max="500" step="10" value="300"><output></output></div>
+  <div class="row"><label>second streets apart, m</label><input type="range" id="d2" min="80" max="220" step="5" value="115"><output></output></div>
+  <div class="row"><label>A · through streets (X), %</label><input type="range" id="thru" min="0" max="60" step="5" value="25"><output></output></div>
+  <div class="row"><label>A · staggered (T), %</label><input type="range" id="stag" min="0" max="80" step="5" value="35"><output></output></div>
+  <label class="lay"><input type="checkbox" id="merge" checked> A · streets merge where they converge (Y)</label>
+</div></section>
+<section class="grp"><h2>4b · Mode B, branching</h2><div class="card">
+<div class="row"><label>keeps its heading</label><input type="range" id="bMem" min="0" max="100" step="5" value="50"><output></output></div>
+  <div class="row"><label>side streets apart (× second)</label><input type="range" id="bGap" min="0.6" max="1.6" step="0.05" value="1"><output></output></div>
+  <div class="row"><label>forks where conflict is over</label><input type="range" id="bFork" min="0.1" max="0.55" step="0.05" value="0.25"><output></output></div>
+  <label class="lay"><input type="checkbox" id="bMains" checked> complete the main streets first</label>
+  <label class="lay"><input type="checkbox" id="bInfill" checked> reach empty ground from the nearest street</label>
+  <label class="lay"><input type="checkbox" id="bSec6" checked> second streets as in v6 (off: v6.2's, cleaned)</label>
+  <details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><p class="note">Main streets apart (above) sets how close two main streets may run side by side; second streets apart sets the side streets' spacing: along the field's main direction, second × (0.7 + 0.9 × clarity) × this slider (long blocks on clear ground); across it, second × 0.75 × this slider. Only second streets fork (with the main streets completed first, main streets stay single). A fork needs the contour's and the other forces' street directions at least 35° apart: a shallower fork reads as two streets side by side; where they are square to each other, one grid serves both, so no fork.</p></details>
+</div></section>
+<section class="grp"><h2>5 · Street widths: a domain</h2><div class="card">
+<div class="row"><label>narrowest, m</label><input type="range" id="wMin" min="3" max="15" step="3" value="6"><output></output></div>
+  <div class="row"><label>widest, m</label><input type="range" id="wMax" min="9" max="30" step="3" value="18"><output></output></div>
+  <div class="row"><label>driven by</label><select id="wBy">
+   <option value="hier" selected>the hierarchy (level + connections)</option>
+   <option value="level">level only (main wide, second narrow)</option>
+   <option value="conn">how many streets meet it</option>
+   <option value="edge">near the cell's roads (tapers inward)</option>
+   <option value="attr">near the attractors (tapers away)</option>
+   <option value="wind">the wind: narrow where exposed</option>
+   <option value="length">the longest streets widest</option>
+  </select></div>
+  <label class="lay"><input type="checkbox" id="wSnap" checked> in steps of 3 m</label>
+  <div class="ramp" id="wRamp"></div><div class="rampl"><span id="wLo">6 m</span><span id="wHi">18 m</span></div>
+  <div id="wnum"></div>
+</div></section>
+<section class="grp"><h2>6 · Growth</h2><div class="card">
+<div class="btns"><button id="bGrow" class="primary">Grow</button><button id="bPause">Pause</button><button id="bInstant">Instant</button></div>
+  <div class="row"><label>growth speed</label><input type="range" id="speed" min="1" max="40" value="6"><output></output></div>
+  <label class="lay"><input type="checkbox" id="auto" checked> regrow when the field changes</label>
+  <div id="num"></div>
+</div></section>
+<section class="grp"><h2>7 · Layers</h2><div class="card">
+<label class="lay"><input type="checkbox" class="lay" id="lFlow" checked> the field, flowing</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lWind"> the wind, blowing (vectors)</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lRose" checked> the wind rose</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lCont" checked> terrain contours</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lCross"> the field as crosses</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lStreets" checked> streets as lines</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lEvents" checked> growth events (branch, fork, join, merge, cross)</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lOther"> the other mode, dashed (to compare)</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lWidth"> roads at width, filleted (the width domain)</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lCells"> cells by size</label>
+  <label class="lay"><input type="checkbox" class="lay" id="lCtx" checked> buildings, roads, water</label>
+  <div class="key" id="key"></div>
+</div></section>
+<section class="grp"><h2>8 · Export</h2><div class="card">
+<div class="btns"><button id="bGeo">GeoJSON</button><button id="bPng">PNG</button></div>
+  <details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><p class="note">British National Grid metres, north up. Drag to pan, wheel to zoom. The flow shows the field's main direction moving: bright where one direction rules, faint where the parts cancel. The winds blow from the side each comes in, strongest there.</p></details>
+</div></section>
+ </div>
+</div>
+<script type="module">
+// Tensor Studio · start.
+// Opened from the London map (incubator/google-map-live), the parent page hands over the site it
+// selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
+// builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
+import { buildTensorSite } from './scripts/site_builder.js?v=8.2.0';
+const V = '8.2.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
+let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
+let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
+const lang0 = host?.lang || stored || 'zh', zh = lang0 === 'zh';
+window.__TS_LANG0 = lang0;
+const keep = new URLSearchParams(location.search).get('keep') === '1';
+try {
+  let D, meta = {};
+  if (host){
+    hud(zh ? '正在生成场地…' : 'Building the site…');
+    const [wind, clip] = await Promise.all([
+      fetch('assets/luton_wind.json?v=' + V).then(r => { if (!r.ok) throw new Error('weather year HTTP ' + r.status); return r.json(); }),
+      import(PC).then(m => m.default || m).catch(() => null)
+    ]);
+    ({ D, meta } = buildTensorSite({ ...host.features, ring: host.ring, elevation: host.elevation, wind, clip, keepBuildings: keep }));
+  } else {
+    hud(zh ? '正在载入车站 P2 示例…' : 'Loading the station P2 example…');
+    const r = await fetch('assets/station-p2.json?v=' + V); if (!r.ok) throw new Error('example site HTTP ' + r.status);
+    D = await r.json();
+  }
+  window.__TS = { D, meta, host, keepBuildings: keep, lang: lang0 };
+  const s = document.createElement('script'); s.src = 'app.js?v=' + V;
+  s.onerror = () => hud(zh ? '引擎加载失败' : 'The engine failed to load');
+  document.body.append(s);
+} catch (error){
+  console.error('Tensor Studio', error);
+  hud((zh ? '无法打开场地：' : 'Could not open the site: ') + (error?.message || error));
+  host?.fail?.(error);
+}
+
+</script>
+</body></html>
