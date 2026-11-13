@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>London 2100 · VR / MR</title>
+<style>html,body{margin:0;height:100%;background:#111113;color:#f5f5f7;font:13px -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif}
+#msg{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:rgba(235,235,245,.7)}
+#drop{position:fixed;inset:12px;border:2px dashed #0a84ff;border-radius:18px;display:none;place-items:center;font-size:16px;z-index:10000;background:rgba(10,132,255,.08)}</style>
+</head>
+<body>
+<div id="msg">载入场景… · Loading the scene…</div>
+<div id="drop">松开以载入场景文件 · Drop a scene file</div>
+<script type="module">
+import { open } from './src/xr_view.js';
+import { apiFromScene } from './src/scene.js';
+const q = new URLSearchParams(location.search), lang = q.get('lang') === 'en' ? 'en' : 'zh';
+const msg = document.getElementById('msg'), drop = document.getElementById('drop');
+let view = null;
+function show(scene, name){
+  try { const api = apiFromScene(scene); view?.close(); view = open(api, lang, { standalone: true, title: 'London 2100 · VR / MR · ' + name }); msg.hidden = true; }
+  catch (e){ msg.hidden = false; msg.textContent = (lang === 'zh' ? '无法打开场景：' : 'Could not open the scene: ') + e.message; console.error(e); }
+}
+const url = q.get('scene') || 'data/station-p2.scene.json';
+fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(s => show(s, (s.source || url).split(' · ')[1] || url))
+  .catch(e => { msg.textContent = (lang === 'zh' ? '无法载入 ' : 'Could not load ') + url + ' — ' + e.message; });
+// drag a scene file exported from Tensor Studio onto the page
+addEventListener('dragover', e => { e.preventDefault(); drop.style.display = 'grid'; });
+addEventListener('dragleave', e => { if (!e.relatedTarget) drop.style.display = 'none'; });
+addEventListener('drop', async e => { e.preventDefault(); drop.style.display = 'none'; const f = e.dataTransfer.files[0]; if (!f) return;
+  try { show(JSON.parse(await f.text()), f.name); } catch (err){ msg.hidden = false; msg.textContent = err.message; } });
+</script>
+</body>
+</html>
