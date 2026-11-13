@@ -31,9 +31,16 @@ function windField(k){ if (F[k]) return F[k]; const st = ENV.stats, e = k === 'V
   const [u, v] = smoothVec(U, V, 2.5); let mx = 1e-9; for (let i = 0; i < N; i++) if (!M || M[i]) mx = Math.max(mx, Math.hypot(u[i], v[i]));
   const A = ENV[k]; let lo = Infinity, hi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ lo = Math.min(lo, A[i]); hi = Math.max(hi, A[i]); }
   return (F[k] = { u, v, mx, a: A, lo, hi }); }
-function comfortPeaks(){ if (F.peaks) return F.peaks; const Cs = blur(ENV.C, 4), cand = [];
-  for (let r = 2; r < ny - 2; r++) for (let c = 2; c < nx - 2; c++){ const i = r * nx + c; if (M && !M[i]) continue; let mx = true;
-    for (let dr = -2; dr <= 2 && mx; dr++) for (let dc = -2; dc <= 2; dc++){ if ((dr || dc) && Cs[(r + dr) * nx + c + dc] > Cs[i]){ mx = false; break; } } if (mx) cand.push([Cs[i], c * cell, r * cell]); }
+// the cells' distance to the nearest ground that is not land (the site's edge, water), in m: candidates keep 60 m from both
+const EDGE_GAP = 60;
+function edgeDist(){ if (F.ed) return F.ed; const d = new Float32Array(N).fill(1e9), q = [];
+  for (let i = 0; i < N; i++) if (M && !M[i]){ d[i] = 0; q.push(i); }
+  for (let h = 0; h < q.length; h++){ const k = q[h], r = (k / nx) | 0, c = k % nx; for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc; if (d[j] > d[k] + cell){ d[j] = d[k] + cell; q.push(j); } } }
+  return (F.ed = d); }
+// a peak among the allowed cells only (land, 60 m from the edge and the water)
+function comfortPeaks(){ if (F.peaks) return F.peaks; const Cs = blur(ENV.C, 4), cand = [], ed = edgeDist();
+  for (let r = 2; r < ny - 2; r++) for (let c = 2; c < nx - 2; c++){ const i = r * nx + c; if ((M && !M[i]) || ed[i] < EDGE_GAP) continue; let mx = true;
+    for (let dr = -2; dr <= 2 && mx; dr++) for (let dc = -2; dc <= 2; dc++){ const j = (r + dr) * nx + c + dc; if ((dr || dc) && (!M || M[j]) && ed[j] >= EDGE_GAP && Cs[j] > Cs[i]){ mx = false; break; } } if (mx) cand.push([Cs[i], c * cell, r * cell]); }
   cand.sort((a, b) => b[0] - a[0]); const out = [];
   for (const p of cand){ if (out.every(q => Math.hypot(q[1] - p[1], q[2] - p[2]) > 380)) out.push(p); if (out.length === 3) break; }
   return (F.peaks = out); }
