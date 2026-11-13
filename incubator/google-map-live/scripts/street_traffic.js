@@ -125,6 +125,108 @@ export function clipPolylineToSquare(points,E){
 
 /* ---------------------------------------------------------------- graph */
 
+/* Vector tiles are simplified: two crossing streets often lose their shared
+ * vertex, so they cross without a junction. Insert a vertex wherever two
+ * segments cross (bridges never join roads below them) and snap dangling ends
+ * that stop just short of another road (T-junctions). Coordinates in world
+ * units; metresPerUnit converts the tolerances. */
+export function joinRoadIntersections(lines,metresPerUnit){
+  const tolEnd=0.35/metresPerUnit;
+  const snapGap=2.5/metresPerUnit;
+  const CELL=40/metresPerUnit;
+  const segs=[];
+  const splits=lines.map(l=>l.coords.map(()=>[]));
+  lines.forEach((line,li)=>{
+    for(let i=1;i<line.coords.length;i++){
+      const [x0,y0]=line.coords[i-1],[x1,y1]=line.coords[i];
+      segs.push({li,i:i-1,x0,y0,x1,y1});
+    }
+  });
+  const grid=new Map();
+  const cellsOf=(x0,y0,x1,y1,pad=0)=>{
+    const out=[];
+    for(let cx=Math.floor((Math.min(x0,x1)-pad)/CELL);cx<=Math.floor((Math.max(x0,x1)+pad)/CELL);cx++){
+      for(let cy=Math.floor((Math.min(y0,y1)-pad)/CELL);cy<=Math.floor((Math.max(y0,y1)+pad)/CELL);cy++){
+        out.push(cx+','+cy);
+      }
+    }
+    return out;
+  };
+  segs.forEach((sg,k)=>{
+    for(const key of cellsOf(sg.x0,sg.y0,sg.x1,sg.y1)){
+      let arr=grid.get(key);
+      if(!arr){arr=[];grid.set(key,arr);}
+      arr.push(k);
+    }
+  });
+  const near=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by)<=tolEnd;
+  const addSplit=(sg,t,x,y)=>splits[sg.li][sg.i].push({t,x,y});
+  const seen=new Set();
+  for(const arr of grid.values()){
+    for(let p=0;p<arr.length;p++){
+      for(let q=p+1;q<arr.length;q++){
+        const a=segs[arr[p]],b=segs[arr[q]];
+        if(a.li===b.li&&Math.abs(a.i-b.i)<=1)continue;
+        if(Boolean(lines[a.li].bridge)!==Boolean(lines[b.li].bridge))continue;
+        const key=arr[p]<arr[q]?arr[p]+'-'+arr[q]:arr[q]+'-'+arr[p];
+        if(seen.has(key))continue;
+        seen.add(key);
+        const rx=a.x1-a.x0,ry=a.y1-a.y0,sx=b.x1-b.x0,sy=b.y1-b.y0;
+        const den=rx*sy-ry*sx;
+        if(Math.abs(den)<1e-12)continue;
+        const qx=b.x0-a.x0,qy=b.y0-a.y0;
+        const t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+        if(t<-1e-9||t>1+1e-9||u<-1e-9||u>1+1e-9)continue;
+        const x=a.x0+t*rx,y=a.y0+t*ry;
+        const aEnd=near(x,y,a.x0,a.y0)||near(x,y,a.x1,a.y1);
+        const bEnd=near(x,y,b.x0,b.y0)||near(x,y,b.x1,b.y1);
+        if(aEnd&&bEnd)continue;
+        if(!aEnd)addSplit(a,t,x,y);
+        if(!bEnd)addSplit(b,u,x,y);
+      }
+    }
+  }
+  // Dangling ends that stop just short of another road.
+  const ends=[];
+  lines.forEach((line,li)=>{
+    const c=line.coords;
+    if(c.length>=2){ends.push([li,0]);ends.push([li,c.length-1]);}
+  });
+  for(const [li,vi] of ends){
+    const [ex,ey]=lines[li].coords[vi];
+    let best=null,bestD=snapGap;
+    for(const key of cellsOf(ex,ey,ex,ey,snapGap)){
+      for(const k of grid.get(key)||[]){
+        const sg=segs[k];
+        if(sg.li===li)continue;
+        if(Boolean(lines[sg.li].bridge)!==Boolean(lines[li].bridge))continue;
+        const dx=sg.x1-sg.x0,dy=sg.y1-sg.y0,l2=dx*dx+dy*dy;
+        if(!l2)continue;
+        const t=((ex-sg.x0)*dx+(ey-sg.y0)*dy)/l2;
+        if(t<=0||t>=1)continue;
+        const px=sg.x0+t*dx,py=sg.y0+t*dy;
+        const d=Math.hypot(px-ex,py-ey);
+        if(d<bestD&&!near(px,py,sg.x0,sg.y0)&&!near(px,py,sg.x1,sg.y1)){bestD=d;best={sg,t,px,py};}
+      }
+    }
+    if(best&&bestD>tolEnd*0.5){
+      addSplit(best.sg,best.t,best.px,best.py);
+      lines[li]={...lines[li],coords:lines[li].coords.map((c,i)=>i===vi?[best.px,best.py]:c)};
+    }else if(best){
+      addSplit(best.sg,best.t,best.px,best.py);
+    }
+  }
+  return lines.map((line,li)=>{
+    const out=[line.coords[0]];
+    for(let i=0;i<line.coords.length-1;i++){
+      const extra=splits[li][i].sort((a,b)=>a.t-b.t);
+      for(const e of extra)out.push([e.x,e.y]);
+      out.push(line.coords[i+1]);
+    }
+    return {...line,coords:out};
+  });
+}
+
 let LINK_UID=1;
 
 /**
@@ -132,7 +234,8 @@ let LINK_UID=1;
  * lines: [{coords:[[X,Y],...] (world units), cls, oneway}]
  * metresPerUnit, origin:[X,Y] -> local metres x=(X-ox)*mpu (east), y=(Y-oy)*mpu (south)
  */
-export function buildRoadGraph(lines,{metresPerUnit,origin}){
+export function buildRoadGraph(lines,{metresPerUnit,origin,joinIntersections=true}){
+  if(joinIntersections)lines=joinRoadIntersections(lines.map(l=>({...l})),metresPerUnit);
   const snapUnits=1.2/metresPerUnit;
   const cell=snapUnits*2;
   const nodes=[];
@@ -601,7 +704,7 @@ export function createTrafficSim({seed=1}={}){
   }
 
   /* Signalised junctions: where two main roads (tertiary or above) meet, or a
-     major road crosses at a four-way junction. Nodes of one junction (dual
+     secondary-or-higher road has a four-way junction. Nodes of one junction (dual
      carriageways, slip lanes) share one controller. */
   function buildSignals(g){
     controllers=[];
@@ -609,8 +712,11 @@ export function createTrafficSim({seed=1}={}){
     if(!g)return;
     const candidates=g.nodes.filter(n=>{
       if(n.links.length<3)return false;
-      const r=n.links.map(l=>l.link.type.rank).sort((a,b)=>b-a);
-      return r[1]>=2||(r[0]>=3&&n.links.length>=4);
+      // A main road passing through contributes two branches, so two main roads
+      // meeting means at least three main-road branches.
+      const main=n.links.filter(l=>l.link.type.rank>=2).length;
+      const top=Math.max(...n.links.map(l=>l.link.type.rank));
+      return main>=3||(top>=3&&n.links.length>=4&&main>=2);
     });
     const used=new Set();
     for(const seed of candidates){
@@ -1289,7 +1395,8 @@ export function roadLinesFromTile(layer,z,x,y){
         out.push({
           coords:piece.map(([px,py])=>[(x*E+px)*scale,(y*E+py)*scale]),
           cls:p.class,
-          oneway:Number(p.oneway)||0
+          oneway:Number(p.oneway)||0,
+          bridge:p.brunnel==='bridge'
         });
       }
     }
