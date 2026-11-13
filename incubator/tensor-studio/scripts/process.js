@@ -41,7 +41,7 @@ const STEPS = [
   { k: 1, zh: '选场地', en: 'The site', rows: [],
     note: () => L('场地红线、锚点（现有道路与边界的交点）和后面要用到的数据。', 'The boundary, the anchors (where existing streets meet the edge) and the data the steps use.') },
   { k: 2, zh: '看环境', en: 'Environment', rows: [],
-    note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。这一步只是查看，选哪张图都不会改变道路。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows. Only a reading: the map you pick does not change the streets.') },
+    note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。这一步只是查看，不设参数；这些数据在第 3、4 步参与道路计算（舒适度暂未参与）。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows. A reading only, nothing to set here; the data shapes the streets in steps 3 and 4 (comfort not yet).') },
   { k: 3, zh: '定约束', en: 'Constraints', rows: ['fOn', 'fAvoid', 'gOn', 'gW', 'gQ'],
     note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入。主要汇水路径留成蓝绿走廊：道路不沿走廊内部走，只能近似垂直地跨过（涵洞）。', 'Water and the flood zones kept clear come out of the land; no street enters them. The main runoff paths are kept as blue-green corridors: no street runs inside one, streets only cross them, near square, on culverts.') },
   { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'wSum', 'wWin', 'wG', 'fW', 'smooth'],
