@@ -114,5 +114,7 @@ export const zh = {
   "cat.status.planned": "规划中",
   "cat.slot.title": "添加新功能",
   "cat.slot.desc": "把 app 放进 incubator/，再在 catalogue.json 中加一条，就会出现在这里。",
-  "cat.back": "返回目录"
+  "cat.back": "返回目录",
+  "app.openTab": "在新标签页打开",
+  "app.loading": "正在打开…"
 };

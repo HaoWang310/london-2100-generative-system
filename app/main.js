@@ -15,6 +15,7 @@ import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared
 import { h, renderParams, renderStats, toast, download } from '../shared/ui/index.js';
 import { createIntro } from './intro.js';
 import { createCatalogue } from './catalogue.js';
+import { createAppView } from './appview.js';
 import { watchForUpdates, fetchReleases, latestUrl, releaseUrl, versionLabel, describeBuild, BUILD } from './updates.js';
 
 const $ = id => document.getElementById(id);
@@ -475,7 +476,7 @@ for (const [id, on] of [['view2d', false], ['view3d', true]]) {
   });
 }
 document.addEventListener('keydown', e => {
-  if (!$('intro').hidden || !$('catalogue').hidden) return;   // shortcuts belong to the workspace only
+  if (!$('intro').hidden || !$('catalogue').hidden || !$('appview').hidden) return;   // shortcuts belong to the workspace only
   if (e.target.closest('input, select, textarea')) return;
   if (e.key === 'Escape') goBack();
   if (e.key === 'Enter') enterNext();
@@ -497,7 +498,13 @@ async function boot() {
   // The workspace stays mounted underneath, so its map loads while the
   // opening screen and catalogue are shown.
   const intro = createIntro($('intro'), { onEnter: () => { location.hash = 'catalogue'; } });
-  const catalogue = createCatalogue($('catalogue'), { onOpenWorkspace: () => { location.hash = 'workspace'; } });
+  const appview = createAppView($('appview'));
+  let pendingOrigin = null;
+  const catalogue = createCatalogue($('catalogue'), {
+    onOpenWorkspace: () => { location.hash = 'workspace'; },
+    onOpenApp: (item, cover) => { pendingOrigin = cover; location.hash = `app/${item.id}`; }
+  });
+  $('appviewBack').addEventListener('click', () => { location.hash = 'catalogue'; });
   const langLabel = () => { const l = getLang() === 'zh' ? 'EN' : '中'; $('introLang').textContent = l; $('catLang').textContent = l; };
   langLabel(); onLangChange(langLabel);
   $('introLang').addEventListener('click', toggleLang);
@@ -508,8 +515,18 @@ async function boot() {
   $('brandHome').addEventListener('keydown', e => { if (e.key === 'Enter') toCatalogue(); });
   $('brandHome').dataset.i18nTitle = 'cat.back';
 
-  const route = () => {
+  const route = async () => {
     const screen = location.hash.replace('#', '') || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
+    if (screen.startsWith('app/')) {
+      // An incubator app, popped out over the catalogue.
+      const item = await catalogue.item(screen.slice(4));
+      if (!item) { location.hash = 'catalogue'; return; }
+      intro.hide(); catalogue.show();
+      appview.open(item, pendingOrigin || catalogue.coverOf(item.id));
+      pendingOrigin = null;
+      return;
+    }
+    if (appview.openId) { appview.setOrigin(catalogue.coverOf(appview.openId)); appview.close(); }
     if (screen === 'intro') { catalogue.hide(); intro.show(); }
     else if (screen === 'catalogue') { if (intro.open) intro.enter(); else intro.hide(); catalogue.show(); }
     else { intro.hide(); catalogue.hide(); setTimeout(() => viewer?.resize(), 60); }

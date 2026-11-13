@@ -7,13 +7,19 @@ import { h } from '../shared/ui/index.js';
 
 const STATUS = ['ready', 'incubating', 'planned'];
 
-export function createCatalogue(root, { onOpenWorkspace } = {}) {
+/** Apps hosted inside this site open in the pop-out viewer; external links open normally. */
+export const isInternalApp = item => typeof item.href === 'string' && /^(\.\/)?incubator\//.test(item.href);
+
+export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
   const grid = root.querySelector('.cat-grid');
   const filters = root.querySelector('.cat-filters');
   const count = root.querySelector('.cat-count');
   let items = [];
   let filter = 'all';
   let loaded = false;
+
+  let readyResolve;
+  const ready = new Promise(r => { readyResolve = r; });
 
   async function load() {
     try {
@@ -26,13 +32,16 @@ export function createCatalogue(root, { onOpenWorkspace } = {}) {
         title: { zh: '多尺度城市生成系统', en: 'Multi-scale generative system' }, desc: { zh: '', en: '' }, tags: [] }];
     }
     loaded = true;
+    readyResolve(items);
     render();
   }
 
   function card(item, i) {
     const status = STATUS.includes(item.status) ? item.status : 'planned';
     const open = e => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;   // let ⌘/Ctrl-click open a new tab
       if (item.href === '#workspace') { e.preventDefault(); onOpenWorkspace?.(); }
+      else if (isInternalApp(item)) { e.preventDefault(); onOpenApp?.(item, e.currentTarget.querySelector('.cat-cover')); }
     };
     const a = h('a', {
       class: `cat-card is-${status}`, href: item.href || '#', style: `--i:${i}`,
@@ -80,7 +89,14 @@ export function createCatalogue(root, { onOpenWorkspace } = {}) {
   onLangChange(render);
 
   return {
+    /** Resolves with the items once catalogue.json is loaded (loads it if needed). */
+    async item(id) { if (!loaded) load(); return (await ready).find(x => x.id === id) || null; },
+    coverOf(id) {
+      const i = items.findIndex(x => x.id === id);
+      return i >= 0 ? grid.querySelectorAll('.cat-card')[i]?.querySelector('.cat-cover') || null : null;
+    },
     show() {
+      if (!root.hidden && root.classList.contains('is-in')) return;   // already showing: keep cards (and their positions) as they are
       root.hidden = false;
       requestAnimationFrame(() => root.classList.add('is-in'));
       if (!loaded) load(); else render();
