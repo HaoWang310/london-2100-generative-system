@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./app/app.css">
   <link rel="stylesheet" href="./app/intro.css">
   <link rel="stylesheet" href="./app/catalogue.css">
+  <link rel="stylesheet" href="./app/appview.css">
   <link rel="preconnect" href="https://assets.mixkit.co">
 </head>
 <body>
@@ -103,6 +104,18 @@
       </div>
       <div class="cat-filters" role="group"></div>
       <div class="cat-grid"></div>
+    </div>
+  </section>
+
+  <section class="appview" id="appview" aria-label="App" hidden>
+    <header class="appview-bar">
+      <button class="btn ghost appview-back" id="appviewBack"><span aria-hidden="true">←</span> <span data-i18n="cat.title"></span></button>
+      <span class="appview-title"></span>
+      <span class="sp"></span>
+      <a class="btn ghost appview-external" target="_blank" rel="noopener"><span data-i18n="app.openTab"></span> ↗</a>
+    </header>
+    <div class="appview-frame">
+      <div class="map-loading appview-loading"><span></span><em data-i18n="app.loading"></em></div>
     </div>
   </section>
 

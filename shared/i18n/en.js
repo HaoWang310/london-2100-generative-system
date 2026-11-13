@@ -114,5 +114,7 @@ export const en = {
   "cat.status.planned": "Planned",
   "cat.slot.title": "Add a new tool",
   "cat.slot.desc": "Put an app in incubator/ and add one entry to catalogue.json — it appears here.",
-  "cat.back": "Back to catalogue"
+  "cat.back": "Back to catalogue",
+  "app.openTab": "Open in new tab",
+  "app.loading": "Opening…"
 };
