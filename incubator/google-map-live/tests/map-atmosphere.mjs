@@ -60,5 +60,10 @@ const nightPalette=tintPalette(BASEMAP_THEMES.planning,[P.night.tint]);
 assert.equal(nightPalette.text,BASEMAP_THEMES.planning.text,'label text is never tinted');
 assert.notEqual(nightPalette.land,BASEMAP_THEMES.planning.land,'the ground darkens at night');
 assert.equal(tintPalette(BASEMAP_THEMES.planning,[]),BASEMAP_THEMES.planning);
+// Night: ground darker than streets, so roads stay legible.
+const lum=h=>{const n=parseInt(h.slice(1),16);return ((n>>16)&255)+((n>>8)&255)+(n&255);};
+assert.ok(lum(nightPalette.road)>lum(nightPalette.land)+40,'streets lighter than the ground at night');
+const mid=blendLighting(P.day,P.night,0.5).tint;
+assert.ok(mid.roles.ground>mid.roles.vehicle,'blended tint keeps per-role strengths');
 
 console.log('PASS map atmosphere: sun position, live lighting, presets and tints');

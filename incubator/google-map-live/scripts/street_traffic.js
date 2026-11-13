@@ -1434,7 +1434,10 @@ export function createStreetTraffic(map,{
     let c=tintCache.get(color);
     if(!c){
       c=color;
-      for(const tn of tints)if(tn&&tn.amount>0)c=mixColor(c,tn.color,tn.amount);
+      for(const tn of tints){
+        const a=tn.roles&&tn.roles.vehicle!=null?tn.roles.vehicle:tn.amount;
+        if(a>0)c=mixColor(c,tn.color,a);
+      }
       tintCache.set(color,c);
     }
     return c;
