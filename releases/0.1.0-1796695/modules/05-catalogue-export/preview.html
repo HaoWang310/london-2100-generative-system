@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catalogue &amp; export · London 2100 module preview</title>
+  <link rel="stylesheet" href="../../shared/ui/theme.css?v=1796695">
+</head>
+<body>
+  <script type="module">
+    import module, { toGeoJSON } from './module.js?v=1796695';
+    import { mountPreview } from '../../shared/ui/preview.js?v=1796695';
+    import { woolChildFixture } from '../../shared/schemas/fixtures.js?v=1796695';
+    const sample = woolChildFixture();
+    sample.roads = sample.context.parentRoads;
+    mountPreview({ module, input: async () => sample });
+    window.previewGeoJSON = () => toGeoJSON([sample]);
+  </script>
+</body>
+</html>
