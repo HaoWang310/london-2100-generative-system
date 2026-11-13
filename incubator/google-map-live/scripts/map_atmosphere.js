@@ -67,8 +67,8 @@ export const LIGHTING_PRESETS=Object.freeze({
 export const WEATHER_PRESETS=Object.freeze({
   clear:{tint:null,lightScale:1},
   fog:{tint:{color:'#c8cdd5',amount:0.2},lightScale:0.8,haze:0.55},
-  rain:{tint:{color:'#56606f',amount:0.2},lightScale:0.72,haze:0.18},
-  snow:{tint:{color:'#ffffff',amount:0.24},lightScale:0.85,haze:0.22}
+  rain:{tint:{color:'#4f5967',amount:0.28},lightScale:0.7,haze:0.2},
+  snow:{tint:{color:'#c9d1dd',amount:0.3},lightScale:0.85,haze:0.22}
 });
 
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -200,8 +200,9 @@ function createWeatherOverlay(map){
     drawHaze(preset.haze||0);
     if(mode==='rain'){
       ctx.lineCap='round';
-      ctx.lineWidth=1.1;
-      const tone=night>0.5?'190,205,230':'205,214,228';
+      ctx.lineWidth=1.25;
+      // Dark streaks on the pale daytime map, pale streaks at night.
+      const tone=night>0.5?'190,205,230':'78,94,120';
       for(const p of particles){
         p.y+=p.speed*dt;p.x+=p.speed*dt*0.18;
         if(p.y-p.len>h||p.x>w+60)Object.assign(p,newParticle(false));
@@ -217,9 +218,12 @@ function createWeatherOverlay(map){
         const x=p.x+Math.sin(p.phase)*p.sway;
         if(p.y>h+10)Object.assign(p,newParticle(false));
         ctx.fillStyle=`rgba(255,255,255,${p.a})`;
+        ctx.strokeStyle=`rgba(110,122,145,${(p.a*0.55).toFixed(2)})`;
+        ctx.lineWidth=0.8;
         ctx.beginPath();
         ctx.arc(x,p.y,p.r,0,Math.PI*2);
         ctx.fill();
+        ctx.stroke();
       }
     }
   }
