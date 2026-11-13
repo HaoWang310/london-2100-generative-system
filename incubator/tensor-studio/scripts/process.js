@@ -271,7 +271,7 @@ function ui(){ if (!PM.active) return;
     if (s.next){ s.next.textContent = s.next._t(); s.next.disabled = s.k < 8 && s.k > PM.valid; } }
   for (const b of chips.children){ const e = ENVK.find(x => x[0] === b.dataset.env); b.textContent = L(e[1], e[2]); b.classList.toggle('on', T6.env === b.dataset.env); b.disabled = !ENV; }
   envTxt.textContent = envConclusion(); siteTxt.innerHTML = siteText();
-  const g = T6.corr, gTxt = g ? L(' 蓝绿走廊 ' + g.areaHa.toFixed(1) + ' 公顷，道路只能跨过。', ' Blue-green corridors ' + g.areaHa.toFixed(1) + ' ha, which streets only cross.') : '';
+  const g = T6.corr, gTxt = g ? L(' 蓝绿走廊 ' + g.areaHa.toFixed(1) + ' 公顷（占土地 ' + Math.round(100 * g.share) + '%），道路只能跨过。' + (g.raised ? '汇水线太多，门槛已自动提高到上游 ' + Math.round(g.minHa) + ' 公顷，使走廊不超过土地的 12%。' : ''), ' Blue-green corridors ' + g.areaHa.toFixed(1) + ' ha (' + Math.round(100 * g.share) + ' % of the land), which streets only cross.' + (g.raised ? ' Too many runoff paths: the threshold rose to ' + Math.round(g.minHa) + ' ha upstream, so the corridors keep under 12 % of the land.' : '')) : '';
   areaTxt.textContent = (PM.area && floodOn() ? L('场地土地 ' + PM.area.base.toFixed(1) + ' 公顷，洪水避让 ' + (PM.area.base - PM.area.use).toFixed(1) + ' 公顷，可生长道路的土地 ' + PM.area.use.toFixed(1) + ' 公顷。',
     'Land ' + PM.area.base.toFixed(1) + ' ha; kept clear of flooding ' + (PM.area.base - PM.area.use).toFixed(1) + ' ha; ' + PM.area.use.toFixed(1) + ' ha left for streets.') : (FR ? L('洪水风险未参与。', 'Flood risk is off.') : L('此场地不在 EA 洪水数据范围内。', 'No EA flood data for this site.'))) + gTxt;
   metTbl.innerHTML = PM.cur === 8 ? metHTML() : '';

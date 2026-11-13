@@ -77,8 +77,8 @@ let GZ = null, GD = null, GA = null, GKEY = '', GINFO = null, GIMG = null;
 const corrOn = () => !!(window.__TS.D.env && window.__TS.envFns) && !!document.getElementById('gOn')?.checked;
 function buildCorridors(){ const on = corrOn(), key = on ? v('gW') + ':' + document.getElementById('gQ').value : 'off'; if (key === GKEY) return; GKEY = key; GIMG = null;
   if (!on){ GZ = GD = GA = null; GINFO = null; return; }
-  const g = window.__TS.envFns.corridors(window.__TS.D.env, D.landMask || null, nx, ny, cell, { q: +document.getElementById('gQ').value, half: v('gW') / 2 });
-  GZ = g.mask; GD = g.dist; GA = g.axis; GINFO = { cells: g.cells, areaHa: g.areaHa }; }
+  const g = window.__TS.envFns.corridors(window.__TS.D.env, D.landMask || null, nx, ny, cell, { minHa: +document.getElementById('gQ').value, half: v('gW') / 2 });
+  GZ = g.mask; GD = g.dist; GA = g.axis; GINFO = { cells: g.cells, areaHa: g.areaHa, share: g.share, minHa: g.minHa, raised: g.raised }; }
 function axisOf(frm, job){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return job === 'along' ? a : a + PI / 2; }
 // (v8.5) flood risk (EA): the class of each 10 m cell, the higher of surface water and rivers & sea (0 none … 4 high)
 const FLOOD = D.flood || null, FR = FLOOD && FLOOD.grid && FLOOD.grid.length === N ? FLOOD.grid : null;
@@ -1243,8 +1243,9 @@ function drawGreen(g){ if (!GZ || !SHOWGREEN) return;
     const bil = (F, u, w) => { const c0 = clamp(Math.floor(u), 0, nx - 1), r0 = clamp(Math.floor(w), 0, ny - 1), c1 = Math.min(c0 + 1, nx - 1), r1 = Math.min(r0 + 1, ny - 1), fu = clamp(u - c0, 0, 1), fw = clamp(w - r0, 0, 1);
       return (F[r0 * nx + c0] * (1 - fu) + F[r0 * nx + c1] * fu) * (1 - fw) + (F[r1 * nx + c0] * (1 - fu) + F[r1 * nx + c1] * fu) * fw; };
     const LM = new Float32Array(N); for (let i = 0; i < N; i++) LM[i] = !M || M[i] ? 1 : 0;
-    for (let py = 0; py < H; py++){ const w = ny - 1 - ((py + 0.5) / U - 0.5); for (let px = 0; px < W; px++){ const u = (px + 0.5) / U - 0.5, dist = bil(GD, u, w); if (dist > half + 4) continue;
-      const edge = clamp((half + 4 - dist) / 6, 0, 1), core = dist < 5 ? 0.35 : 0, a = (0.42 + core) * edge * bil(LM, u, w), o = 4 * (py * W + px); d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a); } }
+    const GDc = new Float32Array(N); for (let i = 0; i < N; i++) GDc[i] = Math.min(GD[i], half + 60); const GDs = blur(GDc, 1.3);   // smoothed: the 8-neighbour distance has steps
+    for (let py = 0; py < H; py++){ const w = ny - 1 - ((py + 0.5) / U - 0.5); for (let px = 0; px < W; px++){ const u = (px + 0.5) / U - 0.5, dist = bil(GDs, u, w); if (dist > half + 4) continue;
+      const edge = clamp((half + 4 - dist) / 6, 0, 1), core = 0.3 * clamp(1 - dist / (half * 0.7), 0, 1), a = (0.4 + core) * edge * bil(LM, u, w), o = 4 * (py * W + px); d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a); } }
     gg.putImageData(im, 0, 0); GIMG = oc; }
   g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = BASEMAP === 'none' ? 1 : 0.85; g.drawImage(GIMG, X(0), Y(ny * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
