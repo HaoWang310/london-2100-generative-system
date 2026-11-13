@@ -42,10 +42,10 @@ const STEPS = [
     note: () => L('场地红线、锚点（现有道路与边界的交点）和后面要用到的数据。', 'The boundary, the anchors (where existing streets meet the edge) and the data the steps use.') },
   { k: 2, zh: '看环境', en: 'Environment', rows: [],
     note: () => L('依次看高程、汇水、夏季通风、冬季冷风和气候舒适度，每张图下面有一句结论。这一步只是查看，选哪张图都不会改变道路。', 'Elevation, runoff, summer air, winter cold and comfort in turn, each with what it shows. Only a reading: the map you pick does not change the streets.') },
-  { k: 3, zh: '定约束', en: 'Constraints', rows: ['fOn', 'fAvoid'],
-    note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入；它们的边界成为岸线。', 'Water and the flood zones kept clear come out of the land; no street enters them, their edges become shores.') },
-  { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'windOn', 'wWind', 'month', 'fW', 'smooth'],
-    note: () => L('等高线、风和顺流排水各给出一个方向，按权重叠成张量场。流线就是道路将要遵循的方向；拖动滑块，流线会实时转向。', 'The contour, the wind and the run of water each give a direction, weighted into one field. Its flow lines are the directions the streets will follow; they turn as you move a slider.') },
+  { k: 3, zh: '定约束', en: 'Constraints', rows: ['fOn', 'fAvoid', 'gOn', 'gW', 'gQ'],
+    note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入。主要汇水路径留成蓝绿走廊：道路不沿走廊内部走，只能近似垂直地跨过（涵洞）。', 'Water and the flood zones kept clear come out of the land; no street enters them. The main runoff paths are kept as blue-green corridors: no street runs inside one, streets only cross them, near square, on culverts.') },
+  { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'wSum', 'wWin', 'wG', 'fW', 'smooth'],
+    note: () => L('每个因素给出一个方向，按权重叠成张量场：顺等高线；通风处顺夏季风；冷风强处横切冬季冷风；走廊旁沿走廊（滨水路）；洪水区顺流排水。流线就是道路将要遵循的方向，拖动滑块会实时转向。', 'Each factor gives a direction, weighted into one field: along the contour; along the summer wind where it blows; across the winter cold where it bites; along the corridors beside them (waterside streets); with the flow in the flood zones. The flow lines are the directions the streets will follow; they turn as you move a slider.') },
   { k: 5, zh: '放吸引点', en: 'Attractors', rows: ['aMode', 'nMain', 'nSec', 'nEdge', 'pull'],
     note: () => L('吸引点把附近的流线弯成环形与放射状。可拖动移动；双击添加（Shift 次级，Alt 边界），右键删除。', 'Attractors bend the flow round them into rings and spokes. Drag to move; double-click to add (shift: secondary, alt: on the edge), right-click to remove.') },
   { k: 6, zh: '长主路', en: 'Main streets', rows: ['d1', 'bMains', 'bMem', 'bFork'],
@@ -141,7 +141,7 @@ function world(k){
   layers(k); }
 function layers(k){
   el('lWidth').checked = k === 8; el('lStreets').checked = true; el('lEvents').checked = k === 6 || k === 7; el('lWind').checked = false;
-  setField(k === 4 || k === 5 ? 'move' : 'off'); setUnder('off'); T6.setFlood(k === 3 && !!FR); if (k !== 2) T6.setEnv('off');
+  setField(k === 4 || k === 5 ? 'move' : 'off'); setUnder('off'); T6.setFlood(k === 3 && !!FR); T6.setGreen(k >= 3); if (k !== 2) T6.setEnv('off');
   FROZEN = false; baseDirty = netDirty = widthDirty = true; syncTools(); }
 function go(k, auto){
   if (k < 1 || k > 8) return; PM.envTok++;
@@ -215,9 +215,10 @@ function summary(k){ const st = T6.envStats, fmt = x => x.toFixed(1);
   if (k === 1) return L(fmt(landArea() / 1e4) + ' 公顷 · ' + D.anchors.length + ' 个锚点', fmt(landArea() / 1e4) + ' ha · ' + D.anchors.length + ' anchors');
   if (k === 2){ if (!st) return L('无环境数据', 'no environmental data'); const s = argmax(st.summerEnergy), w = argmax(st.winterColdEnergy);
     return L('高程 ' + st.zMin + '–' + st.zMax + ' m · 夏季' + dirName(s) + '风 · 冬季冷风来自' + dirName(w), st.zMin + '–' + st.zMax + ' m · summer air from ' + dirName(s) + ' · winter cold from ' + dirName(w)); }
-  if (k === 3){ if (!floodOn()) return L('不考虑洪水', 'flood risk off'); if (!PM.area) return ''; const a = PM.area;
-    return L('避让 ' + fmt(a.base - a.use) + ' 公顷 · 可用 ' + fmt(a.use) + ' 公顷', fmt(a.base - a.use) + ' ha kept clear · ' + fmt(a.use) + ' ha left'); }
-  if (k === 4) return L('等高线 ' + v('wC') + ' · 风 ' + (el('windOn').checked ? v('wWind') : '关') + ' · 顺流 ' + (floodOn() ? v('fW') : '关'), 'contour ' + v('wC') + ' · wind ' + (el('windOn').checked ? v('wWind') : 'off') + ' · flow ' + (floodOn() ? v('fW') : 'off'));
+  if (k === 3){ const g = T6.corr, gs = g ? L(' · 走廊 ' + fmt(g.areaHa) + ' 公顷', ' · corridors ' + fmt(g.areaHa) + ' ha') : '';
+    if (!floodOn()) return L('不考虑洪水', 'flood risk off') + gs; if (!PM.area) return ''; const a = PM.area;
+    return L('避让 ' + fmt(a.base - a.use) + ' 公顷 · 可用 ' + fmt(a.use) + ' 公顷', fmt(a.base - a.use) + ' ha kept clear · ' + fmt(a.use) + ' ha left') + gs; }
+  if (k === 4) return L('等高线 ' + v('wC') + ' · 夏风 ' + v('wSum') + ' · 冬风 ' + v('wWin') + ' · 走廊 ' + (T6.corrOn ? v('wG') : '关') + ' · 顺流 ' + (floodOn() ? v('fW') : '关'), 'contour ' + v('wC') + ' · summer ' + v('wSum') + ' · winter ' + v('wWin') + ' · corridors ' + (T6.corrOn ? v('wG') : 'off') + ' · flow ' + (floodOn() ? v('fW') : 'off'));
   if (k === 5) return L(PM.nAttr + ' 个吸引点', PM.nAttr + ' attractors');
   if (k === 6){ const f = PM.frames[PM.b6]; if (!f) return ''; let n = 0; f.o.forEach((l, i) => { if (l.level === 1 && !l.circus && f.n[i] > 1) n++; });
     return L(n + ' 条主路 · 间距 ' + v('d1') + ' m', n + ' main streets · ' + v('d1') + ' m apart'); }
@@ -227,9 +228,9 @@ function argmax(a){ let b = 0; a.forEach((x, i) => { if (x > a[b]) b = i; }); re
 function envConclusion(){ const st = T6.envStats, k = T6.env; if (!st) return L('此场地没有环境分析数据，可以直接进入下一步。', 'No environmental fields for this site: go on to the next step.');
   const pct = (a, i) => Math.round(100 * a[i] / (a.reduce((s, x) => s + x, 0) || 1));
   if (k === 'Z') return L('场地高程 ' + st.zMin + '–' + st.zMax + ' 米，高差 ' + (st.zMax - st.zMin).toFixed(1) + ' 米。道路将优先顺着等高线走。', 'The land runs from ' + st.zMin + ' to ' + st.zMax + ' m. Streets will follow the contours first.');
-  if (k === 'Q') return L('亮蓝线是雨水汇集的路径，下一步会和洪水风险一起作为约束。', 'The bright lines are where rain gathers; the next step uses them with the flood risk.');
-  if (k === 'V'){ const i = argmax(st.summerEnergy); return L('夏季通风以' + dirName(i) + '风为主，占夏季风能的 ' + pct(st.summerEnergy, i) + '%。', 'Summer air comes mostly from the ' + dirName(i) + ', ' + pct(st.summerEnergy, i) + ' % of its energy.'); }
-  if (k === 'Cw'){ const i = argmax(st.winterColdEnergy); return L('冬季冷风主要来自' + dirName(i) + '，占 ' + pct(st.winterColdEnergy, i) + '%。', 'The winter cold comes mostly from the ' + dirName(i) + ', ' + pct(st.winterColdEnergy, i) + ' %.'); }
+  if (k === 'Q') return L('亮蓝线是雨水汇集的路径。下一步把主要路径留成蓝绿走廊，道路只能跨过它们。', 'The bright lines are where rain gathers. The next step keeps the main paths as blue-green corridors, which streets only cross.');
+  if (k === 'V'){ const i = argmax(st.summerEnergy); return L('夏季通风以' + dirName(i) + '风为主，占夏季风能的 ' + pct(st.summerEnergy, i) + '%。深色处风最强，第 4 步在那里让道路顺着风走。', 'Summer air comes mostly from the ' + dirName(i) + ', ' + pct(st.summerEnergy, i) + ' % of its energy. Step 4 runs the streets along it where it is strongest (dark).'); }
+  if (k === 'Cw'){ const i = argmax(st.winterColdEnergy); return L('冬季冷风主要来自' + dirName(i) + '，占 ' + pct(st.winterColdEnergy, i) + '%。深色处最冷，第 4 步在那里让道路横切冷风。', 'The winter cold comes mostly from the ' + dirName(i) + ', ' + pct(st.winterColdEnergy, i) + ' %. Step 4 runs the streets across it where it bites (dark).'); }
   if (k === 'C') return L('暖色处避开冬季冷风、又有夏季通风，适合布置公共空间。', 'Warm ground is out of the winter cold and open to summer air: good for public space.');
   return L('点击上面的图层，或播放分析。', 'Pick a map above, or play the analysis.'); }
 function siteText(){ const s = D.site, st = T6.envStats, list = [];
@@ -267,8 +268,9 @@ function ui(){ if (!PM.active) return;
     if (s.next){ s.next.textContent = s.next._t(); s.next.disabled = s.k < 8 && s.k > PM.valid; } }
   for (const b of chips.children){ const e = ENVK.find(x => x[0] === b.dataset.env); b.textContent = L(e[1], e[2]); b.classList.toggle('on', T6.env === b.dataset.env); b.disabled = !ENV; }
   envTxt.textContent = envConclusion(); siteTxt.innerHTML = siteText();
-  areaTxt.textContent = PM.area && floodOn() ? L('场地土地 ' + PM.area.base.toFixed(1) + ' 公顷，洪水避让 ' + (PM.area.base - PM.area.use).toFixed(1) + ' 公顷，可生长道路的土地 ' + PM.area.use.toFixed(1) + ' 公顷。',
-    'Land ' + PM.area.base.toFixed(1) + ' ha; kept clear of flooding ' + (PM.area.base - PM.area.use).toFixed(1) + ' ha; ' + PM.area.use.toFixed(1) + ' ha left for streets.') : (FR ? L('洪水风险未参与。', 'Flood risk is off.') : L('此场地不在 EA 洪水数据范围内。', 'No EA flood data for this site.'));
+  const g = T6.corr, gTxt = g ? L(' 蓝绿走廊 ' + g.areaHa.toFixed(1) + ' 公顷，道路只能跨过。', ' Blue-green corridors ' + g.areaHa.toFixed(1) + ' ha, which streets only cross.') : '';
+  areaTxt.textContent = (PM.area && floodOn() ? L('场地土地 ' + PM.area.base.toFixed(1) + ' 公顷，洪水避让 ' + (PM.area.base - PM.area.use).toFixed(1) + ' 公顷，可生长道路的土地 ' + PM.area.use.toFixed(1) + ' 公顷。',
+    'Land ' + PM.area.base.toFixed(1) + ' ha; kept clear of flooding ' + (PM.area.base - PM.area.use).toFixed(1) + ' ha; ' + PM.area.use.toFixed(1) + ' ha left for streets.') : (FR ? L('洪水风险未参与。', 'Flood risk is off.') : L('此场地不在 EA 洪水数据范围内。', 'No EA flood data for this site.'))) + gTxt;
   metTbl.innerHTML = PM.cur === 8 ? metHTML() : '';
   if (PM.cur === 8) floodNum();
   el('pmStepT').textContent = stepCap();
