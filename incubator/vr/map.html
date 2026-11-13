@@ -21,18 +21,20 @@
 </head>
 <body>
 <!-- The London map, untouched. VR lives only in this folder.
-     Opens straight into the VR view. ?at=lat,lon,zoom picks the place (else the last place, else central London);
+     Opens straight into the VR view: OSM that loads as you move (default), or ?mode=capture for a still capture of the map with its layers. ?at=lat,lon,zoom picks the place (else the last place, else central London);
      ?map=1 starts on the map instead. The 「地图」 button in the VR view shows the map; VR goes back. -->
 <iframe id="map" title="London map" allow="geolocation; fullscreen; xr-spatial-tracking"></iframe>
 <button id="vr" type="button" title="VR / MR · Meta Quest">VR</button>
 <div id="cover"><div><b>London 2100 · VR</b><span id="coverText">正在后台加载伦敦地图…</span></div></div>
 <div id="err"></div>
 <script type="module">
-import { findMap } from './src/map_bridge.js?v=0.6';
-import { openFromMap } from './src/from_map.js?v=0.6';
+import { findMap } from './src/map_bridge.js?v=0.7';
+import { openFromMap } from './src/from_map.js?v=0.7';
+import { open } from './src/xr_view.js?v=0.7';
+import { streamApi } from './src/stream.js?v=0.7';
 const KEY = 'london2100.vr.at', q = new URLSearchParams(location.search);
 const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err'), cover = document.getElementById('cover'), coverText = document.getElementById('coverText');
-const mapQuery = new URLSearchParams(location.search); for (const k of ['at', 'map']) mapQuery.delete(k);
+const mapQuery = new URLSearchParams(location.search); for (const k of ['at', 'map', 'mode', 'tiles']) mapQuery.delete(k);
 frame.src = '../google-map-live/' + (mapQuery.toString() ? '?' + mapQuery : '') + location.hash;
 const lang = () => (frame.contentDocument?.documentElement?.dataset.uiLanguage === 'en' ? 'en' : 'zh');
 const show = m => { err.textContent = m; err.style.display = m ? 'block' : 'none'; if (m) setTimeout(() => show(''), 9000); };
@@ -48,19 +50,34 @@ async function waitForMap(ms = 45000){
   throw last || new Error('the map did not load');
 }
 
+const CAPTURE = q.get('mode') === 'capture';
 async function goVR(at){
   btn.disabled = true; show('');
   try {
+    if (!CAPTURE){
+      // streaming: no need to wait for the map unless we take its place
+      if (!at){ const m = await waitForMap(); const c = m.getCenter(); at = { lat: c.lat, lng: c.lng, zoom: Math.max(15, m.getZoom()) }; }
+      const zh = lang() === 'zh';
+      const api = streamApi(at.lat, at.lng, { tiles: q.get('tiles') || undefined });
+      open(api, lang(), { closeLabel: zh ? '地图' : 'Map', title: 'London 2100 · OSM · ' + at.lat.toFixed(4) + ', ' + at.lng.toFixed(4) + (zh ? ' · 移动加载' : ' · streaming'),
+        onClose: async (info) => { cover.hidden = true;   // the map opens where you were looking in VR
+          const p = info?.focus ? { ...api.stream.toLatLng(info.focus[0], info.focus[1]), zoom: at.zoom || 15.5 } : at; remember(p);
+          try { const m = await waitForMap(8000); m.jumpTo({ center: [p.lng, p.lat], zoom: p.zoom }); } catch (e){} } });
+      cover.hidden = true; remember(at); return;
+    }
     const map = await waitForMap();
     if (at){ coverText.textContent = lang() === 'zh' ? '移动到指定位置…' : 'Moving to the place…'; map.jumpTo({ center: [at.lng, at.lat], zoom: at.zoom, pitch: 0, bearing: 0 }); await sleep(300); }
     await openFromMap(map, lang(), { closeLabel: lang() === 'zh' ? '地图' : 'Map', onClose: () => { cover.hidden = true; } });
     cover.hidden = true;
-    // remember the place, and put it in the address so a reload shows the same scene
-    const c = map.getCenter(), z = Math.max(15, map.getZoom()), s = c.lat.toFixed(5) + ',' + c.lng.toFixed(5) + ',' + z.toFixed(1);
-    try { localStorage.setItem(KEY, s); } catch (e){}
-    const rest = new URLSearchParams(location.search); rest.delete('at'); rest.delete('map'); history.replaceState(null, '', location.pathname + '?at=' + s + (rest.toString() ? '&' + rest : '') + location.hash);
+    const c = map.getCenter(); remember({ lat: c.lat, lng: c.lng, zoom: Math.max(15, map.getZoom()) });
   } catch (e){ console.error(e); cover.hidden = true; show((lang() === 'zh' ? 'VR 没能打开：' : 'VR could not open: ') + (e.message || e)); }
   finally { btn.disabled = false; }
+}
+// remember the place, and put it in the address so a reload shows the same scene
+function remember(at){
+  const s = at.lat.toFixed(5) + ',' + at.lng.toFixed(5) + ',' + (at.zoom || 15.5).toFixed(1);
+  try { localStorage.setItem(KEY, s); } catch (e){}
+  {   const rest = new URLSearchParams(location.search); rest.delete('at'); rest.delete('map'); history.replaceState(null, '', location.pathname + '?at=' + s + (rest.toString() ? '&' + rest : '') + location.hash); }
 }
 
 btn.onclick = () => goVR(null);   // from the map: the place the map shows now

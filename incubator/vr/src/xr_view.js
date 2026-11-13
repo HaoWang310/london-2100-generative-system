@@ -114,16 +114,16 @@ const rotY = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * 
 const VS = `#version 300 es
 in vec3 aPos; in vec2 aSide; in vec3 aNor; in vec3 aCol; in float aKind;
 uniform mat4 uP, uV, uM; uniform float uExag, uWidth, uLift;
-out vec3 vCol; out vec3 vN;
+out vec3 vCol; out vec3 vN; out vec2 vMP;
 void main(){ vec3 p = aPos; p.y = p.y * uExag + aKind * uLift; p.xz += aSide * uWidth;
-  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = mat3(uM) * aNor; vCol = aCol; }`;
+  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = mat3(uM) * aNor; vCol = aCol; vMP = p.xz; }`;
 const FS = `#version 300 es
-precision mediump float; in vec3 vCol; in vec3 vN; uniform float uAlpha; out vec4 o;
-void main(){ vec3 n = normalize(vN); float l = 0.58 + 0.42 * max(dot(n, normalize(vec3(-0.45, 0.85, 0.35))), 0.0); o = vec4(vCol * l, uAlpha); }`;
+precision highp float; in vec3 vCol; in vec3 vN; in vec2 vMP; uniform float uAlpha; uniform vec3 uClip; out vec4 o;
+void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; vec3 n = normalize(vN); float l = 0.58 + 0.42 * max(dot(n, normalize(vec3(-0.45, 0.85, 0.35))), 0.0); o = vec4(vCol * l, uAlpha); }`;
 const VT = `#version 300 es
-in vec3 aPos; in vec2 aUV; uniform mat4 uP, uV, uM; out vec2 vUV; void main(){ vUV = aUV; gl_Position = uP * uV * uM * vec4(aPos, 1.0); }`;
+in vec3 aPos; in vec2 aUV; uniform mat4 uP, uV, uM; out vec2 vUV; out vec2 vMP; void main(){ vUV = aUV; vMP = aPos.xz; gl_Position = uP * uV * uM * vec4(aPos, 1.0); }`;
 const FT = `#version 300 es
-precision mediump float; in vec2 vUV; uniform sampler2D uT; out vec4 o; void main(){ o = texture(uT, vUV); if (o.a < 0.02) discard; }`;
+precision highp float; in vec2 vUV; in vec2 vMP; uniform sampler2D uT; uniform vec3 uClip; out vec4 o; void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; o = texture(uT, vUV); if (o.a < 0.02) discard; }`;
 
 function program(gl, vs, fs){ const p = gl.createProgram();
   for (const [t, s] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]){ const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh); if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); gl.attachShader(p, sh); }
@@ -149,7 +149,7 @@ export function open(api, lang = 'zh', opt = {}){
   const st = { bld: true, flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
   const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
   let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
-  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : api.extra ? L.buildings : fixedLabel;
+  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : (api.extra || api.stream) ? L.buildings : fixedLabel;
   const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#111113;color:#f5f5f7;font:13px/1.4 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif}
 #tsXR canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #tsXR .bar{position:absolute;left:16px;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
@@ -172,9 +172,11 @@ export function open(api, lang = 'zh', opt = {}){
   const prog = program(gl, VS, FS), tex = program(gl, VT, FT);
 
   // state
+  const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
+  const streamInfo = () => { let n = 0, c = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; } return { tiles: n, count: c }; };
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
-  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
+  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? (lang === 'zh' ? `移动加载 · ${streamInfo().tiles} 块 · ${streamInfo().count} 栋建筑 · ` : `streaming · ${streamInfo().tiles} tiles · ${streamInfo().count} buildings · `) : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
   const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
@@ -183,7 +185,7 @@ export function open(api, lang = 'zh', opt = {}){
   // buttons
   const btn = k => root.querySelector(`button[data-k="${k}"]`);
   const sync = () => { btn('flood').classList.toggle('on', st.flood); btn('drain').classList.toggle('on', st.drain); btn('fixed').classList.toggle('on', st.fixed);
-    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; btn('bld').hidden = !api.extra; btn('bld').classList.toggle('on', st.bld); };
+    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; btn('bld').hidden = !api.extra && !api.stream; btn('bld').classList.toggle('on', st.bld); };
   btn('bld').onclick = () => { st.bld = !st.bld; sync(); };
   btn('flood').onclick = () => { st.flood = !st.flood; refresh(true); sync(); };
   btn('drain').onclick = () => { st.drain = !st.drain; refresh(true); sync(); };
@@ -201,17 +203,45 @@ export function open(api, lang = 'zh', opt = {}){
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-x, 0, z, 0, 0, x, 0, z, 1, 0, -x, 0, -z, 0, 1, x, 0, -z, 1, 1]), gl.STATIC_DRAW);
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return vao; }
 
+  // ---- streaming tiles (api.stream): load near the focus, drop far ones, clip to a circle
+  function tileQuad(q){ const [x0, y0, x1, y1] = q, vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([x0, 0, -y0, 0, 0, x1, 0, -y0, 1, 0, x0, 0, -y1, 0, 1, x1, 0, -y1, 1, 1]), gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return { vao, b }; }
+  function freeTile(T){ if (!T.ready) return; gl.deleteTexture(T.tex); gl.deleteVertexArray(T.quad.vao); gl.deleteBuffer(T.quad.b);
+    if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); } }
+  /** fx, fy: focus in plan metres; r: radius in metres */
+  function updateTiles(t, fx, fy, r){
+    clip = [fx, -fy, r];
+    if (!api.stream || t - lastUpd < 250) return; lastUpd = t;
+    const want = api.stream.near(fx, fy, r), keep = new Set(api.stream.near(fx, fy, r * 1.35 + 200));
+    for (const [k, T] of tiles) if (!keep.has(k)){ freeTile(T); tiles.delete(k); }
+    for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || tiles.size >= 40) break;
+      const T = { ready: false, count: 0 }; tiles.set(k, T); loadingN++;
+      api.stream.load(k).then(d => { loadingN--; if (tiles.get(k) !== T) return;
+        T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status(); })
+        .catch(e => { loadingN--; console.warn(e); note.textContent = (lang === 'zh' ? 'OSM 瓦片读取失败：' : 'OSM tile failed: ') + (e.message || e);
+          setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
+  }
+  function drawTiles(P, V, M){
+    gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, clip);
+    gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
+    for (const T of tiles.values()) if (T.ready){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
+    if (st.bld) for (const T of tiles.values()) if (T.ready && T.mesh){ gl.bindVertexArray(T.mesh.vao); gl.drawElements(gl.TRIANGLES, T.mesh.n, gl.UNSIGNED_INT, 0); }
+    gl.bindVertexArray(null); }
+
   // drawing, shared by the page and the headset
   const unit = 1 / terrain.size;   // the model is 1 unit across in the page preview
   function drawScene(P, V, M, o){
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.uP, false, P); gl.uniformMatrix4fv(prog.u.uV, false, V); gl.uniformMatrix4fv(prog.u.uM, false, M);
-    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1);
+    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : [0, 0, -1]);
+    if (api.stream){ drawTiles(P, V, M); return; }
     gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
     if (gTex){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4); }
     gl.bindVertexArray(tMesh.vao); gl.drawElements(gl.TRIANGLES, tMesh.n, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
     if (xMesh && st.bld){ gl.bindVertexArray(xMesh.vao); gl.drawElements(gl.TRIANGLES, xMesh.n, gl.UNSIGNED_INT, 0); }
-    if (gTex){ gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M);
+    if (gTex){ gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, [0, 0, -1]);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gTex); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(gQuad); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.useProgram(prog.p); }
     gl.uniform1f(prog.u.uWidth, o.width); gl.uniform1f(prog.u.uLift, o.lift);
     if (st.fixed && fMesh.n){ gl.bindVertexArray(fMesh.vao); gl.drawElements(gl.TRIANGLES, fMesh.n, gl.UNSIGNED_INT, 0); }
@@ -219,7 +249,7 @@ export function open(api, lang = 'zh', opt = {}){
     gl.bindVertexArray(null); }
 
   // ---- page preview: orbit camera
-  const cam = { yaw: 0.55, pitch: 0.85, dist: 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
+  const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 0.9 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
   cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam } }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener('pointermove', e => { if (!drag) return; const dx = (e.clientX - drag.x) / cv.clientWidth, dy = (e.clientY - drag.y) / cv.clientHeight;
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
@@ -230,6 +260,7 @@ export function open(api, lang = 'zh', opt = {}){
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0.067, 0.067, 0.075, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
+    if (api.stream) updateTiles(t, cam.tx / unit, -cam.tz / unit, Math.max(400, Math.min(2500, cam.dist / unit * 0.55)));
     drawScene(M4.persp(0.7, w / h, 0.01, 50), M4.look(eye, [cam.tx, 0, cam.tz]), M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit }); }
   raf = requestAnimationFrame(frame);
 
@@ -266,9 +297,14 @@ export function open(api, lang = 'zh', opt = {}){
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = snap.lines.length; const hq = quad();
     let head = [0, 1.6, 0], headF = [0, 0, -1], hold = 0, Hs = null, Hg = null;
-    const placeTable = () => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
-      M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; if (st.walk) farFor(false); st.walk = false; };
-    const placeWalk = () => { const zc = heightSampler(snap.S).at(terrain.cx, terrain.cy); M.s = 1; M.pos = [head[0], -zc, head[2]]; st.walk = true; farFor(true); };
+    const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
+      M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; M.anchor = M.pos.slice();
+      if (api.stream && keep){ const r = rotY([keep[0] * M.s, 0, keep[1] * M.s], M.yaw); M.pos = [M.anchor[0] - r[0], M.pos[1], M.anchor[2] - r[2]]; }   // keep looking at the same place
+      if (st.walk) farFor(false); st.walk = false; };
+    const focusModel = at => { const d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw); return [d[0] / M.s, d[2] / M.s]; };
+    const placeWalk = () => {
+      if (api.stream){ const fm = focusModel(M.anchor || head), r = rotY([fm[0], 0, fm[1]], M.yaw); M.s = 1; M.pos = [head[0] - r[0], 0, head[2] - r[2]]; st.walk = true; farFor(true); return; }
+      const zc = heightSampler(snap.S).at(terrain.cx, terrain.cy); M.s = 1; M.pos = [head[0], -zc, head[2]]; st.walk = true; farFor(true); };
     const sources = () => [...grabs.keys()];
     const rebase = (frame) => { base = null; const ss = sources(); if (!ss.length) return; const P = ss.map(s => poseOf(frame, s)).filter(Boolean); if (P.length !== ss.length) return;
       if (P.length === 1) base = { one: true, h: P[0].p, hy: P[0].yaw, pos: M.pos.slice(), yaw: M.yaw, s: M.s };
@@ -284,10 +320,10 @@ export function open(api, lang = 'zh', opt = {}){
       // buttons and sticks
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
         const hit = k => now[k] && !was[k], ax = gp.axes[2] || 0, ay = gp.axes[3] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
-        if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(); else placeWalk(); grabs.clear(); base = null; }
+        if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
           else { if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], 0); void r; M.yaw += a; } if (dz(ay)){ const k = Math.exp(-dz(ay) * dt * 1.2); M.s = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k)); } } }
-        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(); grabs.clear(); base = null; }
+        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
@@ -304,26 +340,28 @@ export function open(api, lang = 'zh', opt = {}){
       const layer = session.renderState.baseLayer; gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
       if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk) gl.clearColor(0.78, 0.84, 0.9, 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      if (api.stream){ const at = st.walk ? head : M.anchor, d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw);
+        updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(2500, 0.45 / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
       if (snap.lines.length !== hudN){ hudN = snap.lines.length; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         drawScene(P, V, Mm, o);
         // controller rays
-        gl.useProgram(prog.p); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
+        gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
         for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue; gl.uniformMatrix4fv(prog.u.uM, false, rp.transform.matrix); gl.bindVertexArray(ray.vao); gl.drawElements(gl.LINES, 2, gl.UNSIGNED_INT, 0); }
         // help card above the left hand, turned to face you
         const left = [...session.inputSources].find(s => s.handedness === 'left'), lp = left && poseOf(frame, left);
         if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
-          gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.086]));
+          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.086]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
           gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
         gl.bindVertexArray(null); } };
     session.requestAnimationFrame(onFrame);
   }
 
-  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; opt.onClose?.(); };
+  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; for (const T of tiles.values()) freeTile(T); tiles.clear(); opt.onClose?.({ focus: api.stream && clip[2] > 0 ? [clip[0], -clip[1]] : null }); };
   if (btn('close')) btn('close').onclick = close; addEventListener('keydown', function esc(e){ if (e.key === 'Escape' && OPEN){ close(); removeEventListener('keydown', esc); } });
   OPEN = { close, state: st, refresh };
   return OPEN;
