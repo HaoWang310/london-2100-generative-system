@@ -1,0 +1,2 @@
+// Historical release copy
+export const BUILD = {"version":"0.1.0","commit":"45103f7c233d5d34190e7dcf942a30e0596775af","builtAt":"2026-11-13T12:56:34.272Z","releasePath":"releases/0.1.0-45103f7/"};
