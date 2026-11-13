@@ -35,7 +35,7 @@ const PAL = {
 if (D.site){ PAL.light.prim = '#b4b4ba'; PAL.dark.prim = '#4a4a4e'; }
 let THEME = 'light', P = PAL.light;
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
-function setTheme(t){ THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
+function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
   try { localStorage.setItem('ts7-theme', t); } catch (e) {}
   baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
@@ -68,7 +68,17 @@ function railOK(x, y, dx, dy){ let a = Math.abs((Math.atan2(dy, dx) - railAngle(
 let BRIDGES = [];
 function railCross(x, y, dx, dy){ if (!railOK(x + dx * 8, y + dy * 8, dx, dy)) return null;
   for (let s = 5; s <= 60; s += 5){ const qx = x + dx * s, qy = y + dy * s; if (!inLand(qx, qy)) return null; if (!inRail(qx, qy)){ BRIDGES.push({ x: (x + qx) / 2, y: (y + qy) / 2 }); return [qx, qy]; } } return null; }
-function inZone(x, y){ const z = D.zone, c = Math.floor(x / z.c), r = Math.floor((D.h - y) / z.c); if (c < 0 || r < 0 || c >= z.W || r >= z.H) return false; const i = r * z.W + c; return (ZB[i >> 3] >> (7 - (i & 7))) & 1; }
+function inZone(x, y){ if (GZ){ const c = Math.floor(x / cell), r = Math.floor(y / cell); if (c >= 0 && r >= 0 && c < nx && r < ny && GZ[r * nx + c]) return true; }
+  const z = D.zone, c = Math.floor(x / z.c), r = Math.floor((D.h - y) / z.c); if (c < 0 || r < 0 || c >= z.W || r >= z.H) return false; const i = r * z.W + c; return (ZB[i >> 3] >> (7 - (i & 7))) & 1; }
+// (v8.8) the blue-green corridors: the main runoff paths, widened. A hard constraint, the same as the watercourses: no
+// street runs inside one, a street crosses one square-ish (30 degrees or more) on a culvert. GZ 1 in a corridor (10 m
+// cells), GD the distance to the nearest corridor axis (m), GA the axis there, for the field (waterside streets)
+let GZ = null, GD = null, GA = null, GKEY = '', GINFO = null, GIMG = null;
+const corrOn = () => !!(window.__TS.D.env && window.__TS.envFns) && !!document.getElementById('gOn')?.checked;
+function buildCorridors(){ const on = corrOn(), key = on ? v('gW') + ':' + document.getElementById('gQ').value : 'off'; if (key === GKEY) return; GKEY = key; GIMG = null;
+  if (!on){ GZ = GD = GA = null; GINFO = null; return; }
+  const g = window.__TS.envFns.corridors(window.__TS.D.env, D.landMask || null, nx, ny, cell, { q: +document.getElementById('gQ').value, half: v('gW') / 2 });
+  GZ = g.mask; GD = g.dist; GA = g.axis; GINFO = { cells: g.cells, areaHa: g.areaHa }; }
 function axisOf(frm, job){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return job === 'along' ? a : a + PI / 2; }
 // (v8.5) flood risk (EA): the class of each 10 m cell, the higher of surface water and rivers & sea (0 none … 4 high)
 const FLOOD = D.flood || null, FR = FLOOD && FLOOD.grid && FLOOD.grid.length === N ? FLOOD.grid : null;
@@ -81,7 +91,7 @@ function toVec(frm){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; ret
 /* ------------------------------------------------------------------ the land mask (2.5 m), with the circus holes */
 let MASK = null, MW = 0, MH = 0; const MC = 2.5; let HOLES = [];
 function ringPath(g, pts, sc){ pts.forEach((p, k) => k ? g.lineTo(p[0] / sc, (D.h - p[1]) / sc) : g.moveTo(p[0] / sc, (D.h - p[1]) / sc)); g.closePath(); }
-function buildMask(){ MW = Math.ceil(D.w / MC); MH = Math.ceil(D.h / MC); const oc = document.createElement('canvas'); oc.width = MW; oc.height = MH; const g = oc.getContext('2d');
+function buildMask(){ buildCorridors(); MW = Math.ceil(D.w / MC); MH = Math.ceil(D.h / MC); const oc = document.createElement('canvas'); oc.width = MW; oc.height = MH; const g = oc.getContext('2d');
   g.fillStyle = '#000'; g.beginPath(); for (const p of D.pieces){ ringPath(g, p.outer, MC); for (const h of p.holes) ringPath(g, h, MC); } g.fill('evenodd');
   g.globalCompositeOperation = 'destination-out';
   // (site) shapes across the boundary that could not be cut exactly are taken out of the land
@@ -181,8 +191,10 @@ let PC, PS, OC_, OS_, CONF, CLAR, UNDERIMG = null;
 // (v7) the watercourses here are field drains: they no longer steer the streets (they made streets run along a drain and stop
 // at it, leaving ground empty); streets still cross them square, on culverts (tryCulvert)
 const STREAM_W = 0.0;
-function buildTarget(){
-  const wc = v('wC'), ww = $('windOn').checked ? v('wWind') : 0, tot = (wc + ww) || 1, pc = { contour: wc };
+function buildTarget(){ buildCorridors();
+  // (v8.8) the climate: streets along the summer wind where it blows (wSum), across the winter cold where it bites (wWin)
+  const ENV_ = window.__TS.D.env, st = ENV_ && ENV_.stats, wsum = st ? v('wSum') : 0, wwin = st ? v('wWin') : 0;
+  const wc = v('wC'), ww = $('windOn').checked ? v('wWind') : 0, tot = (wc + ww + wsum + wwin) || 1, pc = { contour: wc };
   // the parts kept apart as well as summed: the contour (1); the other forces, the wind, the attractors and the streams (2);
   // the land's edge (0, in the sum only)
   const C = new Float32Array(N), S = new Float32Array(N), Wt = new Float32Array(N).fill(1e-6);
@@ -196,6 +208,14 @@ function buildTarget(){
     for (let d = 0; d < 8; d++){ const k = DIRS[d], a = M.share[d] * M.v[d] * M.v[d] / YSUM; if (a < 1e-4) continue;
       const t = axisOf(k.frm, k.job), c2 = Math.cos(2 * t), s2 = Math.sin(2 * t);
       for (let i = 0; i < N; i++){ const w = k.S[i] * a * f; C[i] += w * c2; S[i] += w * s2; Wt[i] += w; oC[i] += w * c2; oS[i] += w * s2; } } }
+  // (v8.8) summer air: each direction by its share of the summer's wind energy, strongest where that wind comes in (S), streets
+  // along it; winter cold: the cold directions by their share of the winter's cold energy, streets across them
+  if (wsum > 0 || wwin > 0){ const eS = st.summerEnergy, eW = st.winterColdEnergy, sS = eS.reduce((a, b) => a + b, 0) || 1, sW = eW.reduce((a, b) => a + b, 0) || 1;
+    for (let d = 0; d < 8; d++){ const k = DIRS[d], aS = wsum / tot * eS[d] / sS, aW = wwin / tot * eW[d] / sW; if (aS < 1e-4 && aW < 1e-4) continue;
+      const tS = axisOf(k.frm, 'along'), tW = axisOf(k.frm, 'across');
+      for (let i = 0; i < N; i++){ const sp = k.S[i]; if (sp < 1e-3) continue; if (aS > 1e-4) add(i, tS, sp * aS, 2); if (aW > 1e-4) add(i, tW, sp * aW, 2); } } }
+  // (v8.8) along the corridors: a waterside street follows the corridor's axis, within about 60 m of it
+  if (GZ && v('wG') > 0){ const f = v('wG') / 100; for (let i = 0; i < N; i++){ const d = GD[i]; if (d > 90) continue; const w = f * Math.exp(-((d / 45) ** 2)); if (w > 1e-4) add(i, GA[i], w, 2); } }
   // (v8.5) flood risk: where water would run, the streets run with the flow (downhill, across the contour): drainage corridors
   if (floodOn() && v('fW') > 0){ const f = v('fW') / 100, W_ = floodWeights(); for (let i = 0; i < N; i++){ const w = W_[i] * f * Math.min(1.5, BA.cW[i]); if (w > 1e-4) add(i, BA.cA[i] + PI / 2, w, 2); } }
   for (let i = 0; i < N; i++){ add(i, BA.eA[i], 0.6 * Math.exp(-((BA.eD[i] / 80) ** 2)), 0); add(i, BA.sA[i], STREAM_W * Math.exp(-((BA.sD[i] / 70) ** 2)), 2); if (BA.rA) add(i, BA.rA[i], 0.9 * Math.exp(-((BA.rD[i] / 90) ** 2)), 2); }
@@ -240,7 +260,7 @@ function near(x, y, d, dir, par, levels, skip){ const r = Math.ceil(d / HC), cx 
   return best; }
 function densify(pts, step){ const out = [pts[0]]; for (let i = 1; i < pts.length; i++){ const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
     for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); } return out; }
-function streamAngle(x, y){ const c = clamp(Math.round(x / cell), 0, nx - 1), r = clamp(Math.round(y / cell), 0, ny - 1); return BA.sA[r * nx + c]; }
+function streamAngle(x, y){ const c = clamp(Math.round(x / cell), 0, nx - 1), r = clamp(Math.round(y / cell), 0, ny - 1), i = r * nx + c; return GZ && GZ[i] ? GA[i] : BA.sA[i]; }
 // (v7) would a street going u cross the watercourse here at 30 degrees or more (on a culvert)?
 function culvertOK(x, y, u){ let a = Math.abs((Math.atan2(u[1], u[0]) - streamAngle(x, y)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; return a >= 30; }
 function tryCulvert(x, y, dx, dy){ let a = Math.abs((Math.atan2(dy, dx) - streamAngle(x + dx * 8, y + dy * 8)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; if (a < 30) return null;
@@ -302,8 +322,10 @@ function* closeGen(){ PHASE = 'every end meets a street';
       let dx = end[0] - pv[0], dy = end[1] - pv[1]; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
       let x = end[0], y = end[1], L = 0, ext = [], hit = null;
       while (L < 220){ const t = fieldAtT(x, y); if (t !== null){ for (const a of [t, t + PI / 2]){ const ux = Math.cos(a), uy = Math.sin(a); if (ux * dx + uy * dy >= 0.7){ dx = ux; dy = uy; break; } if (-ux * dx - uy * dy >= 0.7){ dx = -ux; dy = -uy; break; } } }
-        x += dx * 5; y += dy * 5; L += 5; if (!inLand(x, y)) break; const c = near(x, y, 6.5, null, false, null, lid); if (c){ hit = [c[1], c[2]]; LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; break; } ext.push([x, y]); }
-      if (hit) ext.push(hit); else { let c = near(end[0], end[1], 120, null, false, null, lid); if (c && MODE === 'B' && (c[1] - end[0]) * dx + (c[2] - end[1]) * dy < 0.5 * c[0]) c = null; ext = c ? curve(end, [dx, dy], [c[1], c[2]]) : null; if (c) LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; }
+        const px = x, py = y; x += dx * 5; y += dy * 5; L += 5; if (!inLand(x, y)) break;
+        if (inZone(x, y)){ const far = tryCulvert(px, py, dx, dy); if (!far){ x = px; y = py; break; } x = far[0]; y = far[1]; L += Math.hypot(far[0] - px, far[1] - py); ext.push([x, y]); continue; }   // (v8.8) across a corridor square-ish, or not at all
+        const c = near(x, y, 6.5, null, false, null, lid); if (c){ hit = [c[1], c[2]]; LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; break; } ext.push([x, y]); }
+      if (hit) ext.push(hit); else { let c = near(end[0], end[1], 120, null, false, null, lid); if (c && MODE === 'B' && (c[1] - end[0]) * dx + (c[2] - end[1]) * dy < 0.5 * c[0]) c = null; ext = c ? curve(end, [dx, dy], [c[1], c[2]]) : null; if (ext && ext.some(q => inZone(q[0], q[1]))) ext = null; if (c) LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; }
       if (ext){ if (side === 0) Pp.push(...ext); else Pp.unshift(...ext.reverse()); l.ends[side] = 'T'; } else cutBack(l, side);
       yield 1; } }
   netDirty = true; widthDirty = true; }
@@ -872,8 +894,11 @@ function* closeGen6(){ PHASE = 'every end meets a street';
       const pv = side === 0 ? Pp[Pp.length - 2] : Pp[1]; let dx = end[0] - pv[0], dy = end[1] - pv[1]; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
       let x = end[0], y = end[1], L = 0, ext = [], hit = null;
       while (L < 220){ const t = fieldAtT(x, y); if (t !== null){ for (const a of [t, t + PI / 2]){ const ux = Math.cos(a), uy = Math.sin(a); if (ux * dx + uy * dy >= 0.7){ dx = ux; dy = uy; break; } if (-ux * dx - uy * dy >= 0.7){ dx = -ux; dy = -uy; break; } } }
-        x += dx * 5; y += dy * 5; L += 5; if (!inLand(x, y)) break; if (inRail(x, y) && !railOK(x, y, dx, dy)) break; if (L > 15 && alongRail(x, y, dx, dy)) break; const c = near(x, y, 6.5, null, false, null, lid); if (c){ hit = [c[1], c[2]]; LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; break; } ext.push([x, y]); }
-      if (hit) ext.push(hit); else { const c = near(end[0], end[1], 120, null, false, null, lid); ext = c ? curve(end, [dx, dy], [c[1], c[2]]) : null; if (ext && ext.some(q => inRail(q[0], q[1]))) ext = null; if (c) LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; }
+        const px = x, py = y; x += dx * 5; y += dy * 5; L += 5; if (!inLand(x, y)) break; if (inRail(x, y) && !railOK(x, y, dx, dy)) break; if (L > 15 && alongRail(x, y, dx, dy)) break;
+        // (v8.8) a watercourse or a corridor ahead: across it square-ish on a culvert, or not at all
+        if (inZone(x, y)){ const far = tryCulvert(px, py, dx, dy); if (!far){ x = px; y = py; break; } x = far[0]; y = far[1]; L += Math.hypot(far[0] - px, far[1] - py); ext.push([x, y]); continue; }
+        const c = near(x, y, 6.5, null, false, null, lid); if (c){ hit = [c[1], c[2]]; LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; break; } ext.push([x, y]); }
+      if (hit) ext.push(hit); else { const c = near(end[0], end[1], 120, null, false, null, lid); ext = c ? curve(end, [dx, dy], [c[1], c[2]]) : null; if (ext && ext.some(q => inRail(q[0], q[1]) || inZone(q[0], q[1]))) ext = null; if (c) LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; }
       if (ext){ if (side === 0) Pp.push(...ext); else Pp.unshift(...ext.reverse()); l.ends[side] = 'T'; } else cutBack(l, side);
       yield 1; } }
   netDirty = true; widthDirty = true; }
@@ -1026,7 +1051,7 @@ function* mainsEnd(){
   yield 1; }
 
 /* ------------------------------------------------------------------ the two modes kept, and compared */
-function settingsKey(){ return FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + $('bSec6').checked + ',' + MONTH + ',' + (floodOn() ? 'f' + $('fAvoid').value + ':' + v('fW') : 'f0') + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
+function settingsKey(){ return FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + $('bSec6').checked + ',' + MONTH + ',' + (floodOn() ? 'f' + $('fAvoid').value + ':' + v('fW') : 'f0') + ',' + (corrOn() ? 'g' + v('gW') + ':' + $('gQ').value : 'g0') + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
 function finishRun(){
   if (MODE === 'A'){ EVENTS = []; for (const l of LINES){ if (l.dead || l.level === 0 || l.circus) continue; const Pp = l.pts;
       l.ends.forEach((e, sd) => { const p = sd === 0 ? Pp[Pp.length - 1] : Pp[0]; if (e === 'T') EVENTS.push({ x: p[0], y: p[1], k: 'join' }); if (e === 'Y') EVENTS.push({ x: p[0], y: p[1], k: 'merge' }); }); } }
@@ -1157,7 +1182,7 @@ function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillSty
   // the land: no colour of its own, a quiet ground under the field (no yellow)
   g.save(); g.shadowColor = bm ? 'rgba(0,0,0,0)' : P.landShadow; g.shadowBlur = 14; g.fillStyle = P.land; g.globalAlpha = bm ? (THEME === 'dark' ? 0.32 : 0.3) : THEME === 'dark' ? 0.9 : 0.82;
   g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.fill('evenodd'); g.restore();
-  drawEnv(g); drawFlood(g);
+  drawEnv(g); drawFlood(g); drawGreen(g);
   if (UNDER !== 'off') drawUnder(g);
   if ($('lCells').checked && CELLS) drawCells(g);
   if ($('lCross').checked) drawCrosses(g);
@@ -1211,6 +1236,17 @@ for (const b of document.querySelectorAll('#tgEnv button')) b.onclick = () => { 
 
 /* ------------------------------------------------------------------ (v8.5) flood risk layer and basemap tiles */
 let SHOWFLOOD = (() => { try { return localStorage.getItem('tensorStudio.showFlood') !== '0'; } catch (e){ return true; } })(), FLOODIMG = null;
+let SHOWGREEN = (() => { try { return localStorage.getItem('tensorStudio.showGreen') !== '0'; } catch (e){ return true; } })();
+function drawGreen(g){ if (!GZ || !SHOWGREEN) return;
+  if (!GIMG){ // drawn 4x finer, the distance to the axis read between the cells, so the band has a soft, even edge
+    const U = ENV_UP, W = nx * U, H = ny * U, oc = mk(); oc.width = W; oc.height = H; const gg = oc.getContext('2d'), im = gg.createImageData(W, H), d = im.data, col = THEME === 'dark' ? [48, 209, 88] : [36, 160, 76], half = v('gW') / 2, M = D.landMask;
+    const bil = (F, u, w) => { const c0 = clamp(Math.floor(u), 0, nx - 1), r0 = clamp(Math.floor(w), 0, ny - 1), c1 = Math.min(c0 + 1, nx - 1), r1 = Math.min(r0 + 1, ny - 1), fu = clamp(u - c0, 0, 1), fw = clamp(w - r0, 0, 1);
+      return (F[r0 * nx + c0] * (1 - fu) + F[r0 * nx + c1] * fu) * (1 - fw) + (F[r1 * nx + c0] * (1 - fu) + F[r1 * nx + c1] * fu) * fw; };
+    const LM = new Float32Array(N); for (let i = 0; i < N; i++) LM[i] = !M || M[i] ? 1 : 0;
+    for (let py = 0; py < H; py++){ const w = ny - 1 - ((py + 0.5) / U - 0.5); for (let px = 0; px < W; px++){ const u = (px + 0.5) / U - 0.5, dist = bil(GD, u, w); if (dist > half + 4) continue;
+      const edge = clamp((half + 4 - dist) / 6, 0, 1), core = dist < 5 ? 0.35 : 0, a = (0.42 + core) * edge * bil(LM, u, w), o = 4 * (py * W + px); d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a); } }
+    gg.putImageData(im, 0, 0); GIMG = oc; }
+  g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = BASEMAP === 'none' ? 1 : 0.85; g.drawImage(GIMG, X(0), Y(ny * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
   if (!FLOODIMG){ const oc = mk(); oc.width = nx; oc.height = ny; const gg = oc.getContext('2d'), im = gg.createImageData(nx, ny), C = [null, [156, 221, 234], [247, 211, 89], [242, 157, 56], [215, 55, 49]];
     for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const k = FR[r * nx + c]; if (!k) continue; const o = 4 * ((ny - 1 - r) * nx + c), col = C[k]; im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = Math.round([0, 40, 70, 140, 175][k] * (inLandNoHoles(c * cell, r * cell) ? 1 : 0.45)); }   // quieter outside the land, low risk light
@@ -1314,14 +1350,14 @@ function drawWidth(){ const w = L_width.width, h = L_width.height, sw = streetWi
   // 1 the road surface: every street at its width, the land's edge road at the widest, the link; closed by a blur (the fillets)
   const a = mk(); a.width = w; a.height = h; const ga = a.getContext('2d'); ga.setTransform(DPR, 0, 0, DPR, 0, 0); ga.strokeStyle = '#000'; ga.lineCap = 'round'; ga.lineJoin = 'round';
   strokeVar(ga, sw, 0, false);
-  ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0){ pathLine(ga, l.pts); ga.stroke(); } }
+  ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0 && !l.hole){ pathLine(ga, l.pts); ga.stroke(); } }   // (v8.8) the shores of water and flood zones are not roads
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(ga, s_); ga.stroke(); }
   const m = mk(); m.width = w; m.height = h; const gm = m.getContext('2d'); gm.filter = 'blur(' + Math.max(1, Math.round(6 * view.s * DPR)) + 'px)'; gm.drawImage(a, 0, 0); gm.filter = 'none';
   const im = gm.getImageData(0, 0, w, h), d = im.data; for (let i = 0; i < d.length; i += 4){ d[i + 3] = d[i + 3] >= 105 ? 255 : 0; } gm.putImageData(im, 0, 0);
   // 2 the colour by width: narrow to wide, the wider drawn last, a little wider than the road so it fills the fillets
   const g = L_width.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round';
   const hiCol = rampCol(Math.max(v('wMax'), v('wMin')));
-  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0){ pathLine(g, l.pts); g.stroke(); } }
+  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0 && !l.hole){ pathLine(g, l.pts); g.stroke(); } }
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(g, s_); g.stroke(); }
   const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
   segs.sort((p, q) => p[0] - q[0]);
@@ -1486,7 +1522,7 @@ function syncTools(){ for (const b of document.querySelectorAll('#tgField button
   $('tStreets').classList.toggle('on', $('lStreets').checked); $('tWidth').classList.toggle('on', $('lWidth').checked);
   for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.classList.toggle('on', b.dataset.m === MODE);
   for (const b of document.querySelectorAll('#tgUnder button')) b.classList.toggle('on', b.dataset.u === UNDER);
-  $('tEvents').classList.toggle('on', $('lEvents').checked); $('tFlood')?.classList.toggle('on', SHOWFLOOD && !!FR);
+  $('tEvents').classList.toggle('on', $('lEvents').checked); $('tFlood')?.classList.toggle('on', SHOWFLOOD && !!FR); $('tGreen')?.classList.toggle('on', SHOWGREEN && !!GZ);
   $('tFreeze').classList.toggle('on', FROZEN); $('tFreeze').innerHTML = FROZEN ? '&#9654; Resume motion' : '&#10074;&#10074; Freeze motion';
   const st = $('windOn').checked ? 3 : (ATTR.length ? 2 : 1); for (const b of document.querySelectorAll('.steps button')) b.classList.toggle('on', +b.dataset.s === st); }
 function setStep(n){ SIM = null; FROZEN = false; GHOST = null;
@@ -1542,7 +1578,7 @@ cv.addEventListener('contextmenu', e => { const r = cv.getBoundingClientRect(), 
   toHand(); ATTR.splice(i, 1); attrChanged(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, wx = (mx - VW / 2) / view.s + view.x, wy = (VH / 2 - my) / view.s + view.y, k = Math.exp(-e.deltaY * 0.0015);
   view.s = clamp(view.s * k, 0.05, 8); view.x = wx - (mx - VW / 2) / view.s; view.y = wy - (VH / 2 - my) / view.s; }, { passive: false });
-let tmr = null; const FIELD_IDS = ['wC', 'wWind', 'month', 'smooth', 'nMain', 'nSec', 'nEdge', 'pull'], NET_IDS = ['d1', 'd2', 'thru', 'stag'];
+let tmr = null; const FIELD_IDS = ['wC', 'wWind', 'month', 'smooth', 'nMain', 'nSec', 'nEdge', 'pull', 'wSum', 'wWin', 'wG'], NET_IDS = ['d1', 'd2', 'thru', 'stag'];
 for (const el of document.querySelectorAll('input[type=range]')){ const o = el.nextElementSibling;
   const up = () => { if (!o) return; if (el.id === 'month'){ o.textContent = YEAR[+el.value].name; return; } if (el.id === 'bFork'){ o.textContent = +el.value >= 0.55 ? 'off' : (+el.value).toFixed(2); return; } if (el.id === 'bGap'){ o.textContent = '× ' + (+el.value).toFixed(2); return; } if (el.id === 'bMem'){ o.textContent = el.value + ' %'; return; } o.textContent = (+el.value).toLocaleString('en-GB') + (['wC', 'wWind', 'thru', 'stag'].includes(el.id) ? ' %' : (el.id === 'speed' ? ' ms' : '')); };
   up(); el.addEventListener('input', up); }
@@ -1560,10 +1596,13 @@ $('tFreeze').onclick = () => { FROZEN = !FROZEN; syncTools(); };
 $('tResult').onclick = showResult;
 for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.onclick = () => setMode(b.dataset.m);
 for (const b of document.querySelectorAll('#tgUnder button')) b.onclick = () => setUnder(b.dataset.u);
+$('tGreen').onclick = () => { SHOWGREEN = !SHOWGREEN; try { localStorage.setItem('tensorStudio.showGreen', SHOWGREEN ? '1' : '0'); } catch (e) {} baseDirty = true; syncTools(); };
 $('tFlood').onclick = () => { SHOWFLOOD = !SHOWFLOOD; try { localStorage.setItem('tensorStudio.showFlood', SHOWFLOOD ? '1' : '0'); } catch (e) {} baseDirty = true; syncTools(); };
 { const out = $('fW').nextElementSibling, upd = () => { out.textContent = v('fW'); }; upd();
   const regrow = () => { clearTimeout(tmr); tmr = setTimeout(() => { buildTarget(); baseDirty = true; if ($('auto').checked) start(true); drawCmp(); floodNum(); }, 160); };
   $('fW').addEventListener('input', () => { upd(); regrow(); }); $('fOn').addEventListener('change', regrow); $('fAvoid').addEventListener('change', regrow);
+  $('gW').addEventListener('input', regrow); $('gOn').addEventListener('change', regrow); $('gQ').addEventListener('change', regrow);
+  if (!(window.__TS.D.env && window.__TS.envFns)) for (const id of ['gOn', 'gW', 'gQ', 'wSum', 'wWin', 'wG']) $(id).disabled = true;
   if (!FR) for (const id of ['fOn', 'fAvoid', 'fW']) $(id).disabled = true; }
 $('tEvents').onclick = () => { $('lEvents').checked = !$('lEvents').checked; syncTools(); };
 $('bBoth').onclick = compareBoth;
@@ -1605,7 +1644,7 @@ window.addEventListener('resize', resize);
     // (v8.7) for the process mode
     setProc: p => { PROC = p; PH0 = ''; }, syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,
     setModeQuiet(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; syncTools(); drawCmp(); }, setEnv(k){ ENVSEL = ENV && k !== 'off' ? k : 'off'; baseDirty = true; syncEnv(); }, get env(){ return ENVSEL; }, get envStats(){ return ENV ? ENV.stats : null; },
-    setFlood(b){ SHOWFLOOD = !!b; baseDirty = true; syncTools(); }, get flood(){ return FR; }, get floodZones(){ return FLOOD ? FLOOD.zones : null; }, floodNum, get land(){ return FLAND; },
+    setFlood(b){ SHOWFLOOD = !!b; baseDirty = true; syncTools(); }, setGreen(b){ SHOWGREEN = !!b; baseDirty = true; syncTools(); }, get corr(){ return GINFO; }, get corrOn(){ return !!GZ; }, get flood(){ return FR; }, get floodZones(){ return FLOOD ? FLOOD.zones : null; }, floodNum, get land(){ return FLAND; },
     landHa(){ let n = 0; for (let i = 0; i < MASK.length; i++) n += MASK[i]; return n * MC * MC / 1e4; }, get holes(){ return HOLES; }, get year(){ return YEAR; }, get dirs(){ return DIRS; }, get month(){ return MONTH; }, clearNet(){ GEN = null; GROWING = false; resetNet(); SCRUB = null; } }; })();
 
 /* ---------------- catalogue presets */

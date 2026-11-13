@@ -30,3 +30,14 @@ assert.equal(names[wE.indexOf(Math.max(...wE))], 'N', 'winter cold comes mostly 
 assert.deepEqual(wE.slice(3), [0, 0, 0, 0, 0], 'cold wind counts only N, NE, E');
 
 console.log(JSON.stringify({ pass: true, landHa: land / 100, stats: E.stats }));
+
+// (v8.8) the corridors: a band along the main runoff paths, a few percent of the land, no specks
+{ const { corridors } = await import('./env_fields.js');
+  const D = JSON.parse(fs.readFileSync(new URL('../assets/station-p2.json', import.meta.url)));
+  const lm = landMaskOf(D), env = environmentFields(D, lm), { nx, ny, cell } = D.grid;
+  const g = corridors(env, lm, nx, ny, cell, { q: 0.6, half: 15 });
+  const land = lm.reduce((s, x) => s + x, 0), share = g.cells / land;
+  let onLand = true; for (let i = 0; i < g.mask.length; i++) if (g.mask[i] && !lm[i]) onLand = false;
+  const ok = share > 0.03 && share < 0.25 && onLand && g.dist[g.seed.indexOf(1)] === 0;
+  console.log(JSON.stringify({ corridors: ok ? 'pass' : 'FAIL', share: +share.toFixed(3), areaHa: +g.areaHa.toFixed(1) }));
+  if (!ok) process.exit(1); }

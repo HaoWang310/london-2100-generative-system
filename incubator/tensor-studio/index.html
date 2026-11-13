@@ -435,6 +435,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
   <div class="dpGrid" role="group"><button class="dpTile" type="button" id="tStreets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4M4 12l8 8"/></svg><span>lines</span></button><button class="dpTile" type="button" id="tWidth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17L17 3M7 21L21 7"/></svg><span>at width</span></button></div></div>
  <div class="dpSection"><div class="dpTitle"><span data-i18n data-zh="显示" data-en="Display">显示</span></div>
   <button class="dpSwitchRow" type="button" id="tEvents"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v6M12 9l-6 6M12 9l6 6M6 15v6M18 15v6"/></svg><span>Events</span><i class="dpSw" aria-hidden="true"></i></button>
+  <button class="dpSwitchRow" type="button" id="tGreen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c4-1 6-4 7-8s3-7 9-8c-1 6-3 9-7 11s-6 3-9 5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 20c3-4 6-7 10-10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span><span data-i18n data-zh="蓝绿走廊" data-en="Corridors">蓝绿走廊</span></span><i class="dpSw" aria-hidden="true"></i></button>
   <button class="dpSwitchRow" type="button" id="tFlood"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c2 0 2-1.5 4.5-1.5S10 15 12 15s2-1.5 4.5-1.5S19 15 21 15M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 3s-4 4.5-4 7a4 4 0 0 0 8 0c0-2.5-4-7-4-7z"/></svg><span><span data-i18n data-zh="洪水风险" data-en="Flood risk">洪水风险</span></span><i class="dpSw" aria-hidden="true"></i></button>
   <button class="dpSwitchRow" type="button" id="tWind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3"/></svg><span>Wind</span><i class="dpSw" aria-hidden="true"></i></button></div>
  <div class="dpSection"><div class="dpTitle"><span data-i18n data-zh="分析场" data-en="Analysis">分析场</span></div>
@@ -452,11 +453,14 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.7" data-en="Station P2 example · v8.7">车站 P2 示例 · v8.7</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.8" data-en="Station P2 example · v8.8">车站 P2 示例 · v8.8</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
   <div class="row"><label>contour</label><input type="range" id="wC" min="0" max="100" value="70"><output></output></div>
+  <div class="row"><label><span data-i18n data-zh="夏季通风（顺夏季风）" data-en="Summer air (along the summer wind)">夏季通风（顺夏季风）</span></label><input type="range" id="wSum" min="0" max="100" value="30"><output></output></div>
+  <div class="row"><label><span data-i18n data-zh="冬季挡风（横切冷风）" data-en="Winter shelter (across the cold wind)">冬季挡风（横切冷风）</span></label><input type="range" id="wWin" min="0" max="100" value="30"><output></output></div>
+  <div class="row"><label><span data-i18n data-zh="沿走廊（滨水路）" data-en="Along the corridors (waterside streets)">沿走廊（滨水路）</span></label><input type="range" id="wG" min="0" max="100" value="50"><output></output></div>
   <label class="lay"><input type="checkbox" id="windOn"> the wind bends the streets</label>
   <div class="row"><label>by, against the contour</label><input type="range" id="wWind" min="0" max="100" value="40"><output></output></div>
   <div class="sub-h"><span data-i18n data-zh="吸引点" data-en="Attractors">吸引点</span></div>
@@ -472,6 +476,11 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
   <div class="row"><label><span data-i18n data-zh="避让" data-en="Keep clear">避让</span></label><select id="fAvoid"><option value="4" selected><span data-i18n data-zh="高风险区（≥3.3%/年）" data-en="High risk (≥ 3.3 %/yr)">高风险区（≥3.3%/年）</span></option><option value="3"><span data-i18n data-zh="中及高风险区（≥1%/年）" data-en="Medium and high (≥ 1 %/yr)">中及高风险区（≥1%/年）</span></option><option value="0"><span data-i18n data-zh="不避让" data-en="None">不避让</span></option></select></div>
   <div class="row"><label><span data-i18n data-zh="顺流排水权重" data-en="Along the flow, weight">顺流排水权重</span></label><input type="range" id="fW" min="0" max="100" step="5" value="40"><output></output></div>
   <div class="flood-num" id="fNum"></div>
+  <div class="sub-h"><span data-i18n data-zh="蓝绿走廊（主要汇水路径，道路只能垂直穿过）" data-en="Blue-green corridors (the main runoff paths; streets only cross them)">蓝绿走廊（主要汇水路径，道路只能垂直穿过）</span></div>
+  <label class="lay"><input type="checkbox" id="gOn" checked> <span data-i18n data-zh="留出蓝绿走廊" data-en="Keep the corridors clear">留出蓝绿走廊</span></label>
+  <div class="row"><label><span data-i18n data-zh="走廊宽度，米" data-en="Corridor width, m">走廊宽度，米</span></label><input type="range" id="gW" min="20" max="60" step="10" value="30"><output></output></div>
+  <div class="row"><label><span data-i18n data-zh="走廊范围" data-en="How many paths">走廊范围</span></label><select id="gQ"><option value="0.7"><span data-i18n data-zh="只有主要汇水线" data-en="Only the main paths">只有主要汇水线</span></option><option value="0.6" selected><span data-i18n data-zh="主要和次要汇水线" data-en="Main and secondary paths">主要和次要汇水线</span></option><option value="0.5"><span data-i18n data-zh="包括细小汇水线" data-en="Down to the small paths">包括细小汇水线</span></option></select></div>
+  <div class="flood-num" id="gNum"></div>
 </div></section>
 <details class="advanced" id="advanced"><summary><span data-i18n data-zh="高级参数" data-en="Advanced settings">高级参数</span><small><span data-i18n data-zh="生成步骤 · 模式对比与指标 · 风场模拟 · 分叉 · 路宽 · 生长 · 图层 · 导出" data-en="Build-up · compare & measures · wind year · branching · widths · growth · layers · export">生成步骤 · 模式对比与指标 · 风场模拟 · 分叉 · 路宽 · 生长 · 图层 · 导出</span></small></summary>
 <section class="grp"><h2><span data-i18n data-zh="生成步骤" data-en="Build-up">生成步骤</span></h2><div class="card"><details class="info"><summary><span data-i18n data-zh="说明" data-en="About">说明</span></summary><div class="sub" id="siteInfo"></div></details>
@@ -607,10 +616,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.7.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.7.0';
-import { environmentFields, landMaskOf } from './scripts/env_fields.js?v=8.7.0';
-const V = '8.7.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.8.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.8.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.8.0';
+const V = '8.8.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
@@ -635,7 +644,7 @@ try {
   try { D.flood = await floodForSite(D, 'assets/flood_risk/'); } catch (e){ console.warn('Tensor Studio: no flood risk', e); D.flood = null; }
   // (v8.6) layer 1: elevation, where rain gathers, summer ventilation, winter cold wind, comfort
   try { D.landMask = landMaskOf(D); D.env = environmentFields(D, D.landMask); } catch (e){ console.warn('Tensor Studio: no environmental fields', e); D.env = null; }
-  window.__TS = { D, meta, host, keepBuildings: keep, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 } };
+  window.__TS = { D, meta, host, keepBuildings: keep, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 }, envFns: { corridors } };
   // (v8.7) the process mode (default) opens on step 1 with nothing grown; scripts/process.js runs it
   try { window.__TS_PROCESS_ON = localStorage.getItem('tensorStudio.flowMode') !== 'free'; } catch (e){ window.__TS_PROCESS_ON = true; }
   const s = document.createElement('script'); s.src = 'app.js?v=' + V;
