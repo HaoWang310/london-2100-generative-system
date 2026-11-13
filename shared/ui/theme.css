@@ -50,6 +50,9 @@ button, select, input { font: inherit; color: inherit; }
 .seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--hairline); }
 .seg button { height: 24px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text); }
+.seg button { transition: background .16s cubic-bezier(.2,0,0,1), color .16s; }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--text); }
+.lang-seg button { min-width: 44px; font-size: 12px; }
 
 .eyebrow { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
 .muted { color: var(--text-2); }

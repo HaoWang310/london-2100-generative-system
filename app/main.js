@@ -12,7 +12,7 @@ import { createWorkspaceStore, SCALE_ORDER } from '../shared/state/index.js';
 import { childInput, createBundle, validateBundle, defaultParams } from '../shared/schemas/index.js';
 import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-viewer/index.js';
 import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared/i18n/index.js';
-import { h, renderParams, renderStats, toast, download } from '../shared/ui/index.js';
+import { h, renderParams, renderStats, toast, download, mountLangSwitch } from '../shared/ui/index.js';
 import { createIntro } from './intro.js';
 import { createCatalogue } from './catalogue.js';
 import { createAppView } from './appview.js';
@@ -463,8 +463,7 @@ document.addEventListener('click', e => {
 
 // ------------------------------------------------------------------ wiring
 
-$('langToggle').addEventListener('click', toggleLang);
-onLangChange(() => { $('langToggle').textContent = getLang() === 'zh' ? 'EN' : '中'; render(); });
+onLangChange(() => render());
 $('playButton').addEventListener('click', () => (playing ? stop() : play()));
 $('scrub').addEventListener('input', e => { stop(); setProgress(e.target.value / 1000); });
 for (const [id, on] of [['view2d', false], ['view3d', true]]) {
@@ -485,7 +484,6 @@ document.addEventListener('keydown', e => {
 
 async function boot() {
   applyI18n(document);
-  $('langToggle').textContent = getLang() === 'zh' ? 'EN' : '中';
   $('versionButton').textContent = versionLabel();
   renderPlayButton();
 
@@ -505,10 +503,8 @@ async function boot() {
     onOpenApp: (item, cover) => { pendingOrigin = cover; location.hash = `app/${item.id}`; }
   });
   $('appviewBack').addEventListener('click', () => { location.hash = 'catalogue'; });
-  const langLabel = () => { const l = getLang() === 'zh' ? 'EN' : '中'; $('introLang').textContent = l; $('catLang').textContent = l; };
-  langLabel(); onLangChange(langLabel);
-  $('introLang').addEventListener('click', toggleLang);
-  $('catLang').addEventListener('click', toggleLang);
+  // One language switch design everywhere; all of them drive the same setting.
+  for (const id of ['langToggle', 'introLang', 'catLang', 'appLang']) mountLangSwitch($(id));
   $('catHome').addEventListener('click', () => { location.hash = ''; });
   const toCatalogue = () => { stop(); location.hash = 'catalogue'; };
   $('brandHome').addEventListener('click', toCatalogue);

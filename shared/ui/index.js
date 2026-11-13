@@ -1,7 +1,7 @@
 // Shared UI helpers: parameter panel generated from a module's `params`,
 // statistics grid, toasts. No framework; plain DOM.
 
-import { pick, t } from '../i18n/index.js';
+import { pick, t, getLang as _getLang, setLang as _setLang, onLangChange as _onLangChange } from '../i18n/index.js';
 
 export const h = (tag, attrs = {}, ...children) => {
   const el = document.createElement(tag);
@@ -81,4 +81,26 @@ export function download(filename, data, type = 'application/json') {
   const a = h('a', { href: URL.createObjectURL(blob), download: filename });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/**
+ * The one language switch used everywhere (中文 | EN segmented control).
+ * Call with an empty container; it keeps itself in sync with the current language.
+ */
+export function mountLangSwitch(container) {
+  container.classList.add('seg', 'lang-seg');
+  container.setAttribute('role', 'group');
+  const buttons = [['zh', '中文'], ['en', 'EN']].map(([code, label]) => {
+    const b = h('button', { type: 'button', lang: code === 'zh' ? 'zh-CN' : 'en', onclick: () => _setLang(code) }, label);
+    b.dataset.lang = code;
+    return b;
+  });
+  container.replaceChildren(...buttons);
+  const sync = () => {
+    container.setAttribute('aria-label', _getLang() === 'zh' ? '界面语言' : 'Interface language');
+    for (const b of buttons) b.setAttribute('aria-pressed', String(b.dataset.lang === _getLang()));
+  };
+  sync();
+  _onLangChange(sync);
+  return container;
 }
