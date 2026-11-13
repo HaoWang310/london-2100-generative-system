@@ -209,6 +209,35 @@
           "#langbar"
         ]
       }
+    },
+    {
+      "id": "vr",
+      "href": "incubator/vr/",
+      "cover": "assets/catalogue/vr.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "VR / MR · Quest 3S",
+        "en": "VR / MR · Quest 3S"
+      },
+      "desc": {
+        "zh": "生成的道路、地形与洪水风险变成三维沙盘：电脑上预览，Meta Quest 3S 上进入 MR 放在桌上，或 1:1 走进街道。",
+        "en": "The generated streets, terrain and flood risk as a 3D model: preview on the desktop, put it on your table in MR on a Meta Quest 3S, or walk the streets at 1:1."
+      },
+      "tags": [
+        {
+          "zh": "WebXR",
+          "en": "WebXR"
+        },
+        {
+          "zh": "混合现实",
+          "en": "Mixed reality"
+        },
+        {
+          "zh": "三维",
+          "en": "3D"
+        }
+      ],
+      "owner": "HaoWang310"
     }
   ]
 }
