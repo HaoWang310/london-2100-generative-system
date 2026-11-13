@@ -1404,6 +1404,13 @@ export function roadLinesFromTile(layer,z,x,y){
   return out;
 }
 
+function mixColor(a,b,t){
+  const parse=h=>{let x=String(h).replace('#','');if(x.length===3)x=x.split('').map(c=>c+c).join('');const n=parseInt(x,16);return [(n>>16)&255,(n>>8)&255,n&255];};
+  if(!/^#/.test(a))return a;
+  const A=parse(a),B=parse(b);
+  return '#'+A.map((v,i)=>Math.max(0,Math.min(255,Math.round(v+(B[i]-v)*t))).toString(16).padStart(2,'0')).join('');
+}
+
 const ROAD_TILE_Z=14;
 const ROAD_TILE_CACHE=36;
 
@@ -1420,6 +1427,18 @@ export function createStreetTraffic(map,{
   let viewCache=null,viewCacheAt=0;
   let lastCenter=null,lastZoom=null;
   let pendingPopulate=false;
+  let tints=[];
+  const tintCache=new Map();
+  const tinted=color=>{
+    if(!tints.length)return color;
+    let c=tintCache.get(color);
+    if(!c){
+      c=color;
+      for(const tn of tints)if(tn&&tn.amount>0)c=mixColor(c,tn.color,tn.amount);
+      tintCache.set(color,c);
+    }
+    return c;
+  };
 
   function ensureLayers(){
     if(!map.getSource(SOURCE_ID)){
@@ -1649,9 +1668,10 @@ export function createStreetTraffic(map,{
         });
         ring.push(ring[0]);
         const base=+(part.base*k).toFixed(2),top=+(part.top*k).toFixed(2);
-        const key=part.color+'|'+base+'|'+top+'|'+part.kind;
+        const color=part.kind==='light'?part.color:tinted(part.color);
+        const key=color+'|'+base+'|'+top+'|'+part.kind;
         let gr=groups.get(key);
-        if(!gr){gr={color:part.color,base,top,kind:part.kind,polys:[]};groups.set(key,gr);}
+        if(!gr){gr={color,base,top,kind:part.kind,polys:[]};groups.set(key,gr);}
         gr.polys.push([ring]);
       }
     }
@@ -1660,9 +1680,10 @@ export function createStreetTraffic(map,{
         const cos=Math.cos(h),sin=Math.sin(h);
         const ring=part.ring.map(([f,l])=>toLngLat(origin.x+f*cos+l*sin,origin.y+f*sin-l*cos));
         ring.push(ring[0]);
-        const key=part.color+'|'+part.base+'|'+part.top+'|'+part.kind;
+        const color=part.kind==='light'?part.color:tinted(part.color);
+        const key=color+'|'+part.base+'|'+part.top+'|'+part.kind;
         let gr=groups.get(key);
-        if(!gr){gr={color:part.color,base:part.base,top:part.top,kind:part.kind,polys:[]};groups.set(key,gr);}
+        if(!gr){gr={color,base:part.base,top:part.top,kind:part.kind,polys:[]};groups.set(key,gr);}
         gr.polys.push([ring]);
       };
       for(const ctrl of sim.signals){
@@ -1747,6 +1768,7 @@ export function createStreetTraffic(map,{
   return {
     setEnabled,
     syncView,
+    setTint(next){tints=Array.isArray(next)?next.filter(x=>x&&x.amount>0):[];tintCache.clear();if(enabled)paint();},
     get enabled(){return enabled;},
     get sim(){return sim;}
   };
