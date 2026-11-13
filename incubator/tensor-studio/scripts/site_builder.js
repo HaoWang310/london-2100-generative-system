@@ -62,6 +62,18 @@ export function wgs84ToBNG(lon, lat){
   return [E0 + IV * dl + V * dl ** 3 + VI * dl ** 5, I + II * dl * dl + III * dl ** 4 + IIIA * dl ** 6];
 }
 
+// British National Grid → WGS84: Newton's method on the forward transform (converges to < 1 mm in a few steps)
+export function bngToWGS84(E, N){
+  let lon = -2 + (E - 400000) / 69000, lat = 49 + (N + 100000) / 111000;
+  for (let i = 0; i < 8; i++){
+    const [e, n] = wgs84ToBNG(lon, lat), h = 1e-6, [e1, n1] = wgs84ToBNG(lon + h, lat), [e2, n2] = wgs84ToBNG(lon, lat + h);
+    const a = (e1 - e) / h, b = (e2 - e) / h, c = (n1 - n) / h, d = (n2 - n) / h, det = a * d - b * c, de = E - e, dn = N - n;
+    lon += (d * de - b * dn) / det; lat += (-c * de + a * dn) / det;
+    if (Math.abs(de) + Math.abs(dn) < 1e-4) break;
+  }
+  return [lon, lat];
+}
+
 /* ---------------------------------------------------------------- small geometry */
 const closeRing = r => { const o = r.map(p => [p[0], p[1]]); if (o.length && (o[0][0] !== o.at(-1)[0] || o[0][1] !== o.at(-1)[1])) o.push([...o[0]]); return o; };
 function ringArea(r){ let s = 0; for (let i = 1; i < r.length; i++) s += r[i - 1][0] * r[i][1] - r[i][0] * r[i - 1][1]; return s / 2; }

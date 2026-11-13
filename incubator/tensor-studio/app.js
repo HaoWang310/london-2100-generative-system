@@ -70,6 +70,12 @@ function railCross(x, y, dx, dy){ if (!railOK(x + dx * 8, y + dy * 8, dx, dy)) r
   for (let s = 5; s <= 60; s += 5){ const qx = x + dx * s, qy = y + dy * s; if (!inLand(qx, qy)) return null; if (!inRail(qx, qy)){ BRIDGES.push({ x: (x + qx) / 2, y: (y + qy) / 2 }); return [qx, qy]; } } return null; }
 function inZone(x, y){ const z = D.zone, c = Math.floor(x / z.c), r = Math.floor((D.h - y) / z.c); if (c < 0 || r < 0 || c >= z.W || r >= z.H) return false; const i = r * z.W + c; return (ZB[i >> 3] >> (7 - (i & 7))) & 1; }
 function axisOf(frm, job){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return job === 'along' ? a : a + PI / 2; }
+// (v8.5) flood risk (EA): the class of each 10 m cell, the higher of surface water and rivers & sea (0 none … 4 high)
+const FLOOD = D.flood || null, FR = FLOOD && FLOOD.grid && FLOOD.grid.length === N ? FLOOD.grid : null;
+let FRW = null;   // smoothed weights of the flow part: low 0.5, medium 1, high 1.4
+function floodWeights(){ if (FRW || !FR) return FRW; const w = new Float32Array(N); for (let i = 0; i < N; i++) w[i] = [0, 0.25, 0.5, 1, 1.4][FR[i]] || 0; return (FRW = blur(w, 1.5)); }
+const floodOn = () => !!FR && !!document.getElementById('fOn')?.checked;
+const floodAvoid = () => floodOn() ? +document.getElementById('fAvoid').value : 0;
 function toVec(frm){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return [Math.cos(a), Math.sin(a)]; }
 
 /* ------------------------------------------------------------------ the land mask (2.5 m), with the circus holes */
@@ -80,6 +86,7 @@ function buildMask(){ MW = Math.ceil(D.w / MC); MH = Math.ceil(D.h / MC); const 
   g.globalCompositeOperation = 'destination-out';
   // (site) shapes across the boundary that could not be cut exactly are taken out of the land
   for (const pg of (D.cut || [])){ g.beginPath(); for (const r of pg) ringPath(g, r, MC); g.fill('evenodd'); }
+  { const fa = floodAvoid(); if (fa && FLOOD.zones[fa]?.length){ g.beginPath(); for (const r of FLOOD.zones[fa]) ringPath(g, r, MC); g.fill('evenodd'); } }   // (v8.5) flood zones kept clear
   for (const h of HOLES){ g.beginPath(); g.arc(h.x / MC, (D.h - h.y) / MC, (h.r + 2) / MC, 0, 2 * PI); g.fill(); }
   const d = g.getImageData(0, 0, MW, MH).data; MASK = new Uint8Array(MW * MH); for (let i = 0; i < MW * MH; i++) MASK[i] = d[4 * i + 3] > 127 ? 1 : 0; }
 function inLand(x, y){ const c = Math.floor(x / MC), r = Math.floor((D.h - y) / MC); return c >= 0 && r >= 0 && c < MW && r < MH && MASK[r * MW + c] === 1; }
@@ -189,6 +196,8 @@ function buildTarget(){
     for (let d = 0; d < 8; d++){ const k = DIRS[d], a = M.share[d] * M.v[d] * M.v[d] / YSUM; if (a < 1e-4) continue;
       const t = axisOf(k.frm, k.job), c2 = Math.cos(2 * t), s2 = Math.sin(2 * t);
       for (let i = 0; i < N; i++){ const w = k.S[i] * a * f; C[i] += w * c2; S[i] += w * s2; Wt[i] += w; oC[i] += w * c2; oS[i] += w * s2; } } }
+  // (v8.5) flood risk: where water would run, the streets run with the flow (downhill, across the contour): drainage corridors
+  if (floodOn() && v('fW') > 0){ const f = v('fW') / 100, W_ = floodWeights(); for (let i = 0; i < N; i++){ const w = W_[i] * f * Math.min(1.5, BA.cW[i]); if (w > 1e-4) add(i, BA.cA[i] + PI / 2, w, 2); } }
   for (let i = 0; i < N; i++){ add(i, BA.eA[i], 0.6 * Math.exp(-((BA.eD[i] / 80) ** 2)), 0); add(i, BA.sA[i], STREAM_W * Math.exp(-((BA.sD[i] / 70) ** 2)), 2); if (BA.rA) add(i, BA.rA[i], 0.9 * Math.exp(-((BA.rD[i] / 90) ** 2)), 2); }
   for (const a of attractorsOn()){ const R = Math.ceil(a.reach * 2.6 / cell), c0 = Math.round(a.x / cell), r0 = Math.round(a.y / cell);
     for (let r = Math.max(0, r0 - R); r <= Math.min(ny - 1, r0 + R); r++) for (let c = Math.max(0, c0 - R); c <= Math.min(nx - 1, c0 + R); c++){
@@ -321,6 +330,12 @@ function resetNet(){
     for (const r of (D.edges.shared || [])) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: false, shared: true });
     for (const r of D.edges.shore) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: true }); }
   else for (const p of D.pieces){ for (const r of [p.outer, ...p.holes]) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: r !== p.outer }); }
+  // (v8.5) a flood zone kept clear is a shore, as water is: its edge inside the land, which streets follow or stop at
+  { const fa = floodAvoid(); if (fa) for (const ring of FLOOD.zones[fa] || []){ const pts = densify(ring, 4), ins = pts.map(p => inLandNoHoles(p[0], p[1]));
+      if (ins.every(Boolean)){ addLine({ level: 0, fam: 0, pts, ends: ['edge', 'edge'], ring: true, hole: true, flood: true }); continue; } if (!ins.some(Boolean)) continue;
+      const k0 = ins.indexOf(false), Pq = pts.slice(0, -1), Iq = ins.slice(0, -1), Rq = Pq.slice(k0).concat(Pq.slice(0, k0)), Jq = Iq.slice(k0).concat(Iq.slice(0, k0)); let run = [];
+      const flush = () => { if (run.length > 3) addLine({ level: 0, fam: 0, pts: run, ends: ['edge', 'edge'], hole: true, flood: true }); run = []; };
+      Rq.forEach((p, k) => { if (Jq[k]) run.push(p); else flush(); }); flush(); } }
   for (const h of HOLES){ const ring = []; for (let k = 0; k <= 48; k++) ring.push([h.x + h.r * Math.cos(k * PI / 24), h.y + h.r * Math.sin(k * PI / 24)]);
     const pts = densify(ring, 4), ins = pts.map(p => inLandNoHoles(p[0], p[1])), k0 = ins.indexOf(false);
     if (!h.edge || k0 < 0){ addLine({ level: 1, fam: 0, pts, ends: ['ring', 'ring'], circus: true }); continue; }
@@ -1008,17 +1023,17 @@ function* mainsEnd(){
   yield 1; }
 
 /* ------------------------------------------------------------------ the two modes kept, and compared */
-function settingsKey(){ return FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + $('bSec6').checked + ',' + MONTH + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
+function settingsKey(){ return FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + $('bSec6').checked + ',' + MONTH + ',' + (floodOn() ? 'f' + $('fAvoid').value + ':' + v('fW') : 'f0') + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
 function finishRun(){
   if (MODE === 'A'){ EVENTS = []; for (const l of LINES){ if (l.dead || l.level === 0 || l.circus) continue; const Pp = l.pts;
       l.ends.forEach((e, sd) => { const p = sd === 0 ? Pp[Pp.length - 1] : Pp[0]; if (e === 'T') EVENTS.push({ x: p[0], y: p[1], k: 'join' }); if (e === 'Y') EVENTS.push({ x: p[0], y: p[1], k: 'merge' }); }); } }
   for (const q of MEAS.xpts) EVENTS.push({ x: q[0], y: q[1], k: 'cross' });
   METR = metrics();
   SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), events: EVENTS.slice(), holes: HOLES.slice(),
-    lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born })) };
+    lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born, flood: !!l.flood })) };
   drawCmp(); }
 function restore(sn){ GEN = null; GROWING = false; LINES = []; HASH = new Map(); TIPS = []; TIPMAP = new Map(); GROW = null; GHOST = null;
-  for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born });
+  for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born, flood: l.flood });
   CULVERTS = sn.culverts.slice(); EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
   netDirty = widthDirty = baseDirty = true; }
 function setMode(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; const sn = SNAP[m];
@@ -1078,7 +1093,7 @@ function drawEvents(){ const r = clamp(view.s * 8, 2.4, 5.5);
 
 /* ------------------------------------------------------------------ measures and cells */
 let MEAS = { km1: 0, km2: 0, dens: 0, T: 0, Y: 0, X: 0, loose: 0, xpts: [], cellsN: 0, med: 0 }, METR = null;
-function measures(){
+function measures(){ floodNum();
   const len = Pp => Pp.reduce((s, p, k) => k ? s + Math.hypot(p[0] - Pp[k - 1][0], p[1] - Pp[k - 1][1]) : 0, 0), xpts = [];
   const km = { 1: 0, 2: 0 }; let T = 0, Y = 0, loose = 0;
   for (const l of LINES){ if (l.dead || l.level === 0) continue; km[l.level] += len(l.pts) / 1000; for (const e of l.ends){ if (e === 'T') T++; if (e === 'Y') Y++; }
@@ -1123,7 +1138,7 @@ function g2d(c){ const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0,
 function pathLine(g, Pp){ g.beginPath(); Pp.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); }
 function pathRings(g, rings){ for (const r of rings){ r.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); } }
 function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH);
-  const ctxOn = $('lCtx').checked;
+  const bm = BASEMAP !== 'none' && drawBasemap(g), ctxOn = $('lCtx').checked && !bm;   // (v8.5) a basemap replaces the drawn context
   if (ctxOn){ g.fillStyle = P.urban; for (const r of D.ctx.urban){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); } }
   if ($('lCont').checked){ g.lineJoin = 'round';
     for (const c of D.contours){ const idx = c.z % 5 === 0; g.strokeStyle = idx ? P.contourIdx : P.contour; g.lineWidth = idx ? 1.0 : 0.6; pathLine(g, c.p); g.stroke(); }
@@ -1137,13 +1152,64 @@ function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillSty
     g.strokeStyle = P.stream; g.lineWidth = 1.1; for (const l of D.ctx.streams){ pathLine(g, l); g.stroke(); }
     g.strokeStyle = P.prim; g.lineWidth = 2.0; for (const l of D.ctx.prim){ pathLine(g, l); g.stroke(); } }
   // the land: no colour of its own, a quiet ground under the field (no yellow)
-  g.save(); g.shadowColor = P.landShadow; g.shadowBlur = 14; g.fillStyle = P.land; g.globalAlpha = THEME === 'dark' ? 0.9 : 0.82;
+  g.save(); g.shadowColor = bm ? 'rgba(0,0,0,0)' : P.landShadow; g.shadowBlur = 14; g.fillStyle = P.land; g.globalAlpha = bm ? (THEME === 'dark' ? 0.32 : 0.3) : THEME === 'dark' ? 0.9 : 0.82;
   g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.fill('evenodd'); g.restore();
+  drawFlood(g);
   if (UNDER !== 'off') drawUnder(g);
   if ($('lCells').checked && CELLS) drawCells(g);
   if ($('lCross').checked) drawCrosses(g);
   if (FIELDMODE === 'lines') drawFieldLines(g);
   baseDirty = false; }
+/* ------------------------------------------------------------------ (v8.5) flood risk layer and basemap tiles */
+let SHOWFLOOD = (() => { try { return localStorage.getItem('tensorStudio.showFlood') !== '0'; } catch (e){ return true; } })(), FLOODIMG = null;
+function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
+  if (!FLOODIMG){ const oc = mk(); oc.width = nx; oc.height = ny; const gg = oc.getContext('2d'), im = gg.createImageData(nx, ny), C = [null, [156, 221, 234], [247, 211, 89], [242, 157, 56], [215, 55, 49]];
+    for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const k = FR[r * nx + c]; if (!k) continue; const o = 4 * ((ny - 1 - r) * nx + c), col = C[k]; im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = Math.round([0, 40, 70, 140, 175][k] * (inLandNoHoles(c * cell, r * cell) ? 1 : 0.45)); }   // quieter outside the land, low risk light
+    gg.putImageData(im, 0, 0); FLOODIMG = oc; }
+  g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = (THEME === 'dark' ? 0.8 : 0.7) * (BASEMAP !== 'none' ? 0.8 : 1); g.drawImage(FLOODIMG, X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore();
+  const fa = floodAvoid(); if (fa){ g.save(); g.strokeStyle = P.waterEdge; g.setLineDash([4, 3]); g.lineWidth = 1; for (const r of FLOOD.zones[fa] || []){ pathLine(g, r); g.stroke(); } g.restore(); } }
+const BASEMAPS = {
+  osm: { url: (z, x, y) => 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png', max: 19, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' },
+  light: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/light_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' },
+  dark: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/dark_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' } };
+let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basemap'); return BASEMAPS[b] ? b : 'none'; } catch (e){ return 'none'; } })();
+const TILES = new Map();
+function tileImg(key, src){ let t = TILES.get(key); if (t) return t; t = new Image(); t.crossOrigin = 'anonymous'; t.decoding = 'async';
+  t.onload = () => { baseDirty = true; }; t.onerror = () => { t.failed = true; }; t.src = src; TILES.set(key, t);
+  if (TILES.size > 500) TILES.delete(TILES.keys().next().value); return t; }
+// tiles are Web Mercator; the plan is British National Grid, about 1.4° turned and 1.6× scaled here: each tile is drawn through
+// the affine map of its own corners (sub-metre over a tile)
+function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && window.__TS.geo; if (!B || !geo) return false;
+  const wx = sx => (sx - VW / 2) / view.s + view.x, wy = sy => (VH / 2 - sy) / view.s + view.y;
+  const cs = [[0, 0], [VW, 0], [0, VH], [VW, VH]].map(([sx, sy]) => geo.bngToWGS84(OX + wx(sx), OY + wy(sy))), lat0 = cs.reduce((s, c) => s + c[1], 0) / 4;
+  const z = clamp(Math.round(Math.log2(156543.03 * Math.cos(lat0 * PI / 180) * view.s * (B.retina ? 1 : Math.min(2, DPR)))), 3, B.max), Z = 2 ** z;
+  const tx = lon => (lon + 180) / 360 * Z, ty = lat => (1 - Math.log(Math.tan(lat * PI / 180) + 1 / Math.cos(lat * PI / 180)) / PI) / 2 * Z;
+  const x0 = Math.floor(Math.min(...cs.map(c => tx(c[0])))), x1 = Math.floor(Math.max(...cs.map(c => tx(c[0])))), y0 = Math.floor(Math.min(...cs.map(c => ty(c[1])))), y1 = Math.floor(Math.max(...cs.map(c => ty(c[1]))));
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > 160) return false;
+  const lonOf = x => x / Z * 360 - 180, latOf = y => Math.atan(Math.sinh(PI * (1 - 2 * y / Z))) * 180 / PI;
+  const scr = (lon, lat) => { const q = geo.wgs84ToBNG(lon, lat); return [X(q[0] - OX), Y(q[1] - OY)]; }, r2 = B.retina && DPR > 1 ? '@2x' : '';
+  g.save(); g.imageSmoothingEnabled = true; let drawn = 0;
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++){ const im = tileImg(BASEMAP + '/' + z + '/' + x + '/' + y + r2, B.url(z, x, y, r2)); if (!im.complete || im.failed || !im.naturalWidth) continue;
+    const a = scr(lonOf(x), latOf(y)), b = scr(lonOf(x + 1), latOf(y)), c = scr(lonOf(x), latOf(y + 1)), S = im.naturalWidth;
+    g.setTransform(DPR * (b[0] - a[0]) / S, DPR * (b[1] - a[1]) / S, DPR * (c[0] - a[0]) / S, DPR * (c[1] - a[1]) / S, DPR * a[0], DPR * a[1]);
+    g.drawImage(im, -0.4, -0.4, S + 0.8, S + 0.8); drawn++; }
+  g.restore(); return true; }
+function syncBase(){ for (const b of document.querySelectorAll('#tgBase button')) b.classList.toggle('on', b.dataset.bm === BASEMAP);
+  const el = document.getElementById('bmAttrib'); if (el){ const B = BASEMAPS[BASEMAP]; el.hidden = !B; el.innerHTML = B ? B.attr : ''; window.__TS_INSETS && window.__TS_INSETS(); } }
+for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); } catch (e) {} baseDirty = true; syncBase(); };
+// how much of the network lies where floods are expected
+let FLAND = null;
+function floodNum(){ const el = document.getElementById('fNum'); if (!el) return; const zh = TS_LANG === 'zh';
+  if (!FR){ el.textContent = zh ? '此场地不在 EA 洪水风险数据范围内。' : 'No EA flood risk data for this site.'; return; }
+  if (!FLAND){ FLAND = [0, 0, 0, 0, 0]; for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++) if (inLandNoHoles(c * cell, r * cell)) FLAND[FR[r * nx + c]] += cell * cell / 1e4; }
+  let tot = 0, med = 0, high = 0;
+  for (const l of LINES){ if (l.dead || l.level < 1) continue; const Pp = l.pts; for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]); tot += L;
+      const k2 = FR[clamp(Math.round((a[1] + b[1]) / 2 / cell), 0, ny - 1) * nx + clamp(Math.round((a[0] + b[0]) / 2 / cell), 0, nx - 1)]; if (k2 >= 4) high += L; else if (k2 === 3) med += L; } }
+  const km = x => (x / 1000).toFixed(2), pc = (100 * (med + high) / (tot || 1)).toFixed(1), ha = x => x.toFixed(1);
+  const key = '<br><span class="fk"><span><i style="background:#f7d359"></i>' + (zh ? '低' : 'low') + '</span><span><i style="background:#f29d38"></i>' + (zh ? '中' : 'medium') + '</span><span><i style="background:#d73731"></i>' + (zh ? '高' : 'high') + '</span></span>';
+  el.innerHTML = zh
+    ? '道路落在中风险区 <b>' + km(med) + ' km</b>、高风险区 <b>' + km(high) + ' km</b>（占 ' + pc + '%）<br>场地内：高风险 ' + ha(FLAND[4]) + ' 公顷，中风险 ' + ha(FLAND[3]) + ' 公顷，低风险 ' + ha(FLAND[2]) + ' 公顷' + key
+    : 'Streets in medium risk <b>' + km(med) + ' km</b>, in high risk <b>' + km(high) + ' km</b> (' + pc + ' %)<br>On the land: high ' + ha(FLAND[4]) + ' ha, medium ' + ha(FLAND[3]) + ' ha, low ' + ha(FLAND[2]) + ' ha' + key; }
 function drawCells(g){ if (!CELLIMG){ const { lab, W, H, areas } = CELLS, oc = mk(); oc.width = W; oc.height = H; const gg = oc.getContext('2d'), im = gg.createImageData(W, H);
     const band = a => a < 0.1 ? 0 : a < 0.5 ? 1 : a < 2 ? 2 : a < 10 ? 3 : 4, rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     for (let i = 0; i < W * H; i++){ if (lab[i] < 0) continue; const c = rgb(P.cells[band(areas[lab[i]])]); im.data[4 * i] = c[0]; im.data[4 * i + 1] = c[1]; im.data[4 * i + 2] = c[2]; im.data[4 * i + 3] = 255; }
@@ -1153,7 +1219,7 @@ function drawCrosses(g){ const step = Math.max(1, Math.round(26 / (cell * view.s
   for (let r = 0; r < ny; r += step) for (let c = 0; c < nx; c += step){ const x = c * cell, y = r * cell; if (!inLand(x, y)) continue; const i = r * nx + c, t = 0.5 * Math.atan2(TS[i], TC[i]), a = Math.cos(t), b = Math.sin(t);
     g.moveTo(X(x - a * Ls), Y(y - b * Ls)); g.lineTo(X(x + a * Ls), Y(y + b * Ls)); g.moveTo(X(x + b * Ls * 0.45), Y(y - a * Ls * 0.45)); g.lineTo(X(x - b * Ls * 0.45), Y(y + a * Ls * 0.45)); }
   g.stroke(); }
-function styleFor(l){ if (GROWING && TIPMAP.has(l.id)) return [P.grow, l.level === 1 ? 2.8 : 1.5]; if (l.level === 0) return [P.edge, 1.3]; if (l.level === 1) return [P.main, 2.4]; return [P.second, 1.0]; }
+function styleFor(l){ if (GROWING && TIPMAP.has(l.id)) return [P.grow, l.level === 1 ? 2.8 : 1.5]; if (l.level === 0) return l.flood ? [P.waterEdge, 1.1] : [P.edge, 1.3]; if (l.level === 1) return [P.main, 2.4]; return [P.second, 1.0]; }
 function drawNet(full){ const g = g2d(L_net); if (full){ g.clearRect(0, 0, VW, VH); netDrawn = 0; }
   if (!$('lStreets').checked){ netDrawn = LINES.length; return; }
   g.lineCap = 'round'; g.lineJoin = 'round';
@@ -1359,7 +1425,7 @@ function syncTools(){ for (const b of document.querySelectorAll('#tgField button
   $('tStreets').classList.toggle('on', $('lStreets').checked); $('tWidth').classList.toggle('on', $('lWidth').checked);
   for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.classList.toggle('on', b.dataset.m === MODE);
   for (const b of document.querySelectorAll('#tgUnder button')) b.classList.toggle('on', b.dataset.u === UNDER);
-  $('tEvents').classList.toggle('on', $('lEvents').checked);
+  $('tEvents').classList.toggle('on', $('lEvents').checked); $('tFlood')?.classList.toggle('on', SHOWFLOOD && !!FR);
   $('tFreeze').classList.toggle('on', FROZEN); $('tFreeze').innerHTML = FROZEN ? '&#9654; Resume motion' : '&#10074;&#10074; Freeze motion';
   const st = $('windOn').checked ? 3 : (ATTR.length ? 2 : 1); for (const b of document.querySelectorAll('.steps button')) b.classList.toggle('on', +b.dataset.s === st); }
 function setStep(n){ SIM = null; FROZEN = false; GHOST = null;
@@ -1433,6 +1499,11 @@ $('tFreeze').onclick = () => { FROZEN = !FROZEN; syncTools(); };
 $('tResult').onclick = showResult;
 for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.onclick = () => setMode(b.dataset.m);
 for (const b of document.querySelectorAll('#tgUnder button')) b.onclick = () => setUnder(b.dataset.u);
+$('tFlood').onclick = () => { SHOWFLOOD = !SHOWFLOOD; try { localStorage.setItem('tensorStudio.showFlood', SHOWFLOOD ? '1' : '0'); } catch (e) {} baseDirty = true; syncTools(); };
+{ const out = $('fW').nextElementSibling, upd = () => { out.textContent = v('fW'); }; upd();
+  const regrow = () => { clearTimeout(tmr); tmr = setTimeout(() => { buildTarget(); baseDirty = true; if ($('auto').checked) start(true); drawCmp(); floodNum(); }, 160); };
+  $('fW').addEventListener('input', () => { upd(); regrow(); }); $('fOn').addEventListener('change', regrow); $('fAvoid').addEventListener('change', regrow);
+  if (!FR) for (const id of ['fOn', 'fAvoid', 'fW']) $(id).disabled = true; }
 $('tEvents').onclick = () => { $('lEvents').checked = !$('lEvents').checked; syncTools(); };
 $('bBoth').onclick = compareBoth;
 for (const id of B_IDS) $(id).addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(() => { if (MODE === 'B' && $('auto').checked) start(true); drawCmp(); }, 160); });
@@ -1455,7 +1526,7 @@ $('bGeo').onclick = () => { const SW = new Map(streetWidths().map(st => [st.pts,
     .concat(CULVERTS.map((c, k) => ({ type: 'Feature', properties: { layer: 'culvert', n: k + 1 }, geometry: { type: 'Point', coordinates: bng([c.x, c.y]) } })))
     .concat(D.fixed.bridges.map((b, k) => ({ type: 'Feature', properties: { layer: 'bridge', n: k + 1 }, geometry: { type: 'LineString', coordinates: b.map(bng) } })));
   const set = {}; for (const id of FIELD_IDS.concat(NET_IDS)) set[id] = +$(id).value; set.width_min = v('wMin'); set.width_max = v('wMax'); set.width_by = $('wBy').value; set.width_snap = $('wSnap').checked; set.merge = $('merge').checked; set.windOn = $('windOn').checked; set.wind_of = YEAR[MONTH].name;
-  set.mode = MODE; set.metrics = METR; set.attractors = { where: AMODE, points: ATTR.map(a => ({ kind: a.kind, at: bng([a.x, a.y]) })) }; save((D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, settings: set, features: F }), 'application/geo+json'); };
+  set.flood = floodOn() ? { source: 'EA max(RoFSW, RoFRS)', keep_clear_from_class: +$('fAvoid').value, along_the_flow: v('fW') } : null; set.mode = MODE; set.metrics = METR; set.attractors = { where: AMODE, points: ATTR.map(a => ({ kind: a.kind, at: bng([a.x, a.y]) })) }; save((D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, settings: set, features: F }), 'application/geo+json'); };
 $('bPng').onclick = () => cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.png'; a.click(); });
 window.addEventListener('resize', resize);
 
@@ -1541,7 +1612,8 @@ document.getElementById('applyPreset').onclick=()=>{
       : 'The site you drew on the London map: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. The land is the site less the water' + (T.keepBuildings ? ' and the existing buildings' : '') + '; ' + m.anchors + ' anchors where existing streets meet the edge. Terrain: OS Terrain 50 (50 m). Streets, water, rail and buildings: OpenStreetMap via OpenFreeMap. Wind: London Luton typical year.' + warn; };
   // language: remembered between visits, and it follows the London 2100 framework's own switch when framed
   const orig = window.setInterfaceLanguage;
-  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); };
+  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); } catch (e) {} };
+  syncBase();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
   if (s){
     $id('siteNav').hidden = false;
