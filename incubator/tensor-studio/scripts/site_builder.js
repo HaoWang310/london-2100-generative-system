@@ -268,6 +268,7 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
     basis: { cA: enc16(cA, 1e4), cW: enc16(cW, 1e3), eD: enc16(edge.D, 1), eA: enc16(edge.A, 1e4), sD: enc16(strm.D, 1), sA: enc16(strm.A, 1e4),
       ...(rail ? { rD: enc16(rail.D, 1), rA: enc16(rail.A, 1e4) } : {}) },
     dirs, year: wind.year, hours: wind.hours,
+    ...(zOK >= 0.5 * N ? { elev: enc16(Zs, 10) } : {}),   // elevation, 0.1 m, for the environmental fields
     zone: { c: ZC, W: ZW, H: ZH, bits: encBits(zoneBits), ...(railBits ? { rail: encBits(railBits) } : {}) },
     pieces, cut, anchors, attract: { main: [], sec: [] }, contours: cont, labels,
     ctx: { water: WA, room: [], streams: WW.map(f => f.pts), urban: [], bld: BL, lanes, prim, rib: [], parcels: [] },
