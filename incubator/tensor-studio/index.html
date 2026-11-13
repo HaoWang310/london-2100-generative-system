@@ -251,21 +251,100 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.querySelectorAll('[data-language]').forEach(b=>b.addEventListener('click',()=>setInterfaceLanguage(b.dataset.language)));
  setInterfaceLanguage(window.__TS_LANG0 || 'zh');
 });
-</script></head><body><header id="package-bar"><div class="brand"><strong data-no-translate>Tensor Studio</strong><small><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.2" data-en="Station P2 example · v8.2">车站 P2 示例 · v8.2</span></small></div><nav class="package-nav site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="bar-right"><div class="seg" id="theme" aria-label="Theme"><button data-t="light">Light</button><button data-t="dark">Dark</button></div><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div></div></header>
+</script><style>
+/* (v8.3) one interface with the London map: control panel floating on the left, display panel on the right */
+:root{--shell-height:0px}
+#wrap{display:block;height:100%}
+#view{position:fixed;inset:0}
+#panel.ts-panel{position:fixed;z-index:20;top:14px;left:14px;width:min(370px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
+ --side:#0b0b0d;--card:#1c1c1f;--ink:#f5f5f7;--grey:#a1a1a6;--grey2:#636366;--line:#343438;--fill:#2c2c30;--fill2:#36363a;--raise:#3a3a40;--track:#48484e;--knob:#fff;--accent:#0a84ff;
+ background:rgba(11,11,13,.98);color:var(--ink);border:1px solid rgba(255,255,255,.13);border-radius:22px;box-shadow:0 18px 48px rgba(0,0,0,.36);
+ -webkit-backdrop-filter:blur(18px) saturate(110%);backdrop-filter:blur(18px) saturate(110%);padding:16px;color-scheme:dark}
+#panel .ts-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:1px 0 2px}
+#panel .ts-title{font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.035em}
+#panel .ts-sub{font-size:11px;color:var(--grey);line-height:1.5;margin-top:3px}
+#panel .ts-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+#panel .language-switch{display:inline-flex;padding:2px;gap:2px;border-radius:11px;background:#222225;border:1px solid #36363b}
+#panel .language-switch button{min-width:34px;min-height:26px;padding:0 7px;border:0;border-radius:9px;background:transparent;color:#9d9da3;font-size:11px;font-weight:600;opacity:1;box-shadow:none}
+#panel .language-switch button.active{background:#3a3a40;color:#f5f5f7;box-shadow:none}
+#tsCollapse{flex:0 0 40px;width:40px;height:40px;background:#2a2a2e;border:1px solid #48484d;color:#f5f5f7;border-radius:13px;font-size:18px;font-weight:500;cursor:pointer}
+#tsCollapse:hover{background:#414146}
+#panel .ts-divider{height:1px;background:#343438;margin:14px 0 16px}
+#panel.collapsed{width:auto;min-width:260px;padding:12px 14px}
+#panel.collapsed > :not(.ts-head){display:none!important}
+#panel.collapsed .ts-sub{display:none}
+#panel .site-nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+#panel .site-nav[hidden]{display:none}
+#panel .site-nav #siteBack{grid-column:1/-1}
+#panel .site-nav .site-label{grid-column:1/-1;font-size:11px;color:var(--grey);padding:4px 2px 0}
+#panel .site-nav button{min-height:36px;padding:6px 10px;border:1px solid #46464b;background:#2c2c30;color:#f5f5f7;border-radius:12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+#panel .site-nav button:hover{background:#414146}
+#panel .site-nav button.active{background:#f5f5f7;color:#121214;border-color:#f5f5f7}
+#panel .card,#panel .preset-box,#panel details.advanced > summary{border:1px solid #3a3a3e;border-radius:15px}
+#panel h2{font-size:12px!important;font-weight:650!important;color:#f5f5f7!important}
+#panel .btns button,#panel .steps button{border:1px solid #46464b;border-radius:12px}
+#panel .btns button.primary,#panel .preset-box button{background:#f5f5f7;color:#121214;border-color:#f5f5f7}
+#panel .btns button.primary:hover,#panel .preset-box button:hover{background:#d1d1d6;opacity:1}
+#panel .steps button.on{box-shadow:inset 0 0 0 1.5px #d1d1d6;background:#2c2c31}
+#panel label.lay input[type=checkbox]{background:#48484e}
+#panel label.lay input[type=checkbox]:checked,[data-theme="dark"] #panel label.lay input[type=checkbox]:checked{background:#2f7bff}
+#panel label.lay input[type=checkbox]::before,[data-theme="dark"] #panel label.lay input[type=checkbox]:checked::before{background:#fff}
+#panel select,#panel .preset-box select{background-color:#1c1c1f;border:1px solid #424247;border-radius:10px}
+#panel details.info summary{color:#8ab4ff}
+#hud{position:fixed;z-index:10;bottom:14px;background:rgba(14,14,16,.9);color:#a1a1a6;border:1px solid #2f2f34;box-shadow:0 16px 45px rgba(0,0,0,.28)}
+#hud b{color:#f5f5f7}
+/* right-hand display panel, as the London map's */
+.displayPanel{position:fixed;z-index:20;top:14px;right:14px;width:224px;max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
+ background:rgba(14,14,16,.94);color:#f5f5f7;border:1px solid #2f2f34;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.28);
+ -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-size:12px;box-sizing:border-box;color-scheme:dark}
+.displayPanel .dpSection{padding:12px 14px 10px;border-top:1px solid #2a2a2e}
+.displayPanel .dpSection:first-child{border-top:0}
+.displayPanel .dpTitle{font-size:10px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;color:#8e8e94;margin-bottom:10px}
+.displayPanel .dpGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.displayPanel .dpTile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:48px;padding:7px 6px;margin:0;
+ background:#1f1f22;color:#c7c7cc;border:1px solid #38383d;border-radius:8px;font:inherit;font-size:11px;line-height:1.25;text-align:center;cursor:pointer;opacity:1}
+.displayPanel .dpTile:hover:not(.on){background:#29292d;color:#f5f5f7}
+.displayPanel .dpTile.on{background:#2c2c31;color:#fff;border-color:#d1d1d6}
+.displayPanel .dpTile.dpRow{flex-direction:row;justify-content:flex-start;gap:7px;min-height:34px;padding:6px 9px;text-align:left;white-space:nowrap}
+.displayPanel .dpTile.dpWide{grid-column:1/-1}
+.displayPanel .dpTile.dpPrimary{justify-content:center;background:#f5f5f7;color:#121214;border-color:#f5f5f7;font-weight:600}
+.displayPanel .dpTile.dpPrimary:hover{background:#d1d1d6;color:#121214}
+.displayPanel .dpTile:focus-visible,.displayPanel .dpSwitchRow:focus-visible{outline:2px solid #4c8dff;outline-offset:2px}
+.displayPanel svg{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.displayPanel .dpDot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+.displayPanel .dpDots{display:flex;gap:3px}.displayPanel .dpDots i{width:9px;height:9px;border-radius:50%}
+.displayPanel .dpSwitchRow{display:flex;align-items:center;gap:10px;width:100%;padding:5px 0;margin:0;background:none;border:0;color:#e5e5ea;font:inherit;font-size:12px;cursor:pointer;text-align:left}
+.displayPanel .dpSwitchRow span{flex:1}
+.displayPanel .dpSw{flex:0 0 30px;width:30px;height:18px;border-radius:999px;background:#48484e;position:relative;transition:background .15s}
+.displayPanel .dpSw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#d1d1d6;transition:transform .15s,background .15s}
+.displayPanel .dpSwitchRow.on .dpSw{background:#2f7bff}
+.displayPanel .dpSwitchRow.on .dpSw::after{transform:translateX(12px);background:#fff}
+@media(max-height:780px){.displayPanel .dpSection{padding:9px 12px 8px}.displayPanel .dpTile{min-height:42px}.displayPanel .dpTile.dpRow{min-height:30px}}
+@media(max-width:760px){#panel.ts-panel{width:min(330px,calc(100vw - 28px));max-height:52dvh}.displayPanel{top:auto;bottom:52px;width:180px;max-height:40dvh}}
+@media(prefers-reduced-motion:reduce){.displayPanel .dpSw,.displayPanel .dpSw::after{transition:none}}
+</style></head><body>
+<aside class="displayPanel" id="displayPanel" role="region" aria-label="Display">
+ <div class="dpSection"><div class="dpTitle">Mode</div>
+  <div class="dpGrid" id="tgMode" role="group"><button class="dpTile" type="button" data-m="A"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8c6 0 12 2 18 0M3 16c6 0 12 2 18 0"/></svg><span>A · today</span></button><button class="dpTile" type="button" data-m="B"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12l8-8M12 4l8 8M8 16l-4 4M16 16l4 4"/></svg><span>B · branching</span></button></div></div>
+ <div class="dpSection"><div class="dpTitle">Read</div>
+  <div class="dpGrid" id="tgUnder" role="group"><button class="dpTile dpRow" type="button" data-u="off"><span>off</span></button><button class="dpTile dpRow" type="button" data-u="clarity"><i class="dpDot" style="background:#0a84ff"></i><span>clarity</span></button><button class="dpTile dpRow" type="button" data-u="conflict"><i class="dpDot" style="background:#ff9f0a"></i><span>conflict</span></button><button class="dpTile dpRow" type="button" data-u="zones"><span class="dpDots"><i style="background:#0a84ff"></i><i style="background:#ff9f0a"></i></span><span>both</span></button></div></div>
+ <div class="dpSection"><div class="dpTitle">Field</div>
+  <div class="dpGrid" id="tgField" role="group"><button class="dpTile dpRow" type="button" data-v="move"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0"/></svg><span>moving</span></button><button class="dpTile dpRow" type="button" data-v="lines"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18M3 12h18M3 16h18"/></svg><span>still lines</span></button><button class="dpTile dpRow dpWide" type="button" data-v="off"><span>off</span></button></div></div>
+ <div class="dpSection"><div class="dpTitle">Streets</div>
+  <div class="dpGrid" role="group"><button class="dpTile" type="button" id="tStreets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L20 4M4 12l8 8"/></svg><span>lines</span></button><button class="dpTile" type="button" id="tWidth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17L17 3M7 21L21 7"/></svg><span>at width</span></button></div></div>
+ <div class="dpSection"><div class="dpTitle"><span data-i18n data-zh="显示" data-en="Display">显示</span></div>
+  <button class="dpSwitchRow" type="button" id="tEvents"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v6M12 9l-6 6M12 9l6 6M6 15v6M18 15v6"/></svg><span>Events</span><i class="dpSw" aria-hidden="true"></i></button>
+  <button class="dpSwitchRow" type="button" id="tWind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h11a3 3 0 1 0-3-3M3 15h15a3 3 0 1 1-3 3"/></svg><span>Wind</span><i class="dpSw" aria-hidden="true"></i></button></div>
+ <div class="dpSection"><div class="dpTitle"><span data-i18n data-zh="外观" data-en="Appearance">外观</span></div>
+  <div class="dpGrid" id="theme" role="group"><button class="dpTile dpRow" type="button" data-t="light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><span>Light</span></button><button class="dpTile dpRow" type="button" data-t="dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Dark</span></button></div></div>
+ <div class="dpSection"><div class="dpTitle"><span data-i18n data-zh="动态" data-en="Motion">动态</span></div>
+  <div class="dpGrid"><button class="dpTile dpRow dpWide" type="button" id="tFreeze">&#10074;&#10074; Freeze motion</button><button class="dpTile dpRow dpWide dpPrimary" type="button" id="tResult">Show result</button></div></div>
+</aside>
 <div id="wrap">
  <div id="view"><canvas id="c"></canvas>
-  <div id="tools">
-   <div class="tg" id="tgMode"><span>Mode</span><button data-m="A">A · today</button><button data-m="B">B · branching</button></div>
-   <div class="tg" id="tgUnder"><span>Read</span><button data-u="off">off</button><button data-u="clarity">clarity</button><button data-u="conflict">conflict</button><button data-u="zones">both</button></div>
-   <div class="tg"><span>Events</span><button id="tEvents">on</button></div>
-   <div class="tg" id="tgField"><span>Field</span><button data-v="move">moving</button><button data-v="lines">still lines</button><button data-v="off">off</button></div>
-   <div class="tg"><span>Wind</span><button id="tWind">on</button></div>
-   <div class="tg"><span>Streets</span><button id="tStreets">lines</button><button id="tWidth">at width</button></div>
-   <div class="tg"><button id="tFreeze">&#10074;&#10074; Freeze motion</button></div>
-   <div class="tg"><button id="tResult" class="go">Show result</button></div>
-  </div>
   <div id="hud">loading…</div></div>
- <div id="panel">
+ <div id="panel" class="ts-panel">
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.3" data-en="Station P2 example · v8.3">车站 P2 示例 · v8.3</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -366,6 +445,20 @@ window.addEventListener('DOMContentLoaded',()=>{
  </div>
 </div>
 <script>
+// (v8.3) the free area between the two floating panels: the plan is fitted into it, the rose and the HUD sit in it
+window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document.getElementById('panel'), d = document.getElementById('displayPanel');
+  const pr = p && p.getBoundingClientRect(), dr = d && d.getBoundingClientRect();
+  let l = pr && pr.width ? pr.right + 8 : 0, r = dr && dr.width ? W - dr.left + 8 : 0;
+  if (W - l - r < 260) l = r = 0;
+  const rb = dr && dr.bottom > H - 70 ? r : 0, hud = document.getElementById('hud');
+  if (hud) hud.style.left = 'calc(50% + ' + ((l - r) / 2) + 'px)';
+  return { l, r, rb }; };
+(() => { const p = document.getElementById('panel'), b = document.getElementById('tsCollapse'); if (!p || !b) return;
+  const set = c => { p.classList.toggle('collapsed', c); b.textContent = c ? '+' : '−'; b.setAttribute('aria-expanded', String(!c)); try { localStorage.setItem('tensorStudio.panelCollapsed', c ? '1' : '0'); } catch (e) {} window.__TS_INSETS(); };
+  try { if (localStorage.getItem('tensorStudio.panelCollapsed') === '1') set(true); } catch (e) {}
+  b.onclick = () => set(!p.classList.contains('collapsed')); })();
+</script>
+<script>
 (()=>{const d=document.getElementById('advanced');if(!d)return;
  try{if(localStorage.getItem('tensorStudio.advancedOpen')==='1')d.open=true;}catch(e){}
  d.addEventListener('toggle',()=>{try{localStorage.setItem('tensorStudio.advancedOpen',d.open?'1':'0');}catch(e){}});})();
@@ -375,8 +468,8 @@ window.addEventListener('DOMContentLoaded',()=>{
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite } from './scripts/site_builder.js?v=8.2.0';
-const V = '8.2.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite } from './scripts/site_builder.js?v=8.3.0';
+const V = '8.3.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }

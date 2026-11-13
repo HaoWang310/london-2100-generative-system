@@ -1117,7 +1117,8 @@ let netDrawn = 0;
 const X = x => (x - view.x) * view.s + VW / 2, Y = y => VH / 2 - (y - view.y) * view.s;
 function resize(){ DPR = Math.min(2, devicePixelRatio || 1); VW = cv.clientWidth; VH = cv.clientHeight; for (const c of [cv, L_base, L_net, L_flow, L_wind, L_width]){ c.width = Math.round(VW * DPR); c.height = Math.round(VH * DPR); }
   if (!fitted && VW){ let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of D.pieces) for (const q of p.outer){ x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); }
-    view.s = Math.min(VW / (x1 - x0), (VH - 130) / (y1 - y0)) * 0.92; view.x = (x0 + x1) / 2; view.y = (y0 + y1) / 2 + 30 / view.s; fitted = true; } baseDirty = netDirty = widthDirty = true; clearTrails(); }
+    const ins = window.__TS_INSETS ? window.__TS_INSETS() : { l: 0, r: 0 };   // (v8.3) fitted between the floating panels
+    view.s = Math.min((VW - ins.l - ins.r) / (x1 - x0), (VH - 130) / (y1 - y0)) * 0.92; view.x = (x0 + x1) / 2 - (ins.l - ins.r) / 2 / view.s; view.y = (y0 + y1) / 2 + 30 / view.s; fitted = true; } baseDirty = netDirty = widthDirty = true; clearTrails(); }
 function g2d(c){ const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return g; }
 function pathLine(g, Pp){ g.beginPath(); Pp.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); }
 function pathRings(g, rings){ for (const r of rings){ r.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); } }
@@ -1250,7 +1251,7 @@ function stepWind(){ const g = L_wind.getContext('2d'); g.setTransform(DPR, 0, 0
   for (let i = 0; i < segs.length; i += 4){ g.moveTo(segs[i], segs[i + 1]); g.lineTo(segs[i + 2], segs[i + 3]); } g.stroke();
   g.globalAlpha = 1; }
 function drawRose(){ if (!$('lRose').checked || !($('windOn').checked || $('lWind').checked || SIM)) return;
-  const M = YEAR[MONTH], R = 46, cx = 26 + R + 8, cy = VH - 26 - R - 18, mx = Math.max(...YEAR.map(m => Math.max(...m.share)));
+  const M = YEAR[MONTH], R = 46, cx = (window.__TS_INSETS ? window.__TS_INSETS().l : 0) + 26 + R + 8, cy = VH - 26 - R - 18, mx = Math.max(...YEAR.map(m => Math.max(...m.share)));
   const bw = 2 * R + 36 + ($('lWind').checked ? 190 : 0);
   ctx.fillStyle = THEME === 'dark' ? 'rgba(28,28,30,0.86)' : 'rgba(255,255,255,0.9)'; ctx.strokeStyle = P.contourIdx; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - R - 18, cy - R - 30, bw, 2 * R + 52, 10) : ctx.rect(cx - R - 18, cy - R - 30, bw, 2 * R + 52); ctx.fill(); ctx.stroke();
@@ -1330,7 +1331,7 @@ function render(now){
     ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(a.x), Y(a.y), a.main ? 4 : 3, 0, 2 * PI); ctx.fill(); }
   drawScale(); drawRose(); hud(); }
 function drawScale(){ const want = VW * 0.16 / view.s; let m = 50; for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if (s <= want) m = s;
-  const x1 = VW - 24, x0 = x1 - m * view.s, y = VH - 26; for (let k = 0; k < 4; k++){ ctx.fillStyle = k % 2 ? P.bg : P.main; ctx.fillRect(x0 + m * view.s * k / 4, y, m * view.s / 4, 5); }
+  const x1 = VW - 24 - (window.__TS_INSETS ? window.__TS_INSETS().rb : 0), x0 = x1 - m * view.s, y = VH - 26; for (let k = 0; k < 4; k++){ ctx.fillStyle = k % 2 ? P.bg : P.main; ctx.fillRect(x0 + m * view.s * k / 4, y, m * view.s / 4, 5); }
   ctx.strokeStyle = P.main; ctx.lineWidth = 0.8; ctx.strokeRect(x0, y, m * view.s, 5); ctx.fillStyle = P.main; ctx.font = '11px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic'; ctx.fillText(m + ' m', x1, y - 6); ctx.textAlign = 'left'; ctx.fillText('0', x0, y - 6);
   const cx = x0 - 26, cy = y - 2, R = 9; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * PI); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R); ctx.stroke(); ctx.textAlign = 'center'; ctx.fillText('N', cx, cy - R - 4); }
 function hud(){ const pre = '<b>' + (MODE === 'A' ? 'A · today' : 'B · branching') + '</b> · ' + (SIM ? 'wind simulation · <b>' + YEAR[MONTH].name + '</b> · ' : ($('windOn').checked ? 'wind of <b>' + YEAR[MONTH].name + '</b> · ' : 'along the contour · '));
@@ -1354,11 +1355,11 @@ function showResult(){ SIM = null; if (GEN) runAll(); GHOST = null; setField('of
   clearTrails(); baseDirty = netDirty = widthDirty = true; syncTools(); }
 function setField(m){ FIELDMODE = m; $('lFlow').checked = (m === 'move'); FLINES = null; baseDirty = true; clearTrails(); syncTools(); }
 function syncTools(){ for (const b of document.querySelectorAll('#tgField button')) b.classList.toggle('on', b.dataset.v === FIELDMODE);
-  $('tWind').classList.toggle('on', $('lWind').checked); $('tWind').textContent = $('lWind').checked ? 'on' : 'off';
+  $('tWind').classList.toggle('on', $('lWind').checked);   // (v8.3) switches in the display panel: no text swap
   $('tStreets').classList.toggle('on', $('lStreets').checked); $('tWidth').classList.toggle('on', $('lWidth').checked);
   for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.classList.toggle('on', b.dataset.m === MODE);
   for (const b of document.querySelectorAll('#tgUnder button')) b.classList.toggle('on', b.dataset.u === UNDER);
-  $('tEvents').classList.toggle('on', $('lEvents').checked); $('tEvents').textContent = $('lEvents').checked ? 'on' : 'off';
+  $('tEvents').classList.toggle('on', $('lEvents').checked);
   $('tFreeze').classList.toggle('on', FROZEN); $('tFreeze').innerHTML = FROZEN ? '&#9654; Resume motion' : '&#10074;&#10074; Freeze motion';
   const st = $('windOn').checked ? 3 : (ATTR.length ? 2 : 1); for (const b of document.querySelectorAll('.steps button')) b.classList.toggle('on', +b.dataset.s === st); }
 function setStep(n){ SIM = null; FROZEN = false; GHOST = null;
