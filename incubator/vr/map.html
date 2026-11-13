@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>伦敦地图 · VR</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#111113}
+  #map{position:fixed;inset:0;width:100%;height:100%;border:0}
+  #vr{position:fixed;z-index:20;right:12px;bottom:52px;height:34px;min-width:52px;padding:0 14px;border-radius:999px;
+    border:1px solid #3a3a3e;background:rgba(14,14,16,.94);color:#f5f5f7;font:600 13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+    letter-spacing:.04em;cursor:pointer;box-shadow:0 8px 20px #0004}
+  #vr:hover{background:#2c2c2e}#vr:disabled{opacity:.5;cursor:progress}
+  #err{position:fixed;z-index:20;right:12px;bottom:94px;max-width:340px;padding:8px 12px;border-radius:12px;background:rgba(60,20,20,.95);
+    color:#ffd7d7;font:12px/1.45 -apple-system,"PingFang SC",sans-serif;display:none}
+</style>
+</head>
+<body>
+<!-- The London map, untouched. VR lives only in this folder. -->
+<iframe id="map" title="London map" allow="geolocation; fullscreen; xr-spatial-tracking"></iframe>
+<button id="vr" type="button" title="VR / MR · Meta Quest">VR</button>
+<div id="err"></div>
+<script type="module">
+import { findMap } from './src/map_bridge.js?v=0.4';
+import { openFromMap } from './src/from_map.js?v=0.4';
+const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err');
+frame.src = '../google-map-live/' + location.search + location.hash;
+const lang = () => (frame.contentDocument?.documentElement?.dataset.uiLanguage === 'en' ? 'en' : 'zh');
+const show = m => { err.textContent = m; err.style.display = m ? 'block' : 'none'; if (m) setTimeout(() => show(''), 7000); };
+btn.onclick = async () => {
+  btn.disabled = true; show('');
+  try { const map = await findMap(frame); await openFromMap(map, lang()); }
+  catch (e){ console.error(e); show((lang() === 'zh' ? 'VR 没能打开：' : 'VR could not open: ') + (e.message || e)); }
+  finally { btn.disabled = false; }
+};
+</script>
+</body>
+</html>

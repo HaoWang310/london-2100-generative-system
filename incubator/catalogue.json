@@ -220,8 +220,8 @@
         "en": "VR / MR · Quest 3S"
       },
       "desc": {
-        "zh": "地形、洪水风险、汇水网络和生成的道路变成三维沙盘：电脑上预览，Meta Quest 3S 上进入 MR 放在桌上，或 1:1 走进去。现有 Hydro Lab 伦敦 70 公里和 Tensor Studio 车站 P2 两个场景。",
-        "en": "Terrain, flood risk, drainage and generated streets as a 3D model: preview on the desktop, put it on your table in MR on a Meta Quest 3S, or walk it at 1:1. Scenes: Hydro Lab London 70 km and Tensor Studio station P2."
+        "zh": "地形、洪水风险、汇水网络和生成的道路变成三维沙盘：电脑上预览，Meta Quest 3S 上进入 MR 放在桌上，或 1:1 走进去。另有 map.html：伦敦地图原样嵌入，按 VR 把当前地图带进头显。",
+        "en": "Terrain, flood risk, drainage and generated streets as a 3D model: preview on the desktop, put it on your table in MR on a Meta Quest 3S, or walk it at 1:1. map.html embeds the London map untouched and takes the current view into the headset."
       },
       "tags": [
         {

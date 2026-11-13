@@ -33,7 +33,7 @@ function addPicker(){
   const sel = document.createElement('select'); sel.style.cssText = 'font:inherit;color:#f5f5f7;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 10px';
   if (!scenes.some(s => s.file === url)){ const o = document.createElement('option'); o.value = url; o.textContent = document.querySelector('#tsXR h3')?.textContent.replace('London 2100 · ', '') || url; o.selected = true; sel.append(o); }
   for (const s of scenes){ const o = document.createElement('option'); o.value = s.file; o.textContent = s.title[lang] || s.title.zh; o.selected = s.file === url; sel.append(o); }
-  sel.onchange = () => { const u = new URL(location.href); u.searchParams.set('scene', sel.value); location.href = u.href; };
+  sel.onchange = () => { if (sel.value.endsWith('.html')){ location.href = sel.value; return; } const u = new URL(location.href); u.searchParams.set('scene', sel.value); location.href = u.href; };
   bar.querySelector('h3').after(sel);
 }
 const url = q.get('scene') || 'data/hydro-lab-70km.scene.json';

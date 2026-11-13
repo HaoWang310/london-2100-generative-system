@@ -1,6 +1,13 @@
 {
   "scenes": [
     {
+      "file": "map.html",
+      "title": {
+        "zh": "伦敦地图 → VR（全部功能）",
+        "en": "London map → VR (all features)"
+      }
+    },
+    {
       "file": "data/hydro-lab-70km.scene.json",
       "title": {
         "zh": "Hydro Lab · 伦敦 70 公里",
