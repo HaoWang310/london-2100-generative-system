@@ -75,11 +75,30 @@ function colorFor(layer,palette){
   return {}; // Raster terrain/EA layers are always managed by their own controls.
 }
 
+/* Lighting/weather tint: mix every palette colour except label text towards
+   the tint colours, so night or fog darkens the basemap but labels stay legible. */
+function mixHex(a,b,t){
+  const parse=h=>{let x=String(h).replace('#','');if(x.length===3)x=x.split('').map(c=>c+c).join('');const n=parseInt(x,16);return [(n>>16)&255,(n>>8)&255,n&255];};
+  const A=parse(a),B=parse(b);
+  return '#'+A.map((v,i)=>Math.max(0,Math.min(255,Math.round(v+(B[i]-v)*t))).toString(16).padStart(2,'0')).join('');
+}
+export function tintPalette(palette,tints){
+  if(!tints||!tints.length)return palette;
+  const out={};
+  for(const [key,value] of Object.entries(palette)){
+    if(key==='text'||typeof value!=='string'||!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)){out[key]=value;continue;}
+    let c=value;
+    for(const t of tints)if(t&&t.amount>0)c=mixHex(c,t.color,t.amount);
+    out[key]=c;
+  }
+  return out;
+}
+
 /** All captured layer IDs are from the ORIGINAL OpenFreeMap style. */
 export function createBasemapThemeController(map){
   const baseLayers=new Map();
   const applied=new Map();
-  let active='planning',captured=false;
+  let active='planning',captured=false,tints=[];
   function capture(){
     if(captured)return;
     const style=map.getStyle?.();
@@ -108,7 +127,7 @@ export function createBasemapThemeController(map){
     capture();
     active=normaliseBasemapTheme(mode);
     if(!captured)return false;
-    const palette=BASEMAP_THEMES[active];
+    const palette=tintPalette(BASEMAP_THEMES[active],tints);
     for(const layer of baseLayers.values()){
       if(!map.getLayer?.(layer.id))continue;
       const paint=colorFor(layer,palette);
@@ -144,5 +163,6 @@ export function createBasemapThemeController(map){
     return true;
   }
   return {capture,apply,isBaseLayer:id=>baseLayers.has(id),
+    setTint(next){tints=Array.isArray(next)?next:[];},
     getMode:()=>active,getCapturedCount:()=>baseLayers.size};
 }

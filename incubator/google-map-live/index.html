@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.31.4-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.32.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -942,6 +942,11 @@
     .displayPanel .dpDots{display:flex;gap:4px}
     .displayPanel .dpDots i{width:9px;height:9px;border-radius:50%;border:1px solid #5a5a60}
     .displayPanel .dpHidden{display:none}
+    .displayPanel .dpTile.dpRow{flex-direction:row;justify-content:flex-start;gap:8px;min-height:38px;padding:7px 9px}
+    .displayPanel .dpTile.dpWide{grid-column:1/-1}
+    .displayPanel .dpInfo{margin-left:auto;font-size:10px;color:#a1a1a6;font-variant-numeric:tabular-nums}
+    @media(max-height:820px){.displayPanel .dpSection{padding:11px 13px 10px}.displayPanel .dpTile{min-height:46px}.displayPanel .dpTile.dpRow{min-height:34px}}
+
     .displayPanel .dpSwitchRow{
       display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:#e5e5ea
     }
@@ -991,6 +996,45 @@
       </div>
     </div>
     <div class="dpSection">
+      <div class="dpTitle">Lighting</div>
+      <div class="dpGrid" role="group" aria-label="Lighting">
+        <button class="dpTile dpRow" type="button" data-lighting="dawn" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18M6 14a6 6 0 0 1 12 0M12 4v3M5 8l2 2M19 8l-2 2"/></svg><span>Dawn</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-lighting="day" aria-pressed="true" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg><span>Day</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-lighting="dusk" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18M6 14a6 6 0 0 1 12 0M12 10V4M9 7l3 3 3-3"/></svg><span>Dusk</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-lighting="night" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Night</span>
+        </button>
+        <button class="dpTile dpRow dpWide" type="button" data-lighting="live" aria-pressed="false" disabled
+          title="Follows the real sun position over the map centre, updated every minute">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span>Live</span>
+          <small id="liveLightingInfo" class="dpInfo" data-no-translate></small>
+        </button>
+      </div>
+    </div>
+    <div class="dpSection">
+      <div class="dpTitle">Weather</div>
+      <div class="dpGrid" role="group" aria-label="Weather">
+        <button class="dpTile dpRow" type="button" data-weather="clear" aria-pressed="true" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg><span>Clear sky</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-weather="fog" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16M3 13h18M5 17h14"/></svg><span>Fog</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-weather="rain" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14a4 4 0 1 1 1-7.9A5 5 0 0 1 17.5 8 3.5 3.5 0 0 1 17 15H7z"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/></svg><span>Rain</span>
+        </button>
+        <button class="dpTile dpRow" type="button" data-weather="snow" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg><span>Snow</span>
+        </button>
+      </div>
+    </div>
+    <div class="dpSection">
       <div class="dpTitle">Color theme</div>
       <div class="dpGrid" role="group" aria-label="Map style">
         <button class="dpTile dpTheme" type="button" data-theme="planning" aria-pressed="true"
@@ -1032,7 +1076,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.31.4-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.32.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1395,11 +1439,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.31.4-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.31.4-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.31.4-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.31.4-english';
-  import {createBasemapThemeController,normaliseBasemapTheme} from './scripts/osm_basemap_themes.js?v=3.31.4-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.32.0-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.32.0-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.32.0-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.32.0-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette} from './scripts/osm_basemap_themes.js?v=3.32.0-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1420,7 +1464,7 @@
     }
   }
 
-  const APP_VERSION='3.31.4-english';
+  const APP_VERSION='3.32.0-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1575,6 +1619,10 @@
   let osmStyleReady=false;
   let basemapTheme='planning'; // 03 is the default on every first load.
   let basemapThemeController=null;
+  // Lighting / weather (scripts/map_atmosphere.js). Tints apply to the basemap,
+  // 3D buildings and vehicles only; analysis layers are never tinted.
+  let atmosphere=null;
+  let atmosphereTints=[];
   let syncRasterBasemap=()=>{};
   let googleMarker=null;
   let osmMarker=null;
@@ -1651,6 +1699,62 @@
       tile.setAttribute('aria-pressed',String(tile.dataset.theme===mode));
     }
   }
+  function cityBuildingColour(theme=basemapTheme){
+    return tintPalette({c:theme==='dark'?'#2b2f33':'#ffffff'},atmosphereTints).c;
+  }
+
+  function applyAtmosphereTints(tints){
+    atmosphereTints=Array.isArray(tints)?tints:[];
+    if(!osmMap||!osmStyleReady)return;
+    basemapThemeController?.setTint(atmosphereTints);
+    basemapThemeController?.apply(basemapTheme);
+    const building=cityBuildingColour();
+    if(osmMap.getLayer(CITY_BUILDINGS_LAYER))
+      osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-color',building);
+    if(osmMap.getLayer(CITY_BUILDINGS_BACKGROUND_FILL))
+      osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-color',building);
+    streetTraffic?.setTint?.(atmosphereTints);
+  }
+
+  function syncAtmosphereButtons(state){
+    for(const b of document.querySelectorAll('#displayPanel [data-lighting]')){
+      b.setAttribute('aria-pressed',String(b.dataset.lighting===state.lighting));
+    }
+    for(const b of document.querySelectorAll('#displayPanel [data-weather]')){
+      b.setAttribute('aria-pressed',String(b.dataset.weather===state.weather));
+    }
+    const live=$('liveLightingInfo');
+    if(live){
+      if(state.lighting==='live'&&state.sun){
+        const now=new Date();
+        const hh=String(now.getHours()).padStart(2,'0'),mm=String(now.getMinutes()).padStart(2,'0');
+        live.textContent=hh+':'+mm+' · '+Math.round(state.sun.altitude)+'°';
+      }else live.textContent='';
+    }
+  }
+
+  function initAtmosphere(){
+    if(atmosphere||!osmMap)return;
+    import('./scripts/map_atmosphere.js?v='+APP_VERSION)
+      .then(({createAtmosphere})=>{
+        if(atmosphere)return;
+        atmosphere=createAtmosphere(osmMap,{onTint:applyAtmosphereTints,onChange:syncAtmosphereButtons});
+        for(const b of document.querySelectorAll('#displayPanel [data-lighting]')){
+          b.disabled=false;
+          b.addEventListener('click',()=>atmosphere.setLighting(b.dataset.lighting));
+        }
+        for(const b of document.querySelectorAll('#displayPanel [data-weather]')){
+          b.disabled=false;
+          b.addEventListener('click',()=>atmosphere.setWeather(b.dataset.weather));
+        }
+        syncAtmosphereButtons(atmosphere.state());
+      })
+      .catch(error=>{
+        console.error('Lighting and weather failed to load',error);
+        say('Lighting and weather could not load: '+(error.message||error),true);
+      });
+  }
+
   function setBasemapTheme(mode){
     const next=normaliseBasemapTheme(mode);
     if(basemapTheme===next&&basemapThemeController?.getMode()===next)return;
@@ -1662,7 +1766,7 @@
       // Paint-only; never setStyle() or lose EA/DEM/tensor/site layers.
       basemapThemeController?.apply(next);
       syncRasterBasemap();
-      const building=next==='dark'?'#2b2f33':'#ffffff';
+      const building=cityBuildingColour(next);
       if(osmMap.getLayer(CITY_BUILDINGS_LAYER))
         osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-color',building);
       if(osmMap.getLayer(CITY_BUILDINGS_BACKGROUND_FILL))
@@ -3046,6 +3150,7 @@
           roadSourceId:streetRoadSourceId(),
           beforeLayerId:getFirstSymbolLayerId
         });
+        streetTraffic.setTint?.(atmosphereTints);
         streetTraffic.setEnabled(streetVehiclesEnabled);
       })
       .catch(error=>{
@@ -3094,7 +3199,7 @@
      */
     const nativeHeight=height;
     const nativeBase=base;
-    const nativeColour=basemapTheme==='dark'?'#2b2f33':'#ffffff';
+    const nativeColour=cityBuildingColour();
 
     /*
      * Transparent driver layer: keep the dedicated building source requesting
@@ -3228,13 +3333,13 @@
     }
 
     if(osmMap.getLayer(CITY_BUILDINGS_LAYER)){
-      osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-color',basemapTheme==='dark'?'#2b2f33':'#ffffff');
+      osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-color',cityBuildingColour());
       osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-height',visibleHeight);
       osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-base',visibleBase);
     }
 
     if(osmMap.getLayer(CITY_BUILDINGS_BACKGROUND_FILL)){
-      osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-color',basemapTheme==='dark'?'#2b2f33':'#ffffff');
+      osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-color',cityBuildingColour());
       osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-opacity',fillOpacity);
     }
 
@@ -3662,10 +3767,11 @@
       ensureCityBuildings();
       tuneCityBuildingFarField();
       syncCityView();
+      initAtmosphere();
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.31.4-english')
+      import('./scripts/local_flood_ui.js?v=3.32.0-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3690,7 +3796,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.31.4-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.32.0-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
