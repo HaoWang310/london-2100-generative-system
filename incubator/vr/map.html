@@ -11,28 +11,61 @@
     border:1px solid #3a3a3e;background:rgba(14,14,16,.94);color:#f5f5f7;font:600 13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
     letter-spacing:.04em;cursor:pointer;box-shadow:0 8px 20px #0004}
   #vr:hover{background:#2c2c2e}#vr:disabled{opacity:.5;cursor:progress}
-  #err{position:fixed;z-index:20;right:12px;bottom:94px;max-width:340px;padding:8px 12px;border-radius:12px;background:rgba(60,20,20,.95);
+  #err{position:fixed;z-index:9999;right:12px;bottom:94px;max-width:360px;padding:8px 12px;border-radius:12px;background:rgba(60,20,20,.95);
     color:#ffd7d7;font:12px/1.45 -apple-system,"PingFang SC",sans-serif;display:none}
+  #cover{position:fixed;inset:0;z-index:9997;display:grid;place-items:center;background:#111113;color:rgba(235,235,245,.72);
+    font:14px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;text-align:center;line-height:1.6}
+  #cover b{display:block;color:#f5f5f7;font-size:15px;font-weight:600;margin-bottom:4px}
+  #cover[hidden]{display:none}
 </style>
 </head>
 <body>
-<!-- The London map, untouched. VR lives only in this folder. -->
+<!-- The London map, untouched. VR lives only in this folder.
+     Opens straight into the VR view. ?at=lat,lon,zoom picks the place (else the last place, else central London);
+     ?map=1 starts on the map instead. The 「地图」 button in the VR view shows the map; VR goes back. -->
 <iframe id="map" title="London map" allow="geolocation; fullscreen; xr-spatial-tracking"></iframe>
 <button id="vr" type="button" title="VR / MR · Meta Quest">VR</button>
+<div id="cover"><div><b>London 2100 · VR</b><span id="coverText">正在后台加载伦敦地图…</span></div></div>
 <div id="err"></div>
 <script type="module">
-import { findMap } from './src/map_bridge.js?v=0.5';
-import { openFromMap } from './src/from_map.js?v=0.5';
-const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err');
-frame.src = '../google-map-live/' + location.search + location.hash;
+import { findMap } from './src/map_bridge.js?v=0.6';
+import { openFromMap } from './src/from_map.js?v=0.6';
+const KEY = 'london2100.vr.at', q = new URLSearchParams(location.search);
+const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err'), cover = document.getElementById('cover'), coverText = document.getElementById('coverText');
+const mapQuery = new URLSearchParams(location.search); for (const k of ['at', 'map']) mapQuery.delete(k);
+frame.src = '../google-map-live/' + (mapQuery.toString() ? '?' + mapQuery : '') + location.hash;
 const lang = () => (frame.contentDocument?.documentElement?.dataset.uiLanguage === 'en' ? 'en' : 'zh');
-const show = m => { err.textContent = m; err.style.display = m ? 'block' : 'none'; if (m) setTimeout(() => show(''), 7000); };
-btn.onclick = async () => {
+const show = m => { err.textContent = m; err.style.display = m ? 'block' : 'none'; if (m) setTimeout(() => show(''), 9000); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const parseAt = s => { const a = String(s || '').split(',').map(Number); return a.length >= 2 && a.every(Number.isFinite) ? { lat: a[0], lng: a[1], zoom: a[2] || 15.5 } : null; };
+let storedAt = null; try { storedAt = localStorage.getItem(KEY); } catch (e){}
+
+async function waitForMap(ms = 45000){
+  const t0 = performance.now(); let last;
+  while (performance.now() - t0 < ms){
+    try { if (frame.contentDocument?.readyState === 'complete'){ const m = await findMap(frame, 800); if (m.isStyleLoaded?.() !== false) return m; } } catch (e){ last = e; }
+    await sleep(500); }
+  throw last || new Error('the map did not load');
+}
+
+async function goVR(at){
   btn.disabled = true; show('');
-  try { const map = await findMap(frame); await openFromMap(map, lang()); }
-  catch (e){ console.error(e); show((lang() === 'zh' ? 'VR 没能打开：' : 'VR could not open: ') + (e.message || e)); }
+  try {
+    const map = await waitForMap();
+    if (at){ coverText.textContent = lang() === 'zh' ? '移动到指定位置…' : 'Moving to the place…'; map.jumpTo({ center: [at.lng, at.lat], zoom: at.zoom, pitch: 0, bearing: 0 }); await sleep(300); }
+    await openFromMap(map, lang(), { closeLabel: lang() === 'zh' ? '地图' : 'Map', onClose: () => { cover.hidden = true; } });
+    cover.hidden = true;
+    // remember the place, and put it in the address so a reload shows the same scene
+    const c = map.getCenter(), z = Math.max(15, map.getZoom()), s = c.lat.toFixed(5) + ',' + c.lng.toFixed(5) + ',' + z.toFixed(1);
+    try { localStorage.setItem(KEY, s); } catch (e){}
+    const rest = new URLSearchParams(location.search); rest.delete('at'); rest.delete('map'); history.replaceState(null, '', location.pathname + '?at=' + s + (rest.toString() ? '&' + rest : '') + location.hash);
+  } catch (e){ console.error(e); cover.hidden = true; show((lang() === 'zh' ? 'VR 没能打开：' : 'VR could not open: ') + (e.message || e)); }
   finally { btn.disabled = false; }
-};
+}
+
+btn.onclick = () => goVR(null);   // from the map: the place the map shows now
+if (q.get('map') === '1') cover.hidden = true;
+else goVR(parseAt(q.get('at')) || parseAt(storedAt) || { lat: 51.50733, lng: -0.12768, zoom: 15.5 });
 </script>
 </body>
 </html>
