@@ -1,5 +1,12 @@
 [
   {
+    "id": "0.1.0-79605ae",
+    "version": "0.1.0",
+    "commit": "79605ae38f9dd7433bab92fb228c69a9afbcb03f",
+    "builtAt": "2026-11-13T13:59:07.953Z",
+    "path": "releases/0.1.0-79605ae/"
+  },
+  {
     "id": "0.1.0-ffcf5e2",
     "version": "0.1.0",
     "commit": "ffcf5e208253cf999ba14f36e5c5fcbb36d7811b",
@@ -131,12 +138,5 @@
     "commit": "f211291b96e677de9935854e1bf671d331c206ee",
     "builtAt": "2026-11-13T11:45:03.827Z",
     "path": "releases/0.1.0-f211291/"
-  },
-  {
-    "id": "0.1.0-a10f238",
-    "version": "0.1.0",
-    "commit": "a10f23858aabf94da371ad67dd8336e072bd988a",
-    "builtAt": "2026-11-12T19:02:19.028Z",
-    "path": "releases/0.1.0-a10f238/"
   }
 ]
