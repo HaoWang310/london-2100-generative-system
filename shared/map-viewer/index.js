@@ -14,7 +14,7 @@
 //   viewer.kind                'maplibre' | 'canvas'
 
 import { toWGS84, truncatePolyline, bbox, centroid, pointInPolygon } from '../geo-core/index.js';
-import { ROAD_STYLE, AREA_STYLE, HIERARCHY_ORDER } from './palette.js';
+import { ROAD_STYLE, AREA_STYLE, HIERARCHY_ORDER, restyleDark } from './palette.js';
 import { PROVIDERS, DEFAULT_PROVIDER } from './providers.js';
 
 // Same version and loading method as google-map-live (verified in production).
@@ -83,6 +83,7 @@ async function createMapLibreViewer(el, opts) {
   });
 
   // Mute the basemap so data layers carry the colour.
+  restyleDark(map);
   for (const layer of map.getStyle().layers) {
     if (layer.type === 'symbol' && /poi|housenum/.test(layer.id)) map.setLayoutProperty(layer.id, 'visibility', 'none');
   }

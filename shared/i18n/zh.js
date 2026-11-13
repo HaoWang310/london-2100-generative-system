@@ -89,5 +89,18 @@ export const zh = {
   'preview.input': '输入：示例数据',
   'preview.run': '运行',
   'preview.valid': '输出符合 ScaleBundle 标准',
-  'preview.invalid': '输出不符合标准：{msg}'
+  'preview.invalid': '输出不符合标准：{msg}',
+  "intro.london": "伦敦 2100",
+  "intro.london.sub": "面向 2100 年的伦敦：气候、水系与城市增长",
+  "intro.housing": "住宅危机",
+  "intro.housing.sub": "在有限土地上容纳更多家庭",
+  "intro.agriculture": "粮食挑战",
+  "intro.agriculture.sub": "让城市本身成为生产性景观",
+  "intro.title": "London 2100 · 多尺度城市生成系统",
+  "intro.tagline": "从伦敦全域到区域、场地与建筑，逐级生成水系引导的生产性城市",
+  "intro.credit": "视频素材：",
+  "intro.hint": "按 Enter 进入",
+  "intro.enter": "进入系统",
+  "intro.reopen": "返回开场",
+  "map.loading": "正在加载底图…"
 };

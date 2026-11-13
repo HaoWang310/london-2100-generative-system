@@ -13,6 +13,7 @@ import { childInput, createBundle, validateBundle, defaultParams } from '../shar
 import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-viewer/index.js';
 import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared/i18n/index.js';
 import { h, renderParams, renderStats, toast, download } from '../shared/ui/index.js';
+import { createIntro } from './intro.js';
 import { watchForUpdates, fetchReleases, latestUrl, releaseUrl, versionLabel, describeBuild, BUILD } from './updates.js';
 
 const $ = id => document.getElementById(id);
@@ -490,6 +491,16 @@ async function boot() {
   }
   render();
 
+  // Opening screen. It covers the workspace while the map loads underneath.
+  const intro = createIntro($('intro'), { onEnter: () => setTimeout(() => viewer?.resize(), 50) });
+  const introLang = () => { $('introLang').textContent = getLang() === 'zh' ? 'EN' : '中'; };
+  introLang(); onLangChange(introLang);
+  $('introLang').addEventListener('click', toggleLang);
+  if (!new URLSearchParams(location.search).has('nointro')) intro.show();
+  const reopen = () => { stop(); intro.show(); };
+  $('brandHome').addEventListener('click', reopen);
+  $('brandHome').addEventListener('keydown', e => { if (e.key === 'Enter') reopen(); });
+
   viewer = await createMapViewer($('map'), {
     theme: 'dark',
     onSelect: id => {
@@ -501,6 +512,7 @@ async function boot() {
     onEnter: id => { if (!activeTool) enterNext(id); },
     onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); }
   });
+  $('mapLoading').classList.add('done');
   const cur = store.current();
   viewer.fit(cur.input?.boundary || cur.result?.boundary, { animate: false });
   if (!cur.result) await runEntry(cur, { animate: false });

@@ -10,6 +10,7 @@
 .topbar { grid-area: top; display: flex; align-items: center; gap: 18px; padding: 0 12px 0 16px;
   background: rgba(0,0,0,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--hairline); z-index: 5; }
 .brand { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.brand { cursor: pointer; border-radius: 6px; }
 .brand-mark { width: 10px; height: 10px; border-radius: 3px; background: var(--text); align-self: center; }
 .brand-name { font-weight: 600; letter-spacing: -.01em; }
 .brand-sub { color: var(--text-3); font-size: 12px; }
@@ -102,3 +103,13 @@
   .sidenav { display: none; }
   .crumbs { display: none; }
 }
+
+/* map loading indicator (shimmer bar) */
+.map-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
+  color: var(--text-3); font-size: 12px; pointer-events: none; transition: opacity .4s; }
+.map-loading.done { opacity: 0; }
+.map-loading em { font-style: normal; }
+.map-loading span { width: 140px; height: 2px; border-radius: 2px; overflow: hidden; background: var(--surface-2); position: relative; }
+.map-loading span::after { content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, var(--text-2), transparent); animation: l2100-shimmer 1.2s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes l2100-shimmer { from { transform: translateX(-100%); } to { transform: translateX(250%); } }

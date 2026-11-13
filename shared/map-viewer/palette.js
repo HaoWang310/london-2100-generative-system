@@ -22,3 +22,47 @@ export const AREA_STYLE = {
 };
 
 export const HIERARCHY_ORDER = ['region-link', 'primary', 'branch', 'secondary', 'local', 'integrated'];
+
+// Dark monochrome restyle for any OpenMapTiles-based style (e.g. liberty).
+// Only paint colours change; layers, sources and data stay as they are.
+const BASE = {
+  background: '#0b0b0c', water: '#15171a', waterLine: '#1c1f23',
+  land: '#0f0f10', green: '#121413', building: '#1a1a1c', buildingLine: '#222225',
+  roadMinor: '#1f1f22', roadMajor: '#2c2c2f', rail: '#26262a', boundary: '#3a3a3d',
+  text: '#7c7c82', textHalo: '#0b0b0c'
+};
+
+function pick(id, type) {
+  if (type === 'background') return { 'background-color': BASE.background };
+  if (/water|ocean|river/.test(id)) {
+    if (type === 'fill') return { 'fill-color': BASE.water, 'fill-outline-color': BASE.water };
+    if (type === 'line') return { 'line-color': BASE.waterLine };
+  }
+  if (/building/.test(id)) {
+    if (type === 'fill') return { 'fill-color': BASE.building, 'fill-outline-color': BASE.buildingLine };
+    if (type === 'fill-extrusion') return { 'fill-extrusion-color': BASE.building };
+  }
+  if (/park|wood|forest|grass|landcover|landuse|vegetation|farmland|scrub/.test(id) && type === 'fill') {
+    return { 'fill-color': /park|wood|forest|grass|vegetation|scrub/.test(id) ? BASE.green : BASE.land, 'fill-outline-color': BASE.land };
+  }
+  if (type === 'fill') return { 'fill-color': BASE.land, 'fill-outline-color': BASE.land };
+  if (type === 'line') {
+    if (/boundary|admin/.test(id)) return { 'line-color': BASE.boundary };
+    if (/rail|transit/.test(id)) return { 'line-color': BASE.rail };
+    if (/motorway|trunk|primary|major/.test(id)) return { 'line-color': BASE.roadMajor };
+    return { 'line-color': BASE.roadMinor };
+  }
+  if (type === 'symbol') return { 'text-color': BASE.text, 'text-halo-color': BASE.textHalo, 'icon-opacity': 0.5 };
+  if (type === 'hillshade') return { 'hillshade-shadow-color': '#000', 'hillshade-highlight-color': '#1c1c1e', 'hillshade-accent-color': '#000' };
+  return null;
+}
+
+export function restyleDark(map) {
+  for (const layer of map.getStyle().layers) {
+    const paint = pick(layer.id, layer.type);
+    if (!paint) continue;
+    for (const [k, v] of Object.entries(paint)) {
+      try { map.setPaintProperty(layer.id, k, v); } catch { /* property not valid for this layer */ }
+    }
+  }
+}
