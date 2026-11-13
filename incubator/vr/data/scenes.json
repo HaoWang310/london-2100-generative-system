@@ -15,10 +15,10 @@
       }
     },
     {
-      "file": "osm:51.50733,-0.12768,900",
+      "file": "osm:51.50733,-0.12768",
       "title": {
-        "zh": "OSM · 伦敦市中心（实时）",
-        "en": "OSM · central London (live)"
+        "zh": "OSM 伦敦（移动加载）",
+        "en": "OSM London (streaming)"
       }
     },
     {

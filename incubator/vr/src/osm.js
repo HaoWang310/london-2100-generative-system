@@ -7,7 +7,7 @@
 const TILEJSON = 'https://tiles.openfreemap.org/planet', FALLBACK = 'https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf', Z = 14, R_EARTH = 6378137;
 
 // ---------------------------------------------------------------- MVT decoder (spec 2.1)
-function decodeMVT(buf){
+export function decodeMVT(buf){
   const b = new Uint8Array(buf); let p = 0;
   const vint = () => { let r = 0, s = 0, c; do { c = b[p++]; r += (c & 0x7f) * 2 ** s; s += 7; } while (c & 0x80); return r; };
   const skip = w => { if (w === 0) vint(); else if (w === 1) p += 8; else if (w === 2) p += vint(); else if (w === 5) p += 4; };
@@ -74,13 +74,13 @@ export function earcut(ring){
 const WALL = [0.86, 0.84, 0.81], ROOF = [0.95, 0.94, 0.92];
 /** list: [{ ring: [[x, y]…] closed, plan metres, y north; h: top; h0: base }] · cx, cy: plan point at the model centre · W, H: keep only centroids inside 0…W × 0…H
  *  Duplicates (a building cut by a tile edge arrives once per tile) are dropped. Returns { mesh: { v, i } in xr_view's layout, count }. */
-export function buildingMesh(list, cx, cy, W, H){
+export function buildingMesh(list, cx, cy, W, H, x0 = 0, y0 = 0){
   const v = [], idx = [], seen = new Set(); let count = 0;
   for (const it of list){ let ring = it.ring; if (ring.length < 4) continue;
     if (area2(ring) > 0) ring = ring.slice().reverse();   // walls below assume clockwise (y north)
     const h = Math.max(3, it.h || 8), h0 = Math.max(0, Math.min(h - 1, it.h0 || 0));
     let mx = 0, my = 0; for (const q of ring){ mx += q[0]; my += q[1]; } mx /= ring.length; my /= ring.length;
-    if (mx < 0 || my < 0 || mx > W || my > H) continue;
+    if (mx < x0 || my < y0 || mx >= x0 + W || my >= y0 + H) continue;
     const key = Math.round(mx * 2) + ':' + Math.round(my * 2) + ':' + Math.round(h); if (seen.has(key)) continue; seen.add(key); count++;
     for (let i = 0; i < ring.length - 1; i++){ const a = ring[i], b = ring[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); if (L < 0.05) continue;
       const n = [-dy / L, 0, -dx / L], o = v.length / 12, k = 0.92 + 0.08 * Math.abs(n[0]), col = WALL.map(c => c * k);
@@ -102,8 +102,30 @@ const landClass = props => { const c = props.class || props.subclass; if (!c) re
   if (/farm/.test(c)) return 'farmland'; if (/wetland/.test(c)) return 'wetland'; if (/sand|beach/.test(c)) return 'sand';
   return FILL[c] ? c : null; };
 
+/** Paints OSM ground layers of decoded tiles onto a 2D context. proj(tile, extent) → (q → [u, v] pixels); pxPerM scales line widths.
+ *  Returns the building features [{ f, t }] (not painted). Tiles: [{ x, y, layers }]. */
+export function paintLayers(g, tiles, proj, pxPerM){
+  const fills = [], lines = [], bld = [];
+  const path = (parts, P) => { g.beginPath(); for (const part of parts){ part.forEach((q, i) => { const [u, v] = P(q); i ? g.lineTo(u, v) : g.moveTo(u, v); }); } };
+  for (const t of tiles){ const L = t.layers;
+    for (const lname of ['landcover', 'landuse', 'park']) for (const f of L[lname] || []) if (f.type === 3){ const c = lname === 'park' ? 'park' : landClass(f.props); if (c) fills.push({ z: lname === 'landuse' ? 0 : 1, c: FILL[c], f, t }); }
+    for (const f of L.water || []) if (f.type === 3) fills.push({ z: 3, c: FILL.water, f, t });
+    for (const f of L.waterway || []) if (f.type === 2) lines.push({ z: 0, w: f.props.class === 'river' ? 14 : 4, c: FILL.water, f, t });
+    for (const f of L.transportation || []){ if (f.type !== 2) continue; const st = ROAD[f.props.class]; if (!st) continue; if (f.props.brunnel === 'tunnel') continue;
+      lines.push({ z: 1 + Object.keys(ROAD).length - Object.keys(ROAD).indexOf(f.props.class), w: st[0], c: st[1], f, t, casing: !/path|track|rail|transit/.test(f.props.class) }); }
+    for (const f of L.building || []) if (f.type === 3 && !f.props.hide_3d) bld.push({ f, t }); }
+  fills.sort((a, b) => a.z - b.z);
+  for (const it of fills){ g.fillStyle = it.c; path(it.f.parts, proj(it.t, it.f.extent)); g.fill('evenodd'); }
+  g.lineCap = g.lineJoin = 'round';
+  lines.sort((a, b) => a.z - b.z);
+  for (const it of lines) if (it.casing){ g.strokeStyle = '#d2cdc4'; g.lineWidth = Math.max(1, (it.w + 2.5) * pxPerM); path(it.f.parts, proj(it.t, it.f.extent)); g.stroke(); }
+  for (const it of lines){ g.strokeStyle = it.c; g.lineWidth = Math.max(1, it.w * pxPerM); path(it.f.parts, proj(it.t, it.f.extent)); g.stroke(); }
+  return bld;
+}
+export const GROUND_COLOUR = GROUND;
+
 // ---------------------------------------------------------------- load
-async function tileTemplate(){
+export async function tileTemplate(){
   try { const r = await fetch(TILEJSON); if (r.ok){ const j = await r.json(); if (j.tiles && j.tiles[0]) return j.tiles[0]; } } catch (e){}
   return FALLBACK;
 }
@@ -147,22 +169,7 @@ export async function osmScene(lat, lon, r = 900, opt = {}){
   // ground texture
   const PX = opt.texture || 2048, cv = document.createElement('canvas'); cv.width = cv.height = PX; const g = cv.getContext('2d'), s = PX / S;
   g.fillStyle = GROUND; g.fillRect(0, 0, PX, PX);
-  const path = (parts, plan) => { g.beginPath(); for (const part of parts){ part.forEach((q, i) => { const [x, y] = plan(q), u = x * s, v = (S - y) * s; i ? g.lineTo(u, v) : g.moveTo(u, v); }); } };
-  const fills = [], lines = [], bld = [];
-  for (const t of tiles){ const L = t.layers;
-    for (const lname of ['landcover', 'landuse', 'park']) for (const f of L[lname] || []) if (f.type === 3){ const c = lname === 'park' ? 'park' : landClass(f.props); if (c) fills.push({ z: lname === 'landuse' ? 0 : 1, c: FILL[c], f, t }); }
-    for (const f of L.water || []) if (f.type === 3) fills.push({ z: 3, c: FILL.water, f, t });
-    for (const f of L.waterway || []) if (f.type === 2) lines.push({ z: 0, w: f.props.class === 'river' ? 14 : 4, c: FILL.water, f, t });
-    for (const f of L.transportation || []){ if (f.type !== 2) continue; const st = ROAD[f.props.class]; if (!st) continue; if (f.props.brunnel === 'tunnel') continue;
-      lines.push({ z: 1 + Object.keys(ROAD).length - Object.keys(ROAD).indexOf(f.props.class), w: st[0], c: st[1], f, t, casing: !/path|track|rail|transit/.test(f.props.class) }); }
-    for (const f of L.building || []) if (f.type === 3 && !f.props.hide_3d) bld.push({ f, t }); }
-  fills.sort((a, b) => a.z - b.z);
-  for (const it of fills){ g.fillStyle = it.c; path(it.f.parts, toPlan(it.t, it.f.extent)); g.fill('evenodd'); }
-  g.lineCap = g.lineJoin = 'round';
-  lines.sort((a, b) => a.z - b.z);
-  for (const it of lines) if (it.casing){ g.strokeStyle = '#d2cdc4'; g.lineWidth = Math.max(1, (it.w + 2.5) * s); path(it.f.parts, toPlan(it.t, it.f.extent)); g.stroke(); }
-  for (const it of lines){ g.strokeStyle = it.c; g.lineWidth = Math.max(1, it.w * s); path(it.f.parts, toPlan(it.t, it.f.extent)); g.stroke(); }
-
+  const bld = paintLayers(g, tiles, (t, ext) => { const plan = toPlan(t, ext); return q => { const [x, y] = plan(q); return [x * s, (S - y) * s]; }; }, s);
   // buildings → prisms (outer rings only; MVT outer rings have negative area once y points north)
   const list = [];
   for (const { f, t } of bld){ const plan = toPlan(t, f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0;

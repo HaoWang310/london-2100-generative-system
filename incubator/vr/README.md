@@ -7,15 +7,26 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - 这个文件夹**只读场景文件**，不引用其他 app 的代码，格式见 [`docs/SCENE-FORMAT.md`](docs/SCENE-FORMAT.md)。所以可以和 Tensor Studio 同时开发：那边继续改算法，这边改三维和交互，互不影响。
 - 它和其他 app 在同一个网址下，以后可以直接读取正在运行的 Tensor Studio，不用再导出文件。
 
-## 从伦敦地图进入 VR（v0.4，打通流程）
+## 移动加载（v0.7，简单版）
+
+像网页地图一样：只加载你看着的那一片，移动到哪里就加载到哪里，远处不显示。
+- 数据：OpenFreeMap 的 OSM 矢量瓦片（z14，伦敦一块约 1.5 公里），每块画成地面贴图（道路、水面、绿地）并把建筑按 `render_height` 拉伸。代码在 `src/stream.js`，瓦片管理在 `src/xr_view.js` 的 `updateTiles`
+- **桌面沙盘**：桌上是一个圆形区域（半径 0.45 m）。抓住模型拖动，就像拖网页地图，新的瓦片自动加载，离开范围的自动卸载；双手缩放改变看到的范围（最大半径 2.5 公里）
+- **1:1 漫游**：只加载你周围 1.5 公里，边走边加载
+- 电脑预览：右键拖动平移，滚轮缩放
+- 同时最多 40 块瓦片（约几万栋建筑），保证 Quest 3S 流畅
+- 目前地面是 OSM 底图，**还没有地图里的分析图层**（洪水、汇水等），这些要在完整版里按瓦片加进来；要看带图层的静态截图，用 `map.html?mode=capture`
+
+## 从伦敦地图进入 VR（v0.4 起）
 
 打开 **`map.html`**：https://haowang310.github.io/london-2100-generative-system/incubator/vr/map.html
 
-**打开就直接是 VR 界面**（地图在后台加载），方便反复检查：
+**打开就直接是 VR 界面**（默认是上面的移动加载；地图在后台加载），方便反复检查：
 - `map.html?at=51.5007,-0.1246,16`：指定位置（纬度、经度、缩放）
 - 不写 `at`：用上次的位置；第一次用伦敦市中心
 - 每次打开后网址会自动带上当前位置，刷新就是同一个场景
-- VR 界面右上角「地图」：回到地图，调整好再按右下角 VR
+- VR 界面右上角「地图」：回到地图，地图会跳到你在 VR 里最后看的位置；调整好再按右下角 VR
+- `map.html?mode=capture`：用截图模式（当前地图画面和图层 + 建筑，一块固定区域）
 - `map.html?map=1`：先显示地图
 
 它把伦敦地图（`../google-map-live/`）原样嵌进来，地图的所有功能照常可用，**地图主程序一行都没改**。VR 按钮在这个外层页面上（右下角坐标上方）：
@@ -66,6 +77,7 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 | `src/map_bridge.js` | 从嵌入的地图页面里找到 MapLibre 地图对象 |
 | `src/from_map.js` | 截图、建筑、打开视图 |
 | `src/osm.js` | OpenFreeMap 矢量瓦片解码、地面贴图、建筑体块 |
+| `src/stream.js` | 移动加载：按瓦片读取、绘制、拉伸建筑 |
 | `data/*.scene.json` | 场景；`data/scenes.json` 是顶栏菜单的列表 |
 | `tools/build-scene-hydro-lab.py` | 从 `../google-map-live/assets` 生成 Hydro Lab 场景（需要 numpy 和 Pillow；参数是网格倍数，默认 6 = 300 m） |
 | `tools/export-from-tensor-studio.mjs` | 无界面运行 Tensor Studio，导出场景（在本文件夹里运行） |

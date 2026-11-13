@@ -12,9 +12,9 @@
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
 <script type="module">
-import { open } from './src/xr_view.js';
+import { open } from './src/xr_view.js?v=0.7';
 import { apiFromScene } from './src/scene.js';
-import { osmScene } from './src/osm.js';
+import { streamApi } from './src/stream.js?v=0.7';
 const q = new URLSearchParams(location.search), lang = q.get('lang') === 'en' ? 'en' : 'zh';
 const msg = document.getElementById('msg'), drop = document.getElementById('drop');
 let view = null;
@@ -40,11 +40,10 @@ const url = q.get('scene') || 'data/hydro-lab-70km.scene.json';
 fetch('data/scenes.json').then(r => r.json()).then(j => { scenes = j.scenes || []; addPicker(); }).catch(() => {});
 const fail = e => { msg.hidden = false; msg.textContent = (lang === 'zh' ? '无法载入 ' : 'Could not load ') + url + ' — ' + e.message; console.error(e); };
 if (url.startsWith('osm:')){
-  // osm:lat,lon[,half side in metres] — live OpenStreetMap (OpenFreeMap tiles) around that point
+  // osm:lat,lon — live OpenStreetMap (OpenFreeMap tiles), loaded around wherever you look (src/stream.js)
   const [lat, lon, r] = url.slice(4).split(',').map(Number), name = q.get('name');
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) fail(new Error('osm:lat,lon'));
-  else osmScene(lat, lon, r || 900, { tiles: q.get('tiles') || undefined, onProgress: t => { msg.textContent = (lang === 'zh' ? '载入 OpenStreetMap… ' : 'Loading OpenStreetMap… ') + t; } })
-    .then(api => showApi(api, 'OSM · ' + (name || lat.toFixed(4) + ', ' + lon.toFixed(4)))).catch(fail);
+  else showApi(streamApi(lat, lon, { tiles: q.get('tiles') || undefined }), 'OSM · ' + (name || lat.toFixed(4) + ', ' + lon.toFixed(4)) + (lang === 'zh' ? ' · 移动加载' : ' · streaming'));
 } else {
   fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(s => show(s, url.split('/').pop())).catch(fail);
