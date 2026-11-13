@@ -1463,6 +1463,14 @@
   </div>
 
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
+  <!-- (vr) the current map in VR / MR (Meta Quest): ../vr/src/from_map.js -->
+  <button id="vrButton" class="vrButton" type="button" data-no-translate title="VR / MR · Meta Quest">VR</button>
+  <style>
+    .vrButton{position:absolute;z-index:10;right:12px;bottom:52px;height:34px;min-width:52px;padding:0 14px;
+      border-radius:999px;border:1px solid #3a3a3e;background:rgba(14,14,16,.94);color:#f5f5f7;
+      font:600 13px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:.04em;cursor:pointer;box-shadow:0 8px 20px #0004}
+    .vrButton:hover{background:#2c2c2e}.vrButton:disabled{opacity:.5;cursor:progress}
+  </style>
 
 <script type="module">
   import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.35.3-english';
@@ -4590,6 +4598,19 @@
   $('osmMap').style.display='block';
   $('osmStructureToggle').checked=osmStructuresHidden;
   initOSM();
+
+  // (vr) take the map as it is now into VR / MR; nothing here changes, closing VR returns to this exact view
+  $('vrButton').addEventListener('click',async()=>{
+    const btn=$('vrButton');
+    if(!osmMap||!osmStyleReady||$('osmMap').style.display==='none'){say('VR needs the OSM map to be ready',true);return;}
+    btn.disabled=true;
+    try{
+      const lang=document.documentElement.dataset.uiLanguage==='en'?'en':'zh';
+      const vr=await import('../vr/src/from_map.js?v=0.3');
+      await vr.openFromMap(osmMap,lang);
+    }catch(error){console.error(error);say('VR: '+(error.message||error),true);}
+    finally{btn.disabled=false;}
+  });
 </script>
 </body>
 </html>

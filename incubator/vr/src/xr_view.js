@@ -13,10 +13,10 @@
 // Hands: pinch = grab, two pinches = scale.
 
 const T = {
-  zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
+  zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
     hud: ['握持键 / 捏合：抓取模型', '双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前'] },
-  en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
+  en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
     hud: ['Grip / pinch: grab the model', 'Both hands: scale and turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back'] }
 };
@@ -69,7 +69,7 @@ export function buildTerrain(S, opt = {}){
   for (const [x, z] of [[-w, -h], [w, -h], [-w, h], [w, h]]) v.push(x, -depth / exag, z, 0, 0, 0, -1, 0, ...PLINTH, 0);
   idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
   void base;
-  return { v: new Float32Array(v), i: new Uint32Array(idx), size: Math.max(nx, ny) * cell, cx, cy, hi: H.hi - H.lo };
+  return { v: new Float32Array(v), i: new Uint32Array(idx), size: (Math.max(nx, ny) - 1) * cell, cx, cy, hi: H.hi - H.lo };
 }
 
 /** Streets as flat ribbons draped on the terrain. lines: [{ pts:[[x,y]…], w:[m…] | number, kind:1|2|'fixed'|'bridge' }] */
@@ -146,10 +146,10 @@ export function open(api, lang = 'zh', opt = {}){
   if (OPEN) return OPEN;
   const L = T[lang] || T.zh;
   const VW = api.view || {};
-  const st = { flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
+  const st = { bld: true, flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
   const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
   let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
-  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : fixedLabel;
+  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : api.extra ? L.buildings : fixedLabel;
   const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#111113;color:#f5f5f7;font:13px/1.4 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif}
 #tsXR canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #tsXR .bar{position:absolute;left:16px;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
@@ -160,10 +160,10 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR button.go{background:#0a84ff;border-color:#0a84ff;font-weight:600}#tsXR button.go:hover{background:#409cff}
 #tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;right:16px;color:rgba(235,235,245,.6);font-size:12px;pointer-events:none}
 #tsXR label{display:flex;gap:6px;align-items:center;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px}
-#tsXR input[type=range]{width:90px;accent-color:#f5f5f7}`;
+#tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}`;
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
-<button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
+<button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="bld" class="on">${L.buildings}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
 <span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${L.close} ✕</button>`}</div><div class="note"></div>`;
   document.body.append(root);
   const cv = root.querySelector('canvas'), note = root.querySelector('.note');
@@ -172,8 +172,9 @@ export function open(api, lang = 'zh', opt = {}){
   const prog = program(gl, VS, FS), tex = program(gl, VT, FT);
 
   // state
+  const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
-  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
+  const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
   const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
@@ -182,7 +183,8 @@ export function open(api, lang = 'zh', opt = {}){
   // buttons
   const btn = k => root.querySelector(`button[data-k="${k}"]`);
   const sync = () => { btn('flood').classList.toggle('on', st.flood); btn('drain').classList.toggle('on', st.drain); btn('fixed').classList.toggle('on', st.fixed);
-    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; };
+    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; btn('bld').hidden = !api.extra; btn('bld').classList.toggle('on', st.bld); };
+  btn('bld').onclick = () => { st.bld = !st.bld; sync(); };
   btn('flood').onclick = () => { st.flood = !st.flood; refresh(true); sync(); };
   btn('drain').onclick = () => { st.drain = !st.drain; refresh(true); sync(); };
   btn('fixed').onclick = () => { st.fixed = !st.fixed; sync(); };
@@ -190,13 +192,27 @@ export function open(api, lang = 'zh', opt = {}){
   if (!(terrain.hi > 0.5)) rng.parentElement.hidden = true;
   sync();
 
+  function groundTexture(canvas){ const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    return t; }
+  function groundQuad(){ const x = api.groundHalf ? api.groundHalf[0] : terrain.cx, z = api.groundHalf ? api.groundHalf[1] : terrain.cy, vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-x, 0, z, 0, 0, x, 0, z, 1, 0, -x, 0, -z, 0, 1, x, 0, -z, 1, 1]), gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return vao; }
+
   // drawing, shared by the page and the headset
   const unit = 1 / terrain.size;   // the model is 1 unit across in the page preview
   function drawScene(P, V, M, o){
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.uP, false, P); gl.uniformMatrix4fv(prog.u.uV, false, V); gl.uniformMatrix4fv(prog.u.uM, false, M);
     gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1);
-    gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.bindVertexArray(tMesh.vao); gl.drawElements(gl.TRIANGLES, tMesh.n, gl.UNSIGNED_INT, 0);
+    gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
+    if (gTex){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4); }
+    gl.bindVertexArray(tMesh.vao); gl.drawElements(gl.TRIANGLES, tMesh.n, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
+    if (xMesh && st.bld){ gl.bindVertexArray(xMesh.vao); gl.drawElements(gl.TRIANGLES, xMesh.n, gl.UNSIGNED_INT, 0); }
+    if (gTex){ gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gTex); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(gQuad); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.useProgram(prog.p); }
     gl.uniform1f(prog.u.uWidth, o.width); gl.uniform1f(prog.u.uLift, o.lift);
     if (st.fixed && fMesh.n){ gl.bindVertexArray(fMesh.vao); gl.drawElements(gl.TRIANGLES, fMesh.n, gl.UNSIGNED_INT, 0); }
     if (rMesh.n){ gl.bindVertexArray(rMesh.vao); gl.drawElements(gl.TRIANGLES, rMesh.n, gl.UNSIGNED_INT, 0); }
@@ -271,7 +287,7 @@ export function open(api, lang = 'zh', opt = {}){
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
           else { if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], 0); void r; M.yaw += a; } if (dz(ay)){ const k = Math.exp(-dz(ay) * dt * 1.2); M.s = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k)); } } }
-        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(); grabs.clear(); base = null; }
+        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
