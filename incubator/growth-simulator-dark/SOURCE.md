@@ -10,3 +10,9 @@ The final outcome replays the release run of the Growth Simulator event by event
 The data that was inlined as base64 in the page is now in `data/` as the same bytes (raw deflate `.z`, PNG layers, the DM Sans font). The page fetches them: the final outcome first, the variation ground after. The code and the rules are unchanged; a variation with the release settings (`#test`) gives the same result as the original file. The original single file is in the git history (commit before this one).
 
 原先以 base64 内嵌在页面中的数据，已原样拆到 `data/`（deflate `.z`、PNG 底图、DM Sans 字体），由页面按需载入：先载入最终结果，再载入变体数据。代码与规则未改；以发布参数运行变体（`#test`）的结果与原文件完全一致。原单文件版本保留在 git 历史中。
+
+## 2026-11-13 · 界面 · Layout
+
+Laid out like the London map: the map fills the window, a floating panel on the left holds the controls (mode, run, the magnet curves, every slider) and one on the right holds the display (playback, view, layers, the readout). Both panels collapse. The year and population sit in a pill at the bottom right. The rules and the data are unchanged.
+
+界面改为与伦敦地图一致：地图铺满窗口，左侧浮动面板为控制（模式、运行、吸引力曲线、全部滑块），右侧浮动面板为显示（播放、视图、图层、数据）。两侧面板均可收起，右下角胶囊显示年份与人口。规则与数据未改。
