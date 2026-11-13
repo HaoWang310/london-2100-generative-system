@@ -214,9 +214,12 @@ export function createBuildingShadowLayer(map,maplibregl,{
       }
       const prevFb=gl.getParameter(gl.FRAMEBUFFER_BINDING);
       const vp=gl.getParameter(gl.VIEWPORT);
-      const main=args?.defaultProjectionData?.mainMatrix||args;
-      // Vertices are relative to `origin`; fold the translation in at double precision.
-      const T=new Float64Array([1,0,0,0,0,1,0,0,0,0,1,0,origin.x,origin.y,0,1]);
+      // MapLibre 6: modelViewProjectionMatrix takes world-pixel coordinates
+      // (mercator x 512 x 2^zoom). Vertices are relative to `origin`; scale and
+      // translation are folded in at double precision.
+      let main=args?.modelViewProjectionMatrix,scale=512*Math.pow(2,map.getZoom());
+      if(!main){main=args?.defaultProjectionData?.mainMatrix||args;scale=1;}
+      const T=new Float64Array([scale,0,0,0,0,scale,0,0,0,0,1,0,origin.x*scale,origin.y*scale,0,1]);
       const matrix=new Float32Array(multiply(main,T));
 
       // Pass 1: opaque shadow mask, so overlaps never darken twice.
