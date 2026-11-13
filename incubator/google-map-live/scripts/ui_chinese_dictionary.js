@@ -885,4 +885,6 @@ export const CHINESE_UI = {
   "Ocean": "海洋",
   "Warm": "暖色",
   "Vivid": "鲜艳",
+  "Building shadows": "建筑阴影",
+  "Ground shadows of the 3D buildings, following the lighting setting (none at night)": "三维建筑在地面上的阴影，随光照设置变化（夜晚没有阴影）",
 };
