@@ -173,6 +173,42 @@
           "#lang"
         ]
       }
+    },
+    {
+      "id": "slime-mould-loop",
+      "href": "incubator/slime-mould-loop/",
+      "cover": "assets/catalogue/slime-mould-loop.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "黏菌模拟 · 整条环线车站单元",
+        "en": "Slime mould · station cells, the whole loop"
+      },
+      "desc": {
+        "zh": "全部 17 个车站作为起点，轨迹沿环线走廊加粗成脉络，并在车站周围围合成单元；第 900 步暂停，识别并可导出单元。",
+        "en": "All 17 stations seed the mould; trails thicken into veins along the orbital corridor and close into cells around the stations. Pauses at step 900, finds the cells and saves them."
+      },
+      "tags": [
+        {
+          "zh": "黏菌",
+          "en": "Slime mould"
+        },
+        {
+          "zh": "车站单元",
+          "en": "Station cells"
+        },
+        {
+          "zh": "整条环线",
+          "en": "Whole loop"
+        }
+      ],
+      "owner": "sawhneyshreyadesign-1602",
+      "embed": {
+        "langStorageKey": "loopCellsLang",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
+        "hide": [
+          "#langbar"
+        ]
+      }
     }
   ]
 }
