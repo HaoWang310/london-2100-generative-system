@@ -1,5 +1,12 @@
 [
   {
+    "id": "0.1.0-ca8ed24",
+    "version": "0.1.0",
+    "commit": "ca8ed24664b95959f5eee777d7d36a6cbeae5768",
+    "builtAt": "2026-11-13T13:02:46.126Z",
+    "path": "releases/0.1.0-ca8ed24/"
+  },
+  {
     "id": "0.1.0-45103f7",
     "version": "0.1.0",
     "commit": "45103f7c233d5d34190e7dcf942a30e0596775af",
