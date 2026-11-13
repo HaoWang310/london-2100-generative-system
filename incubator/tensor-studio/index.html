@@ -423,6 +423,21 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
 #pmCount{min-width:58px;text-align:right;color:#a1a1a6;font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:760px){#pmBar{bottom:8px;gap:8px;padding:8px 10px}.pmSpeed,#pmCount{display:none}}
 @media(prefers-reduced-motion:reduce){.pmStep{transition:none}}
+
+/* (v8.11) step 5: the three kinds of node */
+.pmKinds{display:flex;flex-direction:column;gap:6px;margin:0 0 8px}
+.pmKinds button{display:grid;grid-template-columns:18px 1fr;column-gap:9px;row-gap:2px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--fill);color:var(--ink);font:inherit;padding:9px 11px;border-radius:10px;cursor:pointer}
+.pmKinds button.on{border-color:var(--accent);background:rgba(10,132,255,.12)}
+.pmKinds button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pmKT{font-size:12.5px;font-weight:500}
+.pmKD{grid-column:2;font-size:11.5px;line-height:1.45;color:var(--grey)}
+.pmDot{grid-row:1 / span 2;align-self:start;margin-top:2px;width:14px;height:14px;border-radius:50%;box-sizing:border-box}
+.pmDot.main{border:3px solid #0a84ff;background:transparent}
+.pmDot.sec{width:10px;height:10px;margin:4px 2px 0;border:2px solid #64d2ff}
+.pmDot.edge{border:3px solid #0a84ff;border-bottom-color:transparent;transform:rotate(180deg)}
+.pmKRow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--grey);margin:0 2px 2px}
+.pmLink{border:0;background:none;color:var(--accent);font:inherit;font-size:11.5px;padding:2px 0;cursor:pointer}
+.pmLink:disabled{color:var(--grey2);cursor:default}
 </style></head><body>
 <aside class="displayPanel" id="displayPanel" role="region" aria-label="Display">
  <div class="dpSection"><div class="dpTitle">Mode</div>
@@ -453,7 +468,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.10" data-en="Station P2 example · v8.10">车站 P2 示例 · v8.10</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.11" data-en="Station P2 example · v8.11">车站 P2 示例 · v8.11</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -616,10 +631,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.10.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.10.0';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.10.0';
-const V = '8.10.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.11.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.11.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.11.0';
+const V = '8.11.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
