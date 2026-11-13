@@ -65,6 +65,42 @@
           "#uiLanguageSwitch"
         ]
       }
+    },
+    {
+      "id": "tensor-studio",
+      "href": "incubator/tensor-studio/",
+      "cover": "",
+      "status": "incubating",
+      "title": {
+        "zh": "张量场工作室",
+        "en": "Tensor Studio"
+      },
+      "desc": {
+        "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路（分叉、T / Y 路口、环形广场）。",
+        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors (branching, T / Y junctions, circuses)."
+      },
+      "tags": [
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        },
+        {
+          "zh": "风场",
+          "en": "Wind"
+        },
+        {
+          "zh": "道路生长",
+          "en": "Street growth"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "tensorStudio.uiLanguage",
+        "langButton": "#package-bar .language-switch button[data-language=\"{lang}\"]",
+        "hide": [
+          "#package-bar .language-switch"
+        ]
+      }
     }
   ]
 }

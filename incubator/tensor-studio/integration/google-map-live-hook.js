@@ -1,22 +1,30 @@
-/* Tensor Studio from the London map.
+/* Reference hook: open Tensor Studio from the London map (incubator/google-map-live).
  *
- * After a site is drawn and confirmed, this collects what Tensor Studio needs for it from the
- * map that is already open (no new data service):
- *   · streets, rail, water, watercourses, buildings: the OpenFreeMap vector tiles already loaded
+ * NOT wired in yet: copy it into google-map-live/scripts/ when you connect the two apps.
+ * It needs nothing from Tensor Studio's code; the two talk only through
+ *   window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang, close, fail}
+ * set on the map page before it frames ../tensor-studio/index.html (same origin).
+ * Tensor Studio builds its own data from that (scripts/site_builder.js).
+ *
+ * What it collects from the map that is already open:
+ *   · streets, rail, water, watercourses, buildings: the loaded OpenFreeMap vector tiles
  *     (OpenMapTiles schema: transportation, water, waterway, building);
- *   · terrain: the same OS Terrain 50 raster (50 m) that the flood and parcel tools use;
- *   · wind: the London Luton typical year baked in Tensor Studio v8.
- * It builds Tensor Studio's site data (tensor_studio_builder.js) and opens tensor_studio.html
- * over the map. Tensor Studio's own growth engine runs unchanged inside it.
+ *   · terrain: the OS Terrain 50 raster (50 m) the flood and parcel tools use, as a sampler.
+ *
+ * Wiring (as tried on 13 Nov, v3.34.5):
+ *   index.html, site card:  <button id="tensorStudioOpen" ...>Tensor Studio · Street growth</button>
+ *                           (and add #tensorStudioEntry to the CSS rule that hides the card's other rows)
+ *   index.html, createLocalFloodUI({... onOpenTensorStudio: ({polygon}) =>
+ *       import('./scripts/tensor_studio_site.js').then(m => m.openTensorStudio({map: osmMap, polygon, assetUrl,
+ *         demBounds: DRAINAGE_3857, demWidth: DRAINAGE_3857.baseWidth50m, demHeight: DRAINAGE_3857.baseHeight50m, say})) })
+ *   local_flood_ui.js: enable 'tensorStudioOpen' with the parcel button; on click call
+ *       onOpenTensorStudio({polygon}) once the boundary is confirmed and prepared.
  */
-import {buildTensorSite} from './tensor_studio_builder.js?v=3.34.5-english';
-
-const POLYGON_CLIPPING = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm';
 const R = 6378137;
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const merc = (lon, lat) => [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + clamp(lat, -85, 85) * Math.PI / 360))];
 
-let demCache = null, windCache = null, clipCache;
+let demCache = null;
 
 /* ---------------------------------------------------------------- OS Terrain 50, as parcel_generator_worker.js decodes it */
 async function demSampler({url, bounds, width, height}){
@@ -104,7 +112,7 @@ function onKey(event){ if (event.key === 'Escape' && overlay) closeTensorStudio(
 export function closeTensorStudio(){
   document.removeEventListener('keydown', onKey);
   overlay?.remove(); overlay = null; frame = null;
-  try { delete window.__TENSOR_SITE__; } catch (error){ window.__TENSOR_SITE__ = undefined; }
+  try { delete window.__TENSOR_SITE_INPUT__; } catch (error){ window.__TENSOR_SITE_INPUT__ = undefined; }
 }
 function showFrame(){
   const wait = overlay.querySelector('#tensorStudioWait'); if (wait) wait.remove();
@@ -112,16 +120,12 @@ function showFrame(){
     frame = document.createElement('iframe');
     frame.title = 'Tensor Studio';
     frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#000';
-    frame.src = new URL('../tensor_studio.html?v=3.34.5-english', import.meta.url).href;
+    frame.src = new URL('../../tensor-studio/index.html', import.meta.url).href;   // from google-map-live/scripts/
     overlay.append(frame);
     frame.addEventListener('load', () => { try { frame.contentWindow.addEventListener('keydown', onKey); } catch (error){} });
-  } else frame.contentWindow.location.reload();
+  }
 }
 
-async function build(keepBuildings){
-  const {D, meta} = buildTensorSite({...session.features, ring: session.ring, elevation: session.elevation, wind: session.wind, clip: session.clip, keepBuildings});
-  window.__TENSOR_SITE__ = {D, meta, lang: lang(), keepBuildings, close: closeTensorStudio, rebuild: ({keepBuildings: k}) => build(Boolean(k)).then(showFrame).catch(fail)};
-}
 function fail(error){
   console.error('Tensor Studio failed', error);
   session?.say?.('Tensor Studio could not open this site: ' + (error?.message || error), true);
@@ -134,16 +138,10 @@ export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWi
   ensureOverlay();
   try {
     const features = collectSiteFeatures(map, ring);
-    const [elevation, wind, clip] = await Promise.all([
-      demSampler({url: new URL(assetUrl('assets/drainage_area/dem50_log16.webp'), location.href).href, bounds: demBounds, width: demWidth, height: demHeight})
-        .catch(error => { console.warn('Tensor Studio: no elevation', error); return null; }),
-      windCache || fetch(new URL(assetUrl('assets/tensor_studio/luton_wind.json'), location.href).href).then(r => { if (!r.ok) throw new Error('Weather year HTTP ' + r.status); return r.json(); }),
-      clipCache !== undefined ? clipCache : import(POLYGON_CLIPPING).then(m => m.default || m).catch(() => null)
-    ]);
-    windCache = wind; clipCache = clip;
-    session = {ring, features, elevation, wind, clip, say};
-    await build(false);
+    const elevation = await demSampler({url: new URL(assetUrl('assets/drainage_area/dem50_log16.webp'), location.href).href,
+      bounds: demBounds, width: demWidth, height: demHeight}).catch(error => { console.warn('Tensor Studio: no elevation', error); return null; });
+    session = {say};
+    window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail};
     showFrame();
-    say?.('Tensor Studio opened on the selected site: ' + window.__TENSOR_SITE__.meta.areaHa + ' ha, ' + window.__TENSOR_SITE__.meta.anchors + ' anchors.');
-  } catch (error){ session = session || {say}; session.say = say; fail(error); }
+  } catch (error){ session = {say}; fail(error); }
 }

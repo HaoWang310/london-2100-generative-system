@@ -1,7 +1,7 @@
 // Tensor Studio site builder: projection accuracy, the baked data contract, anchors and zones.
-// Run: node scripts/test_tensor_studio_builder.mjs
+// Run: node scripts/test_site_builder.mjs
 import assert from 'node:assert/strict';
-import {wgs84ToBNG, buildTensorSite, MAX_SIDE_M} from './tensor_studio_builder.js';
+import {wgs84ToBNG, buildTensorSite, MAX_SIDE_M} from './site_builder.js';
 
 // 1. WGS84 → British National Grid within the Helmert transform's stated accuracy (~5 m)
 const bigBen = wgs84ToBNG(-0.124625, 51.500729);

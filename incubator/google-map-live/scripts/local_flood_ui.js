@@ -879,7 +879,7 @@ export function createLocalFloodUI({
   // Colour of the context buildings around the site: the same colour as the
   // city's 3D buildings for the current colour theme / lighting.
   getContextBuildingColour=()=>'#ffffff',
-  onOpenParcelGenerator,onOpenTensorStudio
+  onOpenParcelGenerator
 }){
   let drawing=false;
   let editingSelection=false;
@@ -4305,7 +4305,7 @@ export function createLocalFloodUI({
   function setButtons(){
     const parcelDisabled=!polygon?.[0]||polygon[0].length<4||
       !selectionConfirmed||selectionDirty||!prepared||drawing||isPreparingSelection||dragVertexIndex>=0;
-    for(const id of ['parcelGeneratorOpen','tensorStudioOpen']){
+    for(const id of ['parcelGeneratorOpen']){
       const button=$(id);
       if(button)button.disabled=parcelDisabled;
     }
@@ -5613,15 +5613,6 @@ export function createLocalFloodUI({
   for(const id of ['parcelGeneratorOpen']){
     $(id)?.addEventListener('click',launchParcelGenerator);
   }
-  // Tensor Studio grows streets on the same confirmed site (tensor_studio_site.js).
-  $('tensorStudioOpen')?.addEventListener('click',()=>{
-    if(!polygon?.[0]||polygon[0].length<4||drawing||!selectionConfirmed||selectionDirty||!prepared||isPreparingSelection)return;
-    try{
-      onOpenTensorStudio?.({polygon:polygon.map(r=>closeRing(r).map(([lng,lat])=>[lng,lat]))});
-    }catch(error){
-      status('Tensor Studio initialization failed: '+(error?.message||error),true);
-    }
-  });
   $('localFloodDraw').addEventListener('click',startDrawing);
   $('localFloodFinish').addEventListener('click',()=>finishAndConfirmSelection());
   $('localFloodEnterSite')?.addEventListener('click',()=>enterSelectionIsolate());
