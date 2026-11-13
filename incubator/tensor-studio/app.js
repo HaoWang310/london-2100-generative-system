@@ -1172,9 +1172,9 @@ function rampAt(stops, t){ const s = stops.map(hex), x = clamp(t, 0, 1) * (s.len
 function envRange(k){ const A = ENV[k], M = D.landMask; let lo = Infinity, hi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ lo = Math.min(lo, A[i]); hi = Math.max(hi, A[i]); } return [lo, hi]; }
 // (v8.7) drawn 4 times finer than the 10 m grid, each value read between the cells (bilinear), so the maps are smooth
 // instead of a mosaic of 10 m squares; the runoff is lightly smoothed first, so its flow paths come out as soft lines
-const ENV_UP = 4;
+const ENV_UP = 4;   // beyond the land the maps are faint (12 %), so the map round the site stays readable
 function envImg(k){ if (ENVIMG[k]) return ENVIMG[k];
-  const M = D.landMask, Z = ENV.Z, [lo, hi] = envRange(k), A = k === 'Q' ? blur(ENV.Q, 0.8) : ENV[k];
+  const M = D.landMask, Z = ENV.Z, [lo, hi] = envRange(k), A = k === 'Q' ? blur(ENV.Q, 1.4) : ENV[k];
   let qlo = lo, qhi = hi; if (k === 'Q'){ qlo = Infinity; qhi = -Infinity; for (let i = 0; i < N; i++) if (!M || M[i]){ qlo = Math.min(qlo, A[i]); qhi = Math.max(qhi, A[i]); } }
   // per cell: the value (0..1), the hill shade (elevation only), the land (1) or not
   const T = new Float32Array(N), SH = k === 'Z' ? new Float32Array(N) : null, LM = new Float32Array(N);
@@ -1188,10 +1188,10 @@ function envImg(k){ if (ENVIMG[k]) return ENVIMG[k];
   const ramp = ENVRAMP[k];
   for (let py = 0; py < H; py++){ const w = ny - 1 - ((py + 0.5) / ENV_UP - 0.5);
     for (let px = 0; px < W; px++){ const u = (px + 0.5) / ENV_UP - 0.5, t = bil(T, u, w), col = rampAt(ramp, t);
-      let a = k === 'Q' ? Math.pow(clamp((t - 0.42) / 0.5, 0, 1), 1.3) : col[3];   // runoff: only the stronger flow paths, as lines
+      let a = k === 'Q' ? Math.pow(clamp((t - 0.5) / 0.45, 0, 1), 1.1) : col[3];   // runoff: only the stronger flow paths, as lines
       if (SH){ const sh = bil(SH, u, w); col[0] = clamp(col[0] * sh, 0, 255); col[1] = clamp(col[1] * sh, 0, 255); col[2] = clamp(col[2] * sh, 0, 255); }
       const lm = bil(LM, u, w), o = 4 * (py * W + px);
-      d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a * (0.4 + 0.6 * lm)); } }
+      d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a * (0.12 + 0.88 * lm)); } }
   gg.putImageData(im, 0, 0); return (ENVIMG[k] = oc); }
 function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
   g.drawImage(envImg(ENVSEL), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }

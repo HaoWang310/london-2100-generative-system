@@ -79,6 +79,11 @@ export function landMaskOf(D){ const { nx, ny, cell } = D.grid, M = new Uint8Arr
   return M; }
 
 const SUMMER = [5, 6, 7], WINTER = [11, 0, 1], COLD = ['N', 'NE', 'E'];
+// a blur that counts only the land: the sum over the land / the share of land in the kernel
+function blurLand(a, mask, nx, ny, sg){ if (!mask) return blur(a, nx, ny, sg); const N = nx * ny, am = new Float32Array(N), m = new Float32Array(N);
+  for (let i = 0; i < N; i++){ m[i] = mask[i] ? 1 : 0; am[i] = a[i] * m[i]; }
+  const ba = blur(am, nx, ny, sg), bm = blur(m, nx, ny, sg), bp = blur(a, nx, ny, sg), o = new Float32Array(N);
+  for (let i = 0; i < N; i++) o[i] = bm[i] > 0.02 ? ba[i] / bm[i] : bp[i]; return o; }
 function percentile(a, mask, p){ const v = []; for (let i = 0; i < a.length; i++) if (!mask || mask[i]) v.push(a[i]); if (!v.length) return 1; v.sort((x, y) => x - y); return v[Math.min(v.length - 1, Math.floor(p * v.length))] || 1; }
 
 export function environmentFields(D, landMask = null){
@@ -96,6 +101,9 @@ export function environmentFields(D, landMask = null){
   const S = D.dirs.map(d => dec16(d.S, 1e3)), eS = energy(SUMMER), eW = energy(WINTER, COLD);
   const V = new Float32Array(N), Cw = new Float32Array(N);
   for (let i = 0; i < N; i++){ let v = 0, w = 0; for (let k = 0; k < S.length; k++){ v += eS[k] * S[k][i]; w += eW[k] * S[k][i]; } V[i] = v; Cw[i] = w; }
+  // (v8.7) the wind speed-up grids carry stripes and steps along the grid axes (they are cast cell by cell); a 30 m smoothing
+  // within the land removes them without carrying the water's values onto it
+  { const sV = blurLand(V, landMask, nx, ny, 3), sW = blurLand(Cw, landMask, nx, ny, 3); V.set(sV); Cw.set(sW); }
   const vM = percentile(V, landMask, 0.98), wM = percentile(Cw, landMask, 0.98);
   const C = new Float32Array(N);
   for (let i = 0; i < N; i++){ V[i] = clamp(V[i] / vM, 0, 1); Cw[i] = clamp(Cw[i] / wM, 0, 1); C[i] = 0.6 * (1 - Cw[i]) + 0.4 * V[i]; }
