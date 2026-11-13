@@ -376,6 +376,10 @@ function curvePose(curve,pos){
 /* ----------------------------------------------------------- simulation */
 
 const IDM={a:1.4,b:2.6,T:1.15,s0:2.4};
+/* Traffic signals (UK sequence: green, amber, red, red+amber, green). Seconds. */
+const SIGNAL_TIMING={main:16,side:11,amber:3,allRed:1.8};
+const SIGNAL_CLUSTER_M=28;
+const SIGNAL_LAMP={red:'#ff2b2b',amber:'#ffb000',green:'#22d36a',off:'#3a3c41'};
 const LOOKAHEAD_M=70;
 const SPAWN_TRACK_GAP_M=16;
 const SPAWN_CLEAR_M=9;
@@ -409,6 +413,8 @@ export function createTrafficSim({seed=1}={}){
   let densityClock=1e9;
   let targetVisible=0,targetTotal=0;
   const junctionOcc=new Map();
+  let controllers=[];
+  let approachMap=new Map();
   const stats={spawned:0,removed:0,spawnedVisible:0,removedVisible:0,released:0};
 
   function chooseSpec(link){
@@ -476,7 +482,8 @@ export function createTrafficSim({seed=1}={}){
     v.plan={link:nl,d:choice.d,lane:Math.min(nlane,lanes-1),r0,r1,maxV,uTurn:isU,deadEnd,
       nodeKey:node.key||(Math.round(node.x)+','+Math.round(node.y)),
       // Only real junctions (3+ roads) need right-of-way; a plain class change does not.
-      controlled:node.links.length>=3};
+      controlled:node.links.length>=3,
+      signal:approachMap.get(link.uid+':'+d)||null};
   }
 
   function buildCurve(v){
@@ -559,6 +566,14 @@ export function createTrafficSim({seed=1}={}){
     const occ=junctionOcc.get(p.nodeKey);
     if(!occ||!occ.size)return true;
     const fromKey=trackKey(v.seg.link,v.seg.d,v.seg.lane);
+    if(p.signal){
+      // Signals already separate the movements; only wait for vehicles of the
+      // other phase that are still clearing the junction.
+      for(const o of occ.values()){
+        if(o.fromKey!==fromKey&&o.phase>=0&&o.phase!==p.signal.phase)return v.wait>2.2;
+      }
+      return true;
+    }
     let otherRank=-1;
     for(const o of occ.values())if(o.fromKey!==fromKey)otherRank=Math.max(otherRank,o.rank);
     if(otherRank<0)return true;
@@ -566,6 +581,93 @@ export function createTrafficSim({seed=1}={}){
     if(myRank>otherRank)return true;
     // Bounded wait: a queue at a junction always clears.
     return v.wait>(myRank>=3?1.0:2.2);
+  }
+
+  function signalState(ctrl,phase){
+    const {amber,allRed}=SIGNAL_TIMING;
+    const t=((simTime+ctrl.offset)%ctrl.cycle+ctrl.cycle)%ctrl.cycle;
+    const g0=ctrl.g0,s1=g0+amber+allRed,g1=ctrl.g1;
+    const end1=s1+g1+amber;
+    if(phase===0){
+      if(t<g0)return 'green';
+      if(t<g0+amber)return 'amber';
+      if(t>=ctrl.cycle-allRed)return 'redamber';
+      return 'red';
+    }
+    if(t>=s1&&t<s1+g1)return 'green';
+    if(t>=s1+g1&&t<end1)return 'amber';
+    if(t>=s1-allRed&&t<s1)return 'redamber';
+    return 'red';
+  }
+
+  /* Signalised junctions: where two main roads (tertiary or above) meet, or a
+     major road crosses at a four-way junction. Nodes of one junction (dual
+     carriageways, slip lanes) share one controller. */
+  function buildSignals(g){
+    controllers=[];
+    approachMap=new Map();
+    if(!g)return;
+    const candidates=g.nodes.filter(n=>{
+      if(n.links.length<3)return false;
+      const r=n.links.map(l=>l.link.type.rank).sort((a,b)=>b-a);
+      return r[1]>=2||(r[0]>=3&&n.links.length>=4);
+    });
+    const used=new Set();
+    for(const seed of candidates){
+      if(used.has(seed))continue;
+      const group=[seed];used.add(seed);
+      for(let i=0;i<group.length;i++){
+        for(const m of candidates){
+          if(!used.has(m)&&Math.hypot(m.x-group[i].x,m.y-group[i].y)<SIGNAL_CLUSTER_M){
+            used.add(m);group.push(m);
+          }
+        }
+      }
+      const members=new Set(group);
+      const approaches=[];
+      for(const n of group){
+        for(const {link,atStart} of n.links){
+          const d=atStart?-1:1;
+          if(link.oneway&&link.oneway!==d)continue;
+          const from=d>0?link.a:link.b;
+          if(members.has(from)||link.len<12)continue;
+          const end=lanePose(link,d,0,link.len-1);
+          approaches.push({link,d,h:end.h,rank:link.type.rank});
+        }
+      }
+      if(approaches.length<2)continue;
+      const lead=approaches.reduce((a,b)=>(b.rank>a.rank||(b.rank===a.rank&&b.link.len>a.link.len))?b:a);
+      for(const ap of approaches){
+        let diff=Math.abs(angleDiff(ap.h,lead.h));
+        diff=Math.min(diff,Math.PI-diff);
+        ap.phase=diff<Math.PI/4?0:1;
+      }
+      if(!approaches.some(a=>a.phase===1)||!approaches.some(a=>a.phase===0))continue;
+      const g0=SIGNAL_TIMING.main,g1=SIGNAL_TIMING.side;
+      const cycle=g0+g1+2*(SIGNAL_TIMING.amber+SIGNAL_TIMING.allRed);
+      const ctrl={id:controllers.length,g0,g1,cycle,offset:rand()*cycle,approaches:[]};
+      for(const ap of approaches){
+        const {link,d}=ap;
+        const r0=Math.max(1.2,Math.min(link.len*0.35,3+link.type.laneW));
+        const stopS=link.len-r0-0.6;
+        const w=link.type.laneW,lanes=link.lanes;
+        const off0=laneOffset(link,0);
+        const centre=s2=>{
+          const q=lanePose(link,d,0,s2);
+          const nx=Math.sin(q.h),ny=-Math.cos(q.h);
+          return {x:q.x-nx*off0,y:q.y-ny*off0,h:q.h,nx,ny};
+        };
+        const kerb=(link.oneway?lanes*w/2:lanes*w)+0.75;
+        const pc=centre(Math.max(0,stopS-1.0));
+        const lc=centre(stopS);
+        const entry={ctrl,phase:ap.phase,stopS,link,d,
+          pole:{x:pc.x+pc.nx*kerb,y:pc.y+pc.ny*kerb,h:pc.h},
+          line:{x:lc.x,y:lc.y,h:lc.h,a:link.oneway?-lanes*w/2:0,b:link.oneway?lanes*w/2:lanes*w}};
+        ctrl.approaches.push(entry);
+        approachMap.set(link.uid+':'+d,entry);
+      }
+      controllers.push(ctrl);
+    }
   }
 
   function step(dt,view){
@@ -592,7 +694,7 @@ export function createTrafficSim({seed=1}={}){
         :v.seg.link.type.speed;
       v0*=v.driver*v.spec.speed;
 
-      let gap=999,dv=0,heldByJunction=false;
+      let gap=999,dv=0,heldByJunction=false,heldBySignal=false;
       const consider=(ahead,leader)=>{
         const g=ahead-halfL-leader.spec.L/2;
         if(g<gap){gap=g;dv=v.v-leader.v;}
@@ -623,6 +725,31 @@ export function createTrafficSim({seed=1}={}){
             const g=Math.max(0,toCurve-0.3);
             if(g<gap){gap=g;dv=v.v;}
           }
+          const sig=p.signal;
+          if(sig){
+            const state=signalState(sig.ctrl,sig.phase);
+            const toLine=sig.stopS-v.pos-halfL;
+            if(state!=='green'&&toLine>-0.4){
+              // Amber: stop only if it can be done comfortably; otherwise carry on.
+              const canStop=toLine>v.v*v.v/(2*3.4);
+              if(state!=='amber'||canStop){
+                const g=Math.max(0,toLine-0.2);
+                if(g<gap){gap=g;dv=v.v;}
+                if(toLine<45)heldBySignal=true;
+              }
+            }else if(state==='green'&&toCurve<10){
+              // Do not block the box: wait at the line if the exit has no room.
+              const nk=trackKey(p.link,p.d,p.lane);
+              const exit=tracks.get(nk);
+              if(exit&&exit.some(e=>e.v!==v&&e.s<p.r1+e.v.spec.L/2+v.spec.L+1.5&&e.s>-4)){
+                if(v.wait<3){
+                  heldByJunction=true;
+                  const g=Math.max(0,toLine-0.2);
+                  if(g<gap){gap=g;dv=v.v;}
+                }
+              }
+            }
+          }
         }
       }else{
         const c=v.seg;
@@ -642,7 +769,9 @@ export function createTrafficSim({seed=1}={}){
       if(travel<v.v*dt*0.5&&gap<900)v.v=Math.min(v.v,travel/Math.max(dt,1e-3));
 
       if(heldByJunction)v.wait+=dt;
-      if(v.v<0.25){v.stopped+=dt;}else{v.stopped=0;}
+      v.heldBySignal=heldBySignal;
+      // Waiting at a red light is normal, not a jam: it never triggers a release.
+      if(v.v<0.25){if(!heldBySignal)v.stopped+=dt;}else{v.stopped=0;}
 
       advance(v,travel,view);
     }
@@ -686,7 +815,11 @@ export function createTrafficSim({seed=1}={}){
         if(curve.nodeKey){
           let occ=junctionOcc.get(curve.nodeKey);
           if(!occ){occ=new Map();junctionOcc.set(curve.nodeKey,occ);}
-          occ.set(v.id,{fromKey:trackKey(curve.from.link,curve.from.d,curve.from.lane),rank:curve.from.link.type.rank});
+          occ.set(v.id,{
+            fromKey:trackKey(curve.from.link,curve.from.d,curve.from.lane),
+            rank:curve.from.link.type.rank,
+            phase:v.plan.signal?v.plan.signal.phase:-1
+          });
         }
       }else{
         const c=v.seg;
@@ -787,6 +920,7 @@ export function createTrafficSim({seed=1}={}){
   function setGraph(next){
     graph=next;
     densityClock=1e9;
+    buildSignals(next);
     if(!next)return;
     for(const v of vehicles){
       if(v.seg.type==='link'){
@@ -823,6 +957,8 @@ export function createTrafficSim({seed=1}={}){
     get vehicles(){return vehicles;},
     get time(){return simTime;},
     get targets(){return {visible:targetVisible,total:targetTotal};},
+    get signals(){return controllers;},
+    signalState,
     stats
   };
 }
@@ -991,6 +1127,29 @@ export function vehicleParts(v,lod){
     add(rect(-L/2-0.03,-L/2+0.06,side*(l-0.25)-0.14,side*(l-0.25)+0.14),0.7,0.86,TAILLIGHT,'light');
   }
   plates(L/2+0.04,-L/2-0.04,0.28);
+  return parts;
+}
+
+/* Traffic light on a pole, lamps facing the approaching traffic (local -x). */
+export function signalParts(state,flat){
+  const parts=[];
+  const add=(ring,base,top,color,kind)=>parts.push({ring,base,top,color,kind});
+  const lit={
+    red:state==='red'||state==='redamber',
+    amber:state==='amber'||state==='redamber',
+    green:state==='green'
+  };
+  if(flat){
+    const color=lit.green?SIGNAL_LAMP.green:lit.amber&&!lit.red?SIGNAL_LAMP.amber:SIGNAL_LAMP.red;
+    add(rect(-0.35,0.35,-0.35,0.35),0,0,color,'light');
+    return parts;
+  }
+  add(rect(-0.06,0.06,-0.06,0.06),0,2.95,'#2b2d31','trim');
+  add(rect(-0.11,0.11,-0.17,0.17),1.98,2.95,'#18191c','trim');
+  add(rect(-0.14,-0.11,-0.21,0.21),1.94,2.99,'#101113','trim');
+  for(const [name,b,t] of [['red',2.67,2.89],['amber',2.37,2.59],['green',2.07,2.29]]){
+    add(rect(-0.19,-0.13,-0.1,0.1),b,t,lit[name]?SIGNAL_LAMP[name]:SIGNAL_LAMP.off,'light');
+  }
   return parts;
 }
 
@@ -1387,6 +1546,29 @@ export function createStreetTraffic(map,{
         let gr=groups.get(key);
         if(!gr){gr={color:part.color,base,top,kind:part.kind,polys:[]};groups.set(key,gr);}
         gr.polys.push([ring]);
+      }
+    }
+    if(map.getZoom()>=15.5){
+      const pushPart=(origin,h,part)=>{
+        const cos=Math.cos(h),sin=Math.sin(h);
+        const ring=part.ring.map(([f,l])=>toLngLat(origin.x+f*cos+l*sin,origin.y+f*sin-l*cos));
+        ring.push(ring[0]);
+        const key=part.color+'|'+part.base+'|'+part.top+'|'+part.kind;
+        let gr=groups.get(key);
+        if(!gr){gr={color:part.color,base:part.base,top:part.top,kind:part.kind,polys:[]};groups.set(key,gr);}
+        gr.polys.push([ring]);
+      };
+      for(const ctrl of sim.signals){
+        for(const ap of ctrl.approaches){
+          const sp=map.project(toLngLat(ap.pole.x,ap.pole.y));
+          if(sp.x<-80||sp.x>w+80||sp.y<-80||sp.y>h+80)continue;
+          const state=sim.signalState(ctrl,ap.phase);
+          for(const part of signalParts(state,flat))pushPart(ap.pole,ap.pole.h,part);
+          pushPart(ap.line,ap.line.h,{
+            ring:rect(-0.15,0.15,ap.line.a,ap.line.b),
+            base:0,top:flat?0:0.03,color:'#f7f7f5',kind:'wheel'
+          });
+        }
       }
     }
     const features=[...groups.values()]

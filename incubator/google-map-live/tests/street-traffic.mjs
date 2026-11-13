@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import {
   buildRoadGraph,createTrafficSim,clipPolylineToSquare,vehicleParts,VEHICLE_SPECS,
-  decodeVectorTileLayer,roadLinesFromTile
+  decodeVectorTileLayer,roadLinesFromTile,signalParts
 } from '../scripts/street_traffic.js';
 
 // ---- vector-tile decoding (synthetic protobuf) ------------------------------
@@ -96,6 +96,12 @@ const view={
 const sim=createTrafficSim({seed:7});
 sim.setGraph(graph);
 sim.populate(5);
+assert.ok(sim.signals.length>=3,'main-road junctions must get traffic signals');
+const approachOf=new Map();
+for(const ctrl of sim.signals)for(const ap of ctrl.approaches)approachOf.set(ap.link.uid+':'+ap.d,{ctrl,ap});
+let redRuns=0,maxSignalWait=0,sawRed=false,sawGreen=false;
+const signalWait=new Map();
+const lastFront=new Map();
 
 const DT=1/30,SECONDS=240;
 let prev=new Map();
@@ -130,7 +136,24 @@ for(let i=0;i<SECONDS/DT;i++){
   }
   if(overlap)overlapFrames++;
   for(const {v} of list){
-    const s=v.v<0.25?(stoppedFor.get(v.id)||0)+DT:0;
+    // Red-light running: front bumper crosses the stop line while the light is red.
+    if(v.seg.type==='link'){
+      const hit=approachOf.get(v.seg.link.uid+':'+v.seg.d);
+      const front=v.pos+v.spec.L/2;
+      if(hit){
+        const state=sim.signalState(hit.ctrl,hit.ap.phase);
+        if(state==='red')sawRed=true;
+        if(state==='green')sawGreen=true;
+        const before=lastFront.get(v.id);
+        if(state==='red'&&before!=null&&before<hit.ap.stopS-0.05&&front>hit.ap.stopS+0.3&&t>=v.releaseUntil)redRuns++;
+      }
+      lastFront.set(v.id,front);
+    }else lastFront.delete(v.id);
+    const w=v.heldBySignal&&v.v<0.25?(signalWait.get(v.id)||0)+DT:0;
+    signalWait.set(v.id,w);
+    if(w>maxSignalWait)maxSignalWait=w;
+    // Waiting at a red light is not a jam.
+    const s=v.v<0.25&&!v.heldBySignal?(stoppedFor.get(v.id)||0)+DT:(v.v<0.25?(stoppedFor.get(v.id)||0):0);
     stoppedFor.set(v.id,s);
     if(s>maxStopped)maxStopped=s;
     if(t>20){speedSum+=v.v;speedN++;}
@@ -146,6 +169,7 @@ const meanSpeed=speedSum/Math.max(1,speedN);
 const meanVisible=visibleSum/Math.max(1,visibleN);
 const report={
   poppedIn,poppedOut,overlapFrames,maxStopped:+maxStopped.toFixed(1),
+  signals:sim.signals.length,redRuns,maxSignalWait:+maxSignalWait.toFixed(1),
   meanSpeed:+meanSpeed.toFixed(2),meanVisible:+meanVisible.toFixed(1),
   vehicles:sim.vehicles.length,targets:sim.targets,stats:sim.stats
 };
@@ -154,7 +178,11 @@ assert.equal(poppedIn,0,'no vehicle may appear on screen after the starting popu
 assert.equal(poppedOut,0,'no vehicle may vanish on screen: '+JSON.stringify(report));
 assert.equal(overlapFrames,0,'vehicles in one lane must not overlap: '+JSON.stringify(report));
 assert.ok(maxStopped<14,'no vehicle may stay stopped for long: '+JSON.stringify(report));
-assert.ok(meanSpeed>3.5,'traffic must keep moving: '+JSON.stringify(report));
+assert.ok(sawRed&&sawGreen,'signals must cycle');
+assert.equal(redRuns,0,'no vehicle may run a red light: '+JSON.stringify(report));
+const cycle=sim.signals[0].cycle;
+assert.ok(maxSignalWait<cycle+6,'a red-light wait must end within one cycle: '+JSON.stringify(report));
+assert.ok(meanSpeed>3.0,'traffic must keep moving: '+JSON.stringify(report));
 assert.ok(meanVisible>=sim.targets.visible*0.6,'screen should hold most of the target: '+JSON.stringify(report));
 
 // ---- every vehicle type produces a model at every detail level --------------
@@ -167,6 +195,11 @@ for(const [key,spec] of Object.entries(VEHICLE_SPECS)){
     }
   }
   assert.ok(vehicleParts({spec,color:'#fff'},'detail').length>vehicleParts({spec,color:'#fff'},'medium').length);
+}
+
+for(const state of ['green','amber','red','redamber']){
+  assert.ok(signalParts(state,false).length>=5);
+  assert.equal(signalParts(state,true).length,1);
 }
 
 console.log('PASS street traffic: '+JSON.stringify(report));
