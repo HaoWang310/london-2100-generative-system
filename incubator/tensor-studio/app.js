@@ -1218,7 +1218,7 @@ function envImg(k){ if (ENVIMG[k]) return ENVIMG[k];
       const lm = bil(LM, u, w), o = 4 * (py * W + px);
       d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a * (0.12 + 0.88 * lm)); } }
   gg.putImageData(im, 0, 0); return (ENVIMG[k] = oc); }
-function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
+function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; if (window.ENVANIM && ENVANIM.on && ENVANIM.k === ENVSEL) return;   // (v8.9) being animated: drawn by scripts/env_anim.js g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
   g.drawImage(envImg(ENVSEL), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function syncEnv(){ for (const b of document.querySelectorAll('#tgEnv button')){ b.classList.toggle('on', b.dataset.env === ENVSEL); if (!ENV && b.dataset.env !== 'off') b.disabled = true; }
   const key = document.getElementById('envKey'); if (!key) return; key.hidden = !ENV || ENVSEL === 'off'; if (key.hidden) return;
@@ -1457,6 +1457,7 @@ function render(now){
   if ($('lWind').checked && !FROZEN) stepWind();
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.drawImage(L_base, 0, 0);
+  if (window.ENVANIM && ENVANIM.on) ENVANIM.draw(ctx, now);   // (v8.9) the analysis map, animated (step 2)
   if ($('lFlow').checked) ctx.drawImage(L_flow, 0, 0);
   if ($('lWidth').checked && FINISHED){ if (widthDirty) drawWidth(); ctx.drawImage(L_width, 0, 0); }
   if (GHOST && $('lStreets').checked){ const ga = GHOSTT ? clamp(1 - (now - GHOSTT) / 1600, 0, 1) : 1; if (ga > 0){ ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = ga;
