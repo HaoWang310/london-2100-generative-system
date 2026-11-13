@@ -344,6 +344,85 @@ window.addEventListener('DOMContentLoaded',()=>{
 @media(max-height:780px){.displayPanel .dpSection{padding:9px 12px 8px}.displayPanel .dpTile{min-height:42px}.displayPanel .dpTile.dpRow{min-height:30px}}
 @media(max-width:760px){#panel.ts-panel{width:min(330px,calc(100vw - 28px));max-height:52dvh}.displayPanel{top:auto;bottom:52px;width:180px;max-height:40dvh}}
 @media(prefers-reduced-motion:reduce){.displayPanel .dpSw,.displayPanel .dpSw::after{transition:none}}
+
+/* (v8.7) the process mode: the steps in the left panel, the timeline at the bottom */
+body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud{display:none!important}
+.pmMode{display:flex;gap:3px;background:var(--fill);border-radius:10px;padding:3px;margin:0 0 14px}
+.pmMode button{flex:1;border:0;background:transparent;color:var(--grey);font:inherit;font-size:12.5px;font-weight:500;padding:6px 8px;border-radius:8px;cursor:pointer}
+.pmMode button.on{background:var(--raise);color:var(--ink)}
+.pmMode button:focus-visible,.pmHead:focus-visible,#pmBar button:focus-visible,.pmActs button:focus-visible,.pmChips button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#pmBox{margin:0 0 8px}
+.pmTop{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px}
+.pmTop h2{margin:0!important}
+#pmAll{border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:12px;padding:5px 11px;border-radius:999px;cursor:pointer}
+#pmAll:hover{background:var(--fill)}
+.pmList{list-style:none;margin:0;padding:0}
+.pmStep{border:1px solid var(--line);border-radius:12px;margin:0 0 6px;background:var(--card);transition:border-color .15s}
+.pmStep.cur{border-color:var(--accent)}
+.pmHead{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:none;color:var(--ink);font:inherit;font-size:13px;font-weight:500;text-align:left;cursor:pointer;border-radius:12px}
+.pmStep.todo .pmHead{color:var(--grey2);cursor:default}
+.pmStep.cur .pmHead{cursor:default}
+.pmNum{flex:0 0 20px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--fill);color:var(--grey);font-variant-numeric:tabular-nums}
+.pmNum svg{width:12px;height:12px}
+.pmStep.cur .pmNum{background:var(--accent);color:#fff}
+.pmStep.done .pmNum{background:var(--ink);color:var(--card)}
+.pmFlag{margin-left:auto;font-size:11px;font-weight:500;color:#ff9f0a}
+.pmStep.cur .pmFlag{color:var(--accent)}
+.pmSum{font-size:11.5px;color:var(--grey);padding:0 12px 10px 42px;margin-top:-5px}
+.pmSum:empty{display:none}
+.pmBody{display:none;padding:0 12px 12px}
+.pmStep.cur .pmBody{display:block}
+.pmStep.cur .pmSum{display:none}
+.pmNote{font-size:12px;line-height:1.55;color:var(--grey);margin:0 0 10px}
+.pmOut{font-size:12px;line-height:1.55;color:var(--ink);margin:8px 0 2px}
+.pmOut ul{margin:6px 0 0;padding:0 0 0 16px;color:var(--grey)}
+.pmOut li{margin:2px 0}
+.pmCard{padding:4px 12px!important;margin:6px 0 0;background:var(--fill)!important;border:0!important}
+.pmCard > .row,.pmCard > label.lay{border-color:var(--line)!important}
+.pmCard .flood-num{margin:8px 0}
+.pmCard .btns{margin:8px 0}
+.pmChips{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 4px}
+.pmChips button{border:1px solid var(--line);background:transparent;color:var(--grey);font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;cursor:pointer}
+.pmChips button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.pmActs{display:flex;gap:6px;margin-top:12px}
+.pmActs button{flex:1;border:1px solid var(--line);background:var(--fill);color:var(--ink);font:inherit;font-size:12.5px;font-weight:500;padding:8px;border-radius:9px;cursor:pointer}
+.pmActs button.primary{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.pmActs button:disabled{opacity:.38;cursor:default}
+.pmMet{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin:4px 0 6px}
+.pmMet th{font-weight:500;color:var(--grey);text-align:right;padding:3px 0}
+.pmMet td{padding:4px 0;border-top:1px solid var(--line);text-align:right;color:var(--ink)}
+.pmMet td:first-child,.pmMet th:first-child{text-align:left;color:var(--grey)}
+.pmMet td:last-child{color:var(--grey)}
+#pmBar{position:fixed;z-index:12;bottom:14px;display:flex;align-items:center;gap:12px;padding:9px 14px;background:rgba(14,14,16,.92);border:1px solid #2f2f34;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.28);color:#f5f5f7;font-size:12px;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-sizing:border-box}
+#pmBar[hidden]{display:none}
+#pmPlay{flex:0 0 32px;width:32px;height:32px;border-radius:50%;border:0;background:#f5f5f7;color:#121214;display:grid;place-items:center;cursor:pointer}
+#pmPlay svg{width:15px;height:15px}
+#pmPlay:disabled{opacity:.3;cursor:default}
+.pmMid{flex:1;min-width:0}
+.pmCap{display:flex;gap:10px;align-items:baseline;white-space:nowrap;overflow:hidden;margin:0 0 6px}
+.pmCap b{font-weight:600}
+#pmPhase{color:#a1a1a6;overflow:hidden;text-overflow:ellipsis}
+.pmTrack{position:relative;height:16px}
+.pmTrack[hidden],.pmDots[hidden]{display:none!important}
+#pmRange{position:absolute;inset:0;width:100%;margin:0;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+#pmRange::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#48484e}
+#pmRange::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;margin-top:-5px;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+#pmRange::-moz-range-track{height:4px;border-radius:2px;background:#48484e}
+#pmRange::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:#fff}
+#pmTicks{position:absolute;left:7px;right:7px;top:2px;height:12px;pointer-events:none}
+#pmTicks i{position:absolute;top:2px;width:2px;height:8px;margin-left:-1px;border-radius:1px;background:#8e8e93}
+#pmTicks i.b6{background:#0a84ff;top:0;height:12px;width:3px}
+.pmDots{display:flex;gap:5px;height:16px;align-items:center}
+.pmDots button{flex:1;height:5px;border:0;padding:0;border-radius:3px;background:#3a3a3e;cursor:pointer}
+.pmDots button.done{background:#8e8e93}
+.pmDots button.cur{background:#0a84ff}
+.pmDots button:disabled{cursor:default}
+.pmSpeed{display:flex;gap:2px;background:#2c2c30;border-radius:8px;padding:2px}
+.pmSpeed button{border:0;background:transparent;color:#a1a1a6;font:inherit;font-size:11.5px;padding:3px 8px;border-radius:6px;cursor:pointer}
+.pmSpeed button.on{background:#48484e;color:#fff}
+#pmCount{min-width:58px;text-align:right;color:#a1a1a6;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:760px){#pmBar{bottom:8px;gap:8px;padding:8px 10px}.pmSpeed,#pmCount{display:none}}
+@media(prefers-reduced-motion:reduce){.pmStep{transition:none}}
 </style></head><body>
 <aside class="displayPanel" id="displayPanel" role="region" aria-label="Display">
  <div class="dpSection"><div class="dpTitle">Mode</div>
@@ -373,7 +452,7 @@ window.addEventListener('DOMContentLoaded',()=>{
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.6" data-en="Station P2 example · v8.6">车站 P2 示例 · v8.6</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.7" data-en="Station P2 example · v8.7">车站 P2 示例 · v8.7</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -528,10 +607,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.6.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.6.0';
-import { environmentFields, landMaskOf } from './scripts/env_fields.js?v=8.6.0';
-const V = '8.6.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.7.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.7.0';
+import { environmentFields, landMaskOf } from './scripts/env_fields.js?v=8.7.0';
+const V = '8.7.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
@@ -557,7 +636,10 @@ try {
   // (v8.6) layer 1: elevation, where rain gathers, summer ventilation, winter cold wind, comfort
   try { D.landMask = landMaskOf(D); D.env = environmentFields(D, D.landMask); } catch (e){ console.warn('Tensor Studio: no environmental fields', e); D.env = null; }
   window.__TS = { D, meta, host, keepBuildings: keep, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 } };
+  // (v8.7) the process mode (default) opens on step 1 with nothing grown; scripts/process.js runs it
+  try { window.__TS_PROCESS_ON = localStorage.getItem('tensorStudio.flowMode') !== 'free'; } catch (e){ window.__TS_PROCESS_ON = true; }
   const s = document.createElement('script'); s.src = 'app.js?v=' + V;
+  s.onload = () => { const p = document.createElement('script'); p.src = 'scripts/process.js?v=' + V; p.onerror = () => hud(zh ? '流程模式加载失败' : 'The process mode failed to load'); document.body.append(p); };
   s.onerror = () => hud(zh ? '引擎加载失败' : 'The engine failed to load');
   document.body.append(s);
 } catch (error){
