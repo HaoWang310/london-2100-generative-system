@@ -103,42 +103,6 @@
       }
     },
     {
-      "id": "slime-mould-quadrant",
-      "href": "incubator/slime-mould-quadrant/",
-      "cover": "assets/catalogue/slime-mould-quadrant.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "黏菌模拟 · 西北象限车站单元",
-        "en": "Slime mould · station cells, north-west quadrant"
-      },
-      "desc": {
-        "zh": "智能体从五个车站出发，轨迹沿铁路走廊加粗成脉络，并在每个车站周围围合成单元；第 900 步暂停并识别单元。",
-        "en": "Agents leave five stations; their trails thicken into veins along the rail corridor and close into a cell around each station. Pauses at step 900 and finds the cells."
-      },
-      "tags": [
-        {
-          "zh": "黏菌",
-          "en": "Slime mould"
-        },
-        {
-          "zh": "车站单元",
-          "en": "Station cells"
-        },
-        {
-          "zh": "智能体",
-          "en": "Agents"
-        }
-      ],
-      "owner": "sawhneyshreyadesign-1602",
-      "embed": {
-        "langStorageKey": "quadrantCellsLang",
-        "langButton": "#langbar button[data-lang=\"{lang}\"]",
-        "hide": [
-          "#langbar"
-        ]
-      }
-    },
-    {
       "id": "growth-simulator-dark",
       "href": "incubator/growth-simulator-dark/",
       "cover": "assets/catalogue/growth-simulator-dark.webp",
@@ -204,6 +168,42 @@
       "owner": "sawhneyshreyadesign-1602",
       "embed": {
         "langStorageKey": "loopCellsLang",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
+        "hide": [
+          "#langbar"
+        ]
+      }
+    },
+    {
+      "id": "slime-mould-quadrant",
+      "href": "incubator/slime-mould-quadrant/",
+      "cover": "assets/catalogue/slime-mould-quadrant.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "黏菌模拟 · 西北象限车站单元",
+        "en": "Slime mould · station cells, north-west quadrant"
+      },
+      "desc": {
+        "zh": "智能体从五个车站出发，轨迹沿铁路走廊加粗成脉络，并在每个车站周围围合成单元；第 900 步暂停并识别单元。",
+        "en": "Agents leave five stations; their trails thicken into veins along the rail corridor and close into a cell around each station. Pauses at step 900 and finds the cells."
+      },
+      "tags": [
+        {
+          "zh": "黏菌",
+          "en": "Slime mould"
+        },
+        {
+          "zh": "车站单元",
+          "en": "Station cells"
+        },
+        {
+          "zh": "智能体",
+          "en": "Agents"
+        }
+      ],
+      "owner": "sawhneyshreyadesign-1602",
+      "embed": {
+        "langStorageKey": "quadrantCellsLang",
         "langButton": "#langbar button[data-lang=\"{lang}\"]",
         "hide": [
           "#langbar"
