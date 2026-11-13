@@ -46,8 +46,8 @@ const STEPS = [
     note: () => L('水体和要避让的洪水区从土地中扣除，道路不会进入。主要汇水路径留成蓝绿走廊：道路不沿走廊内部走，只能近似垂直地跨过（涵洞）。', 'Water and the flood zones kept clear come out of the land; no street enters them. The main runoff paths are kept as blue-green corridors: no street runs inside one, streets only cross them, near square, on culverts.') },
   { k: 4, zh: '建张量场', en: 'Tensor field', rows: ['wC', 'wSum', 'wWin', 'wG', 'fW', 'smooth'],
     note: () => L('每个因素给出一个方向，按权重叠成张量场：顺等高线；通风处顺夏季风；冷风强处横切冬季冷风；走廊旁沿走廊（滨水路）；洪水区顺流排水。流线就是道路将要遵循的方向，拖动滑块会实时转向。', 'Each factor gives a direction, weighted into one field: along the contour; along the summer wind where it blows; across the winter cold where it bites; along the corridors beside them (waterside streets); with the flow in the flood zones. The flow lines are the directions the streets will follow; they turn as you move a slider.') },
-  { k: 5, zh: '放吸引点', en: 'Attractors', rows: ['aMode', 'nMain', 'nSec', 'nEdge', 'pull'],
-    note: () => L('吸引点把附近的流线弯成环形与放射状。可拖动移动；双击添加（Shift 次级，Alt 边界），右键删除。', 'Attractors bend the flow round them into rings and spokes. Drag to move; double-click to add (shift: secondary, alt: on the edge), right-click to remove.') },
+  { k: 5, zh: '放吸引点', en: 'Attractors', rows: ['pull'],
+    note: () => L('选一种节点，在地图上双击放置；拖动可移动，右键删除。三种节点对道路的作用不同。', 'Pick a kind of node, then double-click on the map to place it; drag to move, right-click to remove. Each kind shapes the streets differently.') },
   { k: 6, zh: '长主路', en: 'Main streets', rows: ['d1', 'bMains', 'bMem', 'bFork'],
     note: () => L('主路从锚点出发，沿场的方向每步 5 米生长，遇到别的道路形成 T 或 Y 路口。', 'Main streets start at the anchors and grow 5 m a step along the field, making a T or a Y where they meet another street.') },
   { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'bGap', 'bInfill', 'bSec6'],
@@ -88,6 +88,21 @@ const envTxt = document.createElement('p'); envTxt.className = 'pmOut';
 STEPS[1].extra.append(chips, envTxt);
 const siteTxt = document.createElement('div'); siteTxt.className = 'pmOut'; STEPS[0].extra.append(siteTxt);
 const areaTxt = document.createElement('p'); areaTxt.className = 'pmOut'; STEPS[2].extra.after(areaTxt);
+// (v8.11) step 5: placement by hand only, with three kinds of node to choose from
+const KINDS = [
+  { k: 'main', zh: '主节点 · 环形广场', en: 'Main node · circus', dzh: '影响约 230 米，周围道路绕成环形广场，并向外放射', den: 'Reaches about 230 m: the streets ring it as a circus and run out from it' },
+  { k: 'sec', zh: '次节点 · 街区中心', en: 'Local node · neighbourhood centre', dzh: '影响约 140 米、力度较弱，只让附近道路微微弯向它，不形成广场', den: 'Reaches about 140 m, gently: nearby streets bend towards it, no circus' },
+  { k: 'edge', zh: '边界节点 · 入口广场', en: 'Edge node · gateway', dzh: '吸附在场地边界上，形成半圆形入口广场，影响约 340 米', den: 'Snaps to the site\'s edge: a half-circle gateway plaza, reaching about 340 m' } ];
+PM.kind = 'main';
+const kindBox = document.createElement('div'); kindBox.className = 'pmKinds'; kindBox.setAttribute('role', 'radiogroup');
+for (const K of KINDS){ const b = document.createElement('button'); b.type = 'button'; b.dataset.kind = K.k; b.setAttribute('role', 'radio');
+  b.innerHTML = '<i class="pmDot ' + K.k + '" aria-hidden="true"></i><span class="pmKT"></span><span class="pmKD"></span>';
+  b.onclick = () => { PM.kind = K.k; ui(); }; kindBox.append(b); }
+const kindCount = document.createElement('div'); kindCount.className = 'pmKCount';
+const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.className = 'pmLink';
+clearBtn.onclick = () => { stopAuto(); HAND = []; ATTR = []; AMODE = 'hand'; el('aMode').value = 'hand'; buildTarget(); onChange(5); };
+const kindRow = document.createElement('div'); kindRow.className = 'pmKRow'; kindRow.append(kindCount, clearBtn);
+STEPS[4].extra.append(kindBox, kindRow);
 const metTbl = document.createElement('table'); metTbl.className = 'pmMet'; STEPS[7].extra.append(metTbl);
 
 // the timeline, at the bottom between the two panels
@@ -124,7 +139,10 @@ function applySpeed(){}
 function withoutFlood(fn){ const f = el('fOn'), c = f.checked; f.checked = false; try { return fn(); } finally { f.checked = c; } }
 function attractorsFor(k){
   if (k <= 4){ if (ATTR.length) PM.saved = ATTR; ATTR = []; }
-  else { if (AMODE === 'hand' && !HAND && PM.saved) HAND = PM.saved; placeAttractors(); PM.nAttr = ATTR.length; } }
+  else { if (AMODE === 'hand' && !HAND && PM.saved) HAND = PM.saved;
+    // (v8.11) the process mode places by hand only: the first time, the points the field suggests become yours to move
+    if (AMODE !== 'hand'){ placeAttractors(); AMODE = 'hand'; el('aMode').value = 'hand'; HAND = ATTR; }
+    placeAttractors(); PM.nAttr = ATTR.length; } }
 function restoreFinal(){ const sn = SNAP.B; if (!sn || sn.key !== settingsKey()) return false; if (!FINISHED) restore(sn); return true; }
 function world(k){
   stopPlay(); PM.livePaused = false; setScrub(null);
@@ -222,11 +240,12 @@ function summary(k){ const st = T6.envStats, fmt = x => x.toFixed(1);
     if (!floodOn()) return L('不考虑洪水', 'flood risk off') + gs; if (!PM.area) return ''; const a = PM.area;
     return L('避让 ' + fmt(a.base - a.use) + ' 公顷 · 可用 ' + fmt(a.use) + ' 公顷', fmt(a.base - a.use) + ' ha kept clear · ' + fmt(a.use) + ' ha left') + gs; }
   if (k === 4) return L('等高线 ' + v('wC') + ' · 夏风 ' + v('wSum') + ' · 冬风 ' + v('wWin') + ' · 走廊 ' + (T6.corrOn ? v('wG') : '关') + ' · 顺流 ' + (floodOn() ? v('fW') : '关'), 'contour ' + v('wC') + ' · summer ' + v('wSum') + ' · winter ' + v('wWin') + ' · corridors ' + (T6.corrOn ? v('wG') : 'off') + ' · flow ' + (floodOn() ? v('fW') : 'off'));
-  if (k === 5) return L(PM.nAttr + ' 个吸引点', PM.nAttr + ' attractors');
+  if (k === 5){ const c = kindCounts(); return L('主 ' + c.main + ' · 次 ' + c.sec + ' · 边界 ' + c.edge, c.main + ' main · ' + c.sec + ' local · ' + c.edge + ' edge'); }
   if (k === 6){ const f = PM.frames[PM.b6]; if (!f) return ''; let n = 0; f.o.forEach((l, i) => { if (l.level === 1 && !l.circus && f.n[i] > 1) n++; });
     return L(n + ' 条主路 · 间距 ' + v('d1') + ' m', n + ' main streets · ' + v('d1') + ' m apart'); }
   if (k === 7){ const m = PM.lastM; if (!m) return ''; return L((m.km1 + m.km2).toFixed(1) + ' km 道路 · ' + m.cells + ' 个地块', (m.km1 + m.km2).toFixed(1) + ' km of street · ' + m.cells + ' cells'); }
   return ''; }
+function kindCounts(){ const src = ATTR.length ? ATTR : (HAND || []), c = { main: 0, sec: 0, edge: 0 }; for (const a of src) c[a.kind] = (c[a.kind] || 0) + 1; return c; }
 function argmax(a){ let b = 0; a.forEach((x, i) => { if (x > a[b]) b = i; }); return b; }
 function envConclusion(){ const st = T6.envStats, k = T6.env; if (!st) return L('此场地没有环境分析数据，可以直接进入下一步。', 'No environmental fields for this site: go on to the next step.');
   const pct = (a, i) => Math.round(100 * a[i] / (a.reduce((s, x) => s + x, 0) || 1));
@@ -270,6 +289,9 @@ function ui(){ if (!PM.active) return;
     if (s.run){ s.run.textContent = s.run._t(); s.run.disabled = (s.k === 7 && PM.valid < 6) || (growing && PM.target === s.k); }
     if (s.next){ s.next.textContent = s.next._t(); s.next.disabled = s.k < 8 && s.k > PM.valid; } }
   for (const b of chips.children){ const e = ENVK.find(x => x[0] === b.dataset.env); b.textContent = L(e[1], e[2]); b.classList.toggle('on', T6.env === b.dataset.env); b.disabled = !ENV; }
+  for (const b of kindBox.children){ const K = KINDS.find(x => x.k === b.dataset.kind), on = PM.kind === K.k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on);
+    b.querySelector('.pmKT').textContent = L(K.zh, K.en); b.querySelector('.pmKD').textContent = L(K.dzh, K.den); }
+  { const c = kindCounts(); kindCount.textContent = L('已放置：主节点 ' + c.main + ' · 次节点 ' + c.sec + ' · 边界节点 ' + c.edge, 'Placed: ' + c.main + ' main · ' + c.sec + ' local · ' + c.edge + ' edge'); clearBtn.textContent = L('全部清除', 'Clear all'); clearBtn.disabled = !(c.main + c.sec + c.edge); }
   envTxt.textContent = envConclusion(); siteTxt.innerHTML = siteText();
   const g = T6.corr, gTxt = g ? L(' 蓝绿走廊 ' + g.areaHa.toFixed(1) + ' 公顷（占土地 ' + Math.round(100 * g.share) + '%），道路只能跨过。' + (g.raised ? '汇水线太多，门槛已自动提高到上游 ' + Math.round(g.minHa) + ' 公顷，使走廊不超过土地的 12%。' : ''), ' Blue-green corridors ' + g.areaHa.toFixed(1) + ' ha (' + Math.round(100 * g.share) + ' % of the land), which streets only cross.' + (g.raised ? ' Too many runoff paths: the threshold rose to ' + Math.round(g.minHa) + ' ha upstream, so the corridors keep under 12 % of the land.' : '')) : '';
   areaTxt.textContent = (PM.area && floodOn() ? L('场地土地 ' + PM.area.base.toFixed(1) + ' 公顷，洪水避让 ' + (PM.area.base - PM.area.use).toFixed(1) + ' 公顷，可生长道路的土地 ' + PM.area.use.toFixed(1) + ' 公顷。',
@@ -307,7 +329,11 @@ for (const b of modeSw.children) b.onclick = () => { const on = b.dataset.pm ===
 el('applyPreset').addEventListener('click', () => { if (!PM.active) return; stopAuto(); setTimeout(() => { PM.valid = 0; PM.reached = 0; PM.frames = []; PM.marks = []; PM.b6 = -1; if (GEN){ GEN = null; GROWING = false; } PM.atB = false; playAll(); }, 160); });
 // attractors: none to place before step 5; one moved, added or removed is a change in step 5
 { const viewEl = el('view'), akey = () => ATTR.map(a => a.kind + Math.round(a.x) + ':' + Math.round(a.y)).join(';'); let before = '';
-  viewEl.addEventListener('dblclick', e => { if (PM.active && PM.cur < 5) e.stopPropagation(); }, true);
+  viewEl.addEventListener('dblclick', e => { if (!PM.active) return; if (PM.cur < 5){ e.stopPropagation(); return; }
+    if (e.shiftKey || e.altKey) return;   // the engine's own shortcuts
+    const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; if (attrAt(mx, my) !== null) return;
+    e.stopPropagation(); e.preventDefault(); stopAuto();
+    if (addAttr((mx - VW / 2) / view.s + view.x, (VH / 2 - my) / view.s + view.y, PM.kind)){ before = akey(); onChange(5); } }, true);
   viewEl.addEventListener('pointerdown', () => { before = akey(); }, true);
   for (const ev of ['pointerup', 'dblclick', 'contextmenu']) viewEl.addEventListener(ev, () => { if (!PM.active || PM.cur < 5) return; setTimeout(() => { if (akey() !== before){ before = akey(); onChange(5); } }, 0); });
   viewEl.addEventListener('contextmenu', () => { before = before || akey(); }, true); }
