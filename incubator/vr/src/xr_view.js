@@ -160,7 +160,8 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR button.go{background:#0a84ff;border-color:#0a84ff;font-weight:600}#tsXR button.go:hover{background:#409cff}
 #tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;max-width:calc(100% - 32px);color:rgba(235,235,245,.85);font-size:12px;pointer-events:none;background:rgba(28,28,30,.82);padding:6px 12px;border-radius:999px;backdrop-filter:blur(12px)}
 #tsXR label{display:flex;gap:6px;align-items:center;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px}
-#tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}`;
+#tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}
+#tsXR.immersive{background:transparent;pointer-events:none}#tsXR.immersive .bar>*,#tsXR.immersive .note{pointer-events:auto}`;
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
 <button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="bld" class="on">${L.buildings}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
@@ -299,6 +300,10 @@ export function open(api, lang = 'zh', opt = {}){
     try { session = await navigator.xr.requestSession(mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] }); }
     catch (e){ try { session = await navigator.xr.requestSession(mode, { optionalFeatures: ['local-floor', 'hand-tracking'] }); } catch (e2){ note.textContent = String(e2.message || e2); return; } }
     xrSession = session; await gl.makeXRCompatible();
+    // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
+    root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'go'; exitB.textContent = lang === 'zh' ? '退出 VR' : 'Exit VR';
+    exitB.onclick = () => session.end().catch(() => {}); xrBox.append(exitB); xrBox.querySelectorAll('button:not(:last-child)').forEach(b => b.hidden = true);
+    const xr = { frames: 0, views: 0, err: '', mode };
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
@@ -321,10 +326,15 @@ export function open(api, lang = 'zh', opt = {}){
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
     const add = e => { grabs.set(e.inputSource, true); base = 'pending'; }, rem = e => { if (grabs.delete(e.inputSource)) base = 'pending'; };
     session.addEventListener('selectstart', add); session.addEventListener('squeezestart', add); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
-    session.addEventListener('end', () => { xrSession = null; status(); });
+    session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); xrBox.querySelectorAll('button').forEach(b => b.hidden = false); status(); });
+    const xrNote = () => { note.textContent = (lang === 'zh' ? `${mode === 'immersive-ar' ? 'MR' : 'VR'} 运行中 · 第 ${xr.frames} 帧 · ${xr.views} 个视图` : `${mode} · frame ${xr.frames} · ${xr.views} views`)
+      + (api.stream ? ' · ' + streamLine() : '') + (xr.err ? (lang === 'zh' ? ' · 出错：' : ' · error: ') + xr.err : ''); };
     let tPrev = 0;
-    const onFrame = (t, frame) => { session.requestAnimationFrame(onFrame); const dt = Math.min(0.05, tPrev ? (t - tPrev) / 1000 : 0); tPrev = t; follow(t);
-      const pose = frame.getViewerPose(ref); if (!pose) return; const hm = pose.transform.matrix; head = [hm[12], hm[13], hm[14]]; headF = [-hm[8], -hm[9], -hm[10]];
+    const onFrame = (t, frame) => { session.requestAnimationFrame(onFrame);
+      try { frameBody(t, frame); xr.frames++; } catch (e){ if (!xr.err){ xr.err = String(e.message || e).slice(0, 120); console.error(e); } }
+      if (xr.frames % 30 === 1 || xr.err) xrNote(); };
+    const frameBody = (t, frame) => { const dt = Math.min(0.05, tPrev ? (t - tPrev) / 1000 : 0); tPrev = t; follow(t);
+      const pose = frame.getViewerPose(ref); if (!pose){ xr.views = 0; return; } xr.views = pose.views.length; const hm = pose.transform.matrix; head = [hm[12], hm[13], hm[14]]; headF = [-hm[8], -hm[9], -hm[10]];
       if (!M.placed){ placeTable(); M.placed = true; }
       // buttons and sticks
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
