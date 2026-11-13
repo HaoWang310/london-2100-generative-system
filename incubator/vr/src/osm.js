@@ -56,6 +56,7 @@ const area2 = r => { let s = 0; for (let i = 0, n = r.length; i < n; i++){ const
 export function earcut(ring){
   let pts = ring.slice(); if (pts.length > 3 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) pts.pop();
   const n = pts.length; if (n < 3) return [];
+  if (n > 250){ const out = []; for (let i = 1; i < n - 1; i++) out.push([0, i, i + 1]); return out; }   // very detailed outline: a fan, so one building cannot freeze the frame
   let idx = [...Array(n).keys()]; if (area2(pts) < 0) idx.reverse();   // counter-clockwise
   const out = [], cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   const inside = (p, a, b, c) => cross(a, b, p) >= 0 && cross(b, c, p) >= 0 && cross(c, a, p) >= 0;
