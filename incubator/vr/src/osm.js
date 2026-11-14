@@ -122,6 +122,11 @@ export function paintLayers(g, tiles, proj, pxPerM){
   lines.sort((a, b) => a.z - b.z);
   for (const it of lines) if (it.casing){ g.strokeStyle = '#d2cdc4'; g.lineWidth = Math.max(1, (it.w + 2.5) * pxPerM); path(it.f.parts, proj(it.t, it.f.extent)); g.stroke(); }
   for (const it of lines){ g.strokeStyle = it.c; g.lineWidth = Math.max(1, it.w * pxPerM); path(it.f.parts, proj(it.t, it.f.extent)); g.stroke(); }
+  // country and region borders (what you see from far out), a fixed thin line
+  g.setLineDash([6, 4]);
+  for (const t of tiles) for (const f of t.layers.boundary || []){ if (f.type !== 2 || f.props.maritime || !(f.props.admin_level <= 4)) continue;
+    g.strokeStyle = f.props.admin_level <= 2 ? '#8e8e96' : '#b4b4bb'; g.lineWidth = f.props.admin_level <= 2 ? 1.6 : 1; path(f.parts, proj(t, f.extent)); g.stroke(); }
+  g.setLineDash([]);
   return bld;
 }
 export const GROUND_COLOUR = GROUND;
