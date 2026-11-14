@@ -1,5 +1,6 @@
 // London 2100 unified app shell.
-// London → Region → Wool → Tensor, with 05 integration / 06 export tools.
+// London → Region → Wool → Tensor, with 05 integration / 06 export tools,
+// and 01 Growth simulator beside the chain (open at any level, a background elsewhere).
 //
 // Rules this shell guarantees:
 //  - Zooming/panning the map never touches the workspace (no clearing, no regeneration).
@@ -7,7 +8,7 @@
 //  - A module runs only when the user enters a level for the first time, changes
 //    a parameter, or presses Regenerate.
 
-import { SCALES, TOOLS, exporters } from './registry.js';
+import { SCALES, TOOLS, SIMULATIONS, exporters } from './registry.js';
 import { createWorkspaceStore, SCALE_ORDER } from '../shared/state/index.js';
 import { childInput, createBundle, validateBundle, defaultParams } from '../shared/schemas/index.js';
 import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-viewer/index.js';
@@ -24,7 +25,8 @@ const storage = (() => { try { localStorage.setItem('l2100.t', '1'); return loca
 const store = createWorkspaceStore({ storage, key: BUILD.releasePath ? `l2100.workspace@${BUILD.releasePath}` : 'l2100.workspace' });
 
 let viewer = null;
-let activeTool = null;          // null | 'integration' | 'export'
+let activeTool = null;          // null | 'integration' | 'export' | 'growth'
+let growthTool = null;          // created the first time 01 is opened
 let progress = 1;               // timeline position for the current result
 let playing = null;             // requestAnimationFrame id
 let runToken = 0;
@@ -79,6 +81,7 @@ async function runEntry(entry, { animate = true } = {}) {
 }
 
 function enterLevel(level, input) {
+  leaveGrowth();
   const parent = store.current();
   const scale = scaleOf(level);
   const entry = store.enter(level, input, defaultParams(scale.module), parent?.result?.createdAt ?? null);
@@ -106,6 +109,7 @@ function enterNext(childId) {
 
 function goTo(index) {
   stop();
+  leaveGrowth();
   activeTool = null;
   const e = store.goTo(index);
   progress = 1;
@@ -114,7 +118,7 @@ function goTo(index) {
 }
 
 function goBack() {
-  if (activeTool) { activeTool = null; render(); return; }
+  if (activeTool) { leaveGrowth(); activeTool = null; progress = 1; render(); return; }
   const path = store.getState().path;
   if (path.length > 1) goTo(path.length - 2);
 }
@@ -141,6 +145,7 @@ function integrationInput() {
 function openTool(key) {
   if (!toolAvailable()) { toast(t('hint.needWool')); return; }
   stop();
+  leaveGrowth();
   activeTool = key;
   progress = 1;
   if (key === 'integration') {
@@ -169,6 +174,32 @@ async function runTool(entry) {
   }
   render();
 }
+
+// ------------------------------------------------------------------ 01 growth simulator
+
+const GROWTH = SIMULATIONS.find(x => x.key === 'growth');
+const isSim = key => SIMULATIONS.some(x => x.key === key);
+const GROWTH_PLAY_MS = 75 / 7 * 1000;           // the incubator's normal speed: 7 years a second
+
+function openGrowth() {
+  if (!viewer) return;
+  stop();
+  const first = !growthTool;
+  if (first) {
+    growthTool = GROWTH.create(viewer, { onState: what => {
+      if (what === 'loaded') { if (activeTool === 'growth') { viewer.fit(growthTool.ring()); setProgress(growthTool.state.year / GROWTH.module.years); } render(); }
+      if (what === 'ran' && activeTool === 'growth' && growthTool.state.variation) play(0);   // as the incubator: a new variation plays from 2025
+      if (what === 'mode' || what === 'error') renderChrome();
+    } });
+  }
+  activeTool = 'growth';
+  growthTool.open().catch(err => toast(t('run.failed', { msg: err.message || err }), { kind: 'error' }));
+  if (growthTool.state.loaded) viewer.fit(growthTool.ring());
+  setProgress((growthTool.state.year || 0) / GROWTH.module.years);
+  render();
+}
+
+function leaveGrowth() { if (activeTool === 'growth') growthTool?.close(); }
 
 // ------------------------------------------------------------------ scene
 
@@ -212,14 +243,20 @@ function sceneFor(entry) {
 
 function setProgress(p) {
   progress = Math.max(0, Math.min(1, p));
-  viewer?.setProgress(progress);
   $('scrub').value = Math.round(progress * 1000);
+  if (activeTool === 'growth') {               // the timeline is the years 2025-2100
+    const y = Math.round(progress * GROWTH.module.years);
+    if (growthTool && growthTool.state.year !== y) growthTool.setYear(y);
+    $('tlLabel').textContent = t('tl.year', { y: 2025 + y });
+    return;
+  }
+  viewer?.setProgress(progress);
   $('tlLabel').textContent = t('tl.growth', { pct: Math.round(progress * 100) });
 }
 
 function play(from = progress >= 1 ? 0 : progress) {
   stop();
-  const duration = 2400;
+  const duration = activeTool === 'growth' ? GROWTH_PLAY_MS : 2400;
   const t0 = performance.now() - from * duration;
   const step = now => {
     const p = (now - t0) / duration;
@@ -249,7 +286,7 @@ function render() {
   const entry = store.current();
   if (entry && viewer) {
     viewer.setScene(sceneFor(entry));
-    viewer.setProgress(progress);
+    viewer.setProgress(activeTool === 'growth' ? 1 : progress);
   }
 }
 
@@ -267,7 +304,7 @@ function renderChrome() {
   });
   if (activeTool) {
     crumbs.append(h('span', { class: 'sep' }, '›'),
-      h('button', { 'aria-current': 'page' }, pick(TOOLS.find(x => x.key === activeTool).module.title)));
+      h('button', { 'aria-current': 'page' }, pick([...TOOLS, ...SIMULATIONS].find(x => x.key === activeTool).module.title)));
   }
 
   // left navigation
@@ -288,6 +325,19 @@ function renderChrome() {
       h('span', { class: 'num' }, s.module.id.slice(0, 2)),
       h('span', {}, h('span', { class: 'name' }, pick(s.module.title)), h('span', { class: 'sub' }, e ? crumbLabel(e) : t(`nav.hint.${s.level}`))),
       h('span', { class: `dot ${status}` }))));
+    if (i === 0) {
+      // 01 sits right after London: the workspace's first simulation, open at any level.
+      for (const sim of SIMULATIONS) {
+        const st = sim.key === 'growth' && growthTool ? (growthTool.state.running ? 'running' : growthTool.state.loaded ? 'done' : '') : '';
+        scaleList.append(h('li', {}, h('button', {
+          class: 'mod', disabled: !viewer, 'aria-current': activeTool === sim.key ? 'true' : 'false',
+          onclick: () => openGrowth()
+        },
+          h('span', { class: 'num' }, sim.module.id.slice(0, 2)),
+          h('span', {}, h('span', { class: 'name' }, pick(sim.module.title)), h('span', { class: 'sub' }, t(`nav.hint.${sim.key}`))),
+          h('span', { class: `dot ${st}` }))));
+      }
+    }
   });
   const toolList = $('toolList');
   toolList.replaceChildren();
@@ -300,7 +350,8 @@ function renderChrome() {
       h('span', { class: 'dot' }))));
   }
 
-  if (activeTool) renderToolInspector(); else renderScaleInspector(entry);
+  if (activeTool === 'growth') renderGrowthInspector();
+  else if (activeTool) renderToolInspector(); else renderScaleInspector(entry);
 
   // map hint + timeline status
   const hint = $('mapHint');
@@ -308,7 +359,9 @@ function renderChrome() {
   hint.hidden = Boolean(activeTool) || !(next?.needsSelection && entry.result);
   hint.textContent = t(`hint.select.${entry.level}`);
   $('tlStatus').textContent = activeTool ? '' : statusText(entry);
-  $('tlLabel').textContent = t('tl.growth', { pct: Math.round(progress * 100) });
+  $('tlLabel').textContent = activeTool === 'growth'
+    ? t('tl.year', { y: 2025 + Math.round(progress * GROWTH.module.years) })
+    : t('tl.growth', { pct: Math.round(progress * 100) });
 }
 
 function statusText(entry) {
@@ -357,6 +410,22 @@ function renderScaleInspector(entry) {
     ? `${entry.result.algorithm.id} · ${entry.result.algorithm.module}@${entry.result.algorithm.version}`
     : '';
   renderLegend(sceneFor(entry));
+}
+
+function renderGrowthInspector() {
+  const mod = GROWTH.module;
+  $('inspCode').textContent = `${mod.id} · v${mod.version}`;
+  $('inspTitle').textContent = pick(mod.title);
+  $('inspDesc').textContent = pick(mod.description);
+  $('inspBadges').replaceChildren(h('span', { class: 'badge' }, 'EPSG:27700'), h('span', { class: 'badge' }, '50 m'));
+  $('inspActions').replaceChildren(h('button', { class: 'btn', onclick: goBack }, t('act.backToScale')));
+  const host = $('inspParams');
+  if (growthTool && host.firstChild !== growthTool.container) host.replaceChildren(growthTool.container);
+  $('inspStats').replaceChildren();
+  $('inspAlgo').textContent = t('growth.source');
+  const el = $('legend');
+  el.replaceChildren(...[3, 2, 1, 4, 5].map(k => h('div', { class: 'legend-row' },
+    h('i', { style: `border-top-width:8px;border-top-color:${mod.palette[k]}` }), t(`growth.legend.${k}`))));
 }
 
 function renderToolInspector() {
@@ -424,6 +493,7 @@ $('importWorkspace').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await file.text());
     store.importJSON(data.workspace || data);
+    leaveGrowth();
     activeTool = null;
     const cur = store.current();
     viewer?.fit(cur?.input?.boundary || cur?.result?.boundary);
@@ -463,7 +533,7 @@ document.addEventListener('click', e => {
 
 // ------------------------------------------------------------------ wiring
 
-onLangChange(() => render());
+onLangChange(() => { render(); growthTool?.relang(); });
 $('playButton').addEventListener('click', () => (playing ? stop() : play()));
 $('scrub').addEventListener('input', e => { stop(); setProgress(e.target.value / 1000); });
 for (const [id, on] of [['view2d', false], ['view3d', true]]) {
@@ -478,7 +548,7 @@ document.addEventListener('keydown', e => {
   if (!$('intro').hidden || !$('catalogue').hidden || !$('appview').hidden) return;   // shortcuts belong to the workspace only
   if (e.target.closest('input, select, textarea')) return;
   if (e.key === 'Escape') goBack();
-  if (e.key === 'Enter') enterNext();
+  if (e.key === 'Enter' && activeTool !== 'growth') enterNext();
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
 });
 
