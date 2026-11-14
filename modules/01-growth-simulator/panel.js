@@ -6,11 +6,12 @@
 import { h } from '../../shared/ui/index.js';
 import { getLang } from '../../shared/i18n/index.js';
 import { PALETTE } from './overlay.js';
+import { GROUND } from './step-images.js';
 
 // Words this panel adds to the incubator's own (controls.js I18N), for the map display.
 const EXTRA_ZH = {
   'Display': '显示', 'Growth': '生长', 'Rail and stations': '铁路与车站', 'Parcel outlines when zoomed in': '放大时显示地块边线', 'Finer grains when zoomed in (illustrative)': '放大时细分颗粒（细部为示意）', 'Fill the 70 km circle beyond the model (illustrative)': '补全 70 km 圆内的缺口（示意）',
-  'Opacity': '不透明度', 'Keep as background on the other levels': '在其他层级保留为背景',
+  'Opacity': '不透明度', 'Where the first pass ends': '第一遍城市的边缘', 'Keep as background on the other levels': '在其他层级保留为背景',
   'Could not load the data files.': '无法载入数据文件。', 'Loading the final outcome…': '正在载入最终结果…'
 };
 
@@ -211,6 +212,13 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     el.steps = h('div', { class: 'g01-steps' }, s.GVC.STEPS.map(st => {
       const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Run the variation to update this step.')));
       if (st.graph) body.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
+      // what the step lays on the map
+      const key = [];
+      if (st.show.includes('aonb')) for (const [, label, col] of GROUND) key.push([col, label]);
+      if (st.show.includes('magnet')) key.push(['linear-gradient(90deg,#2a160d,#c2523a,#efa65c,#f2d99e)', 'Magnet field, the invisible landscape']);
+      if (st.show.includes('pass1')) key.push([PALETTE[2], 'First pass: finding where the city ends']);
+      if (st.show.includes('edge')) key.push(['#7FD1FF', 'Where the first pass ends']);
+      if (key.length) body.append(h('div', { class: 'g01-key' }, key.map(([c, l]) => h('span', {}, h('i', { style: `background:${c}` }), T(l)))));
       for (const id of st.c || []) {
         const parts = id === 'seed' ? seedRow() : ctlById(id) ? control(ctlById(id)) : [];
         for (const p of parts) if (p) body.append(p);
@@ -344,6 +352,8 @@ export const PANEL_CSS = `
 .g01-step .chev { color: var(--text-3); transition: transform .2s; margin-top: 1px; } .g01-step.open .chev { transform: rotate(90deg); }
 .g01-step .sb { display: none; padding: 0 12px 8px; } .g01-step.open .sb { display: block; }
 .g01-step .sb .note { color: var(--text-3); font-size: 12px; line-height: 1.45; margin: 0 0 8px; }
+.g01-key { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 8px; font-size: 11.5px; color: var(--text-2); }
+.g01-key i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
 .g01-step .stale { display: none; color: #EFA65C; font-size: 12px; margin: 0 0 8px; } .g01-step.open.pending .stale { display: block; }
 .g01-glab { margin: 6px 0 2px !important; }
 .g01-sl .param-value.def { color: var(--text-3); } .g01-sl .param-value { color: #EFA65C; }
