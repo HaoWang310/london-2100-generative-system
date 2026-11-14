@@ -1892,7 +1892,7 @@ function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
 const BASEMAPS = {
   osm: { url: (z, x, y) => 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png', max: 19, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' },
   // (v8.34) the London map itself, seen through a transparent page: the host moves its map with this view (no tiles here)
-  map: { live: true, max: 22, attr: '' }
+  map: { live: true, max: 22, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>' }
 };
 let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basemap'); return BASEMAPS[b] ? b : 'none'; } catch (e){ return 'none'; } })();
 // (v8.33) opened from the London map, the surroundings show as a real map by default: the tile basemap that matches the

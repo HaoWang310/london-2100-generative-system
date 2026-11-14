@@ -91,12 +91,22 @@ function ensureOverlay(){
   overlay.innerHTML = '<div id="tensorStudioWait" role="status" aria-live="polite">' + 'Preparing the Tensor Studio site…' + '</div>';
   document.body.append(overlay);
   document.addEventListener('keydown', onKey);
+  // (v3.38.2) only the map itself shows through Tensor Studio's transparent page: the map page's own panels, controls
+  // and badges are hidden while it is open (visibility, so nothing moves), and come back on close
+  if (!document.getElementById('tensorStudioHideUI')){
+    const st = document.createElement('style'); st.id = 'tensorStudioHideUI';
+    st.textContent = 'body.tensorStudioOpen > :not(#osmMap):not(#googleMap):not(#tensorStudioOverlay):not(script):not(style){visibility:hidden!important}' +
+      'body.tensorStudioOpen #osmMap .maplibregl-control-container{visibility:hidden!important}';
+    document.head.append(st);
+  }
+  document.body.classList.add('tensorStudioOpen');
 }
 function onKey(event){ if (event.key === 'Escape' && overlay) closeTensorStudio(); }
 export function closeTensorStudio(){
   const was = !!overlay;
   document.removeEventListener('keydown', onKey);
   overlay?.remove(); overlay = null; frame = null;
+  document.body.classList.remove('tensorStudioOpen');
   restoreMap();
   try { delete window.__TENSOR_SITE_INPUT__; } catch (error){ window.__TENSOR_SITE_INPUT__ = undefined; }
   const cb = onCloseCb; onCloseCb = null; if (was && cb) cb();
@@ -124,7 +134,7 @@ function restoreMap(){
   try { hostMap.jumpTo(camera); } catch (error){}
   camera = null;
 }
-/* (v3.38.1) the map only holds the vector tiles of its current view, so before the site's streets, water and buildings
+/* (v3.38.2) the map only holds the vector tiles of its current view, so before the site's streets, water and buildings
  * are read, the view is set to the site and its 450 m surround at a zoom that carries buildings (14+), and the tiles
  * are given a moment to arrive */
 function loadedAround(map, ring, padM = 450){
