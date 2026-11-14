@@ -304,7 +304,10 @@ export function createAtmosphere(map,{onTint=()=>{},onChange=()=>{},onSun=()=>{}
     onSun({
       azimuth:state.light.azimuth,
       altitude:90-state.light.polar,
-      strength:SHADOW_STRENGTH*(1-(state.night||0))*(WEATHER_SHADOW[weather]??1)
+      strength:SHADOW_STRENGTH*(1-(state.night||0))*(WEATHER_SHADOW[weather]??1),
+      color:state.light.color,
+      intensity:state.light.intensity*w.lightScale,
+      night:state.night||0
     });
     const now=performance.now();
     if(forceTint||now-lastTintAt>110){

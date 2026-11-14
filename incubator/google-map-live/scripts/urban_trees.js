@@ -112,8 +112,12 @@ export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=
         if(cells.has(key))continue;
         const u=hash01(i,j,salt+3),v=hash01(i,j,salt+4);
         const conifer=v<def.conifer;
+        const columnar=!conifer&&v>0.88;
+        const variant=conifer?'conifer':columnar?'columnar':'broadleaf';
         const h=def.height[0]+(def.height[1]-def.height[0])*u;
-        cells.set(key,{x,y,cls:area.cls,h,r:conifer?h*0.2:h*0.3,conifer,tone:hash01(i,j,salt+5)});
+        const width=0.85+0.35*hash01(i,j,salt+6);
+        const r=h*width*(conifer?0.24:columnar?0.13:0.32);
+        cells.set(key,{x,y,cls:area.cls,h,r,conifer,variant,width,tone:hash01(i,j,salt+5)});
       }
     }
   }
@@ -178,63 +182,27 @@ export function treeParts(t,lod='detail'){
 
 /* -------------------------------------------------------------- MapLibre */
 
-const SOURCE='urban-trees-source';
-const LAYER_3D='urban-trees-3d';
-const LAYER_2D='urban-trees-2d';
-
-function mixColor(a,b,t){
-  const p=h=>{const n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255];};
-  const A=p(a),B=p(b);
-  return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('');
+/* Per-tree colour variation (multiplies the model's leaf colours). */
+export function treeTint(t){
+  const a=hash01(Math.round(t.x*10),Math.round(t.y*10),11);
+  const b=hash01(Math.round(t.x*10),Math.round(t.y*10),12);
+  // From yellow-green to deep blue-green, lighter and darker.
+  const light=0.86+0.28*b;
+  return [light*(0.9+0.22*a),light*(1.0+0.06*(1-a)),light*(0.88+0.12*(1-a))];
 }
 
 export function createUrbanTrees(map,{
   sourceId='openmaptiles',
-  beforeLayerId=()=>undefined,
+  createRenderer,
   minZoom=15.5,
   maxTrees=3000,
   onChange=()=>{}
 }={}){
   let enabled=false;
-  let tints=[];
   let trees=[];
   let projector=null;
   let timer=null;
-  let lastKey='';
-
-  function ensureLayers(){
-    if(!map.getSource(SOURCE))map.addSource(SOURCE,{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    const before=beforeLayerId();
-    if(!map.getLayer(LAYER_3D)){
-      map.addLayer({id:LAYER_3D,type:'fill-extrusion',source:SOURCE,minzoom:minZoom-0.5,
-        layout:{visibility:'none'},
-        paint:{'fill-extrusion-color':['get','color'],'fill-extrusion-base':['get','base'],
-          'fill-extrusion-height':['get','top'],'fill-extrusion-vertical-gradient':true,
-          'fill-extrusion-opacity':['interpolate',['linear'],['zoom'],minZoom-0.5,0,minZoom,1]}},before);
-    }
-    if(!map.getLayer(LAYER_2D)){
-      map.addLayer({id:LAYER_2D,type:'fill',source:SOURCE,minzoom:minZoom-0.5,
-        filter:['==',['get','kind'],'crown'],
-        layout:{visibility:'none'},
-        paint:{'fill-color':['get','color'],'fill-opacity':0.85}},before);
-    }
-  }
-
-  function syncView(){
-    if(!map.getLayer(LAYER_3D))return;
-    const is3D=map.getPitch()>0.5;
-    map.setLayoutProperty(LAYER_3D,'visibility',enabled&&is3D?'visible':'none');
-    map.setLayoutProperty(LAYER_2D,'visibility',enabled&&!is3D?'visible':'none');
-  }
-
-  const tinted=color=>{
-    let c=color;
-    for(const t of tints){
-      const a=t.roles&&t.roles.building!=null?t.roles.building:t.amount;
-      if(a>0)c=mixColor(c,t.color,a);
-    }
-    return c;
-  };
+  const renderer=createRenderer();
 
   function readAreas(){
     const areas=[],water=[];
@@ -275,33 +243,17 @@ export function createUrbanTrees(map,{
 
   function rebuild(){
     timer=null;
-    const src=map.getSource(SOURCE);
-    if(!src)return;
     if(!enabled||map.getZoom()<minZoom-0.5){
-      if(trees.length){trees=[];src.setData({type:'FeatureCollection',features:[]});onChange();}
-      lastKey='';
+      if(trees.length){trees=[];renderer.setTrees([],REF);onChange();}
       return;
     }
     const {areas,water}=readAreas();
     trees=scatterTrees(areas,water,{maxTrees,bounds:viewBounds()});
-    paint();
+    renderer.setTrees(trees.map(t=>{
+      const [lng,lat]=projector.toLngLat([t.x,t.y]);
+      return {lng,lat,h:t.h,yaw:t.tone*Math.PI*2,variant:t.variant,tint:treeTint(t),width:t.width};
+    }),REF);
     onChange();
-  }
-
-  function paint(){
-    const src=map.getSource(SOURCE);
-    if(!src||!projector)return;
-    const z=map.getZoom();
-    const lod=z>=16.6?'detail':'simple';
-    const features=[];
-    for(const t of trees){
-      for(const p of treeParts(t,lod)){
-        features.push({type:'Feature',
-          properties:{color:tinted(p.color),base:+p.base.toFixed(2),top:+p.top.toFixed(2),kind:p.kind},
-          geometry:{type:'Polygon',coordinates:[p.ring.map(projector.toLngLat)]}});
-      }
-    }
-    src.setData({type:'FeatureCollection',features});
   }
 
   function schedule(delay=250){
@@ -311,34 +263,38 @@ export function createUrbanTrees(map,{
   }
   const onMoveEnd=()=>schedule(200);
   const onData=e=>{if(e.sourceId===sourceId&&e.isSourceLoaded)schedule(400);};
-  const onPitch=()=>syncView();
 
   return {
     setEnabled(on){
       on=Boolean(on);
       if(on===enabled)return;
       enabled=on;
-      ensureLayers();
-      syncView();
+      renderer.setVisible(on);
       if(on){
-        map.on('moveend',onMoveEnd);map.on('sourcedata',onData);map.on('pitchend',onPitch);
+        map.on('moveend',onMoveEnd);map.on('sourcedata',onData);
         schedule(0);
       }else{
-        map.off('moveend',onMoveEnd);map.off('sourcedata',onData);map.off('pitchend',onPitch);
-        clearTimeout(timer);trees=[];
-        map.getSource(SOURCE)?.setData({type:'FeatureCollection',features:[]});
+        map.off('moveend',onMoveEnd);map.off('sourcedata',onData);
+        clearTimeout(timer);trees=[];renderer.setTrees([],REF);
         onChange();
       }
     },
+    /* Lighting tints: the strongest one darkens or warms the foliage. */
     setTint(next){
-      tints=Array.isArray(next)?next.filter(t=>t&&t.amount>0):[];
-      if(enabled&&trees.length)paint();
+      const list=Array.isArray(next)?next.filter(t=>t&&t.amount>0):[];
+      let best={color:'#000000',amount:0};
+      for(const t of list){
+        const a=t.roles&&t.roles.building!=null?t.roles.building:t.amount;
+        if(a>best.amount)best={color:t.color,amount:a};
+      }
+      renderer.setTint(best);
     },
-    syncView,
+    setSun(sun){renderer.setSun(sun);},
+    syncView(){},
     /* Crown footprints for the ground-shadow layer: [{ring:[[lng,lat],...], height}] */
     shadowFootprints(){
       if(!enabled||!projector)return [];
-      return trees.map(t=>({ring:octagon(t.x,t.y,t.r*0.85).slice(0,8).map(projector.toLngLat),height:t.h*0.9}));
+      return trees.map(t=>({ring:octagon(t.x,t.y,t.r*0.8).slice(0,8).map(projector.toLngLat),height:t.h*0.85}));
     },
     get count(){return trees.length;},
     get enabled(){return enabled;}
