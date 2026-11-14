@@ -6,10 +6,13 @@
 import { sourceBase, evaluateShared, inflate } from './source.js';
 import { cellsFromEvents } from './cells.js';
 
-export const YEARS = 75;
-// The build's ?v= (tools/build-site.mjs), carried to every incubator file this module reads, so a
-// browser that still holds yesterday's controls.js or meta.js never mixes it with today's module.
-const VQ = new URL(import.meta.url).search;                       // year index 0..75 = 2025..2100
+export const YEARS = 75;                       // year index 0..75 = 2025..2100
+const VQ = new URL(import.meta.url).search;    // the build's ?v=, for this module's own worker
+// A short content hash for each incubator file this module reads, filled in by
+// tools/build-site.mjs (empty while developing). A file is fetched again only when it has
+// changed, never mixed with an older copy, and not re-downloaded after every deploy.
+const SRC_HASH = /*SRC_HASH*/{};
+const hq = p => (SRC_HASH[p] ? `?h=${SRC_HASH[p]}` : '');
 
 async function fetchOk(url, as = 'text') {
   const r = await fetch(url);
@@ -41,7 +44,7 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
         if (data.type === 'error') p.reject(new Error(data.message)); else p.resolve(data);
       };
       worker.onerror = e => { for (const p of pending.values()) p.reject(new Error(e.message || 'worker failed')); pending.clear(); worker = null; };
-      call({ type: 'init', base: s.base, v: VQ });
+      call({ type: 'init', base: s.base, hash: SRC_HASH });
     }
     const id = ++nextId;
     return new Promise((resolve, reject) => { pending.set(id, { resolve, reject, onProgress }); worker.postMessage({ ...msg, id }); });
@@ -51,11 +54,11 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
     if (s.loaded) return s;
     if (s.loading) return s.loading;
     s.loading = (async () => {
-      const [meta, controls] = await Promise.all([fetchOk(s.base + 'data/meta.js' + VQ), fetchOk(s.base + 'controls.js' + VQ)]);
+      const [meta, controls] = await Promise.all([fetchOk(s.base + 'data/meta.js' + hq('data/meta.js')), fetchOk(s.base + 'controls.js' + hq('controls.js'))]);
       Object.assign(s, evaluateShared(meta, controls));
       s.N = s.D.meta.NX * s.D.meta.NY;
       s.groundTotal = Object.values(s.D.arr).reduce((t, p) => t + (s.SIZES[p] || 0), 0);
-      const [idx, cls] = await Promise.all([fetchOk(s.base + s.D.final.idx + VQ, 'buf').then(inflate), fetchOk(s.base + s.D.final.cls + VQ, 'buf').then(inflate)]);
+      const [idx, cls] = await Promise.all([fetchOk(s.base + s.D.final.idx + hq(s.D.final.idx), 'buf').then(inflate), fetchOk(s.base + s.D.final.cls + hq(s.D.final.cls), 'buf').then(inflate)]);
       const ev = { idx: new Uint32Array(idx), cls: new Uint8Array(cls), off: s.D.final.off };
       s.final = { ev, stats: s.D.final.stats, cells: cellsFromEvents(s.N, ev) };
       s.DEFAULTS = await defaults();
@@ -69,7 +72,7 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
 
   // The engine's DEFAULTS come from engine.js itself (read in a private scope, no grids needed).
   async function defaults() {
-    const text = await fetchOk(s.base + 'engine.js' + VQ);
+    const text = await fetchOk(s.base + 'engine.js' + hq('engine.js'));
     // eslint-disable-next-line no-new-func
     return { ...new Function(`${text}\nreturn GV.DEFAULTS;`)() };
   }
@@ -126,7 +129,7 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
     /** The release's first pass (step 6), as cells; loaded once, on demand. */
     loadPass1() {
       if (!s.D.pass1) return Promise.reject(new Error('this incubator has no first pass'));
-      if (!s.pass1Final) s.pass1Final = Promise.all([fetchOk(s.base + s.D.pass1.idx + VQ, 'buf').then(inflate), fetchOk(s.base + s.D.pass1.cls + VQ, 'buf').then(inflate)])
+      if (!s.pass1Final) s.pass1Final = Promise.all([fetchOk(s.base + s.D.pass1.idx + hq(s.D.pass1.idx), 'buf').then(inflate), fetchOk(s.base + s.D.pass1.cls + hq(s.D.pass1.cls), 'buf').then(inflate)])
         .then(([i, c]) => cellsFromEvents(s.N, { idx: new Uint32Array(i), cls: new Uint8Array(c), off: s.D.pass1.off }));
       s.pass1Final.catch(() => { s.pass1Final = null; });
       return s.pass1Final;
