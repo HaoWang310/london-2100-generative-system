@@ -3,8 +3,9 @@
 // MapLibre: one WebGL custom layer. The parcel records (cells.js) go to the GPU
 // once per run as a 3000 x 2460 texture; the year is a uniform, so playback
 // costs nothing per frame. The texture is drawn through the exact mesh of
-// georef.js, below the map's labels and the workspace's roads. When a parcel
-// is 6 px or larger on screen, a fine outline marks each 50 m parcel.
+// georef.js, under the basemap's water and roads (they cut through the parcels)
+// and the map's labels. Zoomed in, the parcels' edges are smoothed (see FS);
+// an optional fine outline can mark each 50 m parcel instead.
 // The loop's rails and stations are ordinary MapLibre line / circle layers.
 //
 // Canvas fallback (no MapLibre): the same classes painted into a 3000 x 2460
@@ -22,21 +23,58 @@ attribute vec2 a_pos; attribute vec2 a_uv;
 uniform mat4 u_matrix; varying vec2 v_uv;
 void main() { v_uv = a_uv; gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0); }`;
 
+// Smoothing (u_smooth = 1, once a parcel is a few pixels wide): the four parcels
+// around each pixel vote, weighted by distance to their centres (smoothstep-shaped
+// bilinear weights), and the class with the most weight wins. Class boundaries
+// become continuous curves instead of 50 m steps and isolated parcels become
+// rounded dots; the boundary is anti-aliased over u_aa parcels (about one pixel).
+// It is drawing only: every parcel keeps its class, the totals do not change.
 const FS = `
 precision highp float;
 uniform sampler2D u_cells; uniform vec2 u_grid; uniform float u_year; uniform float u_opacity; uniform float u_edge;
+uniform float u_smooth; uniform float u_aa; uniform float u_round;
 uniform vec3 u_c1; uniform vec3 u_c2; uniform vec3 u_c3; uniform vec3 u_c4; uniform vec3 u_c5;
 uniform float u_show; varying vec2 v_uv;
-void main() {
-  if (v_uv.x < 0.0 || v_uv.y < 0.0 || v_uv.x >= 1.0 || v_uv.y >= 1.0) discard;
-  vec2 cell = floor(v_uv * u_grid);
+float classOf(vec2 cell) {
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= u_grid.x || cell.y >= u_grid.y) return 0.0;
   vec4 c = floor(texture2D(u_cells, (cell + 0.5) / u_grid) * 255.0 + 0.5);
   float y = u_year + 0.5;
-  float k = 0.0;
-  if (c.a < y) k = 3.0; else if (c.b < y) k = 2.0; else if (c.r > 0.5 && c.g < y) k = c.r;
-  if (k < 0.5) discard;
-  vec3 col = k < 1.5 ? u_c1 : k < 2.5 ? u_c2 : k < 3.5 ? u_c3 : k < 4.5 ? u_c4 : u_c5;
-  float a = u_opacity * (k < 3.5 ? 1.0 : 0.85) * u_show;
+  if (c.a < y) return 3.0;
+  if (c.b < y) return 2.0;
+  if (c.r > 0.5 && c.g < y) return c.r;
+  return 0.0;
+}
+vec3 colourOf(float k) { return k < 1.5 ? u_c1 : k < 2.5 ? u_c2 : k < 3.5 ? u_c3 : k < 4.5 ? u_c4 : u_c5; }
+float alphaOf(float k) { return k < 0.5 ? 0.0 : (k < 3.5 ? 1.0 : 0.85); }
+void main() {
+  if (v_uv.x < 0.0 || v_uv.y < 0.0 || v_uv.x >= 1.0 || v_uv.y >= 1.0) discard;
+  float k; float blend = 1.0; float k2 = 0.0;
+  if (u_smooth > 0.5) {
+    vec2 p = v_uv * u_grid - 0.5;
+    vec2 i0 = floor(p), t = p - i0;
+    t = smoothstep(0.5 - u_round, 0.5 + u_round, t);   // u_round: how far from a parcel edge the rounding reaches
+    float a = classOf(i0), b = classOf(i0 + vec2(1.0, 0.0)), c = classOf(i0 + vec2(0.0, 1.0)), d = classOf(i0 + vec2(1.0, 1.0));
+    float wa = (1.0 - t.x) * (1.0 - t.y), wb = t.x * (1.0 - t.y), wc = (1.0 - t.x) * t.y, wd = t.x * t.y;
+    // weight of each candidate class (the four corners' classes)
+    float sa = wa + (b == a ? wb : 0.0) + (c == a ? wc : 0.0) + (d == a ? wd : 0.0);
+    float sb = wb + (a == b ? wa : 0.0) + (c == b ? wc : 0.0) + (d == b ? wd : 0.0);
+    float sc = wc + (a == c ? wa : 0.0) + (b == c ? wb : 0.0) + (d == c ? wd : 0.0);
+    float sd = wd + (a == d ? wa : 0.0) + (b == d ? wb : 0.0) + (c == d ? wc : 0.0);
+    // best and runner-up (a different class)
+    k = a; float s1 = sa;
+    if (sb > s1) { k = b; s1 = sb; } if (sc > s1) { k = c; s1 = sc; } if (sd > s1) { k = d; s1 = sd; }
+    float s2 = 0.0;
+    if (a != k && sa > s2) { s2 = sa; k2 = a; } if (b != k && sb > s2) { s2 = sb; k2 = b; }
+    if (c != k && sc > s2) { s2 = sc; k2 = c; } if (d != k && sd > s2) { s2 = sd; k2 = d; }
+    blend = s2 > 0.0 ? smoothstep(0.0, u_aa, s1 - s2) * 0.5 + 0.5 : 1.0;
+  } else {
+    k = classOf(floor(v_uv * u_grid));
+  }
+  float a1 = alphaOf(k), a2 = alphaOf(k2);
+  float al = mix(a2, a1, blend);
+  if (al < 0.004) discard;
+  vec3 col = (colourOf(k) * a1 * blend + colourOf(k2) * a2 * (1.0 - blend)) / max(al, 1e-4);
+  float a = u_opacity * al * u_show;
   if (u_edge > 0.0) {
     vec2 f = fract(v_uv * u_grid);
     float d = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
@@ -61,7 +99,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   const f = gridFrame(meta);
   const mesh = gridMesh(meta);
   let map = null, gl = null, prog = null, buf = null, ibuf = null, tex = null, vao = null, vaoApi = null;
-  let uploaded = null, opts = { opacity, edges: true, rails: true };
+  let uploaded = null, opts = { opacity, edges: false, smooth: true, rails: true };
   let beforeId;
 
   // ------------------------------------------------------------ MapLibre
@@ -141,6 +179,10 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
       gl.uniform1f(gl.getUniformLocation(prog, 'u_opacity'), opts.opacity);
       gl.uniform1f(gl.getUniformLocation(prog, 'u_show'), 1);
       gl.uniform1f(gl.getUniformLocation(prog, 'u_edge'), opts.edges && cellPx >= 6 ? Math.min(0.12, 1.2 / cellPx) : 0);
+      const smooth = opts.smooth && cellPx >= 3;
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_smooth'), smooth ? 1 : 0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_aa'), smooth ? Math.min(0.5, 2.4 / cellPx) : 0.0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_round'), opts.round ?? 0.24);
       for (const k of [1, 2, 3, 4, 5]) gl.uniform3fv(gl.getUniformLocation(prog, `u_c${k}`), rgb(PALETTE[k]));
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.drawElements(gl.TRIANGLES, mesh.index.length, gl.UNSIGNED_SHORT, 0);
@@ -156,9 +198,11 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   ]);
   const stationsFC = () => fc(stations.map(s => ({ type: 'Feature', properties: { kind: s[1], name: s[0] }, geometry: { type: 'Point', coordinates: toWGS84([s[2], s[3]]) } })));
 
-  function attachMapLibre(m, before) {
+  // `ground`: where the parcels go (under the basemap's water and roads, so the real
+  // rivers and streets cut through them); `before`: where the rails and stations go.
+  function attachMapLibre(m, before, { ground = before } = {}) {
     map = m; beforeId = before;
-    map.addLayer(layer, beforeId);
+    map.addLayer(layer, ground && map.getLayer(ground) ? ground : beforeId);
     map.addSource('g01-rails', { type: 'geojson', data: railsFC() });
     map.addSource('g01-stations', { type: 'geojson', data: stationsFC() });
     map.addLayer({ id: 'g01-rails-line', type: 'line', source: 'g01-rails', layout: { 'line-cap': 'round', 'line-join': 'round' },
