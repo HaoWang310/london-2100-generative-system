@@ -27,10 +27,10 @@ Two of the slime mould's station cells, C12 (round station P2) and C13, taken st
 - **The road rules:**
   - M is the cell edge.
   - A roads are added one at a time where land is out of reach, never side by side.
-  - No new road runs along an existing one.
+  - No new road runs along an existing one, or along the cell edge.
   - Every loose end is joined to a road.
 
-  道路规则：M 为单元边界；A 级道路逐条加在覆盖不到的土地最多之处，且彼此不平行；新道路不沿现有道路布置；每个断头都连接到道路。
+  道路规则：M 为单元边界；A 级道路逐条加在覆盖不到的土地最多之处，且彼此不平行；新道路不沿现有道路或单元边界布置；每个断头都连接到道路。
 - **English | 中文** switch at the top left of the map.
   地图左上角可切换中英文。
 
