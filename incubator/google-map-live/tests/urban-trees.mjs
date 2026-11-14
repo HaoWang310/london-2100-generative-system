@@ -1,6 +1,7 @@
 /* Procedural green-space trees (no DOM). */
 import assert from 'node:assert/strict';
-import {scatterTrees,greenClassOf,treeParts,pointInPolygon,hash01,GREEN_CLASSES} from '../scripts/urban_trees.js';
+import {scatterTrees,greenClassOf,treeParts,pointInPolygon,hash01,GREEN_CLASSES,treeTint} from '../scripts/urban_trees.js';
+import {buildTreeModels} from '../scripts/tree_renderer.js';
 
 // Class mapping from OpenMapTiles layers.
 assert.equal(greenClassOf('landcover',{class:'wood',subclass:'forest'}),'wood');
@@ -50,5 +51,22 @@ for(const conifer of [false,true]){
   assert.equal(treeParts(t,'flat')[0].top,0);
 }
 assert.ok(hash01(1,2,3)>=0&&hash01(1,2,3)<1);
+
+// 3D models: unit height, sane sizes, normals and colours present.
+const models=buildTreeModels();
+for(const [name,m] of Object.entries(models)){
+  assert.equal(m.position.length,m.normal.length,name);
+  assert.equal(m.position.length,m.color.length,name);
+  let zmax=0,zmin=1,rmax=0;
+  for(let i=0;i<m.position.length;i+=3){
+    zmax=Math.max(zmax,m.position[i+2]);zmin=Math.min(zmin,m.position[i+2]);
+    rmax=Math.max(rmax,Math.hypot(m.position[i],m.position[i+1]));
+  }
+  assert.ok(zmin>-0.05&&zmax<1.15&&zmax>0.85,name+' height '+zmin.toFixed(2)+'..'+zmax.toFixed(2));
+  assert.ok(rmax<0.6,name+' crown radius '+rmax.toFixed(2));
+  assert.ok(m.count<2500,name+' vertex budget');
+}
+assert.ok(trees.some(t=>t.variant==='broadleaf'));
+for(const t of trees.slice(0,20)){const c=treeTint(t);assert.ok(c.every(v=>v>0.7&&v<1.4));}
 
 console.log('PASS urban trees: classes, density, water, determinism, models ('+trees.length+' park trees)');
