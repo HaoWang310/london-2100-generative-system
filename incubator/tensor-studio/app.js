@@ -966,7 +966,7 @@ function shoreStreets(maxHa){ const OFF = 32; let made = 0;
   const bd = (x, y) => { const fx = clamp(x / cell, 0, nx - 1.001), fy = clamp(y / cell, 0, ny - 1.001), c0 = Math.floor(fx), r0 = Math.floor(fy), u = fx - c0, w = fy - r0, i = r0 * nx + c0;
     return BD[i] * (1 - u) * (1 - w) + BD[i + 1] * u * (1 - w) + BD[i + nx] * (1 - u) * w + BD[i + nx + 1] * u * w; };
   const grad = (x, y) => { const gx = bd(x + 10, y) - bd(x - 10, y), gy = bd(x, y + 10) - bd(x, y - 10), n = Math.hypot(gx, gy) || 1; return [gx / n, gy / n]; };
-  const why = globalThis.__SHW || null, half = (x0, y0, sg) => { const pts = []; let x = x0, y = y0, g = grad(x, y), hx = -g[1] * sg, hy = g[0] * sg; const R = r => { if (why) why.push([r, Math.round(x0), Math.round(y0), sg, Math.round(x), Math.round(y), pts.length]); return null; };
+  const why = null, half = (x0, y0, sg) => { const pts = []; let x = x0, y = y0, g = grad(x, y), hx = -g[1] * sg, hy = g[0] * sg; const R = r => { if (why) why.push([r, Math.round(x0), Math.round(y0), sg, Math.round(x), Math.round(y), pts.length]); return null; };
     // (where the line turns too hard or drifts, after 60 m: it ends on the nearest street ahead within 90 m, straight, if the way is clear)
     const finish = r => { if (pts.length < 12) return R(r); let best = null;
       for (let a = -120; a <= 120; a += 10){ const ca = Math.cos(a * PI / 180), sa = Math.sin(a * PI / 180), ux = hx * ca - hy * sa, uy = hx * sa + hy * ca;
@@ -1006,7 +1006,7 @@ function arcOf(P, q){ let acc = 0, best = 1e9, s = 0; for (let k = 1; k < P.leng
 // the second street l's end on its side `side` (0: its last point) brought to the point T on the street par, its last stretch
 // (about 25 m) a curve that meets par square; false (and nothing changed) if the curve leaves the land, crosses a corridor
 // or the rail, comes near another street, or another street ends on the stretch it replaces
-function retail(l, side, T, par, back){ back = back || 25; const RW = r => { if (globalThis.__RTW) globalThis.__RTW.push(r); return false; }; const P = side === 0 ? l.pts.slice() : l.pts.slice().reverse(); if (plen(P) < 40) return RW('len');
+function retail(l, side, T, par, back){ back = back || 25; const RW = () => false; const P = side === 0 ? l.pts.slice() : l.pts.slice().reverse(); if (plen(P) < 40) return RW('len');
   let acc = 0, kP = P.length - 1; for (let k = P.length - 1; k > 0; k--){ acc += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); if (acc >= back){ kP = k - 1; break; } } if (kP >= P.length - 2) return RW('kP');
   const A = P[kP], h = (() => { const z = P[Math.max(0, kP - 3)], L = Math.hypot(A[0] - z[0], A[1] - z[1]) || 1; return [(A[0] - z[0]) / L, (A[1] - z[1]) / L]; })();
   const [sT] = arcOf(par.pts, T), tg = atArc(par.pts, sT).d; let nrm = [-tg[1], tg[0]]; if ((A[0] - T[0]) * nrm[0] + (A[1] - T[1]) * nrm[1] < 0) nrm = [-nrm[0], -nrm[1]];
@@ -1046,7 +1046,7 @@ function crossJoin(){ let n = 0; rehashAll(); const byPar = new Map();
 // a second street meeting a street at under 70 degrees: its last stretch bent to meet it square (moving the junction along
 // the street, not within 12 m of another junction on it)
 function squareEnds(){ let n = 0; rehashAll();
-  for (const q of secEnds()){ if (q.l.dead) continue; const ang = endAngle(q.l, q.side, q.par, q.e); if (ang >= 70) continue; const W_ = globalThis.__SQW, R = r => { if (W_) W_.push([r, q.l.id, q.l.born, q.l.ends[q.side], q.par.level, Math.round(ang), q.e.map(Math.round)]); };
+  for (const q of secEnds()){ if (q.l.dead) continue; const ang = endAngle(q.l, q.side, q.par, q.e); if (ang >= 70) continue; const R = () => {};
     const P = q.side === 0 ? q.l.pts : q.l.pts.slice().reverse(); let ok = false;
     for (const back of [25, 15, 40]){   // (a shorter stretch where a street branches off the last 25 m; a longer one where it runs close beside)
       let acc = 0, A = P[0]; for (let k = P.length - 1; k > 0; k--){ acc += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); if (acc >= back){ A = P[k - 1]; break; } }
@@ -1294,12 +1294,12 @@ function splitBlocks(maxHa){ maxHa = maxHa || 1.5; let made = 0;
         let u = t === null ? cross : nearestAxis(t, cross[0], cross[1]); if (along) u = [-u[1], u[0]];
         const half = sg => { const pts = []; let x = x0, y = y0, hx = u[0] * sg, hy = u[1] * sg;
           for (let k = 0; k < 120; k++){ const tt = fieldAtT(x, y); if (tt !== null){ const ax = nearestAxis(tt, hx, hy); hx = hx * 0.85 + ax[0] * 0.15; hy = hy * 0.85 + ax[1] * 0.15; const nn = Math.hypot(hx, hy); hx /= nn; hy /= nn; }
-            const nx2 = x + hx * 5, ny2 = y + hy * 5; const W_ = globalThis.__SPW, R = r => { if (W_ && area > 8) W_.push([r, Math.round(area), Math.round(x0), Math.round(y0), along, sg, Math.round(nx2), Math.round(ny2)]); return null; }; if (!inLand(nx2, ny2)) return R('land');
+            const nx2 = x + hx * 5, ny2 = y + hy * 5; const W_ = null, R = r => { if (W_ && area > 8) W_.push([r, Math.round(area), Math.round(x0), Math.round(y0), along, sg, Math.round(nx2), Math.round(ny2)]); return null; }; if (!inLand(nx2, ny2)) return R('land');
             const hit = nearB(nx2, ny2, 6, -1, [], null, false, null); if (hit){ if (LINES[hit[3]].hole) return R('hole'); pts.push([hit[1], hit[2]]); return pts; }
             if (inRail(nx2, ny2) || (inZone(nx2, ny2) && !culvertOK(nx2, ny2, [hx, hy]))) return R('zone');
             pts.push([nx2, ny2]); x = nx2; y = ny2; } return null; };
         const a = half(1), b = half(-1); if (!a || !b) continue;
-        const pts = b.slice().reverse().concat([[x0, y0]], a); if (plen(pts) < 40 || !cutClear(pts)){ if (globalThis.__SPW && area > 8) globalThis.__SPW.push(['clear', Math.round(x0), Math.round(y0), along, Math.round(plen(pts))]); continue; }
+        const pts = b.slice().reverse().concat([[x0, y0]], a); if (plen(pts) < 40 || !cutClear(pts)){ continue; }
         const l = newLine(2, pts, u[0], u[1], 'split'); l.ends = ['T', 'T']; EVENTS.push({ x: x0, y: y0, k: 'split' }); n++; done = true; rehashAll(); } }
     made += n; if (!n) break; }
   rehashAll(); netDirty = widthDirty = true; return made; }
