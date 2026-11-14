@@ -5,7 +5,7 @@
 // Messages out: {type:'progress', id, ...} · {type:'result', id, ...} · {type:'error', id, message}
 /* global importScripts, D, GV, GRIDCODEC */
 
-let base = null, engine = null, finalEv = null;
+let base = null, v = '', engine = null, finalEv = null;
 const runs = new Map();            // runId -> {idx, cls, off}; the latest few, for comparisons
 const tiers = new Map();           // key -> {applied, tier}
 const cache = new Map();
@@ -16,7 +16,7 @@ async function inflate(buf) {
 }
 
 async function fetchBytes(path, id, label) {
-  const r = await fetch(base + path);
+  const r = await fetch(base + path + v);
   if (!r.ok) throw new Error(`${path}: ${r.status}`);
   if (!r.body || !r.body.getReader) return r.arrayBuffer();
   const reader = r.body.getReader(), parts = [];
@@ -87,8 +87,8 @@ function samePlace(a, b) {
 onmessage = async ({ data: m }) => {
   try {
     if (m.type === 'init') {
-      base = m.base;
-      importScripts(base + 'data/meta.js', base + 'codec.js', base + 'engine.js');
+      base = m.base; v = m.v || '';
+      importScripts(base + 'data/meta.js' + v, base + 'codec.js' + v, base + 'engine.js' + v);
       postMessage({ type: 'ready', id: m.id });
     } else if (m.type === 'prepare') {          // load the ground in the background, before any run
       await ensureEngine(m.id);
