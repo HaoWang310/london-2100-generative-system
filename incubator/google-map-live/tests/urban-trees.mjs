@@ -70,3 +70,31 @@ assert.ok(trees.some(t=>t.variant==='broadleaf'));
 for(const t of trees.slice(0,20)){const c=treeTint(t);assert.ok(c.every(v=>v>0.7&&v<1.4));}
 
 console.log('PASS urban trees: classes, density, water, determinism, models ('+trees.length+' park trees)');
+
+// Street trees: both kerbs of a residential street, none on the carriageway,
+// none in buildings or airports, none on a crossing road, none on motorways.
+{
+  const {streetTreeSlots,STREET_HALF_WIDTH,STREET_TREES}=await import('../scripts/urban_trees.js');
+  const street={cls:'minor',coords:[[0,0],[400,0]]};
+  const cross={cls:'secondary',coords:[[200,-200],[200,200]]};
+  const shop={rings:[[[50,3],[90,3],[90,30],[50,30],[50,3]]]};
+  const airport={rings:[[[300,-50],[400,-50],[400,50],[300,50],[300,-50]]]};
+  const out=scatterTrees([],[],{roads:[street,cross,{cls:'motorway',coords:[[0,500],[400,500]]}],exclude:[shop,airport]});
+  const off=STREET_HALF_WIDTH.minor+STREET_TREES.kerb;
+  const onStreet=out.filter(t=>Math.abs(Math.abs(t.y)-off)<1e-6);
+  assert.ok(onStreet.some(t=>t.y>0)&&onStreet.some(t=>t.y<0),'trees on both kerbs');
+  assert.ok(out.every(t=>t.cls==='street'),'only street trees');
+  assert.ok(!out.some(t=>Math.abs(t.y-500)<20),'no trees along motorways');
+  assert.ok(!out.some(t=>t.x>=50&&t.x<=90&&t.y>=3&&t.y<=30),'no trees in buildings');
+  assert.ok(!out.some(t=>t.x>=300&&t.x<=400&&Math.abs(t.y)<=50),'no trees in airports');
+  assert.ok(!out.some(t=>Math.abs(t.x-200)<STREET_HALF_WIDTH.secondary+0.8&&Math.abs(t.y)<off+1),'junction kept clear');
+  // Same trees when the street arrives split into tiles.
+  const parts=streetTreeSlots([{cls:'minor',coords:[[0,0],[137,0]]},{cls:'minor',coords:[[137,0],[400,0]]}]);
+  const whole=streetTreeSlots([street]);
+  assert.deepEqual(parts.map(t=>[t.x.toFixed(3),t.y]).sort(),whole.map(t=>[t.x.toFixed(3),t.y]).sort(),'tile split stable');
+  // Plain grass (verges, airfields) and pitches grow nothing.
+  assert.equal(greenClassOf('landcover',{class:'grass',subclass:null}),null);
+  assert.equal(greenClassOf('landcover',{class:'grass',subclass:'pitch'}),null);
+  assert.equal(greenClassOf('landuse',{class:'pitch'}),null);
+  console.log('PASS street trees ('+out.length+')');
+}
