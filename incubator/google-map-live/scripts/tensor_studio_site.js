@@ -1,6 +1,6 @@
-/* Tensor Studio opened over the London map (v3.37): the site the user drew, with the map's own OSM features
+/* Tensor Studio opened over the London map (v3.38): the site the user drew, with the map's own OSM features
  * and the OS Terrain 50 elevation, handed to ../../tensor-studio/index.html in an iframe (same origin) through
- * window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang, close, fail}. Tensor Studio builds its site
+ * window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang, close, fail, view}. Tensor Studio builds its site
  * from that (its scripts/site_builder.js) and reads the EA flood risk itself. Copied from
  * tensor-studio/integration/google-map-live-hook.js (same logic; this copy has English-only source strings for the map's language layer).
  */
@@ -81,13 +81,13 @@ export function collectSiteFeatures(map, ring, padM = 450){
 }
 
 /* ---------------------------------------------------------------- the overlay */
-let overlay = null, frame = null, session = null, onCloseCb = null;
+let overlay = null, frame = null, session = null, onCloseCb = null, camera = null, hiddenLayers = [];
 const lang = () => String(document.documentElement.lang || 'zh').toLowerCase().startsWith('en') ? 'en' : 'zh';
 function ensureOverlay(){
   if (overlay) return;
   overlay = document.createElement('div');
   overlay.id = 'tensorStudioOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:4000;background:#000;display:flex;align-items:center;justify-content:center;color:#98989d;font:13px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#98989d;font:13px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
   overlay.innerHTML = '<div id="tensorStudioWait" role="status" aria-live="polite">' + 'Preparing the Tensor Studio site…' + '</div>';
   document.body.append(overlay);
   document.addEventListener('keydown', onKey);
@@ -97,16 +97,38 @@ export function closeTensorStudio(){
   const was = !!overlay;
   document.removeEventListener('keydown', onKey);
   overlay?.remove(); overlay = null; frame = null;
+  restoreMap();
   try { delete window.__TENSOR_SITE_INPUT__; } catch (error){ window.__TENSOR_SITE_INPUT__ = undefined; }
   const cb = onCloseCb; onCloseCb = null; if (was && cb) cb();
 }
 export const tensorStudioOpen = () => !!overlay;
+
+/* ---------------------------------------------------------------- (v3.38) the map under Tensor Studio follows its view */
+let hostMap = null;
+function followView(v){
+  if (!hostMap) return;
+  if (!v){ restoreMap(); return; }   // Tensor Studio switched to its own basemap: the map goes back to where it was
+  if (!camera){
+    camera = {center: hostMap.getCenter(), zoom: hostMap.getZoom(), bearing: hostMap.getBearing(), pitch: hostMap.getPitch()};
+    hiddenLayers = (hostMap.getStyle()?.layers || []).map(l => l.id).filter(id => id.startsWith('site-selection-'));
+    for (const id of hiddenLayers){ try { hostMap.setLayoutProperty(id, 'visibility', 'none'); } catch (error){} }
+  }
+  try { hostMap.jumpTo({center: [v.lng, v.lat], zoom: Math.max(0, Math.min(22, v.zoom)), bearing: v.bearing, pitch: 0}); } catch (error){}
+}
+function restoreMap(){
+  if (!hostMap || !camera) return;
+  for (const id of hiddenLayers){ try { hostMap.setLayoutProperty(id, 'visibility', 'visible'); } catch (error){} }
+  hiddenLayers = [];
+  try { hostMap.jumpTo(camera); } catch (error){}
+  camera = null;
+}
 function showFrame(){
   const wait = overlay.querySelector('#tensorStudioWait'); if (wait) wait.remove();
   if (!frame){
     frame = document.createElement('iframe');
     frame.title = 'Tensor Studio';
-    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#000';
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent';
+    overlay.style.background = 'transparent';   // (v3.38) the London map shows through: Tensor Studio paints only the site and its panels
     frame.src = new URL('../../tensor-studio/index.html?r=' + Date.now(), import.meta.url).href;   // from google-map-live/scripts/; ?r= defeats the Pages cache so a new Tensor Studio arrives at once
     overlay.append(frame);
     frame.addEventListener('load', () => { try { frame.contentWindow.addEventListener('keydown', onKey); } catch (error){} });
@@ -130,7 +152,8 @@ export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWi
       bounds: demBounds, width: demWidth, height: demHeight}).catch(error => { console.warn('Tensor Studio: no elevation', error); return null; });
     session = {say};
     if (!frame && overlay && !overlay.isConnected) ensureOverlay();
-    window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail};
+    hostMap = map;
+    window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail, view: followView};
     showFrame();
   } catch (error){ session = {say}; fail(error); }
 }
