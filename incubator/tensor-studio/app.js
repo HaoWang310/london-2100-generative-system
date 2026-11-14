@@ -95,7 +95,7 @@ function syncTints(){ const box = document.getElementById('tints'), nm = documen
   for (const b of box.children) b.classList.toggle('on', b.dataset.tint === TINT);
   if (nm){ const T = TINTS.find(x => x[0] === TINT); nm.textContent = String(TINTS.indexOf(T) + 1).padStart(2, '0') + ' ' + (zh ? T[1] : T[2]); } }
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
-function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
+function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t); if (typeof autoBasemap === 'function') autoBasemap(t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
   try { localStorage.setItem('ts7-theme', t); } catch (e) {}
   baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; PARKIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
@@ -1893,6 +1893,11 @@ const BASEMAPS = {
   light: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/light_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' },
   dark: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/dark_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' } };
 let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basemap'); return BASEMAPS[b] ? b : 'none'; } catch (e){ return 'none'; } })();
+// (v8.33) opened from the London map, the surroundings show as a real map by default: the tile basemap that matches the
+// theme, until the user picks a basemap here (then that choice is kept)
+let BASEMAP_AUTO = false;
+if (D.site){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen'); } catch (e) {} if (!chosen){ BASEMAP_AUTO = true; BASEMAP = 'light'; } }
+function autoBasemap(theme){ if (!BASEMAP_AUTO) return; const want = theme === 'dark' ? 'dark' : 'light'; if (BASEMAP !== want){ BASEMAP = want; baseDirty = true; syncBase(); } }
 const TILES = new Map();
 function tileImg(key, src){ let t = TILES.get(key); if (t) return t; t = new Image(); t.crossOrigin = 'anonymous'; t.decoding = 'async';
   t.onload = () => { baseDirty = true; }; t.onerror = () => { t.failed = true; }; t.src = src; TILES.set(key, t);
@@ -1913,10 +1918,10 @@ function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && windo
     const a = scr(lonOf(x), latOf(y)), b = scr(lonOf(x + 1), latOf(y)), c = scr(lonOf(x), latOf(y + 1)), S = im.naturalWidth;
     g.setTransform(DPR * (b[0] - a[0]) / S, DPR * (b[1] - a[1]) / S, DPR * (c[0] - a[0]) / S, DPR * (c[1] - a[1]) / S, DPR * a[0], DPR * a[1]);
     g.drawImage(im, -0.4, -0.4, S + 0.8, S + 0.8); drawn++; }
-  g.restore(); return true; }
+  g.restore(); return drawn > 0; }   // (v8.33) no tile yet (or offline): the drawn context stays until the tiles arrive
 function syncBase(){ for (const b of document.querySelectorAll('#tgBase button')) b.classList.toggle('on', b.dataset.bm === BASEMAP);
   const el = document.getElementById('bmAttrib'); if (el){ const B = BASEMAPS[BASEMAP]; el.hidden = !B; el.innerHTML = B ? B.attr : ''; window.__TS_INSETS && window.__TS_INSETS(); } }
-for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); } catch (e) {} baseDirty = true; syncBase(); };
+for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; BASEMAP_AUTO = false; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); localStorage.setItem('tensorStudio.basemapChosen', '1'); } catch (e) {} baseDirty = true; syncBase(); };
 // how much of the network lies where floods are expected
 let FLAND = null;
 function floodNum(){ const el = document.getElementById('fNum'); if (!el) return; const zh = TS_LANG === 'zh';
