@@ -155,8 +155,8 @@ function refine(m){ const C = PM.cmp, best = C.list.filter(c => !c.fail.length).
     const kk = setKey(s); if (seen.has(kk)) continue; seen.add(kk); out.push(s); }
   return out.length ? out : samples(C.base, m + 1).slice(1); }
 // (v8.28) how many, and how much of each run is shown on the map
-PM.cmpN = 16; PM.cmpShow = 'full';
-try { const n = +localStorage.getItem('tensorStudio.cmpN'); if (n >= 4 && n <= 48) PM.cmpN = n; const m = localStorage.getItem('tensorStudio.cmpShow'); if (['full', 'roads', 'off'].includes(m)) PM.cmpShow = m; } catch (e) {}
+PM.cmpN = 10; PM.cmpShow = 'full';
+try { const n = +localStorage.getItem('tensorStudio.cmpRuns'); if (n >= 4 && n <= 48) PM.cmpN = n; const m = localStorage.getItem('tensorStudio.cmpShow'); if (['full', 'roads', 'off'].includes(m)) PM.cmpShow = m; } catch (e) {}
 const SHOWS = [['full', '完整过程', 'Whole process'], ['roads', '只看道路', 'Streets only'], ['off', '不展示', 'No display']];
 const PER = { full: 8.8, roads: 5, off: 2.3 };   // seconds a run (station P2)
 function estimate(){ const s = Math.round(PM.cmpN * PER[PM.cmpShow]), m = Math.floor(s / 60), r = s % 60; return L('约 ' + (m ? m + ' 分 ' : '') + r + ' 秒', 'about ' + (m ? m + ' min ' : '') + r + ' s'); }
@@ -228,7 +228,7 @@ function renderCmp(){ if (!PM.active) return; const C = PM.cmp, running = !!(C &
   let h = '<div class="pmCHead"><b>' + L('方案比较', 'Compare runs') + '</b>' + (running ? '<button type="button" class="pmLink" data-act="stop">' + L('停止', 'Stop') + '</button>' : '') + '</div>';
   if (!running){
     h += '<p class="pmHint">' + L('你放的节点和主路间距不变，自动改变次路间距、等高线、夏季通风、冬季挡风和疏密。先在整个范围里均匀试 2/3 的方案，再在前两名附近细调剩下的 1/3，按总分排序。', 'Your nodes and the main-street spacing stay; the second-street spacing, contour, summer air, winter shelter and density vary. Two thirds of the runs spread over the whole range, the last third close to the best two; ranked by the score.') + '</p>';
-    h += '<div class="pmCCtl"><label>' + L('方案数', 'Runs') + '</label><input type="range" min="4" max="48" step="4" value="' + PM.cmpN + '" data-ctl="n" aria-label="' + L('方案数', 'Runs') + '"><output>' + PM.cmpN + '</output></div>';
+    h += '<div class="pmCCtl"><label>' + L('方案数', 'Runs') + '</label><input type="range" min="4" max="48" step="2" value="' + PM.cmpN + '" data-ctl="n" aria-label="' + L('方案数', 'Runs') + '"><output>' + PM.cmpN + '</output></div>';
     h += '<div class="pmCCtl"><label>' + L('展示', 'Show') + '</label><div class="pmSeg">' + SHOWS.map(([k, z, e]) => '<button type="button" data-show="' + k + '" class="' + (PM.cmpShow === k ? 'on' : '') + '">' + L(z, e) + '</button>').join('') + '</div></div>';
     h += '<p class="pmHint pmEst">' + estText() + '</p>'; }
   if (!C || (!running && !C.list.length)) h += '<div class="pmActs"><button type="button" class="primary" data-act="run">' + L('开始比较', 'Start') + '</button></div>';
@@ -243,7 +243,7 @@ function renderCmp(){ if (!PM.active) return; const C = PM.cmp, running = !!(C &
         (!c.cur && !running ? '<button type="button" class="pmLink" data-act="use" data-i="' + r.i + '">' + L('用这个方案', 'Use this run') + '</button>' : '') + '</div></div>'; }).join('') + '</div>';
     if (!running) h += '<div class="pmActs"><button type="button" data-act="run">' + L('重新比较', 'Compare again') + '</button></div>'; }
   cmpBox.innerHTML = h; }
-cmpBox.addEventListener('input', e => { if (e.target.dataset.ctl !== 'n') return; PM.cmpN = +e.target.value; e.target.nextElementSibling.textContent = PM.cmpN; try { localStorage.setItem('tensorStudio.cmpN', PM.cmpN); } catch (err) {}
+cmpBox.addEventListener('input', e => { if (e.target.dataset.ctl !== 'n') return; PM.cmpN = +e.target.value; e.target.nextElementSibling.textContent = PM.cmpN; try { localStorage.setItem('tensorStudio.cmpRuns', PM.cmpN); } catch (err) {}
   const est = cmpBox.querySelector('.pmEst'); if (est) est.textContent = estText(); });
 cmpBox.addEventListener('click', e => { const sh = e.target.closest('[data-show]'); if (sh){ PM.cmpShow = sh.dataset.show; try { localStorage.setItem('tensorStudio.cmpShow', PM.cmpShow); } catch (err) {} renderCmp(); return; }
   const pv = e.target.closest('[data-pv]'); if (pv && PM.cmp && !PM.cmp.running){ preview(+pv.dataset.pv); return; }
