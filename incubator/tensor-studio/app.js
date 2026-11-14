@@ -65,13 +65,13 @@ const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), hexOf = c
 const mixH = (a, b, t) => { const p = hex3(a), q = hex3(b); return hexOf(p.map((v, i) => v + (q[i] - v) * t)); }, rgbaH = (h, a) => { const c = hex3(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; };
 function tintColours(id){ const T = TINTS.find(x => x[0] === id) || TINTS[0], [c0, c1, c2, c3, c4] = T[3];
   const dk = JSON.parse(JSON.stringify(BASEPAL.dark)), lt = JSON.parse(JSON.stringify(BASEPAL.light));
-  Object.assign(dk, { bg: c0, land: mixH(c0, c1, 0.42), edge: c4, contour: rgbaH(c4, 0.06), contourIdx: rgbaH(c4, 0.15), label: mixH(c3, c1, 0.4), room: rgbaH(c2, 0.08), bld: mixH(c0, c1, 0.8), lane: mixH(c0, c1, 0.6),
+  Object.assign(dk, { bg: '#000000', land: mixH(c0, c1, 0.42), edge: c4, contour: rgbaH(c4, 0.06), contourIdx: rgbaH(c4, 0.15), label: mixH(c3, c1, 0.4), room: rgbaH(c2, 0.08), bld: mixH(c0, c1, 0.8), lane: mixH(c0, c1, 0.6),
     rib: { M: mixH(c0, c1, 0.95), A: mixH(c0, c1, 0.85), B: mixH(c0, c1, 0.75), C: mixH(c0, c1, 0.6) }, main: c4, second: mixH(c3, c1, 0.45), grow: c3, glow: rgbaH(c2, 0.55), anchor: c4, bridge: c4, culvert: c3, width: c4,
     flow: [hex3(c2), hex3(c3), hex3(c4)], flowAlpha: 0.48, fieldLine: rgbaH(c3, 0.6), fieldLine2: rgbaH(c4, 0.2), wLo: hex3(c1), wHi: hex3(c4), windAlong: c3, ghost: rgbaH(c4, 0.2),
     cells: [c0, mixH(c0, c1, 0.3), mixH(c0, c1, 0.55), mixH(c0, c1, 0.8), c1], cross: rgbaH(c4, 0.28), evBranch: c3, evCross: c4, uTeal: hex3(c3) });
   if (D.site) dk.prim = mixH(c1, c3, 0.25);
   const ink = mixH(c0, '#1d1d1f', 0.4);
-  Object.assign(lt, { bg: mixH('#f2f2f4', c4, 0.28), room: rgbaH(c2, 0.05), main: ink, prim: D.site ? lt.prim : ink, anchor: ink, bridge: ink, width: ink, edge: ink, second: mixH(c1, '#9a9aa0', 0.55), grow: c2, glow: rgbaH(c2, 0.28), culvert: c2,
+  Object.assign(lt, { bg: '#ffffff', room: rgbaH(c2, 0.05), main: ink, prim: D.site ? lt.prim : ink, anchor: ink, bridge: ink, width: ink, edge: ink, second: mixH(c1, '#9a9aa0', 0.55), grow: c2, glow: rgbaH(c2, 0.28), culvert: c2,
     flow: [hex3(c2), hex3(mixH(c1, '#6e6e73', 0.3)), hex3(mixH(c2, c3, 0.5))], fieldLine: rgbaH(c2, 0.5), fieldLine2: rgbaH(c1, 0.2), windAlong: c2, evBranch: c2, uTeal: hex3(c2),
     cells: ['#fafafa', mixH('#fafafa', c4, 0.4), mixH('#ececf0', c3, 0.25), mixH('#d8d8de', c3, 0.35), mixH('#c2c2c8', c2, 0.3)] });
   return { T, c: [c0, c1, c2, c3, c4], dark: dk, light: lt,
@@ -2374,7 +2374,7 @@ document.getElementById('applyPreset').onclick=()=>{
     document.querySelector('#aMode option[value="sketch"]')?.remove();
     $id('siteBack').onclick = () => H?.close?.();
     for (const b of document.querySelectorAll('[data-keep]')){ const on = (b.dataset.keep === '1') === T.keepBuildings; b.classList.toggle('active', on);
-      b.onclick = () => { if (on) return; $id('hud').textContent = zh() ? '正在重新生成场地…' : 'Rebuilding the site…'; location.search = b.dataset.keep === '1' ? '?keep=1' : ''; }; }
+      b.onclick = () => { if (on) return; $id('hud').textContent = zh() ? '正在重新生成场地…' : 'Rebuilding the site…'; location.search = b.dataset.keep === '1' ? '?keep=1' : '?keep=0'; }; }
   }
   window.setInterfaceLanguage(T.lang);
 })();

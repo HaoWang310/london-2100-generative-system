@@ -17,32 +17,8 @@ const paths=[
  'scripts/building_shadows.js',
  'scripts/urban_trees.js',
  'scripts/tree_renderer.js',
- 'scripts/local_flood_ui.js',
- 'scripts/local_flood_sim.js',
- 'scripts/local_flood_worker.js',
- 'scripts/flood_water_visual.js',
- 'scripts/hydro_tensor_grid.js',
- 'scripts/hydro_tensor_visual.js',
- 'scripts/hydro_tensor_field.js',
- 'scripts/hydro_tensor_worker.js',
- 'scripts/hydro_tensor_geometry.js',
- 'scripts/hydro_tensor_geometry_worker.js',
- 'scripts/hydro_tensor_particle_layout.js',
- 'scripts/hydro_tensor_gap_diagnostic.js',
- 'scripts/site_planning_tensor.js',
- 'scripts/site_visual_field.js',
- 'scripts/global_warped_weave.js',
- 'scripts/site_element_decisions.js',
- 'scripts/parcel_generator.js',
- 'scripts/parcel_generator_worker.js',
- 'scripts/parcel_road_ui.js',
- 'scripts/parcel_road_worker.js',
- 'scripts/parcel_road_constraints.js',
- 'scripts/parcel_road_skeleton.js',
- 'scripts/parcel_road_presentation.js',
- 'scripts/parcel_road_organic.js',
- 'scripts/parcel_wool_solver.js',
- 'scripts/parcel_road_topology.js'
+ 'scripts/tensor_site_ui.js',
+ 'scripts/tensor_studio_site.js'
 ];
 const chinese=/[\u3400-\u9fff]/;
 for(const path of paths){
@@ -54,7 +30,7 @@ for(const path of paths){
 }
 const html=readFileSync('index.html','utf8');
 assert.match(html,/<html\s+lang="en"/i,'HTML document language must be English');
-assert.match(html,/APP_VERSION='3\.36\.6-english'/,'page must use English module build');
-assert.match(html,/ui_language\.js\?v=3\.36\.6-english/,
+assert.match(html,/APP_VERSION='3\.37\.0-english'/,'page must use English module build');
+assert.match(html,/ui_language\.js\?v=3\.37\.0-english/,
  'bidirectional language layer must use current version');
 console.log('PASS English London Map: '+paths.length+' active HTML/JS files; no visible Chinese source strings');

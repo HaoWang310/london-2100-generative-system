@@ -2,6 +2,17 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.37.0 replaces the old isolated-site hydro lab (rainfall, flood
+simulation, sponge, hydro tensor, Wool, parcel generator) with Tensor Studio
+(`../tensor-studio/`). Site selection is unchanged: draw the red boundary, press
+Enter to preview, Enter again to confirm, then double-click inside or click
+"Enter site". That opens Tensor Studio over the map in a same-origin iframe
+(`scripts/tensor_studio_site.js`, the copy of
+`tensor-studio/integration/google-map-live-hook.js`), handing over the site ring,
+the map's own OSM streets, water and buildings, and the OS Terrain 50 elevation.
+Existing buildings are obstacles the generated streets route around by default.
+Esc or "Back to the London map" returns to the map with the selection kept.
+
 Version 3.14.0 uses OpenStreetMap / OpenFreeMap and an independent layer list:
 EA LiDAR terrain, contributing area, EA present-day flood-risk overview,
 terrain-derived drainage network, and the 70 km study circle. All five analysis
