@@ -611,7 +611,8 @@ async function boot() {
       render();
     },
     onEnter: id => { if (!activeTool) enterNext(id); },
-    onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); }
+    onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); },
+    onView3D: on => { view3D = on; $('view2d').setAttribute('aria-pressed', String(!on)); $('view3d').setAttribute('aria-pressed', String(on)); }
   });
   $('mapLoading').classList.add('done');
   const cur = store.current();
