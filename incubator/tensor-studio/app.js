@@ -803,6 +803,31 @@ function roundKinks(){ let n = 0; rehashAll();
       if (ms === 1) m.pts = half2.concat(m.pts.slice(km)); else m.pts = m.pts.slice(0, m.pts.length - km).concat(half2.slice().reverse());
       n++; rehashAll(); } }
   netDirty = widthDirty = true; return n; }
+// (v8.21) a sharp bend inside a main street (one grown a step at a time, not a planned one) rounded: up to 20 m either side
+// of it become one curve. A street that ends on that stretch (a T) is moved onto the curve; the bend is kept as it is where
+// a street crosses it there, or where the curve would leave the land, cross a zone or the rail, or come within 6 m of
+// another street
+function smoothBends(){ let n = 0; rehashAll();
+  const at = (P, k0, d, dir) => { let acc = 0, k = k0; while (k + dir >= 0 && k + dir < P.length){ acc += Math.hypot(P[k + dir][0] - P[k][0], P[k + dir][1] - P[k][1]); k += dir; if (acc >= d) return k; } return acc >= 8 ? k : -1; };
+  const bez = (A, m, B, u) => [(1 - u) * (1 - u) * A[0] + 2 * (1 - u) * u * m[0] + u * u * B[0], (1 - u) * (1 - u) * A[1] + 2 * (1 - u) * u * m[1] + u * u * B[1]];
+  for (const l of LINES){ if (l.dead || l.level !== 1 || l.circus || l.stitched || l.pts.length < 5) continue;
+    for (let k = 1; k < l.pts.length - 1; k++){ const P = l.pts, a = at(P, k, 20, -1), b = at(P, k, 20, 1); if (a < 0 || b < 0) continue;
+      const m = P[k], A = P[a], B = P[b], ha = Math.atan2(m[1] - A[1], m[0] - A[0]), hb = Math.atan2(B[1] - m[1], B[0] - m[0]);
+      const t = Math.abs(((hb - ha) % (2 * PI) + 3 * PI) % (2 * PI) - PI); if (t < 50 * PI / 180) continue;
+      const seg = P.slice(a + 1, b), on = q => seg.some(p => Math.hypot(p[0] - q[0], p[1] - q[1]) < 3), meet = []; let cross = false;
+      for (const q of seg){ const c = nearB(q[0], q[1], 3, l.id, [], null, false, null); if (!c || meet.some(x => x.l.id === c[3])) continue; const o = LINES[c[3]];
+        const e0 = on(o.pts[0]), e1 = on(o.pts[o.pts.length - 1]); if ((!e0 && !e1) || o.circus){ cross = true; break; } meet.push({ l: o, end: e0 ? 0 : 1 }); }
+      if (cross){ k = b - 1; continue; }
+      const L = Math.hypot(m[0] - A[0], m[1] - A[1]) + Math.hypot(B[0] - m[0], B[1] - m[1]), N = Math.max(4, Math.round(L / 5)), curve = [];
+      for (let j = 1; j < N; j++) curve.push(bez(A, m, B, j / N));
+      const ign = meet.map(x => x.l.id);
+      if (curve.some(q => !inLand(q[0], q[1]) || inZone(q[0], q[1]) || inRail(q[0], q[1]) || nearB(q[0], q[1], 6, l.id, ign, null, false, null))){ k = b - 1; continue; }
+      const fine = []; for (let j = 0; j <= 8 * N; j++) fine.push(bez(A, m, B, j / (8 * N)));
+      const moves = meet.map(x => { const e = x.end ? x.l.pts[x.l.pts.length - 1] : x.l.pts[0]; let best = null, bd = 1e9; for (const q of fine){ const d = Math.hypot(q[0] - e[0], q[1] - e[1]); if (d < bd){ bd = d; best = q; } } return { x, best, bd }; });
+      if (moves.some(v => v.bd > 10)){ k = b - 1; continue; }   // (a street ending here would be left too far behind)
+      l.pts = P.slice(0, a + 1).concat(curve, P.slice(b)); k = a + curve.length; n++;
+      for (const v of moves){ const Q = v.x.l.pts; Q[v.x.end ? Q.length - 1 : 0] = v.best.slice(); } } }
+  if (n){ rehashAll(); netDirty = widthDirty = true; } return n; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1024,11 +1049,10 @@ function* stitchMains(o){
       { const a = P[A_.e - 1], b = P[B_.s], m = P[(A_.e + B_.s) >> 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; if (nearB(m[0], m[1], 22, -1, ign, [(b[0] - a[0]) / L, (b[1] - a[1]) / L], true, LV1)) continue; }   // (along a street, not across it: no)
       const mid = P[(A_.e + B_.s) >> 1], c = nearB(mid[0], mid[1], BAND + 14, -1, ign, null, false, LV1); if (c){ addNode(c[1], c[2], true); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; EVENTS.push({ x: c[1], y: c[2], k: 'cross' }); }
       A_.pts = A_.pts.concat(P.slice(A_.e, B_.s), B_.pts); A_.e = B_.e; runs.splice(n, 1); }
-    const crossAt = new Map();
     for (const run of runs){ const pts = run.pts.slice();
       for (const [k, at] of [[run.s - 1, 0], [run.e, 1]]){ if (k < 0 || k >= P.length) continue;
-        const x = at === 1 ? crossAt.get(run.e) : crossAt.get(-run.s), c = x ? [0, x.pt[0], x.pt[1], x.line] : nearB(P[k][0], P[k][1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
-        if (at === 0) pts.unshift([c[1], c[2]]); else pts.push([c[1], c[2]]); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; addNode(c[1], c[2], true); if (!x || at === 1) EVENTS.push({ x: c[1], y: c[2], k: x ? 'cross' : 'join' }); }
+        const c = nearB(P[k][0], P[k][1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
+        if (at === 0) pts.unshift([c[1], c[2]]); else pts.push([c[1], c[2]]); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; addNode(c[1], c[2], true); EVENTS.push({ x: c[1], y: c[2], k: 'join' }); }
       if (pts.length < 2 || (plen(pts) < 25 && runs.length > 1)) continue;
       const l = newLine(1, [pts[0], pts[1]], 1, 0, 'stitch'); l.stitched = true; l.ends = ['T', 'T']; res.lines.push(l); if (run.s === 0) res.startLine = l;
       for (let k = 2; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l.pts.push(b); hashPt(l, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); if (k % 3 === 0) yield 1; }
@@ -1207,7 +1231,7 @@ function* growBranching(){
     for (const l of LINES) if (!l.dead && l.level === 2 && plen(l.pts) < 1) l.dead = true;   // (a side street that never grew: a point on its parent)
     // (v7) a main street left under 150 m long (a stub where the rest was cut or turned second) is a second street
     for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
-    holeTrim(); dropSide(); holeTrim(); alignShared(); splitBlocks(1.5); holeTrim(); roundKinks();
+    holeTrim(); dropSide(); holeTrim(); alignShared(); splitBlocks(1.5); holeTrim(); roundKinks(); smoothBends();
     rehashAll();
     PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); return; }
   PHASE = 'second streets branch off them'; o.phase = 2;
@@ -1244,7 +1268,7 @@ function* growBranching(){
   // the last word: cut what is left side by side, and close any open end by cutting it back only (which can make neither
   // a new pair nor a new open end); then the main streets end on main streets
   for (let k = 0; k < 4; k++){ rehashAll(); const n = cutSide(true), st = dropStubs(); if (!n && !st) break; yield* sweepOpen(true); }
-  mainsFinal(); despike(); rehashAll();
+  mainsFinal(); despike(); smoothBends(); rehashAll();
   PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); }
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
     for (let round = 0; round < 3; round++){ let made = 0;
