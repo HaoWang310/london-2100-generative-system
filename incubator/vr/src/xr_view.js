@@ -341,7 +341,11 @@ export function open(api, lang = 'zh', opt = {}){
         const hit = k => now[k] && !was[k], ax = gp.axes[2] || 0, ay = gp.axes[3] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
-          else { if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], 0); void r; M.yaw += a; } if (dz(ay)){ const k = Math.exp(-dz(ay) * dt * 1.2); M.s = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k)); } } }
+          else {   // turn and scale about the table centre (the anchor), so the place under it stays put
+            const c = M.anchor || M.pos;
+            if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
+            if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
+              M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }

@@ -28,10 +28,10 @@
 <div id="cover"><div><b>London 2100 · VR</b><span id="coverText">正在后台加载伦敦地图…</span></div></div>
 <div id="err"></div>
 <script type="module">
-import { findMap } from './src/map_bridge.js?v=0.10';
-import { openFromMap } from './src/from_map.js?v=0.10';
-import { open } from './src/xr_view.js?v=0.10';
-import { streamApi } from './src/stream.js?v=0.10';
+import { findMap } from './src/map_bridge.js?v=0.11';
+import { openFromMap } from './src/from_map.js?v=0.11';
+import { open } from './src/xr_view.js?v=0.11';
+import { streamApi } from './src/stream.js?v=0.11';
 const KEY = 'london2100.vr.at', q = new URLSearchParams(location.search);
 const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err'), cover = document.getElementById('cover'), coverText = document.getElementById('coverText');
 const mapQuery = new URLSearchParams(location.search); for (const k of ['at', 'map', 'mode', 'tiles']) mapQuery.delete(k);
