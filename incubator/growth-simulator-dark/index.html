@@ -351,6 +351,7 @@ button.nx:hover { background:#fff; } button.nx:disabled { opacity:.6; cursor:pro
   var STEPS = GVC.STEPS, openStep = null, LAY0 = null, flowing = false, flowT = 0, flowTok = 0, growTok = 0, growing = false;
   // walked in order with Next: reached = the furthest step opened, DONE = the steps passed (a green tick)
   var reached = -1, DONE = {}, busy = false;
+  var BASEMAP = ["aonb", "towns", "absorbed", "water", "roads", "belt"];
   function stepIx(id) { for (var i = 0; i < STEPS.length; i++) if (STEPS[i].id === id) return i; return -1; }
   function buildSimple() {
     var host = $("steps"); host.innerHTML = ""; SC = {};
@@ -407,7 +408,8 @@ button.nx:hover { background:#fff; } button.nx:disabled { opacity:.6; cursor:pro
       LAY0 = null; showP1 = false; buildLayers(); overlays(false).then(draw); draw(); return;
     }
     var sh = st.show;
-    Object.keys(LAY).forEach(function (k) { LAY[k].on = sh.indexOf(k) >= 0 || (k === "growth" && sh.indexOf("pass1") >= 0); });
+    // every step keeps the ground as its map (this page has no basemap of its own); the step's layers go on top
+    Object.keys(LAY).forEach(function (k) { LAY[k].on = BASEMAP.indexOf(k) >= 0 || sh.indexOf(k) >= 0 || (k === "growth" && sh.indexOf("pass1") >= 0); });
     showP1 = sh.indexOf("pass1") >= 0;
     if (showP1) loadP1().then(function () { draw(); });
     if (st.id === "farm") loadP1().then(function () { edgeOverlay(); draw(); });
@@ -700,7 +702,8 @@ button.nx:hover { background:#fff; } button.nx:disabled { opacity:.6; cursor:pro
     ["aonb", "towns", "absorbed", "water", "roads", "belt"].forEach(function (n) { if (LAY[n].on && layersImg[n]) ctx.drawImage(layersImg[n], 0, 0, V0.W, V0.H); });
     var smooth = view.k * GS < 1.6;
     ctx.imageSmoothingEnabled = smooth; ctx.imageSmoothingQuality = "high";
-    ["magnet", "field", "vein"].forEach(function (n) { if (LAY[n].on && OV[n]) { ctx.globalAlpha = 0.9; ctx.drawImage(OV[n], GX0, GY0, NX * GS, NY * GS); ctx.globalAlpha = 1; } });
+    // in step 5 the magnet field is see-through, so the water and roads under it still read
+    ["magnet", "field", "vein"].forEach(function (n) { if (LAY[n].on && OV[n]) { ctx.globalAlpha = n === "magnet" && openStep === "pull" ? 0.6 : 0.9; ctx.drawImage(OV[n], GX0, GY0, NX * GS, NY * GS); ctx.globalAlpha = 1; } });
     var R = mapReplay(); if (LAY.growth.on && R) ctx.drawImage(R.cv, GX0, GY0, NX * GS, NY * GS);
     if (LAY.edge.on && OV.edge) ctx.drawImage(view.k * GS >= 1.2 ? OV.edge : OV.edge2, GX0, GY0, NX * GS, NY * GS);
     ctx.imageSmoothingEnabled = true;
