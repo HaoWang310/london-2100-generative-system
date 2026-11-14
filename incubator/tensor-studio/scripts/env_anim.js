@@ -97,7 +97,7 @@ function drawStatic(ctx, k, a){ if (a <= 0.003) return; ctx.save(); ctx.setTrans
   ctx.drawImage(envImg(k), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); ctx.restore(); }
 const ease = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t), seg = (t, a, b) => ease((t - a) / (b - a));
 
-EA.draw = function(ctx, now){ if (!EA.on) return; const k = EA.k, P = EA.period(k), dark = THEME === 'dark', C = COL[dark ? 'dark' : 'light'];
+EA.draw = function(ctx, now){ if (!EA.on) return; const k = EA.k, P = EA.period(k), dark = THEME === 'dark', C = (window.__TINTCOL && window.__TINTCOL[dark ? 'dark' : 'light']) || COL[dark ? 'dark' : 'light'];   // (v8.30) the palette's colours
   const vk = view.x.toFixed(1) + ',' + view.y.toFixed(1) + ',' + view.s.toFixed(4); if (fitCanvases() || vk !== EA.lastView){ EA.lastView = vk; clearTrail(); }
   let t = (now - EA.t0) / 1000; if (t > P){ if (EA.onCycle) EA.onCycle(k, EA.cycle); restart(now); t = 0; }
   const g = trail.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0);
