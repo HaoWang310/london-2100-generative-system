@@ -21,6 +21,9 @@ import { watchForUpdates, fetchReleases, latestUrl, releaseUrl, versionLabel, de
 
 const $ = id => document.getElementById(id);
 const scaleOf = level => SCALES.find(s => s.level === level);
+// The next level the user can enter from `level` (none while that part of the chain is hidden).
+const nextScale = level => { const n = SCALES[SCALES.findIndex(s => s.level === level) + 1]; return n && !n.hidden ? n : null; };
+const shownTools = () => TOOLS.filter(x => !x.hidden);
 const storage = (() => { try { localStorage.setItem('l2100.t', '1'); return localStorage; } catch { return null; } })();
 const store = createWorkspaceStore({ storage, key: BUILD.releasePath ? `l2100.workspace@${BUILD.releasePath}` : 'l2100.workspace' });
 
@@ -95,7 +98,7 @@ function enterLevel(level, input) {
 function enterNext(childId) {
   const cur = store.current();
   if (!cur?.result) return;
-  const next = SCALES[levelIndex(cur.level) + 1];
+  const next = nextScale(cur.level);
   if (!next) return;
   if (next.needsSelection) {
     const id = childId ?? cur.selectedChildId;
@@ -143,6 +146,7 @@ function integrationInput() {
 }
 
 function openTool(key) {
+  if (!shownTools().some(x => x.key === key)) return;
   if (!toolAvailable()) { toast(t('hint.needWool')); return; }
   stop();
   leaveGrowth();
@@ -311,6 +315,7 @@ function renderChrome() {
   const scaleList = $('scaleList');
   scaleList.replaceChildren();
   SCALES.forEach((s, i) => {
+    if (s.hidden) return;
     const inPath = i < path.length;
     const e = inPath ? path[i] : null;
     const isNext = i === path.length;
@@ -341,7 +346,8 @@ function renderChrome() {
   });
   const toolList = $('toolList');
   toolList.replaceChildren();
-  for (const tool of TOOLS) {
+  $('toolTitle').hidden = !shownTools().length;
+  for (const tool of shownTools()) {
     toolList.append(h('li', {}, h('button', {
       class: 'mod', disabled: !toolAvailable(), 'aria-current': activeTool === tool.key ? 'true' : 'false',
       onclick: () => openTool(tool.key)
@@ -355,7 +361,7 @@ function renderChrome() {
 
   // map hint + timeline status
   const hint = $('mapHint');
-  const next = SCALES[levelIndex(entry.level) + 1];
+  const next = nextScale(entry.level);
   hint.hidden = Boolean(activeTool) || !(next?.needsSelection && entry.result);
   hint.textContent = t(`hint.select.${entry.level}`);
   $('tlStatus').textContent = activeTool ? '' : statusText(entry);
@@ -375,7 +381,8 @@ function statusText(entry) {
 function renderScaleInspector(entry) {
   const scale = scaleOf(entry.level);
   const mod = scale.module;
-  const next = SCALES[levelIndex(entry.level) + 1];
+  const next = nextScale(entry.level);
+  const last = levelIndex(entry.level) === SCALES.length - 1;
   $('inspCode').textContent = `${mod.id} · v${mod.version}`;
   $('inspTitle').textContent = pick(mod.title);
   $('inspDesc').textContent = pick(mod.description);
@@ -393,7 +400,7 @@ function renderScaleInspector(entry) {
       ? (sel ? t('act.enterSel', { name: sel.label, scale: pick(next.module.title) }) : t('act.selectToEnter'))
       : t('act.enter', { scale: pick(next.module.title) });
     actions.append(h('button', { class: 'btn primary', disabled: !entry.result || (next.needsSelection && !sel), onclick: () => enterNext() }, label));
-  } else {
+  } else if (last && shownTools().some(x => x.key === 'integration')) {
     actions.append(h('button', { class: 'btn primary', disabled: !toolAvailable(), onclick: () => openTool('integration') }, t('act.integrate')));
   }
   actions.append(h('div', { class: 'row' },
@@ -560,6 +567,8 @@ async function boot() {
   if (!store.current()) {
     store.enter('london', null, defaultParams(SCALES[0].module));
   }
+  // A saved workspace may stand on a level that is hidden now: open it at the London map.
+  if (scaleOf(store.current().level)?.hidden) store.goTo(0);
   render();
 
   // Screens: '' = opening video, #catalogue = catalogue, #workspace = this app.
