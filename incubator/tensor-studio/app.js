@@ -1898,7 +1898,7 @@ let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basema
 // theme, until the user picks a basemap here (then that choice is kept)
 const HOSTVIEW = (window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function') ? window.__TS.host.view : null;
 if (!HOSTVIEW && BASEMAP === 'map') BASEMAP = 'none';
-if (HOSTVIEW){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen') && BASEMAPS[localStorage.getItem('tensorStudio.basemap')]; } catch (e) {} if (!chosen) BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }
+if (HOSTVIEW){ BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }   // from the map, always the map itself to start with (a switch here lasts this visit)
 // the host's map follows this view: centre, zoom and bearing worked out from the plan's grid (British National Grid) at the view centre
 let lastHostView = '';
 function pushHostView(){ if (!HOSTVIEW || BASEMAP !== 'map') return; const geo = window.__TS && window.__TS.geo; if (!geo) return;
@@ -1931,7 +1931,7 @@ function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && windo
 function syncBase(){ for (const b of document.querySelectorAll('#tgBase button')) b.classList.toggle('on', b.dataset.bm === BASEMAP);
   document.documentElement.setAttribute('data-bm', BASEMAP); lastHostView = ''; if (HOSTVIEW && BASEMAP !== 'map'){ try { HOSTVIEW(null); } catch (e) {} }
   const el = document.getElementById('bmAttrib'); if (el){ const B = BASEMAPS[BASEMAP]; el.hidden = !B; el.innerHTML = B ? B.attr : ''; window.__TS_INSETS && window.__TS_INSETS(); } }
-for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); localStorage.setItem('tensorStudio.basemapChosen', '1'); } catch (e) {} baseDirty = true; syncBase(); };
+for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; if (!HOSTVIEW) try { localStorage.setItem('tensorStudio.basemap', BASEMAP); } catch (e) {} baseDirty = true; syncBase(); };
 // how much of the network lies where floods are expected
 let FLAND = null;
 function floodNum(){ const el = document.getElementById('fNum'); if (!el) return; const zh = TS_LANG === 'zh';
