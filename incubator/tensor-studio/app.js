@@ -242,7 +242,7 @@ function fieldAtT(x, y){ const q = sampleCS(TC, TS, x, y); if (!q || q[0] * q[0]
 function flowAt(x, y){ const q = sampleCS(CC, CS, x, y); if (!q) return null; const c = Math.floor(x / cell), r = Math.floor(y / cell), w = CWt[r * nx + c] || 1; return [0.5 * Math.atan2(q[1], q[0]), Math.min(1, Math.hypot(q[0], q[1]) / w)]; }
 
 /* ------------------------------------------------------------------ the streets: a growth simulation (generators) */
-let LINES = [], HASH = new Map(), CULVERTS = [], GROW = null, GEN = null, GROWING = false, STEPS = 0, PHASE = '', CELLS = null, CELLIMG = null, FINISHED = false;
+let LINES = [], HASH = new Map(), CULVERTS = [], XNODES = [], GROW = null, GEN = null, GROWING = false, STEPS = 0, PHASE = '', CELLS = null, CELLIMG = null, FINISHED = false;
 // (v8.7) the process mode drives the growth from outside: PROC.stopAt(phase) pauses the generator at a phase boundary, PROC.record()
 // is called once a frame while it grows, PROC.onStop / PROC.onDone when it pauses or ends; SCRUB (a recorded frame) draws the net as it was
 let PROC = null, PH0 = '', SCRUB = null;
@@ -348,7 +348,7 @@ function inLandNoHoles(x, y){ return D.pieces.some(p => inRing([x, y], p.outer) 
 function start(animated){ GEN = MODE === 'B' ? growBranching() : growAll(); GROWING = true; if (!animated){ runAll(); } }
 function runAll(){ if (!GEN) return; let r; do { r = GEN.next(); } while (!r.done); GEN = null; GROWING = false; }
 function resetNet(){
-  LINES = []; HASH = new Map(); CULVERTS = []; BRIDGES = []; STEPS = 0; CELLS = null; CELLIMG = null; FINISHED = false; netDirty = true; widthDirty = true; GROW = null;
+  LINES = []; HASH = new Map(); CULVERTS = []; XNODES = []; BRIDGES = []; STEPS = 0; CELLS = null; CELLIMG = null; FINISHED = false; netDirty = true; widthDirty = true; GROW = null;
   TIPS = []; TIPMAP = new Map(); EVENTS = []; BUDS = []; METR = null; NODES = new Map(); MNODES = new Map();
   HOLES = attractorsOn().filter(a => a.main && a.pull >= 2).filter(a => a.edge || [0, 1, 2, 3].every(k => inLandNoHoles(a.x + 60 * Math.cos(k * PI / 2), a.y + 60 * Math.sin(k * PI / 2)))).map(a => ({ x: a.x, y: a.y, r: CIRCUS_R, edge: !!a.edge }));
   buildMask();
@@ -828,6 +828,40 @@ function smoothBends(){ let n = 0; rehashAll();
       l.pts = P.slice(0, a + 1).concat(curve, P.slice(b)); k = a + curve.length; n++;
       for (const v of moves){ const Q = v.x.l.pts; Q[v.x.end ? Q.length - 1 : 0] = v.best.slice(); } } }
   if (n){ rehashAll(); netDirty = widthDirty = true; } return n; }
+// (v8.22) the last tidy of the network, after every street is laid:
+// 1 a main street (or a run of them) joined to the rest only through second streets is a second street itself
+// 2 every short stretch inside a corridor (a crossing, up to 40 m) has its culvert drawn
+// 3 a small knot in a street (it crosses itself within 80 m) is cut out at the crossing
+// 4 two streets that cross share a point there (a node of the network, for the export and the blocks)
+function tidyNet(){ const live = () => LINES.filter(l => !l.dead && l.pts.length > 1);
+  const box = l => { let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const p of l.pts){ if (p[0] < a) a = p[0]; if (p[1] < b) b = p[1]; if (p[0] > c) c = p[0]; if (p[1] > d) d = p[1]; } return [a - 3, b - 3, c + 3, d + 3]; };
+  const meets = (l, m, bl, bm) => { if (bl[0] > bm[2] || bm[0] > bl[2] || bl[1] > bm[3] || bm[1] > bl[3]) return false; for (const p of l.pts) for (const q of m.pts) if (Math.abs(p[0] - q[0]) < 3 && Math.abs(p[1] - q[1]) < 3) return true; return false; };
+  let demoted = 0, culverts = 0, nodes = 0, knots = 0;
+  { const cr = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    for (const l of live()){ if (l.level < 1 || l.circus) continue; let again = true;
+      while (again){ again = false; const P = l.pts;
+        for (let i = 1; i < P.length && !again; i++){ let acc = 0; for (let j = i + 2; j < P.length; j++){ acc += Math.hypot(P[j - 1][0] - P[j - 2][0], P[j - 1][1] - P[j - 2][1]); if (acc > 80) break;
+            const p0 = P[i - 1], p1 = P[i], q0 = P[j - 1], q1 = P[j], d1 = cr(p0, p1, q0), d2 = cr(p0, p1, q1), d3 = cr(q0, q1, p0), d4 = cr(q0, q1, p1); if (!(d1 * d2 < 0 && d3 * d4 < 0)) continue;
+            const t = d3 / (d3 - d4); l.pts = P.slice(0, i).concat([[p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]], P.slice(j)); knots++; again = true; break; } } } } }
+  rehashAll();
+  { const mains = live().filter(l => l.level === 1 && !l.circus), ground = live().filter(l => l.level === 0 || l.circus), B = new Map(); for (const l of LINES) if (!l.dead && l.pts.length > 1) B.set(l.id, box(l));
+    const ok = new Set(mains.filter(l => ground.some(g => meets(l, g, B.get(l.id), B.get(g.id)))).map(l => l.id));
+    for (let ch = true; ch;){ ch = false; for (const l of mains) if (!ok.has(l.id) && mains.some(m => ok.has(m.id) && meets(l, m, B.get(l.id), B.get(m.id)))){ ok.add(l.id); ch = true; } }
+    for (const l of mains) if (!ok.has(l.id)){ l.level = 2; l.demoted = true; demoted++; } }
+  for (const l of live()){ if (l.level < 1 || l.circus) continue; const P = l.pts; let k0 = -1;
+    for (let k = 0; k <= P.length; k++){ const z = k < P.length && inZone(P[k][0], P[k][1]);
+      if (z && k0 < 0) k0 = k; else if (!z && k0 >= 0){ const a = P[Math.max(0, k0 - 1)], b = P[Math.min(P.length - 1, k)];
+        if (plen(P.slice(Math.max(0, k0 - 1), Math.min(P.length, k + 1))) <= 40){ const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; if (!CULVERTS.some(c => Math.hypot(c.x - m[0], c.y - m[1]) < 20)){ CULVERTS.push({ x: m[0], y: m[1] }); culverts++; } }
+        k0 = -1; } } }
+  { const L = live().filter(l => l.level >= 1), B = L.map(box), cr = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]), ins = new Map(), add = (l, k, X) => { if (!ins.has(l)) ins.set(l, []); ins.get(l).push([k, X]); };
+    for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++){ const bi = B[i], bj = B[j]; if (bi[0] > bj[2] || bj[0] > bi[2] || bi[1] > bj[3] || bj[1] > bi[3]) continue; const P = L[i].pts, Q = L[j].pts;
+      for (let a = 1; a < P.length; a++) for (let b = 1; b < Q.length; b++){ const p0 = P[a - 1], p1 = P[a], q0 = Q[b - 1], q1 = Q[b];
+        const d1 = cr(p0, p1, q0), d2 = cr(p0, p1, q1), d3 = cr(q0, q1, p0), d4 = cr(q0, q1, p1); if (!(d1 * d2 < 0 && d3 * d4 < 0)) continue;
+        const t = d3 / (d3 - d4), X = [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]; add(L[i], a, X); add(L[j], b, X); XNODES.push(X); nodes++; } }
+    for (const [l, list] of ins){ list.sort((u, w) => w[0] - u[0] || Math.hypot(w[1][0] - l.pts[w[0] - 1][0], w[1][1] - l.pts[w[0] - 1][1]) - Math.hypot(u[1][0] - l.pts[u[0] - 1][0], u[1][1] - l.pts[u[0] - 1][1]));
+      for (const [k, X] of list){ const a = l.pts[k - 1], b = l.pts[k];   // (a point within 1 m of the crossing moves onto it; otherwise one is put in)
+        if (Math.hypot(a[0] - X[0], a[1] - X[1]) < 1 && k - 1 > 0) l.pts[k - 1] = X.slice(); else if (Math.hypot(b[0] - X[0], b[1] - X[1]) < 1 && k < l.pts.length - 1) l.pts[k] = X.slice(); else l.pts.splice(k, 0, X.slice()); } } }
+  rehashAll(); netDirty = widthDirty = true; return { demoted, culverts, nodes, knots }; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1231,7 +1265,7 @@ function* growBranching(){
     for (const l of LINES) if (!l.dead && l.level === 2 && plen(l.pts) < 1) l.dead = true;   // (a side street that never grew: a point on its parent)
     // (v7) a main street left under 150 m long (a stub where the rest was cut or turned second) is a second street
     for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
-    holeTrim(); dropSide(); holeTrim(); alignShared(); splitBlocks(1.5); holeTrim(); roundKinks(); smoothBends();
+    holeTrim(); dropSide(); holeTrim(); alignShared(); splitBlocks(1.5); holeTrim(); roundKinks(); smoothBends(); tidyNet();
     rehashAll();
     PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); return; }
   PHASE = 'second streets branch off them'; o.phase = 2;
@@ -1268,7 +1302,7 @@ function* growBranching(){
   // the last word: cut what is left side by side, and close any open end by cutting it back only (which can make neither
   // a new pair nor a new open end); then the main streets end on main streets
   for (let k = 0; k < 4; k++){ rehashAll(); const n = cutSide(true), st = dropStubs(); if (!n && !st) break; yield* sweepOpen(true); }
-  mainsFinal(); despike(); smoothBends(); rehashAll();
+  mainsFinal(); despike(); smoothBends(); tidyNet(); rehashAll();
   PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); }
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
     for (let round = 0; round < 3; round++){ let made = 0;
@@ -1305,12 +1339,12 @@ function finishRun(){
       l.ends.forEach((e, sd) => { const p = sd === 0 ? Pp[Pp.length - 1] : Pp[0]; if (e === 'T') EVENTS.push({ x: p[0], y: p[1], k: 'join' }); if (e === 'Y') EVENTS.push({ x: p[0], y: p[1], k: 'merge' }); }); } }
   for (const q of MEAS.xpts) EVENTS.push({ x: q[0], y: q[1], k: 'cross' });
   METR = metrics();
-  SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), events: EVENTS.slice(), holes: HOLES.slice(),
+  SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), xnodes: XNODES.slice(), events: EVENTS.slice(), holes: HOLES.slice(),
     lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born, flood: !!l.flood })) };
   drawCmp(); }
 function restore(sn){ GEN = null; GROWING = false; LINES = []; HASH = new Map(); TIPS = []; TIPMAP = new Map(); GROW = null; GHOST = null;
   for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born, flood: l.flood });
-  CULVERTS = sn.culverts.slice(); EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
+  CULVERTS = sn.culverts.slice(); XNODES = (sn.xnodes || []).slice(); EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
   netDirty = widthDirty = baseDirty = true; }
 function setMode(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; const sn = SNAP[m];
   if (sn && sn.key === settingsKey()) restore(sn); else start(true); syncTools(); drawCmp(); }
@@ -1382,6 +1416,7 @@ function measures(){ floodNum();
   for (const [key, arr] of segs){ const [cx, cy] = key.split(',').map(Number); const cand = []; for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++){ const b = segs.get((cx + i) + ',' + (cy + j)); if (b) cand.push(...b); }
     for (const [id1, a1, b1] of arr) for (const [id2, a2, b2] of cand){ if (id1 >= id2) continue; const rx = b1[0] - a1[0], ry = b1[1] - a1[1], sx = b2[0] - a2[0], sy = b2[1] - a2[1], den = rx * sy - ry * sx; if (Math.abs(den) < 1e-9) continue;
       const t = ((a2[0] - a1[0]) * sy - (a2[1] - a1[1]) * sx) / den, u = ((a2[0] - a1[0]) * ry - (a2[1] - a1[1]) * rx) / den; if (t > 0.02 && t < 0.98 && u > 0.02 && u < 0.98){ const k2 = Math.round(a1[0] + rx * t) + ',' + Math.round(a1[1] + ry * t); if (!seen.has(k2)){ seen.add(k2); X++; xpts.push([a1[0] + rx * t, a1[1] + ry * t]); } } } }
+  for (const p of XNODES){ const k2 = Math.round(p[0]) + ',' + Math.round(p[1]); if (!seen.has(k2)){ seen.add(k2); X++; xpts.push(p.slice()); } }   // (v8.22) a crossing made a shared point by tidyNet is still an X
   const J = T + Y + X || 1, area = D.pieces.reduce((s, p) => s + Math.abs(polyArea(p.outer)), 0) / 1e6;
   const ok = CELLS ? CELLS.areas.filter(a => a > 0.05).sort((a, b) => a - b) : [], med = ok.length ? ok[Math.floor(ok.length / 2)] : 0;
   MEAS = { km1: km[1], km2: km[2], dens: (km[1] + km[2]) / area, T: 100 * T / J, Y: 100 * Y / J, X: 100 * X / J, loose, xpts, cellsN: ok.length, med };
