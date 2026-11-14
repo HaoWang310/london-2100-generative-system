@@ -12,8 +12,8 @@
 //   A = flood risk on / off · B = table ↔ walk 1 : 1 · X = existing streets · Y = put it back in front of me
 // Hands: pinch = grab, two pinches = scale.
 
-import { defaultEnv } from './app_state.js?v=0.18';
-import { writeCars } from './features.js?v=0.18';
+import { defaultEnv } from './app_state.js?v=0.19';
+import { writeCars } from './features.js?v=0.19';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -193,6 +193,9 @@ export function open(api, lang = 'zh', opt = {}){
   document.body.append(root);
   // the app's control panel (opt.panel, src/app_panel.js): beside the view on a screen, on the left hand in the headset
   const panel = opt.panel || null; let panelOn = !!panel;
+  // where the panel is in the headset (kept between sessions): on the left hand, placed in the room (c, facing you), or hidden; w = width in metres
+  const pm = { mode: panel ? 'hand' : 'off', c: null, w: 0.36, grab: null };
+  window.__vrPanel = pm;   // for checking from the console / tests
   if (panel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(panel.canvas); root.append(box);
     const uv = e => { const r = panel.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
     panel.canvas.addEventListener('pointermove', e => { panel.setHover(panel.hitAt(...uv(e))); panel.canvas.style.cursor = panel.hitAt(...uv(e)) != null ? 'pointer' : 'default'; });
@@ -423,6 +426,12 @@ export function open(api, lang = 'zh', opt = {}){
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return vao; }
   const ray = mesh(gl, prog, { v: new Float32Array([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, -0.6, 0, 0, 0, 1, 0, 1, 1, 1, 0]), i: new Uint32Array([0, 1]) });
 
+  function pillTexture(){ const make = a => { const c = document.createElement('canvas'); c.width = 256; c.height = 48; const g = c.getContext('2d');
+      g.fillStyle = `rgba(245,245,247,${a})`; g.beginPath(); g.roundRect ? g.roundRect(4, 8, 248, 32, 16) : g.rect(4, 8, 248, 32); g.fill();
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+    return { idle: make(0.55), hot: make(0.98) }; }
+
   async function startXR(mode){
     let session; const AR = mode === 'immersive-ar';
     try { session = await navigator.xr.requestSession(mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] }); }
@@ -452,10 +461,17 @@ export function open(api, lang = 'zh', opt = {}){
       if (P.length === 1) base = { one: true, h: P[0].p, hy: P[0].yaw, pos: M.pos.slice(), yaw: M.yaw, s: M.s };
       else { const a = P[0].p, b = P[1].p; base = { one: false, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], d: Math.hypot(a[0] - b[0], a[2] - b[2], a[1] - b[1]) || 1e-3, ang: yawOf(b[0] - a[0], b[2] - a[2]), pos: M.pos.slice(), yaw: M.yaw, s: M.s }; } };
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
-    const rayHit = new Map();   // input source → panel item under its ray
-    const add = (e, select) => { if (select && panelOn && rayHit.get(e.inputSource) != null){ panel.press(rayHit.get(e.inputSource)); return; }
-      grabs.set(e.inputSource, true); base = 'pending'; }, rem = e => { if (grabs.delete(e.inputSource)) base = 'pending'; };
-    let panelPose = null, panelTex = null, panelVer = -1;
+    const rayHit = new Map(), rayLen = new Map(), barHit = new Map();   // input source → panel item under its ray · distance to the panel · point on the drag bar
+    // the panel: on the left hand, or placed anywhere in the room (drag its bar); pm.w = width in metres
+    pm.grab = null;
+    const add = (e, select) => { const src = e.inputSource;
+      // drag the panel by its bar (trigger, grip or pinch), or by its face with the grip
+      const g = barHit.get(src) || (!select && rayLen.has(src) && rayHit.has(src) ? src.__panelLocal : null);
+      if (pm.mode !== 'off' && g){ pm.grab = { src, t0: g.t, lu: g.lx, lv: g.ly }; return; }
+      if (select && pm.mode !== 'off' && rayHit.get(src) != null){ panel.press(rayHit.get(src)); return; }
+      grabs.set(src, true); base = 'pending'; },
+      rem = e => { if (pm.grab && pm.grab.src === e.inputSource){ pm.grab = null; return; } if (grabs.delete(e.inputSource)) base = 'pending'; };
+    let panelPose = null, panelTex = null, panelVer = -1, barTex = null;
     session.addEventListener('selectstart', e => add(e, true)); session.addEventListener('squeezestart', e => add(e, false)); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
     session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); xrBox.querySelectorAll('button').forEach(b => b.hidden = false); status(); });
     const xrNote = () => { note.textContent = (lang === 'zh' ? `${mode === 'immersive-ar' ? 'MR' : 'VR'} 运行中 · 第 ${xr.frames} 帧 · ${xr.views} 个视图` : `${mode} · frame ${xr.frames} · ${xr.views} views`)
@@ -470,6 +486,10 @@ export function open(api, lang = 'zh', opt = {}){
       // buttons and sticks
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
         const hit = k => now[k] && !was[k], ax = gp.axes[2] || 0, ay = gp.axes[3] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
+        if (pm.grab && s === pm.grab.src){   // while dragging the panel: stick up / down = further / nearer, left / right = smaller / bigger
+          if (dz(ay)) pm.grab.t0 = Math.max(0.25, Math.min(4, pm.grab.t0 * Math.exp(-dz(ay) * dt * 1.6)));
+          if (dz(ax)){ const w1 = Math.max(0.18, Math.min(1.4, pm.w * Math.exp(dz(ax) * dt * 1.2))); pm.grab.lu *= w1 / pm.w; pm.grab.lv *= w1 / pm.w; pm.w = w1; }
+          continue; }
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
           else {   // turn and scale about the table centre (the anchor), so the place under it stays put
@@ -477,7 +497,8 @@ export function open(api, lang = 'zh', opt = {}){
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
             if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? 0.45 / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
-        if (key === 'left' && panel && hit(3)) panelOn = !panelOn;
+        // left stick click: a placed panel comes back to the hand; on the hand it hides / shows
+        if (key === 'left' && panel && hit(3)){ pm.mode = pm.mode === 'world' ? 'hand' : pm.mode === 'hand' ? 'off' : 'hand'; panelOn = pm.mode !== 'off'; if (pm.mode === 'hand') pm.w = 0.36; }
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
@@ -506,22 +527,35 @@ export function open(api, lang = 'zh', opt = {}){
       else if (api.stream){ fogSet = { e: [clip[0], 0, clip[1]], r0: clip[2] * 0.3, r1: clip[2] * 1.05, a: env.haze, c: env.fog }; carScale = Math.max(1, clip[2] / 600); }
       else fogSet = { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: env.fog };
       // the app panel: above the left hand, turned to you; rays from the other hands point at it
-      panelTick(t); panelPose = null; rayHit.clear();
+      panelTick(t); panelPose = null; rayHit.clear(); rayLen.clear(); barHit.clear();
       const leftS = [...session.inputSources].find(s => s.handedness === 'left'), lpp = leftS && poseOf(frame, leftS);
-      if (panel && panelOn && lpp){ const sx = 0.36, sy = sx * panel.aspect(), c = [lpp.p[0], lpp.p[1] + 0.06 + sy / 2, lpp.p[2]];
-        const z = [head[0] - c[0], head[1] - c[1], head[2] - c[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
-        const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
-        panelPose = { c, x, y, z, sx, sy };
-        let hov = null;
-        for (const s of session.inputSources){ if (s === leftS || !s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue; const m = rp.transform.matrix;
-          const o = [m[12], m[13], m[14]], d = [-m[8], -m[9], -m[10]], den = d[0] * z[0] + d[1] * z[1] + d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
-          const tt = ((c[0] - o[0]) * z[0] + (c[1] - o[1]) * z[1] + (c[2] - o[2]) * z[2]) / den; if (tt <= 0 || tt > 4) continue;
-          const q = [o[0] + d[0] * tt - c[0], o[1] + d[1] * tt - c[1], o[2] + d[2] * tt - c[2]], u = (q[0] * x[0] + q[1] * x[1] + q[2] * x[2]) / sx + 0.5, v = 0.5 - (q[0] * y[0] + q[1] * y[1] + q[2] * y[2]) / sy;
-          if (u < 0 || u > 1 || v < 0 || v > 1) continue; const i = panel.hitAt(u, v); s.__panelT = tt; if (i != null){ rayHit.set(s, i); hov = i; } else rayHit.set(s, null); }
-        panel.setHover(hov);
-        if (panel.version !== panelVer){ panelVer = panel.version; if (!panelTex) panelTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, panelTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panel.canvas); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); } }
+      const facing = c => { const z = [head[0] - c[0], head[1] - c[1], head[2] - c[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
+        const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; return { x, y: [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]], z }; };
+      const rayOf = s => { const rp = s.targetRaySpace && frame.getPose(s.targetRaySpace, ref); if (!rp) return null; const m = rp.transform.matrix; return { o: [m[12], m[13], m[14]], d: [-m[8], -m[9], -m[10]] }; };
+      if (panel && pm.mode !== 'off'){
+        const sx = pm.w, sy = sx * panel.aspect(); let c = null;
+        if (pm.grab){ const r = rayOf(pm.grab.src);   // dragged: the grabbed point stays on the ray, the panel keeps facing you
+          if (r){ const gp = [r.o[0] + r.d[0] * pm.grab.t0, r.o[1] + r.d[1] * pm.grab.t0, r.o[2] + r.d[2] * pm.grab.t0];
+            c = pm.c || gp; for (let it = 0; it < 2; it++){ const B = facing(c); c = [0, 1, 2].map(k => gp[k] - B.x[k] * pm.grab.lu - B.y[k] * pm.grab.lv); }
+            pm.mode = 'world'; pm.c = c; } }
+        if (!c) c = pm.mode === 'world' && pm.c ? pm.c : lpp ? [lpp.p[0], lpp.p[1] + 0.06 + sy / 2, lpp.p[2]] : null;
+        if (c){ const { x, y, z } = facing(c), barY = -(sy / 2 + 0.035);
+          panelPose = { c, x, y, z, sx, sy, barY };
+          let hov = null;
+          for (const s of session.inputSources){ if ((pm.mode === 'hand' && s === leftS) || !s.targetRaySpace) continue; const r = rayOf(s); if (!r) continue;
+            const den = r.d[0] * z[0] + r.d[1] * z[1] + r.d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
+            const tt = ((c[0] - r.o[0]) * z[0] + (c[1] - r.o[1]) * z[1] + (c[2] - r.o[2]) * z[2]) / den; if (tt <= 0 || tt > 6) continue;
+            const q = [r.o[0] + r.d[0] * tt - c[0], r.o[1] + r.d[1] * tt - c[1], r.o[2] + r.d[2] * tt - c[2]], lx = q[0] * x[0] + q[1] * x[1] + q[2] * x[2], ly = q[0] * y[0] + q[1] * y[1] + q[2] * y[2];
+            if (Math.abs(lx) <= 0.08 && Math.abs(ly - barY) <= 0.022){ barHit.set(s, { t: tt, lx, ly }); rayLen.set(s, tt); continue; }   // the drag bar
+            if (Math.abs(lx) > sx / 2 || Math.abs(ly) > sy / 2) continue;
+            const i = panel.hitAt(lx / sx + 0.5, 0.5 - ly / sy); rayLen.set(s, tt); s.__panelLocal = { t: tt, lx, ly };
+            if (i != null){ rayHit.set(s, i); hov = i; } else rayHit.set(s, null); }
+          panel.setHover(hov);
+          if (panel.version !== panelVer){ panelVer = panel.version; if (!panelTex) panelTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, panelTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panel.canvas); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.generateMipmap(gl.TEXTURE_2D);   // sharper from a distance
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            const an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT))); }
+          if (!barTex) barTex = pillTexture(); } }
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
@@ -530,14 +564,18 @@ export function open(api, lang = 'zh', opt = {}){
         // controller rays
         noFog(prog); noFog(tex); gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
         for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue;
-          const len = rayHit.has(s) ? s.__panelT / 0.6 : 1, sc = M4.id(); sc[10] = len;   // a ray that meets the panel ends on it
+          const len = rayLen.has(s) ? rayLen.get(s) / 0.6 : 1, sc = M4.id(); sc[10] = len;   // a ray that meets the panel ends on it
           gl.uniformMatrix4fv(prog.u.uM, false, M4.mul(rp.transform.matrix, sc)); gl.bindVertexArray(ray.vao); gl.drawElements(gl.LINES, 2, gl.UNSIGNED_INT, 0); }
         // help card above the left hand, turned to face you
         const left = [...session.inputSources].find(s => s.handedness === 'left'), lp = left && poseOf(frame, left);
-        if (panelPose && panelTex){ const { c, x, y, z, sx, sy } = panelPose;
+        if (panelPose && panelTex){ const { c, x, y, z, sx, sy, barY } = panelPose;
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, c, [sx, sy]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, panelTex); gl.uniform1i(tex.u.uT, 0);
-          gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
+          gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          // the drag bar under it, brighter while pointed at or held
+          const hot = pm.grab || barHit.size, bc = [c[0] + y[0] * barY, c[1] + y[1] * barY, c[2] + y[2] * barY], bw = hot ? 0.15 : 0.13;
+          gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, bc, [bw, bw * 48 / 256])); gl.bindTexture(gl.TEXTURE_2D, hot ? barTex.hot : barTex.idle); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          gl.disable(gl.BLEND); }
         else if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
