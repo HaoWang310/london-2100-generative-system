@@ -1,5 +1,6 @@
 // The map's display panel: a floating, collapsible panel at the map's top right,
-// resizable by dragging its left and bottom edges. It drives the London map
+// resizable by dragging its left and bottom edges. Docked (setDocked) it sits flush
+// on the map's right edge and collapses to a slim vertical tab there. It drives the London map
 // features (london-map.js): search, jumps, lighting, weather, colour theme,
 // labels / vehicles / shadows / trees, and the analysis layers.
 
@@ -49,6 +50,15 @@ const CSS = `
 .dp-rz-x::after { left: 3px; top: 50%; width: 4px; height: 40px; margin-top: -20px; } .dp-rz-y::after { top: 3px; left: 50%; height: 4px; width: 40px; margin-left: -20px; }
 .dp:hover .dp-rz::after { opacity: .5; } .dp-rz:hover::after, .dp-rz.on::after { opacity: 1; background: var(--text); }
 body.dp-resizing, body.dp-resizing * { user-select: none !important; }
+/* docked: attached to the map's right edge; collapsed it is a slim vertical tab on that edge */
+.dp.docked { right: 0; border-right: 0; border-radius: 16px 0 0 16px; }
+.dp.docked.collapsed { width: 36px !important; top: 16px; border-radius: 12px 0 0 12px; cursor: pointer; transition: background .15s; }
+.dp.docked.collapsed:hover { background: rgba(30,30,33,.96); }
+.dp.docked.collapsed .dp-head { flex-direction: column-reverse; justify-content: flex-start; gap: 8px; padding: 8px 0 12px; }
+.dp.docked.collapsed .dp-head b { writing-mode: vertical-rl; font-size: 12.5px; font-weight: 500; letter-spacing: .12em; color: var(--text-2); }
+.dp.docked.collapsed:hover .dp-head b { color: var(--text); }
+.dp.docked.collapsed .dp-head .btn { width: 26px; height: 26px; }
+.dp.docked.collapsed .dp-rz { display: none; }
 @media (max-width: 720px) { .dp { width: calc(100% - 24px) !important; max-height: 55%; } .dp-rz { display: none; } }
 `;
 
@@ -61,6 +71,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* private mode */ }
   const panel = h('div', { class: `dp ${saved.collapsed ? 'collapsed' : ''}` });
+  let docked = false;
   const apply = () => {
     panel.style.width = saved.w ? `${saved.w}px` : '';
     panel.style.height = saved.h ? `${saved.h}px` : '';
@@ -171,9 +182,13 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
         h('div', { class: 'dp-layer' },
           h('div', { class: 'dp-row' }, h('span', {}, h('span', { class: 'name' }, t('dp.focus70')), h('small', {}, t('dp.focus70Sub'))), sw(S.focus70.on, v => lm.setLayer('focus70', { on: v }))))),
       h('p', { class: 'dp-src' }, source));
-    const collapse = h('button', { class: 'btn ghost', title: t('dp.collapse'), onclick: () => { saved.collapsed = !panel.classList.toggle('collapsed') ? false : true; collapse.textContent = saved.collapsed ? '+' : '–'; store(); } }, saved.collapsed ? '+' : '–');
+    const icon = () => (saved.collapsed ? (docked ? '‹' : '+') : (docked ? '›' : '–'));
+    const toggle = () => { saved.collapsed = panel.classList.toggle('collapsed'); collapse.textContent = icon(); store(); };
+    const collapse = h('button', { class: 'btn ghost', title: t('dp.collapse'), onclick: e => { e.stopPropagation(); toggle(); } }, icon());
+    const head = h('div', { class: 'dp-head' }, h('b', {}, t('dp.title')), collapse);
+    head.addEventListener('click', () => { if (saved.collapsed && docked) toggle(); });   // the whole edge tab opens it
     const scroll = panel.querySelector('.dp-body')?.scrollTop || 0;
-    panel.replaceChildren(handle('x'), handle('y'), h('div', { class: 'dp-head' }, h('b', {}, t('dp.title')), collapse), body);
+    panel.replaceChildren(handle('x'), handle('y'), head, body);
     body.scrollTop = scroll;
   }
   build();
@@ -183,6 +198,8 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   // keep the switches and statuses in step with the map, but never rebuild while a slider or field is in use
   return {
     update(what) { if (what === 'layers' || what === 'atmosphere' || what === 'theme' || what === 'display') { if (!panel.contains(document.activeElement) || document.activeElement.type === 'checkbox' || document.activeElement.tagName === 'BUTTON') refresh(); } },
+    /** Attach the panel to the map's right edge (a slim tab when collapsed), or float it again. */
+    setDocked(on) { on = Boolean(on); if (on === docked) return; docked = on; panel.classList.toggle('docked', on); refresh(); },
     element: panel
   };
 }
