@@ -1,4 +1,4 @@
-// 02 · Wool network — regional road skeleton inside one planning region.
+// 03 · Wool network — regional road skeleton inside one planning region.
 //
 // P0 PLACEHOLDER: radial spokes from the region centre, an inner ring, and the
 // inherited region-link roads clipped to the region (so the network connects
@@ -13,7 +13,7 @@ import {
 } from '../../shared/geo-core/index.js';
 
 const mod = {
-  id: '02-wool-network',
+  id: '03-wool-network',
   level: 'wool',
   version: '0.1.0',
   placeholder: true,

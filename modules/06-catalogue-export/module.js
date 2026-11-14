@@ -1,4 +1,4 @@
-// 05 · Catalogue & export — package results for GIS / Rhino / archive.
+// 06 · Catalogue & export — package results for GIS / Rhino / archive.
 //
 // toGeoJSON(): WGS84 GeoJSON (for QGIS, Google Earth, web maps), with the
 // original EPSG:27700 coordinates kept in each feature's properties.bng.
@@ -9,7 +9,7 @@ import { createBundle } from '../../shared/schemas/index.js';
 import { toWGS84 } from '../../shared/geo-core/index.js';
 
 const mod = {
-  id: '05-catalogue-export',
+  id: '06-catalogue-export',
   level: 'integration',
   version: '0.1.0',
   title: { zh: '方案目录与导出', en: 'Catalogue & export' },

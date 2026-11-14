@@ -1,4 +1,4 @@
-// 01 · Region planning — divide the London study area into planning regions.
+// 02 · Region planning — divide the London study area into planning regions.
 //
 // P0 PLACEHOLDER: a rotated square grid clipped to the study area, with
 // centre nodes and adjacency links. It produces a correct ScaleBundle so the
@@ -10,7 +10,7 @@ import { createBundle } from '../../shared/schemas/index.js';
 import { clipPolygonConvex, centroid, area } from '../../shared/geo-core/index.js';
 
 const mod = {
-  id: '01-region-planning',
+  id: '02-region-planning',
   level: 'region',
   version: '0.1.0',
   placeholder: true,
