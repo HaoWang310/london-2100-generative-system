@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>London map · London 2100 module preview</title>
+  <link rel="stylesheet" href="../../shared/ui/theme.css?v=eb450ed">
+</head>
+<body>
+  <script type="module">
+    import module from './module.js?v=eb450ed';
+    import { mountPreview } from '../../shared/ui/preview.js?v=eb450ed';
+    
+    mountPreview({ module, input: async () => null });
+  </script>
+</body>
+</html>
