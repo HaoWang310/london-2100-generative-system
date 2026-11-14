@@ -9,7 +9,6 @@
 // overlay and the inspector panel. run() returns a ScaleBundle describing the loop
 // (its stations as nodes), for export and for later modules.
 
-import { getLang } from '../../shared/i18n/index.js';
 import { createBundle } from '../../shared/schemas/index.js';
 import { createGrowth, YEARS } from './growth.js';
 import { createGrowthOverlay, PALETTE } from './overlay.js';
@@ -56,12 +55,12 @@ function injectCss() {
 }
 
 /**
- * The tool the app mounts. display: {show, rails, grain, edges, opacity, background}.
+ * The tool the app mounts. display: {show, rails, grain, fill, edges, opacity, background}.
  * onState(what) fires on 'loaded' | 'year' | 'mode' | 'params' | 'progress' | 'ran' | 'error'.
  */
 export function createGrowthTool(viewer, { onState = () => {} } = {}) {
   injectCss();
-  const display = { show: true, rails: true, grain: true, edges: false, opacity: 0.9, background: true };
+  const display = { show: true, rails: true, grain: true, fill: true, edges: false, opacity: 0.9, background: true };
   let active = false, overlay = null, panel = null;
   const container = globalThis.document ? document.createElement('div') : null;
 
@@ -74,7 +73,6 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     }
   });
 
-  const extentLabel = () => (getLang() === 'zh' ? '生长模拟范围' : 'Growth model extent');
   const visible = () => display.show && (active || display.background);
   function attachOverlay() {
     if (overlay || !viewer) return;
@@ -83,13 +81,19 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       meta: s.D.meta, rails: s.D.rails, stations: s.D.meta.NODES, opacity: display.opacity,
       get: () => ({ cells: growth.shown()?.cells || null, year: s.year, show: visible() })
     });
-    overlay.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity, label: extentLabel() });
+    overlay.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity, fill: display.fill });
     viewer.addOverlay?.(overlay);
+    // the illustrative fill up to the 70 km circle (small; the overlay draws without it until it arrives)
+    const v = new URL(import.meta.url).search;
+    fetch(new URL(`./data/fill-strips.z${v}`, import.meta.url))
+      .then(r => { if (!r.ok) throw new Error(`fill ${r.status}`); return new Response(r.body.pipeThrough(new DecompressionStream('deflate'))).arrayBuffer(); })
+      .then(b => { overlay.setFill(new Uint8Array(b)); viewer.redraw?.(); })
+      .catch(e => console.warn('Growth fill unavailable:', e.message || e));
   }
 
   if (container) panel = createPanel(container, growth, {
     display,
-    onDisplay: change => { Object.assign(display, change); overlay?.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity }); viewer.redraw?.(); }
+    onDisplay: change => { Object.assign(display, change); overlay?.set({ edges: display.edges, grain: display.grain, fill: display.fill, rails: display.rails, opacity: display.opacity }); viewer.redraw?.(); }
   });
 
   return {
@@ -107,7 +111,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     },
     close() { active = false; overlay?.sync(); viewer.redraw?.(); },
     setYear: y => growth.setYear(y),
-    relang: () => { panel?.update('lang'); overlay?.set({ label: extentLabel() }); },
+    relang: () => panel?.update('lang'),
     resize: () => panel?.resize()
   };
 }
