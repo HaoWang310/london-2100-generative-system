@@ -782,10 +782,10 @@ var GV = (function () {
   var r4 = function (v) { return Math.round(v * 1e4) / 1e4; };
   var SIMPLE = [
     { t: "Where the city grows", note: "How hard the stations and the railway pull, and how far.", graph: true, c: [
-      { id: "sec", t: "Smaller stations, against the main ones", k: ["wS"], min: 0, max: 1.3, step: 0.05,
+      { id: "sec", t: "Smaller stations, against the main ones", k: ["wS"], min: 0, max: 1.3, step: 0.05, can: function (q) { return q.wP > 0; },
         get: function (q) { return q.wP > 0 ? q.wS / q.wP : null; }, set: function (v) { P.wS = r4(v * P.wP); },
         show: function (v) { return fmt(v * 100) + " %"; }, ends: ["no pull", "as strong"] },
-      { id: "line", t: "The railway, against the main stations", k: ["wR"], min: 0, max: 1, step: 0.02,
+      { id: "line", t: "The railway, against the main stations", k: ["wR"], min: 0, max: 1, step: 0.02, can: function (q) { return q.wP > 0; },
         get: function (q) { return q.wP > 0 ? q.wR / q.wP : null; }, set: function (v) { P.wR = r4(v * P.wP); },
         show: function (v) { return fmt(v * 100) + " %"; }, ends: ["towns round stations", "a ribbon along the line"],
         pre: [["node city", { wR: 0, sR: 1500 }], ["as run", { wR: 0.6, sR: 1500 }], ["ribbon city", { wR: 2.0, sR: 3000 }]] },
@@ -811,7 +811,7 @@ var GV = (function () {
         get: function (q) { return q.soil; }, set: function (v) { P.soil = r4(v); },
         show: function (v) { return "× " + fmt(v, 2); }, ends: ["protect it", "treat it as any land"],
         pre: [["protected", { soil: 0.2 }], ["as run", { soil: 0.45 }], ["ignored", { soil: 1.0 }]] },
-      { id: "dens", t: "How far from a station it rises", k: ["rcore", "rmed"], min: 0, max: 1.5, step: 0.05,
+      { id: "dens", t: "How far from a station it rises", k: ["rcore", "rmed"], min: 0, max: 1.45, step: 0.05,
         get: function (q) { var a = q.rcore / 700, b = q.rmed / 1700; return Math.abs(a - b) < 1e-6 ? a : null; },
         set: function (v) { P.rcore = Math.round(700 * v); P.rmed = Math.round(1700 * v); },
         show: function (v) { return T("mid") + " " + fmt(700 * v) + " m · " + T("high") + " " + fmt(1700 * v) + " m"; }, ends: ["at the station", "further out"] }] },
@@ -827,13 +827,14 @@ var GV = (function () {
         show: function (v) { return "× " + fmt(v, 2); }, ends: ["narrow", "wide"] }] },
     { t: "Another layout", note: "Same rules, another roll of the dice. The release is layout 42.", seed: true, c: [] }
   ];
-  var SC = {};
+  var SC = {}, GRAPHWRAP = $("graphwrap");
   function syncSimple() {
     SIMPLE.forEach(function (g) { g.c.forEach(function (c) {
       var d = SC[c.id]; if (!d) return;
       var v = c.get(P), def = c.get(GV.DEFAULTS), ok = v !== null && v >= c.min - 1e-9 && v <= c.max + 1e-9;
       if (ok) { d.inp.value = v; d.val.textContent = c.show(v); } else { d.inp.value = def; d.val.textContent = T("Custom"); }
       d.val.classList.toggle("custom", !ok); d.inp.classList.toggle("dim", !ok);
+      d.inp.disabled = c.can ? !c.can(P) : false;
       d.val.classList.toggle("def", ok && c.k.every(function (k) { return P[k] === GV.DEFAULTS[k]; }));
     }); });
     if ($("seedv")) $("seedv").textContent = T("Layout") + " " + P.seed + (P.seed === 42 ? " · " + T("the release") : "");
@@ -853,7 +854,7 @@ var GV = (function () {
     SIMPLE.forEach(function (g) {
       var box = document.createElement("div"); box.className = "grp";
       box.innerHTML = '<div class="gh"><h2>' + T(g.t) + '</h2></div><div class="note">' + T(g.note) + "</div>";
-      if (g.graph) box.appendChild($("graphwrap"));
+      if (g.graph) box.appendChild(GRAPHWRAP);
       g.c.forEach(function (c) {
         var el = document.createElement("div"); el.className = "sl";
         var def = c.get(GV.DEFAULTS), pos = (def - c.min) / (c.max - c.min) * 100;
@@ -863,8 +864,7 @@ var GV = (function () {
         SC[c.id] = { inp: inp, val: el.querySelector(".val") };
         inp.oninput = function () {
           var v = +inp.value;
-          if (Math.abs(v - def) < c.step / 2 + 1e-9) c.k.forEach(function (k) { P[k] = GV.DEFAULTS[k]; });   // the release, exactly
-          else c.set(v);
+          c.set(Math.abs(v - def) < c.step / 2 + 1e-9 ? def : v);   // at the tick: the release's exact values
           syncAll(); changed();
         };
         box.appendChild(el);
