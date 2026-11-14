@@ -1,6 +1,7 @@
 // The app is the only place that imports several modules. Modules never
 // import each other (enforced by tools/check-isolation.mjs).
 import london from '../modules/00-london-map/module.js';
+import growth, { createGrowthTool } from '../modules/01-growth-simulator/module.js';
 import region from '../modules/02-region-planning/module.js';
 import wool from '../modules/03-wool-network/module.js';
 import tensor from '../modules/04-tensor-roads/module.js';
@@ -19,6 +20,12 @@ export const SCALES = [
 export const TOOLS = [
   { key: 'integration', module: integration },
   { key: 'export', module: exporter }
+];
+
+// Simulations that stand beside the scale chain: open at any level, drawn on the map,
+// kept as a background while working at other levels. Listed after London in the nav.
+export const SIMULATIONS = [
+  { key: 'growth', module: growth, create: createGrowthTool }
 ];
 
 export const exporters = { toGeoJSON, toBNGGeoJSON };

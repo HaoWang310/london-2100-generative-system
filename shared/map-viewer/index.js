@@ -11,6 +11,9 @@
 //   viewer.setProgress(0..1)   growth animation driven by the timeline
 //   viewer.fit(ring)           only called on scale changes, never on zoom
 //   viewer.setView3D(bool)
+//   viewer.addOverlay(o)       a module's own map layer (e.g. 01 growth). o.attachMapLibre(map, beforeId),
+//                              o.detachMapLibre(), o.drawCanvas(ctx, {toPx, mpp, w, h}), o.sync()
+//   viewer.removeOverlay(id) · viewer.redraw()
 //   viewer.kind                'maplibre' | 'canvas'
 
 import { toWGS84, truncatePolyline, bbox, centroid, pointInPolygon } from '../geo-core/index.js';
@@ -157,9 +160,16 @@ async function createMapLibreViewer(el, opts) {
   map.on('click', 'l2100-children-fill', e => opts.onSelect?.(e.features[0].properties.cid));
   map.on('dblclick', 'l2100-children-fill', e => { e.preventDefault(); opts.onEnter?.(e.features[0].properties.cid); });
 
+  // Module overlays sit under the labels and under the workspace's own layers and 3D buildings.
+  const overlays = new Map();
+  const overlayBefore = () => (map.getLayer('l2100-buildings') ? 'l2100-buildings' : firstSymbol);
+
   return {
     kind: 'maplibre',
     map,
+    addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore()); },
+    removeOverlay(id) { overlays.get(id)?.detachMapLibre?.(); overlays.delete(id); },
+    redraw() { for (const o of overlays.values()) o.sync?.(); map.triggerRepaint(); },
     setScene(scene) {
       ll = toLL(scene);
       map.getSource('l2100-boundary').setData(fc(ll.boundary ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: ll.boundary } }] : []));
@@ -203,6 +213,7 @@ function createCanvasViewer(el, opts) {
   el.appendChild(canvas);
   const ctx = canvas.getContext('2d');
   let scene = {}, progress = 1;
+  const overlays = new Map();
   // view: metres per pixel and centre in EPSG:27700
   let view = { cx: 530034, cy: 180381, mpp: 180 };
   let hover = null;
@@ -228,6 +239,8 @@ function createCanvasViewer(el, opts) {
     ctx.strokeStyle = '#1c1c1e'; ctx.lineWidth = 1;
     for (let e = Math.floor(e0 / step) * step; e < e1; e += step) { const [x] = toPx([e, 0]); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     for (let n = Math.floor(n0 / step) * step; n < n1; n += step) { const [, y] = toPx([0, n]); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+    for (const o of overlays.values()) o.drawCanvas?.(ctx, { toPx, mpp: view.mpp, w, h });
 
     ctx.strokeStyle = AREA_STYLE.ghost; ctx.lineWidth = 1; ctx.setLineDash([]);
     for (const g of scene.ghosts || []) {
@@ -302,6 +315,9 @@ function createCanvasViewer(el, opts) {
 
   return {
     kind: 'canvas',
+    addOverlay(o) { overlays.set(o.id, o); draw(); },
+    removeOverlay(id) { overlays.delete(id); draw(); },
+    redraw: draw,
     setScene(s) { scene = s; draw(); },
     setProgress(t) { progress = t; draw(); },
     fit(ring) {
