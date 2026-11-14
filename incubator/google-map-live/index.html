@@ -11,7 +11,7 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.35.3-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.36.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
@@ -1095,6 +1095,11 @@
         <span>Building shadows</span>
         <input id="buildingShadowToggle" class="dpSwitch" type="checkbox" autocomplete="off" checked disabled>
       </label>
+      <label class="dpSwitchRow" title="Procedural trees in parks, woods and other green spaces from zoom 15.5 (a visual impression, not a tree survey)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-6"/><path d="M12 3a5 5 0 0 0-5 5 4 4 0 0 0 1 7h8a4 4 0 0 0 1-7 5 5 0 0 0-5-5z"/></svg>
+        <span>Trees in green spaces</span>
+        <input id="urbanTreeToggle" class="dpSwitch" type="checkbox" autocomplete="off" checked disabled>
+      </label>
     </div>
   </div>
 
@@ -1106,7 +1111,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.35.3-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.36.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -1465,11 +1470,11 @@
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
 <script type="module">
-  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.35.3-english';
-  import {createPlaceSearch} from './scripts/place_search.js?v=3.35.3-english';
-  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.35.3-english';
-  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.35.3-english';
-  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.35.3-english';
+  import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './scripts/flood_detail.js?v=3.36.0-english';
+  import {createPlaceSearch} from './scripts/place_search.js?v=3.36.0-english';
+  import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './scripts/drainage_display.js?v=3.36.0-english';
+  import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './scripts/terrain_local.js?v=3.36.0-english';
+  import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './scripts/osm_basemap_themes.js?v=3.36.0-english';
   // Map rendering must not depend on a single CDN. Heavy analysis modules are
   // loaded only AFTER the basemap has started.
   let maplibregl;
@@ -1490,7 +1495,7 @@
     }
   }
 
-  const APP_VERSION='3.35.3-english';
+  const APP_VERSION='3.36.0-english';
   // Keep the header's version derived from exactly the same runtime build id.
   document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
   const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1655,6 +1660,10 @@
   let buildingShadows=null;
   let buildingShadowsWanted=true;
   let buildingShadowsActive=null;
+  // Procedural trees in green spaces (scripts/urban_trees.js); display only.
+  let urbanTrees=null;
+  let urbanTreesWanted=true;
+  let urbanTreesActive=null;
   let syncRasterBasemap=()=>{};
   let googleMarker=null;
   let osmMarker=null;
@@ -1747,6 +1756,7 @@
     if(osmMap.getLayer(CITY_BUILDINGS_BACKGROUND_FILL))
       osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-color',building);
     streetTraffic?.setTint?.(atmosphereTints);
+    urbanTrees?.setTint(atmosphereTints);
     localFloodUI?.refreshBuildingColours?.();
   }
 
@@ -1765,6 +1775,36 @@
         live.textContent=hh+':'+mm+' · '+Math.round(state.sun.altitude)+'°';
       }else live.textContent='';
     }
+  }
+
+  function syncUrbanTrees(){
+    if(!urbanTrees)return;
+    const active=urbanTreesWanted&&!localFloodIsolateMode;
+    if(active!==urbanTreesActive){
+      urbanTreesActive=active;
+      urbanTrees.setEnabled(active);
+      buildingShadows?.refresh();
+    }
+  }
+
+  function initUrbanTrees(){
+    if(urbanTrees||!osmMap)return;
+    import('./scripts/urban_trees.js?v='+APP_VERSION)
+      .then(({createUrbanTrees})=>{
+        if(urbanTrees)return;
+        urbanTrees=createUrbanTrees(osmMap,{
+          sourceId:streetRoadSourceId(),
+          beforeLayerId:()=>osmMap.getLayer(CITY_BUILDINGS_LAYER)?CITY_BUILDINGS_LAYER:undefined,
+          onChange:()=>buildingShadows?.refresh()
+        });
+        urbanTrees.setTint(atmosphereTints);
+        $('urbanTreeToggle').disabled=false;
+        syncUrbanTrees();
+      })
+      .catch(error=>{
+        console.error('Trees failed to load',error);
+        say('Trees could not load: '+(error.message||error),true);
+      });
   }
 
   function syncBuildingShadows(){
@@ -1790,6 +1830,7 @@
         if(shadowModule){
           buildingShadows=shadowModule.createBuildingShadowLayer(osmMap,maplibregl,{
             sourceId:CITY_BUILDINGS_SOURCE,
+            extraFootprints:()=>urbanTrees?.shadowFootprints()||[],
             beforeId:()=>osmMap.getLayer(CITY_BUILDINGS_LAYER)?CITY_BUILDINGS_LAYER:undefined
           });
           syncBuildingShadows();
@@ -3298,6 +3339,7 @@
 
   function syncStreetVehicleView(){
     streetTraffic?.syncView();
+    urbanTrees?.syncView();
   }
 
   function setStreetVehiclesEnabled(on){
@@ -3601,6 +3643,7 @@
     if(localFloodIsolateMode===next)return;
     localFloodIsolateMode=next;
     syncBuildingShadows();
+    syncUrbanTrees();
     syncCityView();
   }
 
@@ -3929,11 +3972,12 @@
       tuneCityBuildingFarField();
       syncCityView();
       initAtmosphere();
+      initUrbanTrees();
       ensureOverviewLayers();
       // A failure in the large flood/parcel modules must never block the map.
       // The independent module graph is downloaded after the basemap is ready.
       $('localFloodDraw').disabled=true;
-      import('./scripts/local_flood_ui.js?v=3.35.3-english')
+      import('./scripts/local_flood_ui.js?v=3.36.0-english')
         .then(({createLocalFloodUI})=>{
           if(localFloodUI)return;
           localFloodUI=createLocalFloodUI({
@@ -3959,7 +4003,7 @@
             onOpenParcelGenerator:async ({polygon,roadNetwork=null})=>{
               try {
                 if(!parcelGenerator){
-                  const module=await import('./scripts/parcel_generator.js?v=3.35.3-english');
+                  const module=await import('./scripts/parcel_generator.js?v=3.36.0-english');
                   parcelGenerator=module.createParcelGenerator({
                     maplibregl,assetUrl,demBounds:DRAINAGE_3857,
                     demWidth:DRAINAGE_3857.baseWidth50m,
@@ -4183,6 +4227,10 @@
 
   $('streetVehicleToggle').addEventListener('change',event=>{
     setStreetVehiclesEnabled(event.target.checked);
+  });
+  $('urbanTreeToggle').addEventListener('change',event=>{
+    urbanTreesWanted=Boolean(event.target.checked);
+    syncUrbanTrees();
   });
   $('buildingShadowToggle').addEventListener('change',event=>{
     buildingShadowsWanted=Boolean(event.target.checked);
