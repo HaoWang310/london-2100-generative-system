@@ -1807,6 +1807,8 @@ function resize(){ DPR = Math.min(2, devicePixelRatio || 1); VW = cv.clientWidth
     view.s = Math.min((VW - ins.l - ins.r) / (x1 - x0), (VH - 130) / (y1 - y0)) * 0.92; view.x = (x0 + x1) / 2 - (ins.l - ins.r) / 2 / view.s; view.y = (y0 + y1) / 2 + 30 / view.s; fitted = true; } baseDirty = netDirty = widthDirty = true; clearTrails(); }
 function g2d(c){ const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return g; }
 function pathLine(g, Pp){ g.beginPath(); Pp.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); }
+// (v8.39) on a map site everything drawn about the site stays inside its red line; call inside save() with the DPR transform
+function siteClip(g){ if (!D.site) return; g.beginPath(); for (const p of D.pieces) p.outer.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.closePath(); g.clip(); }
 function pathRings(g, rings){ for (const r of rings){ r.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); } }
 function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); if (!(BASEMAPS[BASEMAP] && BASEMAPS[BASEMAP].live)){ g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH); }
   const bm = BASEMAP !== 'none' && drawBasemap(g), ctxOn = $('lCtx').checked && !bm;   // (v8.5) a basemap replaces the drawn context
@@ -1864,7 +1866,8 @@ function envImg(k){ if (ENVIMG[k]) return ENVIMG[k];
       const lm = bil(LM, u, w), o = 4 * (py * W + px);
       d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(255 * a * (0.12 + 0.88 * lm)); } }
   gg.putImageData(im, 0, 0); return (ENVIMG[k] = oc); }
-function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; if (window.ENVANIM && ENVANIM.on && ENVANIM.k === ENVSEL) return;   // (v8.9) being animated: drawn by scripts/env_anim.js g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;
+function drawEnv(g){ if (!ENV || ENVSEL === 'off') return; if (window.ENVANIM && ENVANIM.on && ENVANIM.k === ENVSEL) return;   // (v8.9) being animated: drawn by scripts/env_anim.js
+  g.save(); siteClip(g); g.imageSmoothingEnabled = true; g.globalAlpha = ENVSEL === 'Q' ? 0.95 : 0.82;   // (v8.39) these were inside the comment above: the map had no opacity and an unpaired restore
   g.drawImage(envImg(ENVSEL), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function syncEnv(){ for (const b of document.querySelectorAll('#tgEnv button')){ b.classList.toggle('on', b.dataset.env === ENVSEL); if (!ENV && b.dataset.env !== 'off') b.disabled = true; }
   const key = document.getElementById('envKey'); if (!key) return; key.hidden = !ENV || ENVSEL === 'off'; if (key.hidden) return;
@@ -1898,8 +1901,8 @@ function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
   if (!FLOODIMG){ const oc = mk(); oc.width = nx; oc.height = ny; const gg = oc.getContext('2d'), im = gg.createImageData(nx, ny), C = [null, [156, 221, 234], [247, 211, 89], [242, 157, 56], [215, 55, 49]];
     for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const k = FR[r * nx + c]; if (!k) continue; const o = 4 * ((ny - 1 - r) * nx + c), col = C[k]; im.data[o] = col[0]; im.data[o + 1] = col[1]; im.data[o + 2] = col[2]; im.data[o + 3] = Math.round([0, 40, 70, 140, 175][k] * (inLandNoHoles(c * cell, r * cell) ? 1 : 0.45)); }   // quieter outside the land, low risk light
     gg.putImageData(im, 0, 0); FLOODIMG = oc; }
-  g.save(); g.imageSmoothingEnabled = true; g.globalAlpha = (THEME === 'dark' ? 0.8 : 0.7) * (BASEMAP !== 'none' ? 0.8 : 1); g.drawImage(FLOODIMG, X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore();
-  const fa = floodAvoid(); if (fa){ g.save(); g.strokeStyle = P.waterEdge; g.setLineDash([4, 3]); g.lineWidth = 1; for (const r of FLOOD.zones[fa] || []){ pathLine(g, r); g.stroke(); } g.restore(); } }
+  g.save(); siteClip(g); g.imageSmoothingEnabled = true; g.globalAlpha = (THEME === 'dark' ? 0.8 : 0.7) * (BASEMAP !== 'none' ? 0.8 : 1); g.drawImage(FLOODIMG, X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore();
+  const fa = floodAvoid(); if (fa){ g.save(); siteClip(g); g.strokeStyle = P.waterEdge; g.setLineDash([4, 3]); g.lineWidth = 1; for (const r of FLOOD.zones[fa] || []){ pathLine(g, r); g.stroke(); } g.restore(); } }
 const BASEMAPS = {
   osm: { url: (z, x, y) => 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png', max: 19, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' },
   // (v8.34) the London map itself, seen through a transparent page: the host moves its map with this view (no tiles here)
@@ -2154,8 +2157,8 @@ function render(now){
   // (v8.12) each kind its own colour and size: main blue and large, local cyan and small, edge purple; the dot and the
   // pulse grow with the kind's pull, the faint circle is its reach
   for (const a of attractorsOn()){ const col = a.kind === 'edge' ? P.attrE : a.main ? P.attr : P.attr2, sz = a.kind === 'sec' ? 4.5 : 4.5, pf = clamp(a.pull / 2.4, 0.15, 1.3), x = X(a.x), y = Y(a.y);
-    ctx.globalAlpha = 0.22; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.arc(x, y, a.reach * view.s, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
-    for (let k = 0; k < 2; k++){ const ph = ((tt * 0.6 + k * 0.5) % 1), r = sz + 3 + ph * (a.reach * view.s * 0.55 * pf); ctx.strokeStyle = col; ctx.globalAlpha = (1 - ph) * 0.6 * Math.min(1, 0.35 + pf); ctx.lineWidth = a.kind === 'sec' ? 1.1 : 1.8; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.stroke(); }
+    ctx.save(); siteClip(ctx); ctx.globalAlpha = 0.22; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.arc(x, y, a.reach * view.s, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    if (!D.site) for (let k = 0; k < 2; k++){ const ph = ((tt * 0.6 + k * 0.5) % 1), r = sz + 3 + ph * (a.reach * view.s * 0.55 * pf); ctx.strokeStyle = col; ctx.globalAlpha = (1 - ph) * 0.6 * Math.min(1, 0.35 + pf); ctx.lineWidth = a.kind === 'sec' ? 1.1 : 1.8; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.stroke(); }
     const rr = sz + 2.2 * pf; ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.strokeStyle = THEME === 'dark' ? '#000' : '#fff'; ctx.lineWidth = 1.5;
     // (v8.13) the shape tells the kind: main a circle, local a square, edge a triangle
     if (a.kind === 'edge'){ const h = rr * 1.25; ctx.beginPath(); ctx.moveTo(x, y - h * 1.05); ctx.lineTo(x + h, y + h * 0.75); ctx.lineTo(x - h, y + h * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); }
