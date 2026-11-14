@@ -4,7 +4,7 @@
 // once per run as a 3000 x 2460 texture; the year is a uniform, so playback
 // costs nothing per frame. The texture is drawn through the exact mesh of
 // georef.js, under the basemap's water and roads (they cut through the parcels)
-// and the map's labels. Zoomed in, the parcels' edges are smoothed (see FS);
+// and the map's labels. Zoomed in, the parcels split into finer grains (see FS);
 // an optional fine outline can mark each 50 m parcel instead.
 // The loop's rails and stations are ordinary MapLibre line / circle layers.
 //
@@ -15,6 +15,7 @@ import { gridMesh, gridFrame, lineToLL } from './georef.js';
 import { classAt } from './cells.js';
 import { toWGS84 } from '../../shared/geo-core/index.js';
 
+const GRAIN_PX = 10;          // target grain size on screen, device pixels
 export const PALETTE = { 1: '#F2D99E', 2: '#EFA65C', 3: '#E8684A', 4: '#5E6A48', 5: '#A9B57F' };
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 
@@ -23,18 +24,24 @@ attribute vec2 a_pos; attribute vec2 a_uv;
 uniform mat4 u_matrix; varying vec2 v_uv;
 void main() { v_uv = a_uv; gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0); }`;
 
-// Smoothing (u_smooth = 1, once a parcel is a few pixels wide): the four parcels
-// around each pixel vote, weighted by distance to their centres (smoothstep-shaped
-// bilinear weights), and the class with the most weight wins. Class boundaries
-// become continuous curves instead of 50 m steps and isolated parcels become
-// rounded dots; the boundary is anti-aliased over u_aa parcels (about one pixel).
-// It is drawing only: every parcel keeps its class, the totals do not change.
+// Finer grains when zoomed in (u_grain = 1). Zoomed out, every 50 m parcel is one
+// grain, exactly the model's data. Zoomed in, each parcel splits into 2 x 2, 4 x 4,
+// 8 x 8 ... square grains, so a grain stays about u_px pixels wide on screen while
+// standing for 25 m, 12.5 m, 6 m ... on the ground. A grain's class: the parcels
+// around it vote (cubic B-spline weights over 4 x 4 parcels), its own parcel gets a
+// small bonus (PB), and value noise at every finer octave (amplitude AMP, halving)
+// adds the detail; the highest score wins. Inside an area of one class nothing
+// changes; along a boundary the grains interleave. Levels cross-fade as the zoom
+// passes from one to the next, and the noise is tied to the ground, so grains do
+// not flicker when the map moves. The sub-parcel detail is illustrative only:
+// every parcel keeps its class and the totals do not change.
 const FS = `
 precision highp float;
 uniform sampler2D u_cells; uniform vec2 u_grid; uniform float u_year; uniform float u_opacity; uniform float u_edge;
-uniform float u_smooth; uniform float u_aa; uniform float u_round;
+uniform float u_grain; uniform float u_level;
 uniform vec3 u_c1; uniform vec3 u_c2; uniform vec3 u_c3; uniform vec3 u_c4; uniform vec3 u_c5;
 uniform float u_show; varying vec2 v_uv;
+const float PB = 0.15, AMP = 0.5;
 float classOf(vec2 cell) {
   if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= u_grid.x || cell.y >= u_grid.y) return 0.0;
   vec4 c = floor(texture2D(u_cells, (cell + 0.5) / u_grid) * 255.0 + 0.5);
@@ -46,38 +53,70 @@ float classOf(vec2 cell) {
 }
 vec3 colourOf(float k) { return k < 1.5 ? u_c1 : k < 2.5 ? u_c2 : k < 3.5 ? u_c3 : k < 4.5 ? u_c4 : u_c5; }
 float alphaOf(float k) { return k < 0.5 ? 0.0 : (k < 3.5 ? 1.0 : 0.85); }
+// lattice ids wrap every 8192 so the float maths stays exact deep into the zoom
+float hash(vec2 p) { p = mod(p, 8192.0); vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+float vnoise(vec2 x, float seed) {
+  vec2 o = vec2(seed * 17.31, seed * 29.17);
+  vec2 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  float a = hash(i + o), b = hash(i + vec2(1.0, 0.0) + o), c = hash(i + vec2(0.0, 1.0) + o), d = hash(i + vec2(1.0, 1.0) + o);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y) - 0.5;
+}
+vec4 bspline(float t) {   // weights for the parcels at offsets -1, 0, 1, 2
+  float t2 = t * t, t3 = t2 * t;
+  return vec4((1.0 - t) * (1.0 - t) * (1.0 - t), 3.0 * t3 - 6.0 * t2 + 4.0, -3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0, t3) / 6.0;
+}
+float pick(vec4 v, int i) { return i == 0 ? v.x : i == 1 ? v.y : i == 2 ? v.z : v.w; }
+// the class of the grain at level L (2^L grains per parcel side) containing p (parcel units)
+float grainClass(vec2 p, float L) {
+  float n = exp2(L);
+  vec2 s = (floor(p * n) + 0.5) / n;                 // the grain's centre
+  float own = classOf(floor(s));
+  if (L < 0.5) return own;
+  vec2 q = s - 0.5, i0 = floor(q), t = q - i0;
+  vec4 wx = bspline(t.x), wy = bspline(t.y);
+  float w0 = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0, w4 = 0.0, w5 = 0.0;
+  for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) {
+    float k = classOf(i0 + vec2(float(i) - 1.0, float(j) - 1.0)), w = pick(wx, i) * pick(wy, j);
+    if (k < 0.5) w0 += w; else if (k < 1.5) w1 += w; else if (k < 2.5) w2 += w; else if (k < 3.5) w3 += w; else if (k < 4.5) w4 += w; else w5 += w;
+  }
+  if (own < 0.5) w0 += PB; else if (own < 1.5) w1 += PB; else if (own < 2.5) w2 += PB; else if (own < 3.5) w3 += PB; else if (own < 4.5) w4 += PB; else w5 += PB;
+  // detail: one noise per class present, summed over the octaves down to this level
+  float amp = AMP;
+  for (int o = 1; o <= 8; o++) {
+    if (float(o) > L) break;
+    vec2 x = s * exp2(float(o));
+    if (w0 > 0.0) w0 += amp * vnoise(x, 1.0 + float(o) * 7.0);
+    if (w1 > 0.0) w1 += amp * vnoise(x, 2.0 + float(o) * 7.0);
+    if (w2 > 0.0) w2 += amp * vnoise(x, 3.0 + float(o) * 7.0);
+    if (w3 > 0.0) w3 += amp * vnoise(x, 4.0 + float(o) * 7.0);
+    if (w4 > 0.0) w4 += amp * vnoise(x, 5.0 + float(o) * 7.0);
+    if (w5 > 0.0) w5 += amp * vnoise(x, 6.0 + float(o) * 7.0);
+    amp *= 0.62;
+  }
+  float k = 0.0, b = w0;
+  if (w1 > b) { k = 1.0; b = w1; } if (w2 > b) { k = 2.0; b = w2; } if (w3 > b) { k = 3.0; b = w3; }
+  if (w4 > b) { k = 4.0; b = w4; } if (w5 > b) { k = 5.0; b = w5; }
+  return k;
+}
 void main() {
   if (v_uv.x < 0.0 || v_uv.y < 0.0 || v_uv.x >= 1.0 || v_uv.y >= 1.0) discard;
-  float k; float blend = 1.0; float k2 = 0.0;
-  if (u_smooth > 0.5) {
-    vec2 p = v_uv * u_grid - 0.5;
-    vec2 i0 = floor(p), t = p - i0;
-    t = smoothstep(0.5 - u_round, 0.5 + u_round, t);   // u_round: how far from a parcel edge the rounding reaches
-    float a = classOf(i0), b = classOf(i0 + vec2(1.0, 0.0)), c = classOf(i0 + vec2(0.0, 1.0)), d = classOf(i0 + vec2(1.0, 1.0));
-    float wa = (1.0 - t.x) * (1.0 - t.y), wb = t.x * (1.0 - t.y), wc = (1.0 - t.x) * t.y, wd = t.x * t.y;
-    // weight of each candidate class (the four corners' classes)
-    float sa = wa + (b == a ? wb : 0.0) + (c == a ? wc : 0.0) + (d == a ? wd : 0.0);
-    float sb = wb + (a == b ? wa : 0.0) + (c == b ? wc : 0.0) + (d == b ? wd : 0.0);
-    float sc = wc + (a == c ? wa : 0.0) + (b == c ? wb : 0.0) + (d == c ? wd : 0.0);
-    float sd = wd + (a == d ? wa : 0.0) + (b == d ? wb : 0.0) + (c == d ? wc : 0.0);
-    // best and runner-up (a different class)
-    k = a; float s1 = sa;
-    if (sb > s1) { k = b; s1 = sb; } if (sc > s1) { k = c; s1 = sc; } if (sd > s1) { k = d; s1 = sd; }
-    float s2 = 0.0;
-    if (a != k && sa > s2) { s2 = sa; k2 = a; } if (b != k && sb > s2) { s2 = sb; k2 = b; }
-    if (c != k && sc > s2) { s2 = sc; k2 = c; } if (d != k && sd > s2) { s2 = sd; k2 = d; }
-    blend = s2 > 0.0 ? smoothstep(0.0, u_aa, s1 - s2) * 0.5 + 0.5 : 1.0;
+  vec2 p = v_uv * u_grid;
+  float k1 = 0.0, k2 = 0.0, f = 0.0;
+  if (u_grain > 0.5 && u_level > 0.0) {
+    float L = floor(u_level);
+    f = smoothstep(0.7, 1.0, u_level - L);            // the next level fades in near the end of this one
+    k1 = grainClass(p, L);
+    k2 = f > 0.0 ? grainClass(p, L + 1.0) : k1;
   } else {
-    k = classOf(floor(v_uv * u_grid));
+    k1 = classOf(floor(p)); k2 = k1;
   }
-  float a1 = alphaOf(k), a2 = alphaOf(k2);
-  float al = mix(a2, a1, blend);
+  float a1 = alphaOf(k1), a2 = alphaOf(k2), al = mix(a1, a2, f);
   if (al < 0.004) discard;
-  vec3 col = (colourOf(k) * a1 * blend + colourOf(k2) * a2 * (1.0 - blend)) / max(al, 1e-4);
+  vec3 col = (colourOf(k1) * a1 * (1.0 - f) + colourOf(k2) * a2 * f) / max(al, 1e-4);
   float a = u_opacity * al * u_show;
   if (u_edge > 0.0) {
-    vec2 f = fract(v_uv * u_grid);
-    float d = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+    vec2 fr = fract(p);
+    float d = min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y));
     col *= mix(0.55, 1.0, smoothstep(0.0, u_edge, d));
   }
   gl_FragColor = vec4(col * a, a);
@@ -99,7 +138,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   const f = gridFrame(meta);
   const mesh = gridMesh(meta);
   let map = null, gl = null, prog = null, buf = null, ibuf = null, tex = null, vao = null, vaoApi = null;
-  let uploaded = null, opts = { opacity, edges: false, smooth: true, rails: true };
+  let uploaded = null, opts = { opacity, edges: false, grain: true, rails: true };
   let beforeId;
 
   // ------------------------------------------------------------ MapLibre
@@ -179,10 +218,9 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
       gl.uniform1f(gl.getUniformLocation(prog, 'u_opacity'), opts.opacity);
       gl.uniform1f(gl.getUniformLocation(prog, 'u_show'), 1);
       gl.uniform1f(gl.getUniformLocation(prog, 'u_edge'), opts.edges && cellPx >= 6 ? Math.min(0.12, 1.2 / cellPx) : 0);
-      const smooth = opts.smooth && cellPx >= 3;
-      gl.uniform1f(gl.getUniformLocation(prog, 'u_smooth'), smooth ? 1 : 0);
-      gl.uniform1f(gl.getUniformLocation(prog, 'u_aa'), smooth ? Math.min(0.5, 2.4 / cellPx) : 0.0);
-      gl.uniform1f(gl.getUniformLocation(prog, 'u_round'), opts.round ?? 0.24);
+      // finer grains: one grain stays about GRAIN_PX device pixels wide (level 0 = the 50 m parcels)
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_grain'), opts.grain ? 1 : 0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_level'), Math.min(8, Math.max(0, Math.log2(cellPx / GRAIN_PX))));
       for (const k of [1, 2, 3, 4, 5]) gl.uniform3fv(gl.getUniformLocation(prog, `u_c${k}`), rgb(PALETTE[k]));
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.drawElements(gl.TRIANGLES, mesh.index.length, gl.UNSIGNED_SHORT, 0);
