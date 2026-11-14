@@ -202,6 +202,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 </aside>
 <div id="pill"><span id="onmap"></span></div>
 <script src="data/meta.js"></script>
+<script src="codec.js"></script>
 <script src="controls.js"></script>
 <script src="engine.js"></script>
 <script>/* Growth variations: the page (12 Nov 2026). Final outcome = the release's own event stream; Variation = the engine. */
@@ -686,7 +687,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     showLoad("Loading the model's ground…");
     engineReady = Promise.all(names.map(function (n) { return unz(D.arr[n]); })).then(function (bufs) {
       doneLoad(); status(T("Loading the model's ground…"));
-      var a = {}; names.forEach(function (n, i) { a[n] = n === "DRAIL" ? new Uint16Array(bufs[i]) : new Uint8Array(bufs[i]); });
+      var a = {}; names.forEach(function (n, i) { var b = GRIDCODEC.decode(n, bufs[i], D.meta, D.enc); a[n] = n === "DRAIL" ? new Uint16Array(b) : new Uint8Array(b); });
       return new Promise(function (res) { setTimeout(function () { GV.init(M, a); status(""); res(); }, 20); });
     });
     return engineReady;

@@ -100,6 +100,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       panel?.build();
       overlay?.sync(); viewer.redraw?.();
       await growth.load();
+      growth.prepare();                // the ground grids, in the background, for a quick first run
       return growth.state;
     },
     close() { active = false; overlay?.sync(); viewer.redraw?.(); },
