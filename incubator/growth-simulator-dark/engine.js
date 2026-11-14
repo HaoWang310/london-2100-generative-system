@@ -177,7 +177,7 @@ var GV = (function () {
   }
 
   // ------------------------------------------------------------------ a run
-  function run(params, onProgress) {
+  function run(params, onProgress, onYear) {     // onYear(pass, year, tier): every year of both passes, the live tiers (read only)
     var p = Object.assign({}, DEFAULTS, params || {});
     var T0 = performance.now(), timing = {};
     var FD = fields(p.seed), F = FD.F, V = FD.V, GU = FD.GU, GVf = FD.GVf, GH = FD.GH;
@@ -346,6 +346,7 @@ var GV = (function () {
           var pop = (cnt[1] * M.PPK.L + cnt[2] * M.PPK.M + cnt[3] * M.PPK.H) * CELL + M.ABSTOT;
           stats.push({ y: y, pop: Math.round(pop), km2: { l: cnt[1] * CELL, m: cnt[2] * CELL, h: cnt[3] * CELL, fh: cnt[4] * CELL, fv: cnt[5] * CELL } });
         }
+        if (onYear) onYear(doFarm ? 2 : 1, y, tier);
         yield { pass: doFarm ? 2 : 1, year: y };
       }
     }
