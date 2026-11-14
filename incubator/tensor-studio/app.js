@@ -1124,6 +1124,50 @@ function windGap(x, y, dx, dy){ const w = windWant(cellAt(x, y), Math.atan2(dx, 
 function sideAxis(x, y, t, px, py){ if (t === null) return [px, py]; let a = nearestAxis(t, px, py); const b0 = [-a[1], a[0]], b = b0[0] * px + b0[1] * py >= 0 ? b0 : [-b0[0], -b0[1]];
   if (b[0] * px + b[1] * py < 0.7) return a; const i = cellAt(x, y), K = 1.2, sa = a[0] * px + a[1] * py + K * windWant(i, Math.atan2(a[1], a[0])), sb = b[0] * px + b[1] * py + K * windWant(i, Math.atan2(b[1], b[0]));
   return sb > sa ? b : a; }
+/* (v8.27) THE SCORE of a finished run, in five groups, each 0-100 (null where the site has no data for it):
+ * climate  the main streets along the summer wind, the main and the second streets across the winter cold (windPref)
+ * terrain  little street on slopes over 5 %; the streets close to the field
+ * water    little street in medium or high flood risk (EA)
+ * blocks   no block over 2.5 ha that can be built on, few pocket parks (slivers left), a median block 0.3-1.5 ha
+ * network  crossroads (15 % or more), a density of 12-16 km/km2, few sharp junctions, no main streets side by side
+ * Each measure is scored on a range (bad -> good), not 'the more the better', so no measure can be run up for its own sake.
+ * Open ends are not scored: they are a fault (counted in fail). */
+const SCORE_W0 = { climate: 15, terrain: 15, water: 15, blocks: 35, network: 20 };
+function scoreRun(w){ w = w || SCORE_W0; const E = D.env, W_ = windPref(); const lin = (x, bad, good) => clamp((x - bad) / (good - bad), 0, 1) * 100;
+  const band = (x, lo, hi, z0, z1) => x < lo ? lin(x, z0, lo) : x > hi ? lin(x, z1, hi) : 100;
+  let L1 = 0, L2 = 0, s1 = 0, c1 = 0, c2 = 0, Lall = 0, steep = 0, fl = 0, off = 0, offL = 0;
+  for (const l of LINES){ if (l.dead || l.level < 1 || l.circus || l.pts.length < 2) continue; const P = l.pts;
+    for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], sl = Math.hypot(b[0] - a[0], b[1] - a[1]); if (sl < 0.5) continue; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, th = Math.atan2(b[1] - a[1], b[0] - a[0]), i = cellAt(mx, my); Lall += sl;
+      if (!W_.none){ const q2 = Math.cos(2 * th), r2 = Math.sin(2 * th), sv = W_.sc[i] * q2 + W_.ss[i] * r2, wv = W_.wc[i] * q2 + W_.ws[i] * r2; if (l.level === 1){ s1 += sv * sl; c1 += wv * sl; L1 += sl; } else { c2 += wv * sl; L2 += sl; } }
+      if (E && E.slope && E.slope[i] > 0.05) steep += sl;
+      if (FR && FR[i] >= 3) fl += sl;
+      const t = fieldAtT(mx, my); if (t !== null){ let d = Math.abs(((th - t) % (PI / 2) + PI / 2) % (PI / 2)); d = Math.min(d, PI / 2 - d); off += d * sl; offL += sl; } } }
+  const raw = {}, g = {};
+  if (!W_.none && L1 && L2){ raw.summerMain = s1 / L1; raw.coldMain = c1 / L1; raw.coldSec = c2 / L2;
+    g.climate = (lin(raw.summerMain, -0.05, 0.12) + lin(-raw.coldMain, -0.05, 0.15) + lin(-raw.coldSec, -0.05, 0.08)) / 3; } else g.climate = null;
+  raw.steep = 100 * steep / (Lall || 1); raw.offField = offL ? off / offL * 180 / PI : 0;
+  g.terrain = E && E.slope ? (lin(raw.steep, 5, 0) + lin(raw.offField, 25, 8)) / 2 : lin(raw.offField, 25, 8);
+  if (FR){ raw.flood = 100 * fl / (Lall || 1); g.water = lin(raw.flood, 10, 0); } else g.water = null;
+  { if (CELLS){ const BH = buildHa(); raw.big = Array.from(BH).filter(a => a > 2.5).length; } else raw.big = 0;
+    raw.pockets = PARKS ? PARKS.list.filter(q => q.pocket).length : 0; raw.med = MEAS.med || 0;
+    g.blocks = (lin(raw.big, 4, 0) + lin(raw.pockets, 30, 0) + band(raw.med, 0.3, 1.5, 0.05, 3)) / 3; }
+  { raw.X = MEAS.X || 0; raw.dens = MEAS.dens || 0; let ac = 0, n = 0; for (const q of secEnds()){ n++; if (endAngle(q.l, q.side, q.par, q.e) < 60) ac++; } raw.acute = n ? 100 * ac / n : 0;
+    let dbl = 0; for (const l of LINES){ if (l.dead || l.level !== 1 || l.circus) continue; const P = l.pts; for (let k = 1; k < P.length; k++){ const a = P[k - 1], q = P[k], L = Math.hypot(q[0] - a[0], q[1] - a[1]) || 1, c = nearB(q[0], q[1], 22, l.id, [], [(q[0] - a[0]) / L, (q[1] - a[1]) / L], true, LV1); if (c && !LINES[c[3]].circus) dbl += L; } } raw.doubled = dbl / 2;
+    g.network = (lin(raw.X, 0, 15) + band(raw.dens, 12, 16, 8, 20) + lin(raw.acute, 25, 5) + lin(raw.doubled, 200, 0)) / 4; }
+  let tw = 0, ts = 0; for (const k in g){ if (g[k] == null) continue; tw += w[k] || 0; ts += (w[k] || 0) * g[k]; }
+  const fail = MEAS.loose ? [{ k: 'loose', n: MEAS.loose }] : [];
+  return { total: tw ? ts / tw : 0, groups: g, raw, fail }; }
+// a whole run, quietly (no recording, no drawing): the settings given (input id -> value) are set first and left set
+function quietRun(set){ for (const id in set){ const e = $(id); if (e) e.value = set[id]; }
+  GEN = null; GROWING = false; MODE = 'B'; buildTarget(); const g = growBranching(); for (let n = 0; n < 2e6; n++){ if (g.next().done) break; }
+  return scoreRun(); }
+// a small picture of the net as it is now (for comparing runs)
+function thumbOf(size){ const c = mk(); c.width = c.height = size; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of D.pieces) for (const q of p.outer){ x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); }
+  const g = c.getContext('2d'), sc = size / Math.max(x1 - x0, y1 - y0) * 0.94, ox = (size - (x1 - x0) * sc) / 2 - x0 * sc, oy = (size - (y1 - y0) * sc) / 2 - y0 * sc, X_ = x => ox + x * sc, Y_ = y => size - oy - y * sc;
+  g.fillStyle = P.bg; g.fillRect(0, 0, size, size); g.fillStyle = P.land; g.beginPath(); for (const p of D.pieces) for (const r of [p.outer, ...p.holes]){ r.forEach((q, k) => k ? g.lineTo(X_(q[0]), Y_(q[1])) : g.moveTo(X_(q[0]), Y_(q[1]))); g.closePath(); } g.fill('evenodd');
+  if (PARKS){ const { mask, W, H, c: cc } = PARKS; g.fillStyle = THEME === 'dark' ? 'rgba(48,209,88,0.45)' : 'rgba(52,168,83,0.4)'; const st = Math.max(1, Math.round(2 / (cc * sc))); for (let y = 0; y < H; y += st) for (let x = 0; x < W; x += st) if (mask[y * W + x]) g.fillRect(X_(x * cc), Y_(D.h - y * cc), Math.max(1, cc * st * sc), Math.max(1, cc * st * sc)); }
+  for (const lv of [2, 1]) for (const l of LINES){ if (l.dead || l.level !== lv || l.pts.length < 2) continue; g.strokeStyle = lv === 1 ? P.main : P.second; g.lineWidth = lv === 1 ? 1.4 : 0.6; g.beginPath(); l.pts.forEach((q, k) => k ? g.lineTo(X_(q[0]), Y_(q[1])) : g.moveTo(X_(q[0]), Y_(q[1]))); g.stroke(); }
+  return c; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1576,10 +1620,10 @@ function finishRun(){
   for (const q of MEAS.xpts) EVENTS.push({ x: q[0], y: q[1], k: 'cross' });
   METR = metrics();
   SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), xnodes: XNODES.slice(), parks: PARKS, events: EVENTS.slice(), holes: HOLES.slice(),
-    lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born, flood: !!l.flood })) };
+    lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born, flood: !!l.flood, hole: !!l.hole, shared: !!l.shared, stitched: !!l.stitched })) };
   drawCmp(); }
 function restore(sn){ GEN = null; GROWING = false; LINES = []; HASH = new Map(); TIPS = []; TIPMAP = new Map(); GROW = null; GHOST = null;
-  for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born, flood: l.flood });
+  for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born, flood: l.flood, hole: !!l.hole, shared: !!l.shared, stitched: !!l.stitched });
   CULVERTS = sn.culverts.slice(); XNODES = (sn.xnodes || []).slice(); PARKS = sn.parks || null; PARKIMG = null; EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
   netDirty = widthDirty = baseDirty = true; }
 function setMode(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; const sn = SNAP[m];
@@ -2172,7 +2216,7 @@ window.addEventListener('resize', resize);
   window.__ts6 = { get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
     get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
     // (v8.7) for the process mode
-    setProc: p => { PROC = p; PH0 = ''; }, syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,
+    setProc: p => { PROC = p; PH0 = ''; }, scoreRun, quietRun, thumbOf, SCORE_W0, snapB: () => SNAP.B, setSnapB: sn => { SNAP.B = sn; }, restoreSnap: sn => restore(sn), syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,
     setModeQuiet(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; syncTools(); drawCmp(); }, setEnv(k){ ENVSEL = ENV && k !== 'off' ? k : 'off'; baseDirty = true; syncEnv(); }, get env(){ return ENVSEL; }, get envStats(){ return ENV ? ENV.stats : null; },
     setFlood(b){ SHOWFLOOD = !!b; baseDirty = true; syncTools(); }, setGreen(b){ SHOWGREEN = !!b; baseDirty = true; syncTools(); }, get corr(){ return GINFO; }, get corrOn(){ return !!GZ; }, get flood(){ return FR; }, get floodZones(){ return FLOOD ? FLOOD.zones : null; }, floodNum, get land(){ return FLAND; },
     landHa(){ let n = 0; for (let i = 0; i < MASK.length; i++) n += MASK[i]; return n * MC * MC / 1e4; }, get holes(){ return HOLES; }, get year(){ return YEAR; }, get dirs(){ return DIRS; }, get month(){ return MONTH; }, clearNet(){ GEN = null; GROWING = false; resetNet(); SCRUB = null; } }; })();

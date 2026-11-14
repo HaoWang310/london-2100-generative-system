@@ -58,7 +58,7 @@ const STEPS = [
   { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'wDens', 'bGap', 'bFork', 'bInfill'],
     note: () => L('次路从主路两侧分出，再清理并行和断头的道路；过大的地块沿水岸和走廊补一条滨水路，再横切开，仍切不开的（可建面积超过 4 公顷）保留为绿地；两条次路夹出的细长地块和小于 0.15 公顷的碎地块，去掉其中一条次路并入旁边，去不掉的作为口袋绿地；锐角路口掰正，主路两侧相距 25 m 内的次路接成十字。舒适度与节点定疏密：舒适处和节点附近次路更密，风大、低洼处更稀（0 % 为均匀）。分叉冲突阈值越低，在场方向冲突的地方越容易分出 Y 形岔路；拉到最右为关闭。', 'Second streets branch off the main ones, then streets side by side and open ends are tidied; a block still too big gets a waterside street along the water or corridor, then a cut across, and one that still cannot be cut (over 4 ha that can be built on) is kept as a park; a thin lens between two second streets, or a sliver under 0.15 ha, loses one of its second streets and joins the block next to it, or else is kept as a pocket park; sharp junctions are squared, and second streets meeting a main street from its two sides within 25 m meet at one crossroads. Comfort and nodes set the density: closer where it is comfortable and near the nodes, wider where it is windy or low (0 %: even). The lower the fork threshold, the more Y forks where the field pulls two ways; fully right turns it off.') },
   { k: 8, zh: '评价出图', en: 'Review and export', rows: ['fNum', 'bGeo'],
-    note: () => L('路网指标与上一个方案对比；道路按宽度显示。', 'The network measured against the previous run; streets drawn at width.') } ];
+    note: () => L('综合评分把地块、路网、气候、地形、水五组各打 0–100 分，按权重加权；“方案比较”自动试 16 组设置并排序，可一键采用。下面是路网指标与上一个方案的对比；道路按宽度显示。', 'The score rates five groups (blocks, network, climate, terrain, water) 0-100 each, weighted; Compare runs tries 16 settings and ranks them, and one can be taken in a click. Below, the network against the previous run; streets drawn at width.') } ];
 
 /* ------------------------------------------------------------------ the panel */
 const panel = el('panel'), homes = new Map();
@@ -114,7 +114,60 @@ const clearBtn = document.createElement('button'); clearBtn.type = 'button'; cle
 clearBtn.onclick = () => { stopAuto(); HAND = []; ATTR = []; AMODE = 'hand'; el('aMode').value = 'hand'; buildTarget(); onChange(5); };
 const kindRow = document.createElement('div'); kindRow.className = 'pmKRow'; kindRow.append(kindCount, clearBtn);
 STEPS[4].extra.append(kindBox, kindRow);
-const metTbl = document.createElement('table'); metTbl.className = 'pmMet'; STEPS[7].extra.append(metTbl);
+const metTbl = document.createElement('table'); metTbl.className = 'pmMet';
+// (v8.27) step 8: the score of this run, by group, with the weights; and the runs compared
+const GROUPS = [['blocks', '地块', 'Blocks', '大地块、碎地块、地块中位面积', 'big blocks, slivers, median block'], ['network', '路网', 'Network', '十字路口、密度、锐角路口、并行主路', 'crossroads, density, sharp junctions, mains side by side'],
+  ['climate', '气候', 'Climate', '主路顺夏季风、主次路横挡冬季冷风', 'mains along the summer wind, streets across the winter cold'], ['terrain', '地形', 'Terrain', '陡坡道路、偏离张量场', 'streets on steep ground, off the field'],
+  ['water', '水', 'Water', '中高洪水风险区里的道路', 'streets in medium or high flood risk']];
+const VARY = [['d2', '次路间距', 'Second apart', 85, 150, 5], ['wC', '等高线', 'Contour', 40, 100, 5], ['wSum', '夏季通风', 'Summer air', 0, 80, 5], ['wWin', '冬季挡风', 'Winter shelter', 0, 80, 5], ['wDens', '疏密', 'Density', 0, 100, 10]];
+PM.w = Object.assign({}, T6.SCORE_W0); try { const s = JSON.parse(localStorage.getItem('tensorStudio.scoreW') || 'null'); if (s) Object.assign(PM.w, s); } catch (e) {}
+const scoreBox = document.createElement('div'); scoreBox.className = 'pmScore';
+const cmpBox = document.createElement('div'); cmpBox.className = 'pmCmp';
+STEPS[7].extra.append(scoreBox, cmpBox, metTbl);
+const curSet = () => Object.fromEntries(VARY.map(([id]) => [id, +el(id).value]));
+const totalOf = g => { let tw = 0, ts = 0; for (const [k] of GROUPS){ if (g[k] == null) continue; tw += PM.w[k]; ts += PM.w[k] * g[k]; } return tw ? ts / tw : 0; };
+function curScore(){ const m = METR || PM.lastM; if (!m) return null; if (PM.sc && PM.sc.m === m) return PM.sc.s; const s = T6.scoreRun(PM.w); PM.sc = { m, s }; return s; }
+function scoreHTML(){ const s = curScore(); if (!s) return ''; const t = totalOf(s.groups);
+  let h = '<div class="pmSHead"><span>' + L('综合评分', 'Score') + '</span><b>' + Math.round(t) + '</b><i>/ 100</i></div>';
+  if (s.fail.length) h += '<p class="pmWarn">' + L('有 ' + s.fail[0].n + ' 条断头路（不计分，但需要处理）', s.fail[0].n + ' open end(s): not scored, but a fault') + '</p>';
+  for (const [k, zh_, en_, dz, de] of GROUPS){ const v = s.groups[k];
+    h += '<div class="pmSRow"><div class="pmSName"><b>' + L(zh_, en_) + '</b><span>' + L(dz, de) + '</span></div><div class="pmSBar"><i style="width:' + (v == null ? 0 : Math.round(v)) + '%"></i></div><span class="pmSVal">' + (v == null ? '—' : Math.round(v)) + '</span>' +
+      '<label class="pmSW" title="' + L('权重', 'Weight') + '"><input type="range" min="0" max="50" step="5" value="' + PM.w[k] + '" data-g="' + k + '" aria-label="' + L(zh_ + '权重', en_ + ' weight') + '"><em>' + PM.w[k] + '</em></label></div>'; }
+  return h + '<p class="pmHint">' + L('右边的滑块是各组权重：总分 = 各组分数按权重加权平均。没有数据的组（—）不计入。', 'The sliders on the right are the weights: the score is the groups averaged by weight. A group without data (—) is left out.') + '</p>'; }
+scoreBox.addEventListener('input', e => { const k = e.target.dataset && e.target.dataset.g; if (!k) return; PM.w[k] = +e.target.value; e.target.nextElementSibling.textContent = e.target.value;
+  try { localStorage.setItem('tensorStudio.scoreW', JSON.stringify(PM.w)); } catch (err) {} const s = curScore(); if (s) scoreBox.querySelector('.pmSHead b').textContent = Math.round(totalOf(s.groups)); renderCmp(); });
+// the settings to try: the current ones first, then a spread over the ranges (a Latin hypercube, the same each time)
+function samples(base, n){ let r = 12345; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647, out = [Object.assign({}, base)];
+  const cols = VARY.map(() => { const a = Array.from({ length: n - 1 }, (_, i) => i); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; });
+  for (let i = 0; i < n - 1; i++){ const s = {}; VARY.forEach(([id, , , lo, hi, st], c) => { const u = (cols[c][i] + rnd()) / (n - 1); s[id] = Math.round((lo + u * (hi - lo)) / st) * st; }); out.push(s); }
+  return out; }
+async function compareRuns(){ if (PM.cmp && PM.cmp.running) return; stopAuto(); stopPlay(); const base = curSet(), sn0 = T6.snapB(), list = samples(base, 16);
+  PM.cmp = { running: true, i: 0, n: list.length, list: [], stop: false }; renderCmp();
+  for (let i = 0; i < list.length; i++){ await sleep(40); if (PM.cmp.stop || !PM.active) break;
+    const s = T6.quietRun(list[i]); PM.cmp.list.push({ set: list[i], groups: s.groups, raw: s.raw, fail: s.fail, cur: i === 0, img: T6.thumbOf(132).toDataURL() }); PM.cmp.i = i + 1; renderCmp(); }
+  // back to this run, as it was
+  for (const [id] of VARY) el(id).value = base[id]; buildTarget(); if (sn0){ T6.setSnapB(sn0); T6.restoreSnap(sn0); } PM.sc = null;
+  PM.cmp.running = false; renderCmp(); ui(); }
+function setOut(id){ const e = el(id), o = e && e.nextElementSibling; if (o && o.tagName === 'OUTPUT') o.textContent = e.value + (['wC', 'wDens'].includes(id) ? ' %' : ''); }
+async function applyRun(c){ stopAuto(); stopPlay(); for (const [id] of VARY){ el(id).value = c.set[id]; setOut(id); } PM.cmp.applied = c;
+  onChange(4); const tok = ++PM.tok, ok = () => tok === PM.tok; PM.auto = true; ui();
+  go(6, true); await stepGrowth(6); if (!ok()) return; go(7, true); await stepGrowth(7); if (!ok()) return; await sleep(400); if (!ok()) return; go(8, true); PM.auto = false; PM.sc = null; ui(); }
+function renderCmp(){ if (!PM.active) return; const C = PM.cmp;
+  let h = '<div class="pmCHead"><b>' + L('方案比较', 'Compare runs') + '</b>' + (C && C.running ? '<button type="button" class="pmLink" data-act="stop">' + L('停止', 'Stop') + '</button>' : '') + '</div>';
+  h += '<p class="pmHint">' + L('保持你放的节点和主路间距不变，自动改变次路间距、等高线、夏季通风、冬季挡风和疏密，跑 16 个方案（约 35 秒），按总分排序。', 'Your nodes and the main-street spacing stay; the second-street spacing, contour, summer air, winter shelter and density vary over 16 runs (about 35 s), ranked by the score.') + '</p>';
+  if (!C || (!C.running && !C.list.length)) h += '<div class="pmActs"><button type="button" class="primary" data-act="run">' + L('自动比较 16 个方案', 'Compare 16 runs') + '</button></div>';
+  else {
+    if (C.running) h += '<div class="pmProg"><i style="width:' + Math.round(100 * C.i / C.n) + '%"></i></div><p class="pmHint">' + L('正在试第 ' + Math.min(C.i + 1, C.n) + ' / ' + C.n + ' 个方案…', 'Trying run ' + Math.min(C.i + 1, C.n) + ' of ' + C.n + '…') + '</p>';
+    const rows = C.list.map((c, i) => ({ c, i, t: totalOf(c.groups) - (c.fail.length ? 100 : 0) })).sort((a, b) => b.t - a.t), cur = rows.find(r => r.c.cur), top = rows.slice(0, 3); if (cur && !top.includes(cur)) top.push(cur);
+    h += '<div class="pmCList">' + top.map((r, n) => { const c = r.c, t = totalOf(c.groups), d = cur && !c.cur ? t - totalOf(cur.c.groups) : null;
+      return '<div class="pmCCard' + (c.cur ? ' cur' : '') + '"><img alt="" src="' + c.img + '"><div class="pmCInfo"><div class="pmCT"><b>' + Math.round(t) + '</b><span>' + (c.cur ? L('当前方案', 'This run') : L('第 ' + (rows.indexOf(r) + 1) + ' 名', 'No. ' + (rows.indexOf(r) + 1))) + (d != null ? ' · ' + (d >= 0 ? '+' : '') + d.toFixed(1) : '') + '</span></div>' +
+        '<div class="pmCG">' + GROUPS.map(([k, z, e]) => '<span>' + L(z, e) + ' ' + (c.groups[k] == null ? '—' : Math.round(c.groups[k])) + '</span>').join('') + '</div>' +
+        '<div class="pmCS">' + VARY.map(([id, z, e]) => L(z, e) + ' ' + c.set[id]).join(' · ') + '</div>' + (c.fail.length ? '<div class="pmWarn">' + L('有断头路', 'open ends') + '</div>' : '') +
+        (!c.cur && !C.running ? '<button type="button" class="pmLink" data-act="use" data-i="' + r.i + '">' + L('用这个方案', 'Use this run') + '</button>' : '') + '</div></div>'; }).join('') + '</div>';
+    if (!C.running) h += '<div class="pmActs"><button type="button" data-act="run">' + L('重新比较', 'Compare again') + '</button></div>'; }
+  cmpBox.innerHTML = h; }
+cmpBox.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
+  if (a === 'run') compareRuns(); else if (a === 'stop' && PM.cmp) PM.cmp.stop = true; else if (a === 'use' && PM.cmp) applyRun(PM.cmp.list[+b.dataset.i]); });
 
 // the timeline, at the bottom between the two panels
 const bar = document.createElement('div'); bar.id = 'pmBar';
@@ -311,6 +364,7 @@ function ui(){ if (!PM.active) return;
   areaTxt.textContent = (PM.area && floodOn() ? L('场地土地 ' + PM.area.base.toFixed(1) + ' 公顷，洪水避让 ' + (PM.area.base - PM.area.use).toFixed(1) + ' 公顷，可生长道路的土地 ' + PM.area.use.toFixed(1) + ' 公顷。',
     'Land ' + PM.area.base.toFixed(1) + ' ha; kept clear of flooding ' + (PM.area.base - PM.area.use).toFixed(1) + ' ha; ' + PM.area.use.toFixed(1) + ' ha left for streets.') : (FR ? L('洪水风险未参与。', 'Flood risk is off.') : L('此场地不在 EA 洪水数据范围内。', 'No EA flood data for this site.'))) + gTxt;
   metTbl.innerHTML = PM.cur === 8 ? metHTML() : '';
+  if (PM.cur === 8){ scoreBox.innerHTML = scoreHTML(); renderCmp(); } else { scoreBox.innerHTML = ''; cmpBox.innerHTML = ''; }
   if (PM.cur === 8) floodNum();
   el('pmStepT').textContent = stepCap();
   el('pmPlay').innerHTML = PM.playing || growing ? PAUSE : PLAY; el('pmPlay').disabled = !(PM.frames.length || growing) || PM.cur < 6;
