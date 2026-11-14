@@ -34,6 +34,58 @@ const PAL = {
 // (site) on a London site the existing main roads are context, not the network being grown: drawn quieter
 if (D.site){ PAL.light.prim = '#b4b4ba'; PAL.dark.prim = '#4a4a4e'; }
 let THEME = 'light', P = PAL.light;
+/* (v8.30) THE PALETTES: twelve from the colour card, five colours each (ground, deep, main, light, highlight). A palette
+ * colours the particles (the field's flow, the climate maps' animation), the field lines, the growth, the analysis maps and
+ * the interface's accent and dark panels; the meaning colours stay (water blue, parks green, the node kinds, the fork
+ * orange) so the maps still read */
+const TINTS = [
+  ['glacier', '冰川蓝', 'Glacier Blue', ['#0B0D12', '#1F2A3A', '#3B6FFF', '#7FB4FF', '#C8E6FF']],
+  ['mint', '极地薄荷', 'Polar Mint', ['#0A0F0E', '#1B342F', '#31CDB7', '#87E9D7', '#D7FFF4']],
+  ['amber', '信号琥珀', 'Signal Amber', ['#120D08', '#3A2A1C', '#D07A2F', '#FFB85A', '#FFE6C2']],
+  ['magenta', '数字洋红', 'Digital Magenta', ['#130B12', '#3C1F3B', '#A93AA2', '#F06EC6', '#FFD4EC']],
+  ['violet', '张量紫', 'Tensor Violet', ['#0C0A14', '#2B2146', '#6B59FF', '#A68CFF', '#E0D8FF']],
+  ['teal', '海洋青', 'Ocean Teal', ['#071016', '#103341', '#1F8FA9', '#66D1E0', '#C9F7FF']],
+  ['lime', '荧光绿', 'Chartreuse Lime', ['#0B0F06', '#2C3D1B', '#6FAF2E', '#BBF04A', '#E6FFBB']],
+  ['oxide', '氧化赤红', 'Oxide Red', ['#140B0B', '#4A2323', '#C45752', '#F08E86', '#FFD2CD']],
+  ['mono', '钛金灰', 'Titanium Mono', ['#0A0A0A', '#2B2E33', '#6B747D', '#AEB8C1', '#E4E8ED']],
+  ['sand', '砂岩米', 'Sand Stone', ['#11100E', '#3E362E', '#8B7A66', '#C9B499', '#F3E7D7']],
+  ['sage', '雾岩绿', 'Mist Sage', ['#0E1210', '#26322B', '#6A8F7B', '#A7C7B6', '#E2F1E8']],
+  ['spectral', '光谱混合', 'Spectral Hybrid', ['#0B0B18', '#2E2863', '#6A5CFF', '#33D7C9', '#B7F5FF']] ];
+const BASEPAL = JSON.parse(JSON.stringify(PAL));
+let TINT = 'violet'; try { const t = localStorage.getItem('tensorStudio.tint'); if (TINTS.some(x => x[0] === t)) TINT = t; } catch (e) {}
+const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mixH = (a, b, t) => { const p = hex3(a), q = hex3(b); return hexOf(p.map((v, i) => v + (q[i] - v) * t)); }, rgbaH = (h, a) => { const c = hex3(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; };
+function tintColours(id){ const T = TINTS.find(x => x[0] === id) || TINTS[0], [c0, c1, c2, c3, c4] = T[3];
+  const dk = JSON.parse(JSON.stringify(BASEPAL.dark)), lt = JSON.parse(JSON.stringify(BASEPAL.light));
+  Object.assign(dk, { bg: c0, land: mixH(c0, c1, 0.42), edge: c4, contour: rgbaH(c4, 0.06), contourIdx: rgbaH(c4, 0.15), label: mixH(c3, c1, 0.4), room: rgbaH(c2, 0.08), bld: mixH(c0, c1, 0.8), lane: mixH(c0, c1, 0.6),
+    rib: { M: mixH(c0, c1, 0.95), A: mixH(c0, c1, 0.85), B: mixH(c0, c1, 0.75), C: mixH(c0, c1, 0.6) }, main: c4, second: mixH(c3, c1, 0.45), grow: c3, glow: rgbaH(c2, 0.55), anchor: c4, bridge: c4, culvert: c3, width: c4,
+    flow: [hex3(c2), hex3(c3), hex3(c4)], flowAlpha: 0.48, fieldLine: rgbaH(c3, 0.6), fieldLine2: rgbaH(c4, 0.2), wLo: hex3(c1), wHi: hex3(c4), windAlong: c3, ghost: rgbaH(c4, 0.2),
+    cells: [c0, mixH(c0, c1, 0.3), mixH(c0, c1, 0.55), mixH(c0, c1, 0.8), c1], cross: rgbaH(c4, 0.28), evBranch: c3, evCross: c4, uTeal: hex3(c3) });
+  if (D.site) dk.prim = mixH(c1, c3, 0.25);
+  const ink = mixH(c0, '#1d1d1f', 0.4);
+  Object.assign(lt, { bg: mixH('#f2f2f4', c4, 0.28), room: rgbaH(c2, 0.05), main: ink, prim: D.site ? lt.prim : ink, anchor: ink, bridge: ink, width: ink, edge: ink, second: mixH(c1, '#9a9aa0', 0.55), grow: c2, glow: rgbaH(c2, 0.28), culvert: c2,
+    flow: [hex3(c2), hex3(mixH(c1, '#6e6e73', 0.3)), hex3(mixH(c2, c3, 0.5))], fieldLine: rgbaH(c2, 0.5), fieldLine2: rgbaH(c1, 0.2), windAlong: c2, evBranch: c2, uTeal: hex3(c2),
+    cells: ['#fafafa', mixH('#fafafa', c4, 0.4), mixH('#ececf0', c3, 0.25), mixH('#d8d8de', c3, 0.35), mixH('#c2c2c8', c2, 0.3)] });
+  return { T, c: [c0, c1, c2, c3, c4], dark: dk, light: lt,
+    anim: { dark: { Z: c4, Q: c3, V: c3, Cw: mixH(c2, c4, 0.35), C: c4, ink: c4 }, light: { Z: c2, Q: c2, V: mixH(c2, c1, 0.25), Cw: c1, C: mixH(c2, c3, 0.3), ink: ink } },
+    ramp: { Z: [c1, mixH(c1, c2, 0.5), c3, c4], Q: [c2, c4], V: [c0, c2, c3], Cw: [c0, c1, c4], C: [c1, mixH(c2, c3, 0.5), c4] } }; }
+function applyTint(id, quiet){ const K = tintColours(id); TINT = K.T[0]; try { localStorage.setItem('tensorStudio.tint', TINT); } catch (e) {}
+  PAL.dark = K.dark; PAL.light = K.light; P = PAL[THEME]; window.__TINTCOL = K.anim;
+  Object.assign(ENVRAMP, K.ramp); for (const k in ENVIMG) delete ENVIMG[k];   // (called from the boot, after these are made)
+  const [c0, c1, c2, c3, c4] = K.c; let st = document.getElementById('tintCSS'); if (!st){ st = document.createElement('style'); st.id = 'tintCSS'; document.head.append(st); }
+  // (v8.30) the panels stay black and white whatever the palette (the user, 14 Nov): the palette is the map's, not the panels'
+  st.textContent = ':root{--accent:#1d1d1f}[data-theme="dark"]{--accent:#f5f5f7}#panel.ts-panel{--accent:#f5f5f7}' +
+    '#panel label.lay input[type=checkbox]:checked,[data-theme="dark"] #panel label.lay input[type=checkbox]:checked{background:#f5f5f7}#panel label.lay input[type=checkbox]:checked::before{background:#1c1c1f}' +
+    '.displayPanel .dpSwitchRow.on .dpSw{background:#f5f5f7}.displayPanel .dpSwitchRow.on .dpSw::after{background:#1c1c1f}.displayPanel .dpTile:focus-visible,.displayPanel .dpSwitchRow:focus-visible{outline-color:#f5f5f7}' +
+    '.pmStep.cur{border-color:#f5f5f7}.pmStep.cur .pmNum{background:#f5f5f7;color:#0b0b0d}.pmStep.cur .pmFlag{color:#f5f5f7}.pmSBar i,.pmProg i{background:#f5f5f7}' +
+    '#pmTicks i.b6,.pmDots button.cur{background:#f5f5f7}.pmTh.best{border-color:#f5f5f7}.pmTh.view,.pmCCard.view{border-color:#8e8e93}#pmPop.best b{color:#fff}.pmLink,.pmPrev,.pmCHead .pmLink{color:#f5f5f7}';
+  void c0; void c1; void c2; void c3; void c4;
+  syncTints(); if (!quiet){ setTheme(THEME); try { syncEnv(); } catch (e) {} if (window.ENVANIM && ENVANIM.on){ const k = ENVANIM.k; ENVANIM.stop(); ENVANIM.start(k); } } }
+function syncTints(){ const box = document.getElementById('tints'), nm = document.getElementById('tintName'); if (!box) return; const zh = typeof TS_LANG === 'undefined' || TS_LANG === 'zh';
+  if (!box.children.length) for (const [id, z, e, c] of TINTS){ const b = document.createElement('button'); b.type = 'button'; b.dataset.tint = id; b.title = z + ' · ' + e; b.setAttribute('aria-label', z + ' ' + e);
+    b.innerHTML = '<i style="background:linear-gradient(90deg,' + c[1] + ' 0%,' + c[2] + ' 38%,' + c[3] + ' 70%,' + c[4] + ' 100%)"></i>'; b.onclick = () => applyTint(id); box.append(b); }
+  for (const b of box.children) b.classList.toggle('on', b.dataset.tint === TINT);
+  if (nm){ const T = TINTS.find(x => x[0] === TINT); nm.textContent = String(TINTS.indexOf(T) + 1).padStart(2, '0') + ' ' + (zh ? T[1] : T[2]); } }
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
 function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
@@ -2207,6 +2259,7 @@ window.addEventListener('resize', resize);
 
 /* ------------------------------------------------------------------ start */
 (function boot(){ let t = null; try { t = localStorage.getItem('ts7-theme'); } catch (e) {}
+  applyTint(TINT, true);   // (v8.30) the palette first, then the theme draws with it
   setTheme(t || 'dark');   // dark by default (reviews are in dark)
   resize(); HOLES = []; buildMask();
   // the current result's field (step 3, settled: the contour 70 %, the year's wind 40 %, the attractors): A at once, then B grows live
@@ -2293,7 +2346,7 @@ document.getElementById('applyPreset').onclick=()=>{
       : 'The site you drew on the London map: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. The land is the site less the water' + (T.keepBuildings ? ' and the existing buildings' : '') + '; ' + m.anchors + ' anchors where existing streets meet the edge. Terrain: OS Terrain 50 (50 m). Streets, water, rail and buildings: OpenStreetMap via OpenFreeMap. Wind: London Luton typical year.' + warn; };
   // language: remembered between visits, and it follows the London 2100 framework's own switch when framed
   const orig = window.setInterfaceLanguage;
-  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); } catch (e) {} };
+  window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); syncTints(); } catch (e) {} };
   syncBase(); syncEnv();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
   if (s){
