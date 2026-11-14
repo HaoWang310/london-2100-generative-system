@@ -5,6 +5,7 @@
 | 层级 level | 模块 | 输入 | 输出 `children`（可进入下一级） | 主要道路层级 |
 |---|---|---|---|---|
 | `london` | 00-london-map | 无 | — | — |
+| 模拟（任意层级可开） | 01-growth-simulator | 无（读取孵化区的模拟器） | — | — |
 | `region` | 02-region-planning | 伦敦研究范围 | 规划区域 | `region-link` |
 | `wool` | 03-wool-network | 选中的区域 | 局部区域 | `primary`、`branch` |
 | `tensor` | 04-tensor-roads | 选中的局部区域 + Wool 主路约束 | — | `secondary`、`local` |
@@ -57,5 +58,8 @@
 | P5 | 05 交叉口拆分、层级整合、街区划分 | |
 | P6 | 06 方案目录、多方案对比、单 HTML 打包 | |
 | 并行 | `incubator/` 合作者 app 迁入与逐个融合 | |
+
+**孵化区直连（01 城市生长模拟）**：模块不复制模拟器，运行时读取 `incubator/growth-simulator-dark/` 的引擎、控制定义与数据（按数据 `fetch`，不 `import`），
+孵化区改好主程序即跟随；模块测试同时校验这条链接。地图图层通过 `viewer.addOverlay()` 接入，网格按 EPSG:27700 精确换算到地图。
 
 已有算法迁入方式：原文件**原样**放入对应模块的 `legacy/`，在 `module.js` 中写适配层，不删减原有功能。
