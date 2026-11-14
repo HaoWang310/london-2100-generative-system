@@ -145,6 +145,70 @@ const multiply = (a, b) => {            // column-major 4x4, in double precision
  * The growth overlay. `get()` returns { cells, year, show } for what is shown now:
  * cells = Uint8Array parcel records or null, year = 0..75, show = boolean.
  */
+// An image over a BNG rectangle, drawn through the same exact-position mesh as the parcels:
+// the steps' ground layers, magnet field and edge. setImage(canvas | null, [e0, n1, e1, n0]).
+const IMG_FS = `
+precision highp float;
+uniform sampler2D u_img; uniform float u_alpha; varying vec2 v_uv;
+void main() {
+  if (v_uv.x < 0.0 || v_uv.y < 0.0 || v_uv.x > 1.0 || v_uv.y > 1.0) discard;
+  gl_FragColor = texture2D(u_img, v_uv) * u_alpha;
+}`;
+export function createImageLayer(id) {
+  let map = null, gl = null, prog = null, buf = null, ibuf = null, tex = null, mesh = null, img = null, uploaded = null, alpha = 1;
+  const layer = {
+    id, type: 'custom', renderingMode: '2d',
+    onAdd(m, context) {
+      map = m; gl = context;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, IMG_FS)); gl.linkProgram(prog);
+      buf = gl.createBuffer(); ibuf = gl.createBuffer(); tex = gl.createTexture(); uploaded = null; mesh = null;
+    },
+    onRemove() { if (gl) { gl.deleteBuffer(buf); gl.deleteBuffer(ibuf); gl.deleteTexture(tex); gl.deleteProgram(prog); } gl = null; },
+    render(context, args) {
+      if (!img || !gl) return;
+      if (!mesh || mesh.rect !== img.rect) {
+        const [e0, n1, e1, n0] = img.rect;
+        mesh = gridMesh({ XMIN: e0, YMAX: n1, C: 1, NX: e1 - e0, NY: n1 - n0 }, 40, 30); mesh.rect = img.rect;
+        const inter = new Float32Array(mesh.pos.length * 2);
+        for (let i = 0; i < mesh.pos.length / 2; i++) inter.set([mesh.pos[i * 2], mesh.pos[i * 2 + 1], mesh.uv[i * 2], mesh.uv[i * 2 + 1]], i * 4);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, inter, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.index, gl.STATIC_DRAW);
+      }
+      if (uploaded !== img.canvas) {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img.canvas);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, img.nearest ? gl.NEAREST : gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+        uploaded = img.canvas;
+      }
+      let main = args?.modelViewProjectionMatrix, scale = 512 * Math.pow(2, map.getZoom());
+      if (!main) { main = args?.defaultProjectionData?.mainMatrix || args; scale = 1; }
+      const T = new Float64Array([scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1, 0, mesh.origin[0] * scale, mesh.origin[1] * scale, 0, 1]);
+      gl.useProgram(prog);
+      const vao = typeof gl.getParameter === 'function' && gl.VERTEX_ARRAY_BINDING ? gl.getParameter(gl.VERTEX_ARRAY_BINDING) : null;
+      if (vao && gl.bindVertexArray) gl.bindVertexArray(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibuf);
+      const aPos = gl.getAttribLocation(prog, 'a_pos'), aUv = gl.getAttribLocation(prog, 'a_uv');
+      gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(aUv); gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 16, 8);
+      gl.uniformMatrix4fv(gl.getUniformLocation(prog, 'u_matrix'), false, new Float32Array(multiply(main, T)));
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(gl.getUniformLocation(prog, 'u_img'), 0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_alpha'), alpha);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.drawElements(gl.TRIANGLES, mesh.index.length, gl.UNSIGNED_SHORT, 0);
+      gl.disableVertexAttribArray(aPos); gl.disableVertexAttribArray(aUv);
+      if (vao && gl.bindVertexArray) gl.bindVertexArray(vao);
+    }
+  };
+  return {
+    layer,
+    setImage(canvas, rect, o = {}) { img = canvas ? { canvas, rect, nearest: Boolean(o.nearest) } : null; alpha = o.alpha ?? 1; uploaded = null; map?.triggerRepaint(); }
+  };
+}
+
 export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 }) {   // stations: meta.NODES [name, kind P/S/A, E, N]
   const f = gridFrame(meta);
   // The model's grid stops short of the 70 km study circle in the north and the south. The overlay
@@ -154,6 +218,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   const fx = { nx: f.nx, ny: f.ny + FILL.north + FILL.south };
   const mesh = gridMesh({ ...meta, YMAX: meta.YMAX + FILL.north * meta.C, NY: fx.ny });
   let strips = null, composed = null, composedFrom = null;
+  const aux = createImageLayer('g01-aux'), auxTop = createImageLayer('g01-aux-top');   // under / over the parcels
   let map = null, gl = null, prog = null, buf = null, ibuf = null, tex = null, vao = null, vaoApi = null;
   let uploaded = null, opts = { opacity, edges: false, grain: true, rails: true, fill: true };
   let beforeId;
@@ -270,6 +335,9 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     ...rails.high_speed.map(l => ({ type: 'Feature', properties: { k: 'high' }, geometry: { type: 'LineString', coordinates: lineToLL(l) } })),
     ...rails.radials.map(l => ({ type: 'Feature', properties: { k: 'radial' }, geometry: { type: 'LineString', coordinates: lineToLL(l) } }))
   ]);
+  // the six zones' boundaries: rays from London at meta.BOUND degrees (as the incubator draws them)
+  const zonesFC = () => fc(meta.BOUND.map(b => { const a = b * Math.PI / 180, R2 = 140000;
+    return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: lineToLL([[meta.LON[0], meta.LON[1]], [meta.LON[0] + Math.sin(a) * R2, meta.LON[1] + Math.cos(a) * R2]]) } }; }));
   const stationsFC = () => fc(stations.map(s => ({ type: 'Feature', properties: { kind: s[1], name: s[0] }, geometry: { type: 'Point', coordinates: toWGS84([s[2], s[3]]) } })));
 
   // `ground`: where the parcels go (under the basemap's water and roads, so the real
@@ -277,7 +345,12 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   function attachMapLibre(m, before, { ground = before } = {}) {
     map = m; beforeId = before;
     map.addLayer(layer, ground && map.getLayer(ground) ? ground : beforeId);
+    map.addLayer(aux.layer, 'g01-growth');                // the steps' images, under the parcels ...
+    map.addLayer(auxTop.layer, beforeId);                 // ... or over them (an outline)
     map.addSource('g01-rails', { type: 'geojson', data: railsFC() });
+    map.addSource('g01-zones', { type: 'geojson', data: zonesFC() });
+    map.addLayer({ id: 'g01-zones', type: 'line', source: 'g01-zones', layout: { visibility: 'none' },
+      paint: { 'line-color': '#9a9a9f', 'line-opacity': 0.8, 'line-width': 1.2, 'line-dasharray': [3, 2.5] } }, beforeId);
     map.addSource('g01-stations', { type: 'geojson', data: stationsFC() });
     map.addLayer({ id: 'g01-rails-line', type: 'line', source: 'g01-rails', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#f2f2f2', 'line-opacity': 0.9,
@@ -286,20 +359,27 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     map.addLayer({ id: 'g01-stations', type: 'circle', source: 'g01-stations',
       paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['match', ['get', 'kind'], 'P', 4.5, 3], 14, ['match', ['get', 'kind'], 'P', 9, 6]],
         'circle-color': ['match', ['get', 'kind'], 'A', '#E8463A', '#ffffff'], 'circle-stroke-color': '#000', 'circle-stroke-width': 1.2 } }, beforeId);
+    map.addLayer({ id: 'g01-names', type: 'symbol', source: 'g01-stations', layout: { visibility: 'none', 'text-field': ['get', 'name'], 'text-size': 12,
+      'text-offset': [0.9, -0.6], 'text-anchor': 'left', 'text-allow-overlap': true },
+      paint: { 'text-color': '#e6e6e6', 'text-halo-color': 'rgba(0,0,0,.85)', 'text-halo-width': 1.2 } }, beforeId);
     sync();
   }
 
   function sync() {
     if (!map) return;
-    const g = get(), vis = g.show && opts.rails ? 'visible' : 'none';
-    for (const id of ['g01-rails-line', 'g01-stations']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+    const g = get(), on = v => (g.show && v ? 'visible' : 'none');
+    const rails = g.rails ?? opts.rails;
+    if (map.getLayer('g01-rails-line')) map.setLayoutProperty('g01-rails-line', 'visibility', on(rails));
+    if (map.getLayer('g01-stations')) map.setLayoutProperty('g01-stations', 'visibility', on(g.stations ?? rails));
+    if (map.getLayer('g01-names')) map.setLayoutProperty('g01-names', 'visibility', on(g.names));
+    if (map.getLayer('g01-zones')) map.setLayoutProperty('g01-zones', 'visibility', on(g.zones));
     map.triggerRepaint();
   }
 
   function detachMapLibre() {
     if (!map) return;
-    for (const id of ['g01-stations', 'g01-rails-line', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
-    for (const id of ['g01-stations', 'g01-rails']) if (map.getSource(id)) map.removeSource(id);
+    for (const id of ['g01-names', 'g01-zones', 'g01-stations', 'g01-rails-line', 'g01-aux-top', 'g01-aux', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
+    for (const id of ['g01-zones', 'g01-stations', 'g01-rails']) if (map.getSource(id)) map.removeSource(id);
     map = null;
   }
 
@@ -337,6 +417,8 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     id: 'g01',
     attachMapLibre, detachMapLibre, drawCanvas, sync,
     set(o) { Object.assign(opts, o); sync(); },
+    /** The steps' image under the parcels (ground layers, magnet field, edge); null to clear. */
+    setImage(canvas, rect, o = {}) { (o.top ? auxTop : aux).setImage(canvas, rect, o); (o.top ? aux : auxTop).setImage(null); },
     /** The fill rows (FILL.north then FILL.south, 4 bytes a parcel like the model's cells). */
     setFill(bytes) {
       if (bytes && bytes.length !== (FILL.north + FILL.south) * fx.nx * 4) throw new Error('fill: unexpected size');

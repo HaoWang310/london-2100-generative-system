@@ -14,6 +14,7 @@ import { createGrowth, YEARS } from './growth.js';
 import { createGrowthOverlay, PALETTE } from './overlay.js';
 import { createPanel, PANEL_CSS } from './panel.js';
 import { gridRing } from './georef.js';
+import { groundImage, magnetImage, edgeImage } from './step-images.js';
 
 const mod = {
   id: '01-growth-simulator',
@@ -62,6 +63,8 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
   injectCss();
   const display = { show: true, rails: true, grain: true, fill: true, edges: false, opacity: 0.9, background: true };
   let active = false, overlay = null, panel = null;
+  // the step of 生成流程 open in the panel (null: none), and what it shows on the map
+  let magnetT = 0, step = null, pass1Cells = null, ground = null, magnet = null, magnetKey = '', edgeFor = null, edge = null;
   const container = globalThis.document ? document.createElement('div') : null;
 
   const growth = createGrowth({
@@ -69,6 +72,8 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       if (what === 'loaded') attachOverlay();
       panel?.update(what);
       if (overlay && (what === 'year' || what === 'mode' || what === 'ran')) viewer.redraw?.();
+      if (step && (what === 'mode' || what === 'ran')) showStep();
+      if (step && what === 'params' && step.show.includes('magnet')) { clearTimeout(magnetT); magnetT = setTimeout(showStep, 300); }   // the field follows the sliders
       onState(what);
     }
   });
@@ -79,7 +84,12 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     const s = growth.state;
     overlay = createGrowthOverlay({
       meta: s.D.meta, rails: s.D.rails, stations: s.D.meta.NODES, opacity: display.opacity,
-      get: () => ({ cells: growth.shown()?.cells || null, year: s.year, show: visible() })
+      get: () => {
+        if (!step || !active) return { cells: growth.shown()?.cells || null, year: s.year, show: visible() };
+        const sh = step.show, p1 = sh.includes('pass1');
+        return { cells: p1 ? pass1Cells : sh.includes('growth') ? growth.shown()?.cells || null : null, year: s.year, show: visible(),
+          rails: sh.includes('rail'), stations: sh.includes('stations'), names: sh.includes('names'), zones: sh.includes('zones') };
+      }
     });
     overlay.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity, fill: display.fill });
     viewer.addOverlay?.(overlay);
@@ -91,7 +101,37 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       .catch(e => console.warn('Growth fill unavailable:', e.message || e));
   }
 
+  // ------------------------------------------------------------ the steps on the map
+  const variationShown = () => growth.state.mode === 'variation' && Boolean(growth.state.variation);
+  async function firstPass() {
+    const v = growth.state.variation;
+    return variationShown() && v.pass1 ? v.pass1 : growth.loadPass1();
+  }
+  let stepSeq = 0;
+  async function showStep() {
+    if (!overlay) return;
+    const seq = ++stepSeq, sh = step && active ? step.show : [], s = growth.state;
+    const keep = () => seq === stepSeq;
+    let img = null;
+    try {
+      if (sh.includes('pass1') || step?.id === 'farm') { const c = await firstPass(); if (!keep()) return; pass1Cells = c; }
+      if (sh.includes('aonb')) { ground ||= await groundImage(s.D, new URL(s.base, location.href)); img = ground; }
+      else if (sh.includes('magnet')) {
+        const key = JSON.stringify(s.P);
+        if (magnetKey !== key) { const b = await growth.magnet(); if (!keep()) return; magnet = magnetImage(s.D.meta, b); magnetKey = key; }
+        img = magnet;
+      } else if (sh.includes('edge') && pass1Cells) {
+        if (edgeFor !== pass1Cells) { edge = edgeImage(s.D.meta, pass1Cells, YEARS); edgeFor = pass1Cells; }
+        img = edge;
+      }
+    } catch (e) { console.warn('Growth step view:', e.message || e); }
+    if (!keep()) return;
+    overlay.setImage(img?.canvas || null, img?.rect, { alpha: sh.includes('magnet') ? 0.9 : 1, top: img === edge });
+    overlay.sync(); viewer.redraw?.();
+  }
+
   if (container) panel = createPanel(container, growth, {
+    onStep: st => { step = st; showStep(); },
     display,
     onDisplay: change => { Object.assign(display, change); overlay?.set({ edges: display.edges, grain: display.grain, fill: display.fill, rails: display.rails, opacity: display.opacity }); viewer.redraw?.(); }
   });
@@ -109,7 +149,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       growth.prepare();                // the ground grids, in the background, for a quick first run
       return growth.state;
     },
-    close() { active = false; overlay?.sync(); viewer.redraw?.(); },
+    close() { active = false; showStep(); },
     setYear: y => growth.setYear(y),
     relang: () => panel?.update('lang'),
     resize: () => panel?.resize()
