@@ -333,7 +333,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
 
     // advanced
     const adv = h('div', { class: `g01-adv ${advOpen ? 'open' : ''}` });
-    const advBody = h('div', { class: 'g01-adv-body' }, h('p', { class: 'muted small' }, T('Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom. A red stretch on a slider marks values where less is built than planned.')));
+    const advBody = h('div', { class: 'g01-adv-body' });
     for (const g of s.GVC.GROUPS) {
       const box = h('div', { class: 'g01-sec' }, h('div', { class: 'eyebrow' }, T(g.t)), h('p', { class: 'muted small' }, T(g.note)));
       for (const sd of g.s) {
