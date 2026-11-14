@@ -645,8 +645,8 @@ function tipStep(tp, o){
   // across it close together: so blocks run long along the field (on clear ground) and about 0.75 x d2 deep
   const tM = fieldAtT(nx_, ny_), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071;
   const gap = d2 * secK(nx_, ny_) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
-  if (tp.acc >= gap && tp.L > 30){ let made = false;
-    for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = t2 === null ? [px, py] : nearestAxis(t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
+  if (tp.acc >= gap * windGap(nx_, ny_, dx, dy) && tp.L > 30){ let made = false;
+    for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = sideAxis(nx_, ny_, t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
       if (tp.level === 1 && o.phase === 1){ BUDS.push({ x: nx_, y: ny_, u, parent: tp.l }); made = true; tp.side = -s; break; }
       if (canBranch(nx_, ny_, u, tp.l.id) && spawn(tp.l, nx_, ny_, u, 'branch', tp)){ made = true; tp.side = -s; break; } }
     tp.acc = made ? 0 : gap * 0.6; }
@@ -718,8 +718,8 @@ function tipStep6(tp, o){
   // 4 a side street, one side then the other: far apart along the field where it is clear, close across it
   const tM = fieldAtT(nx_, ny_), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071;
   const gap = d2 * secK(nx_, ny_) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
-  if (tp.acc >= gap && tp.L > 30){ let made = false;
-    for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = t2 === null ? [px, py] : nearestAxis(t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
+  if (tp.acc >= gap * windGap(nx_, ny_, dx, dy) && tp.L > 30){ let made = false;
+    for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = sideAxis(nx_, ny_, t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
       if (canBranch6(nx_, ny_, u, tp.l.id) && spawn(tp.l, nx_, ny_, u, 'branch', tp)){ made = true; tp.side = -s; break; } }
     tp.acc = made ? 0 : gap * 0.6; }
   return true; }
@@ -839,6 +839,16 @@ function tidyNet(){ const live = () => LINES.filter(l => !l.dead && l.pts.length
   const box = l => { let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const p of l.pts){ if (p[0] < a) a = p[0]; if (p[1] < b) b = p[1]; if (p[0] > c) c = p[0]; if (p[1] > d) d = p[1]; } return [a - 3, b - 3, c + 3, d + 3]; };
   const meets = (l, m, bl, bm) => { if (bl[0] > bm[2] || bm[0] > bl[2] || bl[1] > bm[3] || bm[1] > bl[3]) return false; for (const p of l.pts) for (const q of m.pts) if (Math.abs(p[0] - q[0]) < 3 && Math.abs(p[1] - q[1]) < 3) return true; return false; };
   let demoted = 0, culverts = 0, nodes = 0, knots = 0;
+  // (v8.26) a grown main street (not a planned one) that runs beside another main street, parallel within 22 m, for a stretch
+  // of 30 m or more: the stretch is cut off it, from that end (or, in its middle, the street becomes a second street)
+  { rehashAll(); for (const l of LINES){ if (l.dead || l.level !== 1 || l.circus || l.stitched || l.born === 'spoke' || l.pts.length < 4) continue; const P = l.pts, bes = P.map((q, k) => { const a = P[Math.max(0, k - 1)], b = P[Math.min(P.length - 1, k + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; const c = nearB(q[0], q[1], 22, l.id, [], [(b[0] - a[0]) / L, (b[1] - a[1]) / L], true, LV1); return !!(c && !LINES[c[3]].circus); });
+      let run = 0, best = [0, 0, 0]; for (let k = 0; k < P.length; k++){ if (bes[k]){ run++; if (run > best[0]) best = [run, k - run + 1, k]; } else run = 0; }
+      const [, a, b] = best; if (plen(P.slice(Math.max(0, a - 1), b + 2)) < 30) continue;
+      const before = looseEnds(), keep = P.slice(), ends = l.ends.slice(); let side = -1;
+      if (a <= 1 && plen(P.slice(b)) >= 60){ l.pts = P.slice(b); side = 1; } else if (b >= P.length - 2 && plen(P.slice(0, a + 1)) >= 60){ l.pts = P.slice(0, a + 1); side = 0; }
+      if (side >= 0){ rehashAll(); cutBack(l, side); if (!l.dead){ const e = side ? l.pts[0] : l.pts[l.pts.length - 1], o = nearB(e[0], e[1], 4.5, l.id, [], null, false, null); if (o){ if (side) l.pts[0] = [o[1], o[2]]; else l.pts[l.pts.length - 1] = [o[1], o[2]]; } } rehashAll();
+        if (l.dead || plen(l.pts) < 60 || looseEnds() > before){ l.pts = keep; l.ends = ends; l.dead = false; side = -1; rehashAll(); } }   // (it must end on a street: else as below)
+      if (side < 0){ l.level = 2; l.demoted = true; } demoted++; rehashAll(); } }
   { const cr = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
     for (const l of live()){ if (l.level < 1 || l.circus) continue; let again = true;
       while (again){ again = false; const P = l.pts;
@@ -1089,6 +1099,31 @@ function dropSlivers(){ let n = 0;
         A.sliver = true; made++; touched.add(A.id); for (const C of ends) touched.add(C.id); for (const id of cnt.keys()) touched.add(id); break; } }
     n += made; if (!made) break; }
   netDirty = widthDirty = true; return n; }
+/* (v8.26) THE WIND, MADE TO COUNT: a field of the two climate wishes, cell by cell, from the eight directions' strength
+ * grids (D.dirs[k].S) and the season's energy from each (env stats): the summer wind (streets along it, for air) and the
+ * winter cold (streets across it, for shelter), each as a doubled-angle vector, 0-1 (1: where it is strongest). For a
+ * direction th: ws(th) is +m along the summer wind, -m across it; ww(th) is +m along the cold, -m across it */
+let WPREF = null;
+function windPref(){ if (WPREF) return WPREF; const st = D.env && D.env.stats; if (!st){ WPREF = { none: true }; return WPREF; }
+  const eS = st.summerEnergy, eW = st.winterColdEnergy, sS = eS.reduce((a, b) => a + b, 0) || 1, sW = eW.reduce((a, b) => a + b, 0) || 1;
+  const sc = new Float32Array(N), ss = new Float32Array(N), wc = new Float32Array(N), wsn = new Float32Array(N);
+  for (let d = 0; d < 8; d++){ const k = DIRS[d], t = axisOf(k.frm, 'along'), c2 = Math.cos(2 * t), s2 = Math.sin(2 * t), aS = eS[d] / sS, aW = eW[d] / sW;
+    for (let i = 0; i < N; i++){ const sp = k.S[i]; if (sp < 1e-3) continue; sc[i] += sp * aS * c2; ss[i] += sp * aS * s2; wc[i] += sp * aW * c2; wsn[i] += sp * aW * s2; } }
+  let mS = 1e-9, mW = 1e-9; const M = D.landMask; for (let i = 0; i < N; i++){ if (M && !M[i]) continue; mS = Math.max(mS, Math.hypot(sc[i], ss[i])); mW = Math.max(mW, Math.hypot(wc[i], wsn[i])); }
+  for (let i = 0; i < N; i++){ sc[i] /= mS; ss[i] /= mS; wc[i] /= mW; wsn[i] /= mW; }
+  WPREF = { sc, ss, wc, ws: wsn, kS: v('wSum') / 100, kW: v('wWin') / 100 }; return WPREF; }   // (the sliders read once a run)
+// how much a street going th at cell i is wanted, for the climate: positive (wanted) along the summer wind, negative along
+// the winter cold; scaled by the two step-4 sliders (0-100)
+function windWant(i, th){ const W_ = windPref(); if (W_.none) return 0; const c2 = Math.cos(2 * th), s2 = Math.sin(2 * th);
+  return W_.kS * (W_.sc[i] * c2 + W_.ss[i] * s2) - W_.kW * (W_.wc[i] * c2 + W_.ws[i] * s2); }
+// the side streets' spacing along a street going (dx, dy): closer where they would run along the summer wind (for air) or
+// across the winter cold (for shelter), wider where the other way
+function windGap(x, y, dx, dy){ const w = windWant(cellAt(x, y), Math.atan2(dx, -dy)); return w ? clamp(1 - 0.9 * w, 0.55, 1.6) : 1; }
+// a side street's direction, of the field's two: the one nearer square to its parent, unless the other (still at 45 degrees
+// or more off the parent) is the better for the climate
+function sideAxis(x, y, t, px, py){ if (t === null) return [px, py]; let a = nearestAxis(t, px, py); const b0 = [-a[1], a[0]], b = b0[0] * px + b0[1] * py >= 0 ? b0 : [-b0[0], -b0[1]];
+  if (b[0] * px + b[1] * py < 0.7) return a; const i = cellAt(x, y), K = 1.2, sa = a[0] * px + a[1] * py + K * windWant(i, Math.atan2(a[1], a[0])), sb = b[0] * px + b[1] * py + K * windWant(i, Math.atan2(b[1], b[0]));
+  return sb > sa ? b : a; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1268,6 +1303,7 @@ function* stitchMains(o){
         if (Math.abs(dc) + Math.abs(dr) === 3){ const m = Math.round(r + dr / 2) * nx + Math.round(c + dc / 2); if (!PASS[m]) continue; }
         let cost = L;
         if (ZN[j]){ let za = Math.abs((th - streamAngle(cx(j), cy(j))) * 180 / PI) % 180; za = za > 90 ? 180 - za : za; if (za < STITCH.ZONE_ANGLE) continue; if (!ZN[i]) cost += STITCH.ZONE_COST; }
+        { const w = windWant(j, th); if (w) cost *= clamp(1 - 1.4 * w, 0.45, 2.2); }   // (v8.26) along the summer wind cheaper, along the winter cold dearer
         const t = TH[i]; if (t === t){ const s = Math.abs(Math.sin(2 * (th - t))); cost *= 1 + (loop === 'through' ? 0.35 : 1) * STITCH.ALIGN * s * (0.3 + 0.7 * CLAR[i]); }
         if (Z) cost += L * STITCH.SLOPE * Math.abs(Z[j] - Z[i]) / L;
         if (ED[j] < 70 && !nearEnds) cost *= 1 + (STITCH.EDGE_COST - 1) * (1 - ED[j] / 70);
@@ -1327,8 +1363,8 @@ function* stitchMains(o){
       { const d2 = v('d2'); let acc = 0, side = l.id % 2 ? 1 : -1;
         for (let k = 1; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / L, dy = (b[1] - a[1]) / L; acc += L;
           const tM = fieldAtT(b[0], b[1]), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071, gap = d2 * secK(b[0], b[1]) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, b[0], b[1]) : 0.75);
-          if (acc < gap || k < 6 || pts.length - k < 6) continue;
-          const px = -dy * side, py = dx * side; let u = tM === null ? [px, py] : nearestAxis(tM, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
+          if (acc < gap * windGap(b[0], b[1], dx, dy) || k < 6 || pts.length - k < 6) continue;
+          const px = -dy * side, py = dx * side; let u = sideAxis(b[0], b[1], tM, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
           BUDS.push({ x: b[0], y: b[1], u, parent: l }); side = -side; acc = 0; } } }
     if (endLine){ endLine.hits = (endLine.hits || 0) + 1; addNode(endPt[0], endPt[1], true); }
     EDGES.push([A.id, B.id, plen(P)]); return res; }
@@ -1411,7 +1447,7 @@ function* stitchMains(o){
     if (yield* lay(A, B, pathTo(end), end, true)) loops++; }
   rehashAll(); netDirty = widthDirty = true; }
 function* growBranching(){
-  SECK = null; resetNet(); const o = { memK: 1.5 - v('bMem') / 100, gapK: v('bGap'), forkT: v('bFork'), phase: 1, mainsT: $('bMains').checked, sec6: true };   // (v8.23) v6's second streets, always (the v6.2 switch is gone)
+  SECK = null; WPREF = null; resetNet(); const o = { memK: 1.5 - v('bMem') / 100, gapK: v('bGap'), forkT: v('bFork'), phase: 1, mainsT: $('bMains').checked, sec6: true };   // (v8.23) v6's second streets, always (the v6.2 switch is gone)
   // (v8.15) the main streets: stitched (a planned network linking the entries and the nodes) or grown from the anchors
   if (($('mMethod') || {}).value === 'stitch') yield* stitchMains(o); else {
   PHASE = 'main streets grow from your anchors';
@@ -1475,10 +1511,10 @@ function* growBranching(){
     PHASE = "side streets off the land's edge, where there is room";
     for (const l of LINES.slice()){ if (!l.ring || l.hole) continue; const Pp = l.pts; let acc = 0;
       for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]);
-        if (acc < d2At(b[0], b[1]) * o.gapK * (0.75 + 0.6 * gridAt(CLAR, b[0], b[1]))) continue;
+        if (acc < d2At(b[0], b[1]) * o.gapK * (0.75 + 0.6 * gridAt(CLAR, b[0], b[1])) * windGap(b[0], b[1], (b[0] - a[0]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1), (b[1] - a[1]) / (Math.hypot(b[0] - a[0], b[1] - a[1]) || 1))) continue;
         const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1; let px = -dy / n, py = dx / n;
         if (!inLand(b[0] + px * 15, b[1] + py * 15)){ px = -px; py = -py; } if (!inLand(b[0] + px * 15, b[1] + py * 15)) continue;
-        const t = fieldAtT(b[0] + px * 10, b[1] + py * 10), u = t === null ? [px, py] : nearestAxis(t, px, py); if (u[0] * px + u[1] * py < 0.5) continue;
+        const t = fieldAtT(b[0] + px * 10, b[1] + py * 10), u = sideAxis(b[0] + px * 10, b[1] + py * 10, t, px, py); if (u[0] * px + u[1] * py < 0.5) continue;
         if (canBranch6(b[0], b[1], u, l.id) && spawn(l, b[0], b[1], u, 'edge-branch', null)) acc = 0; } }
     yield* runTips(o);
     if ($('bInfill').checked){ PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
