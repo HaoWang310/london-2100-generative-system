@@ -4,7 +4,7 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.12';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.13';
 
 const Z = 14, R = 6378137, WORLD = 2 * Math.PI * R, TILE = WORLD / 2 ** Z;
 
@@ -18,7 +18,7 @@ export function osmStream(lat, lon, opt = {}){
   const sizeM = TILE * K;
 
   return {
-    origin: { lat, lon }, tileSize: sizeM,
+    origin: { lat, lon }, tileSize: sizeM, painter: opt.painter || null,
     /** plan metres → { lat, lng } */
     toLatLng(px, py){ const mx = px / K + mx0, my = py / K + my0; return { lng: mx / R * 180 / Math.PI, lat: (2 * Math.atan(Math.exp(my / R)) - Math.PI / 2) * 180 / Math.PI }; },
     /** keys of tiles whose square touches the circle (px, py, r) in plan metres, nearest first */

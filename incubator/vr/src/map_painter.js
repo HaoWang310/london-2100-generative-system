@@ -6,7 +6,7 @@
 // Extrusions are hidden there (VR extrudes the buildings itself), and the app's building colour is reported so the
 // VR prisms match. The app map itself is only read (getStyle), never changed.
 
-import { mapLib } from './map_bridge.js?v=0.12';
+import { mapLib } from './map_bridge.js?v=0.13';
 
 const PX = 1024, Z = 15;
 
@@ -24,15 +24,20 @@ export async function mapPainter(map, frame){
   // the app's building colour (first extrusion layer with a plain colour)
   let building = null;
   for (const L of style.layers || []) if (L.type === 'fill-extrusion'){ building = rgb(L.paint?.['fill-extrusion-color']); if (building) break; }
-  // a copy of the style without extrusions or custom layers
-  const copy = { ...style, layers: (style.layers || []).filter(L => L.type !== 'custom').map(L => L.type === 'fill-extrusion' ? { ...L, layout: { ...(L.layout || {}), visibility: 'none' } } : L) };
-  delete copy.terrain;
+  // a copy of the style without extrusions (VR extrudes itself), custom layers, terrain, and sources nothing uses any more
+  const layers = (style.layers || []).filter(L => L.type !== 'custom' && L.type !== 'fill-extrusion');
+  const used = new Set(layers.map(L => L.source).filter(Boolean)), sources = {};
+  for (const [id, src] of Object.entries(style.sources || {})) if (used.has(id)) sources[id] = src;
+  const copy = { ...style, layers, sources }; delete copy.terrain; delete copy.projection;
   const div = win.document.createElement('div');
   div.style.cssText = `position:fixed;left:-${PX + 64}px;top:0;width:${PX}px;height:${PX}px;pointer-events:none;visibility:visible`;
   win.document.body.append(div);
   const MapC = lib.Map || lib.default.Map;
   const m = new MapC({ container: div, style: copy, interactive: false, attributionControl: false, pixelRatio: 1, preserveDrawingBuffer: true,
     fadeDuration: 0, center: map.getCenter(), zoom: Z, pitch: 0, bearing: 0, renderWorldCopies: false });
+  // keep its errors out of the console: count them and keep the first, for the VR note line
+  const errs = { n: 0, first: '' };
+  m.on('error', e => { errs.n++; if (!errs.first) errs.first = String(e?.error?.message || e?.message || e).slice(0, 100); if (errs.n === 1) console.warn('VR map style:', e?.error || e); });
   await new Promise(res => { if (m.loaded()) res(); else { m.once('load', res); setTimeout(res, 15000); } });
 
   let chain = Promise.resolve(), gone = false;
@@ -52,5 +57,6 @@ export async function mapPainter(map, frame){
     chain = job.catch(() => null);
     return job;
   }
-  return { render, building, dispose(){ gone = true; try { m.remove(); } catch (e){} div.remove(); } };
+  return { render, building, errors: errs,
+    dispose(){ gone = true; try { m.stop(); } catch (e){} setTimeout(() => { try { m.remove(); } catch (e){} div.remove(); }, 0); } };
 }

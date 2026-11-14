@@ -179,8 +179,9 @@ export function open(api, lang = 'zh', opt = {}){
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
   const streamLine = () => { const i = streamInfo(); return lang === 'zh'
-      ? `移动加载 · 已加载 ${i.tiles} 块` + (i.styled ? `（${i.styled} 块已用 app 样式）` : '') + ` · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '')
-      : `streaming · ${i.tiles} tiles` + (i.styled ? ` (${i.styled} in the app's look)` : '') + ` · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : ''); };
+      ? `移动加载 · 已加载 ${i.tiles} 块` + (i.styled ? `（${i.styled} 块已用 app 样式）` : '') + ` · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '') + (pe() ? ` · app 样式报错 ${pe().n} 次：${pe().first}` : '')
+      : `streaming · ${i.tiles} tiles` + (i.styled ? ` (${i.styled} in the app's look)` : '') + ` · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : '') + (pe() ? ` · map style errors ${pe().n}: ${pe().first}` : ''); };
+  const pe = () => { const e = api.stream?.painter?.errors; return e && e.n ? e : null; };
   const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? streamLine() + ' · ' : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
