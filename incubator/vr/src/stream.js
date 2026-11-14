@@ -4,8 +4,8 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.19';
-import { treesForTile, carsForTile } from './features.js?v=0.19';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.20';
+import { treesForTile, carsForTile } from './features.js?v=0.20';
 
 const ZMAX = 14, R = 6378137, WORLD = 2 * Math.PI * R;
 const tileM = z => WORLD / 2 ** z;   // Web Mercator metres per tile side at zoom z
