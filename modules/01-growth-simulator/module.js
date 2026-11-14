@@ -9,6 +9,7 @@
 // overlay and the inspector panel. run() returns a ScaleBundle describing the loop
 // (its stations as nodes), for export and for later modules.
 
+import { getLang } from '../../shared/i18n/index.js';
 import { createBundle } from '../../shared/schemas/index.js';
 import { createGrowth, YEARS } from './growth.js';
 import { createGrowthOverlay, PALETTE } from './overlay.js';
@@ -73,6 +74,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     }
   });
 
+  const extentLabel = () => (getLang() === 'zh' ? '生长模拟范围' : 'Growth model extent');
   const visible = () => display.show && (active || display.background);
   function attachOverlay() {
     if (overlay || !viewer) return;
@@ -81,7 +83,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       meta: s.D.meta, rails: s.D.rails, stations: s.D.meta.NODES, opacity: display.opacity,
       get: () => ({ cells: growth.shown()?.cells || null, year: s.year, show: visible() })
     });
-    overlay.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity });
+    overlay.set({ edges: display.edges, grain: display.grain, rails: display.rails, opacity: display.opacity, label: extentLabel() });
     viewer.addOverlay?.(overlay);
   }
 
@@ -105,7 +107,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     },
     close() { active = false; overlay?.sync(); viewer.redraw?.(); },
     setYear: y => growth.setYear(y),
-    relang: () => panel?.update('lang'),
+    relang: () => { panel?.update('lang'); overlay?.set({ label: extentLabel() }); },
     resize: () => panel?.resize()
   };
 }
