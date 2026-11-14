@@ -37,3 +37,13 @@ The page is now four files, so the main workspace's 01 module can load the same 
 Change these here and the workspace follows. The page looks and runs exactly as before: the same run, with the release's settings and with others, gives identical results, and its screenshots are identical pixel for pixel.
 
 页面拆成四个文件，主程序的 01 模块直接读取同一份引擎、控制与数据。以后在这里修改，主程序跟着变。页面外观和运行完全不变：同样设置的运行结果一致，截图逐像素相同。
+
+## 2026-11-14 · 生成流程 · The process, step by step
+
+The simple controls now sit in nine steps that follow how the model makes the city: choose the area, read the ground, lay the rail, set the targets, compute the pull, the first pass (where the city ends), lay out the farming, the second pass (city and farmland together), the result. Each step is a card with a tick, a line of numbers from the run (`GVC.STEPS[].sum`) and its controls; opening it sets the map to what that step works with (ground layers, the magnet field, the first pass, its edge). A step whose numbers depend on the run shows a hollow circle once the settings differ from what is shown, until the variation is run. **Play the whole process** opens the steps in turn and grows both passes from 2025 to 2100.
+
+The first pass is new on the map. The release's is stored in `data/pass1-idx.z` / `pass1-cls.z` (`tools/pass1.mjs`, which checks the release's population, 12,222,179); a variation's is recorded while it runs. For that, `GV.run(params, onProgress, onYear)` takes an optional third argument, called each year with the pass and the parcels' classes. Without it the engine runs as before, and results are unchanged.
+
+控制分到九个步骤中，顺序即模型生成城市的过程：选范围、读地面、铺铁路、定目标、算吸引力、第一遍（城市长到哪里）、布置农业、第二遍（城市与农田一起长）、结果。每一步是一张卡片：勾、一行来自运行结果的数字（`GVC.STEPS[].sum`）和该步的控制；展开时地图切换到这一步用到的图层（地面、磁力场、第一遍城市及其边缘）。依赖运行结果的步骤在设置改动后显示空心圆，运行变体后恢复为勾。「播放全流程」依次展开每一步，两遍生长各从 2025 播到 2100。
+
+第一遍城市首次显示在地图上：发布版存于 `data/pass1-*.z`（由 `tools/pass1.mjs` 生成，并核对人口 12,222,179），变体在运行时记录。为此 `GV.run` 增加可选的第三个参数 `onYear`，不传时引擎行为与结果均不变。主程序 01 模块使用同一组步骤。

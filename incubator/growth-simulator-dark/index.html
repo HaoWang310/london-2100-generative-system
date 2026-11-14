@@ -110,6 +110,22 @@ body.resizing, body.resizing * { user-select:none !important; }
 body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resizing.ns, body.resizing.ns * { cursor:ns-resize !important; }
 .panel.collapsed .rz-y { display:none; }
 /* simple controls and the advanced fold */
+.flowhead { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:20px 0 8px; }
+.flowhead h2 { margin:0; }
+.flowhead button { flex:none; background:transparent; color:var(--ink); border:1px solid var(--bd); border-radius:999px; padding:7px 14px; font:inherit; font-size:13px; cursor:pointer; }
+.flowhead button:hover { border-color:var(--bdon); }
+.step { border:1px solid var(--bd); border-radius:14px; margin:8px 0; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
+.step.open { border-color:#55555b; background:rgba(255,255,255,.04); }
+.step .sh { display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; background:none; border:0; color:inherit; padding:12px 14px; cursor:pointer; font:inherit; }
+.step .ck { flex:0 0 22px; height:22px; border-radius:50%; background:#f2f2f2; position:relative; margin-top:1px; box-sizing:border-box; }
+.step .ck::after { content:""; position:absolute; left:8px; top:4px; width:5px; height:10px; border:solid #111; border-width:0 2px 2px 0; transform:rotate(45deg); }
+.step.pending .ck { background:transparent; border:1.5px solid #6e6e73; } .step.pending .ck::after { display:none; }
+.step .st { flex:1; min-width:0; } .step .st b { display:block; font-size:14.5px; font-weight:600; }
+.step .ss { display:block; color:var(--grey); font-size:12px; margin-top:3px; line-height:1.45; }
+.step .chev { color:var(--dim); transition:transform .2s; margin-top:2px; } .step.open .chev { transform:rotate(90deg); }
+.step .sb { display:none; padding:0 14px 8px; } .step.open .sb { display:block; }
+.step .sb .note { color:var(--dim); font-size:12px; line-height:1.45; margin:0 0 8px; }
+.step .stale { display:none; color:var(--acc2); font-size:12px; margin:0 0 8px; } .step.open.pending .stale { display:block; }
 #graphwrap { margin:4px 0 14px; } .glab { font-size:12px; color:var(--dim); margin-bottom:4px; }
 .sl .val.custom { color:var(--dim); font-style:italic; }
 .sl input.dim { opacity:.35; }
@@ -158,7 +174,8 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       <canvas id="graph"></canvas>
       <div class="sub" id="ratio"></div>
     </div>
-    <div id="simple"></div>
+    <div class="flowhead"><h2 data-t>How the city is made</h2><button id="flowBtn" data-t>Play the whole process</button></div>
+    <div id="steps"></div>
     <div class="advsec">
       <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt" data-t>Advanced settings</span></button>
       <div class="advnote" data-t>Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom. A red stretch on a slider marks values where less is built than planned.</div>
@@ -298,38 +315,113 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     });
     return row;
   }
-  function buildSimple() {
-    var host = $("simple"); host.innerHTML = ""; SC = {};
-    SIMPLE.forEach(function (g) {
-      var box = document.createElement("div"); box.className = "grp";
-      box.innerHTML = '<div class="gh"><h2>' + T(g.t) + '</h2></div><div class="note">' + T(g.note) + "</div>";
-      if (g.graph) box.appendChild(GRAPHWRAP);
-      g.c.forEach(function (c) {
-        var el = document.createElement("div"); el.className = "sl";
-        var def = c.get(GV.DEFAULTS), pos = (def - c.min) / (c.max - c.min) * 100;
-        el.innerHTML = '<div class="top"><span>' + T(c.t) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>' +
-          '<div class="ends"><span>' + T(c.ends[0]) + "</span><span>" + T(c.ends[1]) + "</span></div>";
-        var inp = el.querySelector("input");
-        SC[c.id] = { inp: inp, val: el.querySelector(".val") };
-        inp.oninput = function () {
-          var v = +inp.value;
-          c.set(P, Math.abs(v - def) < c.step / 2 + 1e-9 ? def : v);   // at the tick: the release's exact values
-          syncAll(); changed();
-        };
-        box.appendChild(el);
-        if (c.pre) box.appendChild(presetRow(c.pre, true));
-      });
-      if (g.seed) {
-        var sr = document.createElement("div");
-        sr.innerHTML = '<div class="seedrow"><button id="seedNew">' + T("Roll another layout") + '</button><button id="seed42">' + T("The release's layout") + '</button></div><div class="seedv" id="seedv"></div>';
-        box.appendChild(sr);
-        sr.querySelector("#seedNew").onclick = function () { var n; do { n = 1 + Math.floor(Math.random() * 3000); } while (n === P.seed); P.seed = n; syncAll(); changed(); };
-        sr.querySelector("#seed42").onclick = function () { P.seed = 42; syncAll(); changed(); };
-      }
-      host.appendChild(box);
-    });
-    syncSimple();
+  function ctlById(id) { var r = null; SIMPLE.forEach(function (g) { g.c.forEach(function (c) { if (c.id === id) r = c; }); }); return r; }
+  function makeControl(c) {
+    var el = document.createElement("div"); el.className = "sl";
+    var def = c.get(GV.DEFAULTS), pos = (def - c.min) / (c.max - c.min) * 100;
+    el.innerHTML = '<div class="top"><span>' + T(c.t) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>' +
+      '<div class="ends"><span>' + T(c.ends[0]) + "</span><span>" + T(c.ends[1]) + "</span></div>";
+    var inp = el.querySelector("input");
+    SC[c.id] = { inp: inp, val: el.querySelector(".val") };
+    inp.oninput = function () {
+      var v = +inp.value;
+      c.set(P, Math.abs(v - def) < c.step / 2 + 1e-9 ? def : v);   // at the tick: the release's exact values
+      syncAll(); changed();
+    };
+    return el;
   }
+  function makeSeed() {
+    var sr = document.createElement("div");
+    sr.innerHTML = '<div class="seedrow"><button id="seedNew">' + T("Roll another layout") + '</button><button id="seed42">' + T("The release's layout") + '</button></div><div class="seedv" id="seedv"></div>';
+    sr.querySelector("#seedNew").onclick = function () { var n; do { n = 1 + Math.floor(Math.random() * 3000); } while (n === P.seed); P.seed = n; syncAll(); changed(); };
+    sr.querySelector("#seed42").onclick = function () { P.seed = 42; syncAll(); changed(); };
+    return sr;
+  }
+  // ------------------------------------------------------------------ the steps: the research process, one card each
+  var STEPS = GVC.STEPS, openStep = null, LAY0 = null, flowing = false, flowT = 0, flowI = 0;
+  function buildSimple() {
+    var host = $("steps"); host.innerHTML = ""; SC = {};
+    STEPS.forEach(function (st) {
+      var card = document.createElement("div"); card.className = "step" + (openStep === st.id ? " open" : ""); card.dataset.id = st.id;
+      card.innerHTML = '<button class="sh"><span class="ck"></span><span class="st"><b>' + T(st.t) + '</b><span class="ss"></span></span><span class="chev">›</span></button>' +
+        '<div class="sb"><div class="note">' + T(st.note) + '</div><div class="stale">' + T("Run the variation to update this step.") + "</div></div>";
+      var body = card.querySelector(".sb");
+      if (st.graph) body.appendChild(GRAPHWRAP);
+      (st.c || []).forEach(function (id) {
+        if (id === "seed") { body.appendChild(makeSeed()); return; }
+        var c = ctlById(id); if (!c) return;
+        body.appendChild(makeControl(c)); if (c.pre) body.appendChild(presetRow(c.pre, true));
+      });
+      card.querySelector(".sh").onclick = function () { stopFlow(); openStepAt(openStep === st.id ? null : st.id); };
+      host.appendChild(card);
+    });
+    syncSimple(); stepsSync();
+  }
+  function stale() { return mode === "variation" && VAR ? JSON.stringify(ranWith) !== JSON.stringify(P) : !isDefault(); }
+  function stepsSync() {                      // each step's line of numbers, and its tick
+    if (!$("steps")) return;
+    var R = mode === "variation" && VAR ? VAR : FINAL, stats = (R ? R.ev.stats : D.final.stats)[75];
+    var x = { D: D, P: P, stats: stats, fmt: fmt, T: T }, old = stale();
+    document.querySelectorAll("#steps .step").forEach(function (card) {
+      var st = STEPS.filter(function (q) { return q.id === card.dataset.id; })[0], txt = "";
+      try { txt = st.sum(x); } catch (e) { txt = ""; }
+      card.querySelector(".ss").textContent = txt;
+      card.classList.toggle("pending", !!st.live && old);
+    });
+  }
+  // the first pass (step 6): the release's from data/, a variation's recorded while it runs
+  var P1F = null, P1V = null, p1Load = null, showP1 = false;
+  function loadP1() {
+    if (!p1Load) p1Load = Promise.all([unz(D.pass1.idx), unz(D.pass1.cls)]).then(function (b) {
+      P1F = new Replay({ idx: new Uint32Array(b[0]), cls: new Uint8Array(b[1]), off: D.pass1.off, stats: D.final.stats }); P1F.set(yi);
+    });
+    return p1Load;
+  }
+  function mapReplay() { if (showP1) { var p = mode === "variation" && P1V ? P1V : P1F; if (p) return p; } return shown(); }
+  function openStepAt(id) {
+    openStep = id;
+    document.querySelectorAll("#steps .step").forEach(function (c) { c.classList.toggle("open", c.dataset.id === id); });
+    var st = STEPS.filter(function (q) { return q.id === id; })[0];
+    if (st && !LAY0) { LAY0 = {}; Object.keys(LAY).forEach(function (k) { LAY0[k] = LAY[k].on; }); }
+    if (!st) {                                  // no step open: the layers as they were
+      if (LAY0) Object.keys(LAY).forEach(function (k) { LAY[k].on = LAY0[k]; });
+      LAY0 = null; showP1 = false; buildLayers(); overlays(false).then(draw); draw(); return;
+    }
+    var sh = st.show;
+    Object.keys(LAY).forEach(function (k) { LAY[k].on = sh.indexOf(k) >= 0 || (k === "growth" && sh.indexOf("pass1") >= 0); });
+    showP1 = sh.indexOf("pass1") >= 0;
+    if (showP1) loadP1().then(function () { draw(); });
+    if (st.id === "farm") loadP1().then(function () { edgeOverlay(); draw(); });
+    else if (LAY.edge.on) edgeOverlay();
+    buildLayers(); overlays(false).then(draw); draw();
+    if (st.graph) drawGraph();
+  }
+  // Play the whole process: each step in turn, the two passes growing 2025 to 2100
+  function stopFlow() {
+    if (!flowing) return;
+    flowing = false; clearTimeout(flowT); clearInterval(flowI); $("flowBtn").textContent = T("Play the whole process");
+  }
+  function playFlow() {
+    if (flowing) { stopFlow(); return; }
+    stop(); flowing = true; $("flowBtn").textContent = T("Stop");
+    var i = 0;
+    function grow(then) {                       // 2025 to 2100 in about six seconds
+      var y = 0; setYear(0);
+      flowI = setInterval(function () { if (!flowing) return; y += 1; setYear(Math.min(75, y)); if (y >= 75) { clearInterval(flowI); flowT = setTimeout(then, 1600); } }, 80);
+    }
+    function next() {
+      if (!flowing) return;
+      if (i >= STEPS.length) { stopFlow(); return; }
+      var st = STEPS[i++]; openStepAt(st.id);
+      var card = document.querySelector('#steps .step[data-id="' + st.id + '"]'); if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      if (st.id === "pass1") loadP1().then(function () { grow(next); });
+      else if (st.id === "pass2") grow(next);
+      else { if (st.id === "farm" || st.id === "result") setYear(75); flowT = setTimeout(next, st.id === "result" ? 4000 : 3400); }
+    }
+    if (!view.user) fit();
+    next();
+  }
+  $("flowBtn").onclick = playFlow;
   var advOpen = false;
   function buildAdvanced() {
     document.querySelector(".advsec").classList.toggle("open", advOpen);
@@ -388,7 +480,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
   function isDefault() { return Object.keys(GV.DEFAULTS).every(function (k) { return P[k] === GV.DEFAULTS[k]; }); }
   var magTimer = null;
   function changed() {
-    markPresets(); drawGraph();
+    markPresets(); drawGraph(); stepsSync();
     if (ranWith && JSON.stringify(ranWith) !== JSON.stringify(P)) status(T("Settings changed. Press Run variation to grow the loop with them."));
     if (LAY.magnet.on || LAY.field.on || LAY.vein.on) { clearTimeout(magTimer); magTimer = setTimeout(function () { overlays(true); }, 350); }
   }
@@ -467,7 +559,9 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
   }
   function edgeOverlay() {                     // the outline of the final's settlements: built share over 9 x 9 parcels >= 1/4
     if (!LAY.edge.on || !FINAL) return;
-    var c = overlayCanvas("edge"), cx = c.getContext("2d"), img = cx.createImageData(NX, NY), px = new Uint32Array(img.data.buffer), t = FINAL.tier;
+    // step 7 outlines the first pass's city (what the farms are laid against); otherwise the final's
+    var p1 = openStep === "farm" ? (mode === "variation" && P1V ? P1V : P1F) : null; if (p1) p1.set(75);
+    var c = overlayCanvas("edge"), cx = c.getContext("2d"), img = cx.createImageData(NX, NY), px = new Uint32Array(img.data.buffer), t = p1 ? p1.tier : FINAL.tier;
     var ice = (255 << 24 | 255 << 16 | 209 << 8 | 127) >>> 0, r = 4, i, j, q, s2, row = new Uint16Array(N), mac = new Uint8Array(N);
     for (i = 0; i < NY; i++) {
       var base = i * NX; s2 = 0;
@@ -538,8 +632,8 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     var smooth = view.k * GS < 1.6;
     ctx.imageSmoothingEnabled = smooth; ctx.imageSmoothingQuality = "high";
     ["magnet", "field", "vein"].forEach(function (n) { if (LAY[n].on && OV[n]) { ctx.globalAlpha = 0.9; ctx.drawImage(OV[n], GX0, GY0, NX * GS, NY * GS); ctx.globalAlpha = 1; } });
-    var R = shown(); if (LAY.growth.on && R) ctx.drawImage(R.cv, GX0, GY0, NX * GS, NY * GS);
-    if (LAY.edge.on && OV.edge && mode === "variation" && VAR) ctx.drawImage(view.k * GS >= 1.2 ? OV.edge : OV.edge2, GX0, GY0, NX * GS, NY * GS);
+    var R = mapReplay(); if (LAY.growth.on && R) ctx.drawImage(R.cv, GX0, GY0, NX * GS, NY * GS);
+    if (LAY.edge.on && OV.edge) ctx.drawImage(view.k * GS >= 1.2 ? OV.edge : OV.edge2, GX0, GY0, NX * GS, NY * GS);
     ctx.imageSmoothingEnabled = true;
     var px = 1 / view.k;
     if (LAY.zones.on) {
@@ -627,6 +721,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     $("mVar").disabled = !VAR;
     $("onmap").textContent = T(isVar ? "Variation" : "Final outcome") + " · " + (2025 + yi) + " · " + fmt(st.pop) + " " + T("people");
     clearTimeout(cmpTimer); cmpTimer = setTimeout(compare, playing ? 400 : 30);
+    stepsSync();
   }
   function compare() {
     if (!VAR) { $("cmp").innerHTML = '<div class="sub">' + T("Run a variation to compare it with the final: where it lands, how much stays in place.") + "</div>"; return; }
@@ -642,7 +737,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       "<span>" + T("High rise, median distance from a station") + '</span><span class="v">' + (a.hiMed ? fmt(a.hiMed, 1) + " km" : "–") + '</span><span class="fv">' + (b.hiMed ? fmt(b.hiMed, 1) + " km" : "–") + "</span></div>";
   }
   function setYear(y) {
-    yi = Math.max(0, Math.min(75, y)); FINAL.set(yi); if (VAR) VAR.set(yi);
+    yi = Math.max(0, Math.min(75, y)); FINAL.set(yi); if (VAR) VAR.set(yi); if (P1F) P1F.set(yi); if (P1V) P1V.set(yi);
     if (LAY.edge.on && mode === "variation") edgeSoon();
     panels(); draw();
   }
@@ -699,14 +794,20 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     var t0 = performance.now(), params = Object.assign({}, P);
     return ensureEngine().then(function () {
       status(T("Growing the loop…"));
+      var prev = new Uint8Array(N), p1 = { idx: [], cls: [], off: [0] };   // the first pass, recorded for step 6
       return GV.run(params, function (pr) {
         var f = ((pr.pass - 1) * 76 + (pr.year - 2025) + 1) / 152;
         $("prog").firstChild.style.width = (f * 100) + "%";
         status(T(pr.pass === 1 ? "First pass: finding where the city ends" : "Second pass: the city and its farmland") + " · " + pr.year);
-      });
+      }, function (pass, year, tier) {
+        if (pass !== 1) return;
+        for (var i = 0; i < N; i++) { var t = tier[i]; if (t !== prev[i]) { if (t >= 1 && t <= 3) { p1.idx.push(i); p1.cls.push(t); } prev[i] = t; } }
+        p1.off.push(p1.idx.length);
+      }).then(function (res) { res.p1 = p1; return res; });
     }).then(function (res) {
       running = false; $("run").disabled = false; $("reset").disabled = false; $("prog").firstChild.style.width = "0";
       VAR = new Replay({ idx: res.idx, cls: res.cls, off: res.off, stats: res.stats }); VAR.id = ++runId; ranWith = params;
+      P1V = new Replay({ idx: Uint32Array.from(res.p1.idx), cls: Uint8Array.from(res.p1.cls), off: res.p1.off, stats: res.stats });
       var s = res.stats[75].km2, built = s.l + s.m + s.h, farmed = s.fh + s.fv;
       status(T("Grown in") + " " + fmt((performance.now() - t0) / 1000, 1) + " s. " + fmt(built, 1) + " km² " + T("built") + ", " + fmt(farmed, 1) + " km² " + T("farmed") + ", " + fmt(res.stats[75].pop) + " " + T("people") + ".");
       if (!LAY.edge.everSet) { LAY.edge.on = true; LAY.edge.everSet = true; buildLayers(); }

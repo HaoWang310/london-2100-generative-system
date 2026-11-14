@@ -1,7 +1,7 @@
 // 01 · Growth simulator — the engine, off the page's thread.
 // A classic worker: it loads the incubator's own data/meta.js and engine.js
 // (see source.js), so the workspace runs exactly the incubator's engine.
-// Messages in:  {type:'init', base} · {type:'prepare', id} · {type:'run', id, params} · {type:'compare', id, runId, year}
+// Messages in:  {type:'init', base} · {type:'prepare', id} · {type:'run', id, params} · {type:'magnet', id, params} · {type:'compare', id, runId, year}
 // Messages out: {type:'progress', id, ...} · {type:'result', id, ...} · {type:'error', id, message}
 /* global importScripts, D, GV, GRIDCODEC */
 
@@ -96,11 +96,33 @@ onmessage = async ({ data: m }) => {
     } else if (m.type === 'run') {
       await ensureEngine(m.id);
       postMessage({ type: 'progress', id: m.id, stage: 'ready' });
-      const res = await GV.run(m.params, pr => postMessage({ type: 'progress', id: m.id, stage: 'run', pass: pr.pass, year: pr.year }));
+      // the first pass, recorded as one record per parcel (cells.js), for step 6
+      const N = D.meta.NX * D.meta.NY, prev = new Uint8Array(N), p1 = new Uint8Array(N * 4);
+      for (let i = 0; i < N; i++) { p1[i * 4 + 1] = 255; p1[i * 4 + 2] = 255; p1[i * 4 + 3] = 255; }
+      const res = await GV.run(m.params, pr => postMessage({ type: 'progress', id: m.id, stage: 'run', pass: pr.pass, year: pr.year }), (pass, year, tier) => {
+        if (pass !== 1) return;
+        const y = year - 2025;
+        for (let i = 0; i < N; i++) {
+          const t = tier[i]; if (t === prev[i]) continue; prev[i] = t;
+          if (t < 1 || t > 3) continue;
+          const q = i * 4;
+          if (!p1[q]) { p1[q] = t; p1[q + 1] = y; }
+          if (t === 2 && p1[q + 2] === 255) p1[q + 2] = y;
+          if (t === 3 && p1[q + 3] === 255) p1[q + 3] = y;
+        }
+      });
       runs.set(m.runId, { idx: res.idx, cls: res.cls, off: res.off });
       for (const k of [...runs.keys()]) if (k !== m.runId) { runs.delete(k); tiers.delete('v' + k); }
       for (const k of [...cache.keys()]) if (!k.startsWith('f')) cache.delete(k);
-      postMessage({ type: 'result', id: m.id, idx: res.idx.slice(), cls: res.cls.slice(), off: Array.from(res.off), stats: res.stats });
+      postMessage({ type: 'result', id: m.id, idx: res.idx.slice(), cls: res.cls.slice(), off: Array.from(res.off), stats: res.stats, pass1: p1 }, [p1.buffer]);
+    } else if (m.type === 'magnet') {            // the score every parcel gets (step 5), 1..255 on a log scale, 0 = never built
+      await ensureEngine(m.id);
+      const FD = GV.fields(m.params.seed), U = GV.score(m.params, FD.F, FD.V), N = U.length, out = new Uint8Array(N), smp = [];
+      for (let i = 0; i < N; i += 53) if (U[i] > 0) smp.push(Math.log(U[i]));
+      smp.sort((a, b) => a - b);
+      const lo = smp[Math.floor(smp.length * 0.02)], hi = smp[Math.floor(smp.length * 0.997)];
+      for (let i = 0; i < N; i++) if (U[i] > 0) out[i] = 1 + Math.max(0, Math.min(254, Math.round((Math.log(U[i]) - lo) / (hi - lo) * 254)));
+      postMessage({ type: 'result', id: m.id, magnet: out }, [out.buffer]);
     } else if (m.type === 'compare') {
       await ensureEngine(m.id);
       const fin = await ensureFinal(m.id), v = runs.get(m.runId);
