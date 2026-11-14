@@ -38,7 +38,7 @@ let FIELDMODE = 'move', FROZEN = false, FLINES = null;
 function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
   try { localStorage.setItem('ts7-theme', t); } catch (e) {}
-  baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
+  baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; PARKIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
 
 /* ------------------------------------------------------------------ data */
 function dec(s, scale){ const b = atob(s), n = b.length >> 1, out = new Float32Array(n);
@@ -242,7 +242,7 @@ function fieldAtT(x, y){ const q = sampleCS(TC, TS, x, y); if (!q || q[0] * q[0]
 function flowAt(x, y){ const q = sampleCS(CC, CS, x, y); if (!q) return null; const c = Math.floor(x / cell), r = Math.floor(y / cell), w = CWt[r * nx + c] || 1; return [0.5 * Math.atan2(q[1], q[0]), Math.min(1, Math.hypot(q[0], q[1]) / w)]; }
 
 /* ------------------------------------------------------------------ the streets: a growth simulation (generators) */
-let LINES = [], HASH = new Map(), CULVERTS = [], XNODES = [], GROW = null, GEN = null, GROWING = false, STEPS = 0, PHASE = '', CELLS = null, CELLIMG = null, FINISHED = false;
+let LINES = [], HASH = new Map(), CULVERTS = [], XNODES = [], PARKS = null, PARKIMG = null, GROW = null, GEN = null, GROWING = false, STEPS = 0, PHASE = '', CELLS = null, CELLIMG = null, FINISHED = false;
 // (v8.7) the process mode drives the growth from outside: PROC.stopAt(phase) pauses the generator at a phase boundary, PROC.record()
 // is called once a frame while it grows, PROC.onStop / PROC.onDone when it pauses or ends; SCRUB (a recorded frame) draws the net as it was
 let PROC = null, PH0 = '', SCRUB = null;
@@ -348,7 +348,7 @@ function inLandNoHoles(x, y){ return D.pieces.some(p => inRing([x, y], p.outer) 
 function start(animated){ GEN = MODE === 'B' ? growBranching() : growAll(); GROWING = true; if (!animated){ runAll(); } }
 function runAll(){ if (!GEN) return; let r; do { r = GEN.next(); } while (!r.done); GEN = null; GROWING = false; }
 function resetNet(){
-  LINES = []; HASH = new Map(); CULVERTS = []; XNODES = []; BRIDGES = []; STEPS = 0; CELLS = null; CELLIMG = null; FINISHED = false; netDirty = true; widthDirty = true; GROW = null;
+  LINES = []; HASH = new Map(); CULVERTS = []; XNODES = []; PARKS = null; PARKIMG = null; BRIDGES = []; STEPS = 0; CELLS = null; CELLIMG = null; FINISHED = false; netDirty = true; widthDirty = true; GROW = null;
   TIPS = []; TIPMAP = new Map(); EVENTS = []; BUDS = []; METR = null; NODES = new Map(); MNODES = new Map();
   HOLES = attractorsOn().filter(a => a.main && a.pull >= 2).filter(a => a.edge || [0, 1, 2, 3].every(k => inLandNoHoles(a.x + 60 * Math.cos(k * PI / 2), a.y + 60 * Math.sin(k * PI / 2)))).map(a => ({ x: a.x, y: a.y, r: CIRCUS_R, edge: !!a.edge }));
   buildMask();
@@ -996,6 +996,22 @@ function squareEnds(){ let n = 0; rehashAll();
       if (endAngle(q.l, q.side, q.par, T) < 70){ R('still'); q.l.pts = keep; continue; }
       insertOn(q.par, T); rehashAll(); n++; ok = true; break; } }
   rehashAll(); netDirty = widthDirty = true; return n; }
+// (v8.24) a block the streets could not cut down (still over 4 ha that can be built on, among the corridors) is kept as
+// a park: green on the map, in the export and in the figures
+function markParks(maxHa){ maxHa = maxHa || 4; const { lab, W, H, c } = CELLS, BH = buildHa(), mask = new Uint8Array(W * H), list = [];
+  const ids = new Map(); for (let i = 0; i < BH.length; i++) if (BH[i] > maxHa) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0 }) - 1);
+  for (let i = 0; i < W * H; i++){ const k = ids.get(lab[i]); if (k === undefined) continue; mask[i] = 1; const q = list[k]; q.n++; q.x += (i % W + 0.5) * c; q.y += D.h - (((i / W) | 0) + 0.5) * c; }
+  for (const q of list){ q.ha = +(q.n * c * c / 1e4).toFixed(2); q.x /= q.n || 1; q.y /= q.n || 1; delete q.n; }
+  PARKS = list.length ? { mask, W, H, c, list } : null; PARKIMG = null; return list.length; }
+function drawParks(g){ if (!PARKS || SCRUB) return;   // (not while a frame of the growth is shown)
+  if (!PARKIMG){ const { mask, W, H } = PARKS, oc = mk(); oc.width = W; oc.height = H; const gg = oc.getContext('2d'), im = gg.createImageData(W, H), col = THEME === 'dark' ? [48, 209, 88, 70] : [52, 168, 83, 64];
+    for (let i = 0; i < W * H; i++){ if (!mask[i]) continue; im.data[4 * i] = col[0]; im.data[4 * i + 1] = col[1]; im.data[4 * i + 2] = col[2]; im.data[4 * i + 3] = col[3]; }
+    gg.putImageData(im, 0, 0); PARKIMG = oc; }
+  g.save(); g.imageSmoothingEnabled = true; g.drawImage(PARKIMG, X(0), Y(D.h), PARKS.W * PARKS.c * view.s, PARKS.H * PARKS.c * view.s); g.restore(); }
+// a park for the export: its raster rows as rectangles (one MultiPolygon)
+function parkPolys(){ if (!PARKS) return []; const { mask, W, H, c } = PARKS, out = [];
+  for (let r = 0; r < H; r++){ let x0 = -1; for (let x = 0; x <= W; x++){ const on = x < W && mask[r * W + x]; if (on && x0 < 0) x0 = x; if (!on && x0 >= 0){ const y1 = D.h - r * c, y0 = y1 - c, a = x0 * c, b = x * c; out.push([[[a, y0], [b, y0], [b, y1], [a, y1], [a, y0]]]); x0 = -1; } } }
+  return out; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1407,7 +1423,7 @@ function* growBranching(){
     crossJoin(); squareEnds();   // (v8.23) crossroads across the main streets, and square junctions
     roundKinks(); smoothBends(); tidyNet();
     rehashAll();
-    PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); return; }
+    PHASE = 'done'; FINISHED = true; readCells(); markParks(4); measures(); finishRun(); return; }
 }
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
     for (let round = 0; round < 3; round++){ let made = 0;
@@ -1444,12 +1460,12 @@ function finishRun(){
       l.ends.forEach((e, sd) => { const p = sd === 0 ? Pp[Pp.length - 1] : Pp[0]; if (e === 'T') EVENTS.push({ x: p[0], y: p[1], k: 'join' }); if (e === 'Y') EVENTS.push({ x: p[0], y: p[1], k: 'merge' }); }); } }
   for (const q of MEAS.xpts) EVENTS.push({ x: q[0], y: q[1], k: 'cross' });
   METR = metrics();
-  SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), xnodes: XNODES.slice(), events: EVENTS.slice(), holes: HOLES.slice(),
+  SNAP[MODE] = { key: settingsKey(), m: METR, culverts: CULVERTS.slice(), xnodes: XNODES.slice(), parks: PARKS, events: EVENTS.slice(), holes: HOLES.slice(),
     lines: LINES.filter(l => !l.dead).map(l => ({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: !!l.circus, ring: !!l.ring, hits: l.hits || 0, born: l.born, flood: !!l.flood })) };
   drawCmp(); }
 function restore(sn){ GEN = null; GROWING = false; LINES = []; HASH = new Map(); TIPS = []; TIPMAP = new Map(); GROW = null; GHOST = null;
   for (const l of sn.lines) addLine({ level: l.level, fam: l.fam, pts: l.pts.map(p => p.slice()), ends: l.ends.slice(), circus: l.circus, ring: l.ring, hits: l.hits, born: l.born, flood: l.flood });
-  CULVERTS = sn.culverts.slice(); XNODES = (sn.xnodes || []).slice(); EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
+  CULVERTS = sn.culverts.slice(); XNODES = (sn.xnodes || []).slice(); PARKS = sn.parks || null; PARKIMG = null; EVENTS = sn.events.slice(); HOLES = sn.holes.slice(); buildMask(); FINISHED = true; readCells(); measures(); METR = sn.m;
   netDirty = widthDirty = baseDirty = true; }
 function setMode(m){ if (GEN){ GEN = null; GROWING = false; } MODE = m; const sn = SNAP[m];
   if (sn && sn.key === settingsKey()) restore(sn); else start(true); syncTools(); drawCmp(); }
@@ -1475,7 +1491,7 @@ function metrics(){ const M = MEAS; let Ls = 0, Cs = 0, al = 0, alL = 0;
     for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k], sl = Math.hypot(b[0] - a[0], b[1] - a[1]); if (sl < 0.5) continue; const t = fieldAtT((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); if (t === null) continue;
       let dd = Math.abs(Math.atan2(b[1] - a[1], b[0] - a[0]) - t) % (PI / 2); dd = Math.min(dd, PI / 2 - dd); al += dd * sl; alL += sl; } }
   let area = 0; for (const st of streetWidths()) for (let k = 1; k < st.pts.length; k++) area += Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1]) * st.w[k];
-  return { km1: M.km1, km2: M.km2, dens: M.dens, T: M.T, Y: M.Y, X: M.X, loose: M.loose, sin: Cs ? Ls / Cs : 1, align: alL ? al / alL * 180 / PI : 0, cells: M.cellsN, med: M.med, sides: cellSides(), road: 100 * area / landArea() }; }
+  return { km1: M.km1, km2: M.km2, dens: M.dens, T: M.T, Y: M.Y, X: M.X, loose: M.loose, sin: Cs ? Ls / Cs : 1, align: alL ? al / alL * 180 / PI : 0, cells: M.cellsN, med: M.med, parks: M.parkHa || 0, sides: cellSides(), road: 100 * area / landArea() }; }
 const CMP_ROWS = [['-', 'the streets'], ['km1', 'main, km', 1], ['km2', 'second, km', 1], ['dens', 'km per km²', 1], ['road', 'land in streets, %', 0], ['sin', 'sinuosity (length ÷ chord)', 2], ['align', 'off the field, ° (mean)', 1],
   ['-', 'the junctions'], ['T', 'T, %', 0], ['Y', 'Y, %', 0], ['X', 'X, %', 0], ['loose', 'dead ends', 0],
   ['-', 'the cells'], ['cells', 'cells', 0], ['med', 'median, ha', 2], ['s3', '3 junctions round (or fewer), %', 0], ['s4', '4, %', 0], ['s5', '5, %', 0], ['s6', '6, %', 0], ['s7', '7 or more, %', 0]];
@@ -1524,10 +1540,11 @@ function measures(){ floodNum();
   for (const p of XNODES){ const k2 = Math.round(p[0]) + ',' + Math.round(p[1]); if (!seen.has(k2)){ seen.add(k2); X++; xpts.push(p.slice()); } }   // (v8.22) a crossing made a shared point by tidyNet is still an X
   const J = T + Y + X || 1, area = D.pieces.reduce((s, p) => s + Math.abs(polyArea(p.outer)), 0) / 1e6;
   const ok = CELLS ? CELLS.areas.filter(a => a > 0.05).sort((a, b) => a - b) : [], med = ok.length ? ok[Math.floor(ok.length / 2)] : 0;
-  MEAS = { km1: km[1], km2: km[2], dens: (km[1] + km[2]) / area, T: 100 * T / J, Y: 100 * Y / J, X: 100 * X / J, loose, xpts, cellsN: ok.length, med };
+  const parkHa = PARKS ? PARKS.list.reduce((s, q) => s + q.ha, 0) : 0;
+  MEAS = { parkHa, parkN: PARKS ? PARKS.list.length : 0, km1: km[1], km2: km[2], dens: (km[1] + km[2]) / area, T: 100 * T / J, Y: 100 * Y / J, X: 100 * X / J, loose, xpts, cellsN: ok.length, med };
   $('num').innerHTML = '<b>' + km[1].toFixed(1) + '</b> km main · <b>' + km[2].toFixed(1) + '</b> km second · <b>' + ((km[1] + km[2]) / area).toFixed(1) + '</b> km/km² (towns 12–16)' + NL +
     'junctions: T <b>' + Math.round(100 * T / J) + '</b> % · Y <b>' + Math.round(100 * Y / J) + '</b> % · X <b>' + Math.round(100 * X / J) + '</b> %' + NL +
-    'loose ends <b>' + loose + '</b> · culverts ' + CULVERTS.length + (ok.length ? ' · <b>' + ok.length + '</b> cells, median <b>' + med.toFixed(2) + '</b> ha' : ''); }
+    'loose ends <b>' + loose + '</b> · culverts ' + CULVERTS.length + (parkHa ? ' · parks <b>' + parkHa.toFixed(1) + '</b> ha' : '') + (ok.length ? ' · <b>' + ok.length + '</b> cells, median <b>' + med.toFixed(2) + '</b> ha' : ''); }
 function polyArea(r){ let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); return a / 2; }
 function readCells(){ const c = 5, W = Math.ceil(D.w / c), H = Math.ceil(D.h / c), occ = new Uint8Array(W * H), ins = new Uint8Array(W * H);
   const mark = (x, y) => { const X_ = Math.floor(x / c), Y_ = Math.floor((D.h - y) / c); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++){ const xx = X_ + i, yy = Y_ + j; if (xx >= 0 && yy >= 0 && xx < W && yy < H) occ[yy * W + xx] = 1; } };
@@ -1570,7 +1587,7 @@ function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillSty
   // the land: no colour of its own, a quiet ground under the field (no yellow)
   g.save(); g.shadowColor = bm ? 'rgba(0,0,0,0)' : P.landShadow; g.shadowBlur = 14; g.fillStyle = P.land; g.globalAlpha = bm ? (THEME === 'dark' ? 0.32 : 0.3) : THEME === 'dark' ? 0.9 : 0.82;
   g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.fill('evenodd'); g.restore();
-  drawEnv(g); drawFlood(g); drawGreen(g);
+  drawEnv(g); drawFlood(g); drawGreen(g); drawParks(g);
   if (UNDER !== 'off') drawUnder(g);
   if ($('lCells').checked && CELLS) drawCells(g);
   if ($('lCross').checked) drawCrosses(g);
@@ -2021,6 +2038,7 @@ $('bGeo').onclick = () => { const SW = new Map(streetWidths().map(st => [st.pts,
   const F = LINES.filter(l => !l.dead && l.level > 0).map(l => { const ws = SW.get(l.pts) || [], mn = ws.length ? Math.min(...ws) : null, mx = ws.length ? Math.max(...ws) : null;
     return { type: 'Feature', properties: { layer: l.circus ? 'circus' : 'level ' + l.level, width_m: ws.length ? Math.round(10 * ws.reduce((a, b) => a + b, 0) / ws.length) / 10 : null, width_min_m: mn, width_max_m: mx }, geometry: { type: 'LineString', coordinates: l.pts.map(bng) } }; })
     .concat(CULVERTS.map((c, k) => ({ type: 'Feature', properties: { layer: 'culvert', n: k + 1 }, geometry: { type: 'Point', coordinates: bng([c.x, c.y]) } })))
+    .concat(PARKS ? [{ type: 'Feature', properties: { layer: 'park', ha: +PARKS.list.reduce((s, q) => s + q.ha, 0).toFixed(2), n: PARKS.list.length }, geometry: { type: 'MultiPolygon', coordinates: parkPolys().map(p => p.map(r => r.map(bng))) } }] : [])
     .concat(D.fixed.bridges.map((b, k) => ({ type: 'Feature', properties: { layer: 'bridge', n: k + 1 }, geometry: { type: 'LineString', coordinates: b.map(bng) } })));
   const set = {}; for (const id of FIELD_IDS.concat(NET_IDS)) set[id] = +$(id).value; set.width_min = v('wMin'); set.width_max = v('wMax'); set.width_by = $('wBy').value; set.width_snap = $('wSnap').checked; set.merge = $('merge').checked; set.windOn = $('windOn').checked; set.wind_of = YEAR[MONTH].name;
   set.flood = floodOn() ? { source: 'EA max(RoFSW, RoFRS)', keep_clear_from_class: +$('fAvoid').value, along_the_flow: v('fW') } : null; set.mode = MODE; set.metrics = METR; set.attractors = { where: AMODE, points: ATTR.map(a => ({ kind: a.kind, at: bng([a.x, a.y]) })) }; save((D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, settings: set, features: F }), 'application/geo+json'); };
