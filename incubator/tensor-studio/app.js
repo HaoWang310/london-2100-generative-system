@@ -1898,7 +1898,7 @@ let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basema
 // theme, until the user picks a basemap here (then that choice is kept)
 const HOSTVIEW = (window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function') ? window.__TS.host.view : null;
 if (!HOSTVIEW && BASEMAP === 'map') BASEMAP = 'none';
-if (HOSTVIEW){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen'); } catch (e) {} if (!chosen) BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }
+if (HOSTVIEW){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen') && BASEMAPS[localStorage.getItem('tensorStudio.basemap')]; } catch (e) {} if (!chosen) BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }
 // the host's map follows this view: centre, zoom and bearing worked out from the plan's grid (British National Grid) at the view centre
 let lastHostView = '';
 function pushHostView(){ if (!HOSTVIEW || BASEMAP !== 'map') return; const geo = window.__TS && window.__TS.geo; if (!geo) return;

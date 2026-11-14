@@ -1,4 +1,4 @@
-/* Tensor Studio opened over the London map (v3.38): the site the user drew, with the map's own OSM features
+/* Tensor Studio opened over the London map (v3.38.1): the site the user drew, with the map's own OSM features
  * and the OS Terrain 50 elevation, handed to ../../tensor-studio/index.html in an iframe (same origin) through
  * window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang, close, fail, view}. Tensor Studio builds its site
  * from that (its scripts/site_builder.js) and reads the EA flood risk itself. Copied from
@@ -105,14 +105,16 @@ export const tensorStudioOpen = () => !!overlay;
 
 /* ---------------------------------------------------------------- (v3.38) the map under Tensor Studio follows its view */
 let hostMap = null;
+function takeMap(map){   // remember where the map was and hide the red selection while Tensor Studio is open
+  hostMap = map;
+  if (camera) return;
+  camera = {center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch()};
+  hiddenLayers = (map.getStyle()?.layers || []).map(l => l.id).filter(id => id.startsWith('site-selection-'));
+  for (const id of hiddenLayers){ try { map.setLayoutProperty(id, 'visibility', 'none'); } catch (error){} }
+}
 function followView(v){
   if (!hostMap) return;
-  if (!v){ restoreMap(); return; }   // Tensor Studio switched to its own basemap: the map goes back to where it was
-  if (!camera){
-    camera = {center: hostMap.getCenter(), zoom: hostMap.getZoom(), bearing: hostMap.getBearing(), pitch: hostMap.getPitch()};
-    hiddenLayers = (hostMap.getStyle()?.layers || []).map(l => l.id).filter(id => id.startsWith('site-selection-'));
-    for (const id of hiddenLayers){ try { hostMap.setLayoutProperty(id, 'visibility', 'none'); } catch (error){} }
-  }
+  if (!v){ if (camera){ try { hostMap.jumpTo(camera); } catch (error){} } return; }   // Tensor Studio shows its own basemap: the map rests where it was
   try { hostMap.jumpTo({center: [v.lng, v.lat], zoom: Math.max(0, Math.min(22, v.zoom)), bearing: v.bearing, pitch: 0}); } catch (error){}
 }
 function restoreMap(){
@@ -121,6 +123,23 @@ function restoreMap(){
   hiddenLayers = [];
   try { hostMap.jumpTo(camera); } catch (error){}
   camera = null;
+}
+/* (v3.38.1) the map only holds the vector tiles of its current view, so before the site's streets, water and buildings
+ * are read, the view is set to the site and its 450 m surround at a zoom that carries buildings (14+), and the tiles
+ * are given a moment to arrive */
+function loadedAround(map, ring, padM = 450){
+  return new Promise(resolve => {
+    const lats = ring.map(p => p[1]), lngs = ring.map(p => p[0]), lat = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const dLat = padM / 111320, dLng = padM / (111320 * Math.max(.15, Math.cos(lat * Math.PI / 180)));
+    try {
+      map.fitBounds([[Math.min(...lngs) - dLng, Math.min(...lats) - dLat], [Math.max(...lngs) + dLng, Math.max(...lats) + dLat]], {padding: 20, duration: 0, bearing: 0, pitch: 0});
+      if (map.getZoom() < 14) map.jumpTo({zoom: 14});
+    } catch (error){ resolve(); return; }
+    let done = false; const finish = () => { if (!done){ done = true; resolve(); } };
+    const timer = setTimeout(finish, 8000);
+    const check = () => { if (map.loaded() && map.areTilesLoaded()){ clearTimeout(timer); finish(); } else if (!done) map.once('idle', check); };
+    map.once('idle', check);
+  });
 }
 function showFrame(){
   const wait = overlay.querySelector('#tensorStudioWait'); if (wait) wait.remove();
@@ -147,12 +166,13 @@ export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWi
   if (!ring || ring.length < 4) throw new Error('Close the red site boundary first');
   ensureOverlay();
   try {
+    takeMap(map);
+    await loadedAround(map, ring);
     const features = collectSiteFeatures(map, ring);
     const elevation = await demSampler({url: new URL(assetUrl('assets/drainage_area/dem50_log16.webp'), location.href).href,
       bounds: demBounds, width: demWidth, height: demHeight}).catch(error => { console.warn('Tensor Studio: no elevation', error); return null; });
     session = {say};
     if (!frame && overlay && !overlay.isConnected) ensureOverlay();
-    hostMap = map;
     window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail, view: followView};
     showFrame();
   } catch (error){ session = {say}; fail(error); }
