@@ -19,6 +19,9 @@
 import { toWGS84, truncatePolyline, bbox, centroid, pointInPolygon } from '../geo-core/index.js';
 import { ROAD_STYLE, AREA_STYLE, HIERARCHY_ORDER, restyleDark } from './palette.js';
 import { PROVIDERS, DEFAULT_PROVIDER } from './providers.js';
+import { loadLondonMap } from './london-map.js';
+import { mountDisplayPanel } from './display-panel.js';
+import { t } from '../i18n/index.js';
 
 // Same version and loading method as google-map-live (verified in production).
 const MAPLIBRE_VERSION = '6.13.0';
@@ -85,17 +88,33 @@ async function createMapLibreViewer(el, opts) {
     map.once('error', e => { if (!map.isStyleLoaded()) { clearTimeout(timer); reject(e.error || new Error('style error')); } });
   });
 
-  // Mute the basemap so data layers carry the colour.
-  restyleDark(map);
-  for (const layer of map.getStyle().layers) {
-    if (layer.type === 'symbol' && /poi|housenum/.test(layer.id)) map.setLayoutProperty(layer.id, 'visibility', 'none');
+  // The London map's features (incubator/google-map-live, read at run time): colour themes, lighting,
+  // weather, 3D city, shadows, trees, vehicles, search, analysis layers. They capture the basemap's own
+  // layers, so they load before anything else is added. If they cannot load, the muted dark basemap stays.
+  const overlays = new Map();
+  const overlayFloor = () => (map.getStyle()?.layers || []).find(l => [...overlays.keys()].some(p => l.id.startsWith(`${p}-`)))?.id;
+  let lm = null;
+  try {
+    lm = await withTimeout(loadLondonMap({ map, maplibregl, version: new URL(import.meta.url).search, analysisBefore: overlayFloor, theme: 'dark',
+      onChange: what => { lmPanel?.update(what); if (what === 'view') opts.onView3D?.(lm.state.view3D); } }), opts.timeoutMs ?? 12000);
+  } catch (e) {
+    console.warn('London map features unavailable; using the plain basemap:', e.message || e);
+    lm = null;
+  }
+  let lmPanel = null;
+  if (!lm) {
+    // Mute the basemap so data layers carry the colour.
+    restyleDark(map);
+    for (const layer of map.getStyle().layers) {
+      if (layer.type === 'symbol' && /poi|housenum/.test(layer.id)) map.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
   }
 
   const empty = fc([]);
   for (const id of ['ghost', 'children', 'boundary', 'roads', 'nodes', 'labels']) map.addSource(`l2100-${id}`, { type: 'geojson', data: empty });
 
   const firstSymbol = map.getStyle().layers.find(l => l.type === 'symbol')?.id;
-  const hasBuildings = map.getStyle().sources.openmaptiles;
+  const hasBuildings = !lm && map.getStyle().sources.openmaptiles;
   if (hasBuildings) {
     map.addLayer({
       id: 'l2100-buildings', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: 13,
@@ -160,14 +179,16 @@ async function createMapLibreViewer(el, opts) {
   map.on('click', 'l2100-children-fill', e => opts.onSelect?.(e.features[0].properties.cid));
   map.on('dblclick', 'l2100-children-fill', e => { e.preventDefault(); opts.onEnter?.(e.features[0].properties.cid); });
 
-  // Module overlays sit under the labels and under the workspace's own layers and 3D buildings.
-  const overlays = new Map();
-  const overlayBefore = () => (map.getLayer('l2100-buildings') ? 'l2100-buildings' : firstSymbol);
+  // Module overlays sit under the labels and under the workspace's own layers and 3D buildings;
+  // the analysis layers go under the overlays.
+  const overlayBefore = () => (lm && map.getLayer(lm.buildingLayer) ? lm.buildingLayer : map.getLayer('l2100-buildings') ? 'l2100-buildings' : firstSymbol);
+  if (lm) lmPanel = mountDisplayPanel(el, lm, { source: t('dp.source') });
 
   return {
     kind: 'maplibre',
     map,
-    addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore()); },
+    addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore()); lm?.restack(); },
+    london: lm,
     removeOverlay(id) { overlays.get(id)?.detachMapLibre?.(); overlays.delete(id); },
     redraw() { for (const o of overlays.values()) o.sync?.(); map.triggerRepaint(); },
     setScene(scene) {
@@ -196,6 +217,7 @@ async function createMapLibreViewer(el, opts) {
       map.fitBounds([[x0, y0], [x1, y1]], { padding: 48, duration: animate ? 900 : 0, pitch: map.getPitch() });
     },
     setView3D(on) {
+      if (lm) { lm.setCityView(on); return; }
       if (hasBuildings) map.setLayoutProperty('l2100-buildings', 'visibility', on ? 'visible' : 'none');
       map.easeTo({ pitch: on ? 58 : 0, bearing: on ? -18 : 0, duration: 700 });
     },
