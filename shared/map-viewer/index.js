@@ -93,7 +93,7 @@ async function createMapLibreViewer(el, opts) {
   // layers, so they load before anything else is added. If they cannot load, the muted dark basemap stays.
   const overlays = new Map();
   const overlayFloor = () => (map.getStyle()?.layers || []).find(l => [...overlays.keys()].some(p => l.id.startsWith(`${p}-`)))?.id;
-  let lm = null;
+  let lm = null, lmPanel = null;
   try {
     lm = await withTimeout(loadLondonMap({ map, maplibregl, version: new URL(import.meta.url).search, analysisBefore: overlayFloor, theme: 'dark',
       onChange: what => { lmPanel?.update(what); if (what === 'view') opts.onView3D?.(lm.state.view3D); } }), opts.timeoutMs ?? 12000);
@@ -101,7 +101,6 @@ async function createMapLibreViewer(el, opts) {
     console.warn('London map features unavailable; using the plain basemap:', e.message || e);
     lm = null;
   }
-  let lmPanel = null;
   if (!lm) {
     // Mute the basemap so data layers carry the colour.
     restyleDark(map);
