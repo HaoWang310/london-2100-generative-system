@@ -4,7 +4,12 @@
 
 import { classAt } from './cells.js';
 
-const GROUND = ['aonb', 'towns', 'absorbed', 'water', 'belt'];    // the incubator's order, bottom to top
+// The incubator's ground layers, bottom to top. Its PNGs are greys for a black page; on the
+// OSM basemap (itself grey) each is tinted so it can be told apart. Labels: controls.js I18N.
+export const GROUND = [
+  ['aonb', 'National Landscape', '#4f7a45', 0.55], ['towns', 'Existing towns', '#a7a7ad', 0.55],
+  ['absorbed', 'Towns the loop absorbs', '#d9b98a', 0.75], ['water', 'Water', '#4d86b3', 0.8], ['belt', 'Green Belt boundary', '#9fd18a', 0.9]
+];
 // the incubator's warm ramp for the magnet field
 const WARM = [[0, 0, 0], [42, 22, 13], [110, 48, 25], [194, 82, 58], [239, 166, 92], [242, 217, 158]];
 
@@ -18,12 +23,19 @@ function ramp(stops, t) {
 
 /** The incubator's ground layers (already coloured PNGs over D.view), stacked into one canvas. */
 export async function groundImage(D, base) {
-  const V = D.view, ims = await Promise.all(GROUND.map(n => new Promise(res => {
+  const V = D.view, ims = await Promise.all(GROUND.map(([n]) => new Promise(res => {
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => res(im); im.onerror = () => res(null); im.src = new URL(D.layers[n], base).href;
   })));
   const c = canvas(V.W, V.H), g = c.getContext('2d');
-  for (const im of ims) if (im) g.drawImage(im, 0, 0, V.W, V.H);
+  const t = canvas(V.W, V.H), tg = t.getContext('2d');
+  ims.forEach((im, k) => {
+    if (!im) return;
+    tg.globalCompositeOperation = 'copy'; tg.drawImage(im, 0, 0, V.W, V.H);           // the layer's shape (its alpha) ...
+    tg.globalCompositeOperation = 'source-in'; tg.fillStyle = GROUND[k][2]; tg.fillRect(0, 0, V.W, V.H);   // ... in its colour
+    g.globalAlpha = GROUND[k][3]; g.drawImage(t, 0, 0);
+  });
+  g.globalAlpha = 1;
   return { canvas: c, rect: [V.e0, V.n1, V.e1, V.n0] };
 }
 
