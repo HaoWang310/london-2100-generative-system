@@ -28,10 +28,11 @@
 <div id="cover"><div><b>London 2100 · VR</b><span id="coverText">正在后台加载伦敦地图…</span></div></div>
 <div id="err"></div>
 <script type="module">
-import { findMap } from './src/map_bridge.js?v=0.11';
-import { openFromMap } from './src/from_map.js?v=0.11';
-import { open } from './src/xr_view.js?v=0.11';
-import { streamApi } from './src/stream.js?v=0.11';
+import { findMap } from './src/map_bridge.js?v=0.12';
+import { openFromMap } from './src/from_map.js?v=0.12';
+import { open } from './src/xr_view.js?v=0.12';
+import { streamApi } from './src/stream.js?v=0.12';
+import { mapPainter } from './src/map_painter.js?v=0.12';
 const KEY = 'london2100.vr.at', q = new URLSearchParams(location.search);
 const frame = document.getElementById('map'), btn = document.getElementById('vr'), err = document.getElementById('err'), cover = document.getElementById('cover'), coverText = document.getElementById('coverText');
 const mapQuery = new URLSearchParams(location.search); for (const k of ['at', 'map', 'mode', 'tiles']) mapQuery.delete(k);
@@ -56,11 +57,15 @@ async function goVR(at){
   try {
     if (!CAPTURE){
       // streaming: no need to wait for the map unless we take its place
-      if (!at){ const m = await waitForMap(); const c = m.getCenter(); at = { lat: c.lat, lng: c.lng, zoom: Math.max(15, m.getZoom()) }; }
+      const m = await waitForMap();
+      if (!at){ const c = m.getCenter(); at = { lat: c.lat, lng: c.lng, zoom: Math.max(15, m.getZoom()) }; }
       const zh = lang() === 'zh';
-      const api = streamApi(at.lat, at.lng, { tiles: q.get('tiles') || undefined });
+      // the ground in the app's own look (theme, labels, layers that are on); falls back to the plain OSM paint
+      coverText.textContent = zh ? '准备 app 地图样式…' : 'Preparing the map style…';
+      let painter = null; try { painter = await mapPainter(m, frame); } catch (e){ console.warn('map style', e); }
+      const api = streamApi(at.lat, at.lng, { tiles: q.get('tiles') || undefined, painter });
       open(api, lang(), { closeLabel: zh ? '地图' : 'Map', title: 'London 2100 · OSM · ' + at.lat.toFixed(4) + ', ' + at.lng.toFixed(4) + (zh ? ' · 移动加载' : ' · streaming'),
-        onClose: async (info) => { cover.hidden = true;   // the map opens where you were looking in VR
+        onClose: async (info) => { cover.hidden = true; painter?.dispose();   // the map opens where you were looking in VR
           const p = info?.focus ? { ...api.stream.toLatLng(info.focus[0], info.focus[1]), zoom: at.zoom || 15.5 } : at; remember(p);
           try { const m = await waitForMap(8000); m.jumpTo({ center: [p.lng, p.lat], zoom: p.zoom }); } catch (e){} } });
       cover.hidden = true; remember(at); return;

@@ -175,12 +175,12 @@ export function open(api, lang = 'zh', opt = {}){
   // state
   const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
   let failN = 0, lastErr = '';
-  const streamInfo = () => { let n = 0, c = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; } return { tiles: n, count: c, loading: loadingN, failed: failN, err: lastErr }; };
+  const streamInfo = () => { let n = 0, c = 0, st2 = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; if (T.styled) st2++; } return { tiles: n, count: c, styled: st2, loading: loadingN, failed: failN, err: lastErr }; };
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
   const streamLine = () => { const i = streamInfo(); return lang === 'zh'
-      ? `移动加载 · 已加载 ${i.tiles} 块 · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '')
-      : `streaming · ${i.tiles} tiles · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : ''); };
+      ? `移动加载 · 已加载 ${i.tiles} 块` + (i.styled ? `（${i.styled} 块已用 app 样式）` : '') + ` · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '')
+      : `streaming · ${i.tiles} tiles` + (i.styled ? ` (${i.styled} in the app's look)` : '') + ` · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : ''); };
   const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? streamLine() + ' · ' : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
@@ -222,8 +222,9 @@ export function open(api, lang = 'zh', opt = {}){
     for (const [k, T] of tiles) if (!keep.has(k)){ freeTile(T); tiles.delete(k); }
     for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || tiles.size >= 40) break;
       const T = { ready: false, count: 0 }; tiles.set(k, T); loadingN++; status();
-      api.stream.load(k).then(d => { loadingN--; if (tiles.get(k) !== T) return;
-        T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status(); })
+      api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
+        T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status();
+        if (d.upgrade) d.upgrade.then(cv => { if (!cv || tiles.get(k) !== T) return; gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); }).catch(e => console.warn('map style tile', e)); })
         .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
           setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
   }
