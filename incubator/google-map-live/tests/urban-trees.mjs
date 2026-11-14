@@ -98,3 +98,16 @@ console.log('PASS urban trees: classes, density, water, determinism, models ('+t
   assert.equal(greenClassOf('landuse',{class:'pitch'}),null);
   console.log('PASS street trees ('+out.length+')');
 }
+
+// Crowns never reach into buildings: trees near a wall shrink or go.
+{
+  const block={rings:[[[0,0],[60,0],[60,60],[0,60],[0,0]]]};
+  const out=scatterTrees([{cls:'wood',rings:[[[-40,-40],[100,-40],[100,100],[-40,100],[-40,-40]]]}],[],{buildings:[block]});
+  const gap=t=>{
+    const dx=Math.max(0-t.x,0,t.x-60),dy=Math.max(0-t.y,0,t.y-60);
+    return Math.hypot(dx,dy);
+  };
+  assert.ok(out.length>50,'wood around the block still grows');
+  assert.ok(out.every(t=>gap(t)>t.r),'no crown touches the building');
+  console.log('PASS building clearance ('+out.length+')');
+}

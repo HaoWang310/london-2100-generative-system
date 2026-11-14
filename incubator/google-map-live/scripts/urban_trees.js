@@ -115,6 +115,22 @@ export function polygonIndex(polys,cell=60){
         if(pointInPolygon(x,y,rings))return true;
       }
       return false;
+    },
+    /* Inside a polygon, or within r metres of one. */
+    near(x,y,r){
+      const seen=new Set(grid.get('big')||[]);
+      for(let i=Math.floor((x-r)/cell);i<=Math.floor((x+r)/cell);i++)
+        for(let j=Math.floor((y-r)/cell);j<=Math.floor((y+r)/cell);j++)
+          for(const id of grid.get(i+','+j)||[])seen.add(id);
+      for(const id of seen){
+        const {rings,box}=items[id];
+        if(x<box[0]-r||x>box[2]+r||y<box[1]-r||y>box[3]+r)continue;
+        if(pointInPolygon(x,y,rings))return true;
+        for(const ring of rings)
+          for(let k=1;k<ring.length;k++)
+            if(segDist(x,y,ring[k-1][0],ring[k-1][1],ring[k][0],ring[k][1])<r)return true;
+      }
+      return false;
     }
   };
 }
@@ -207,10 +223,12 @@ export function streetTreeSlots(roads,{gridOffset=[0,0],bounds=null}={}){
  *   pass gridOrigin so cells are anchored to the world, not the view).
  * water: [{rings}] in the same metres.
  * roads: [{cls, coords}] for street trees and road clearance.
- * exclude: [{rings}] where no tree may stand (buildings, airports, rail land).
+ * exclude: [{rings}] where no tree may stand (airports, rail land).
+ * buildings: [{rings}]; neither trunk nor crown may touch one (a tree too
+ *   close is made smaller, or dropped).
  * Returns [{x,y,cls,h,r,conifer,tone}]
  */
-export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=null,roads=[],exclude=[]}={}){
+export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=null,roads=[],exclude=[],buildings=[]}={}){
   const cells=new Map();
   const [gx,gy]=gridOffset;
   for(const area of areas){
@@ -256,6 +274,17 @@ export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=
   const blocked=polygonIndex([...water,...exclude]);
   const onRoad=roadIndex(roads);
   trees=trees.filter(t=>!blocked.contains(t.x,t.y)&&!onRoad.blocked(t.x,t.y,t.cls==='street'?0.8:1.5));
+  if(buildings.length){
+    const built=polygonIndex(buildings,40);
+    const clear=(x,y,r)=>!built.near(x,y,r);
+    trees=trees.filter(t=>{
+      // Model crowns reach about 1.1 x r; keep half a metre off the wall.
+      if(clear(t.x,t.y,t.r*1.12+0.5))return true;
+      if(!clear(t.x,t.y,t.r*0.6*1.12+0.5))return false;
+      t.h*=0.65;t.r*=0.6;t.width*=0.92;
+      return true;
+    });
+  }
   if(trees.length>maxTrees){
     // Keep a stable, evenly spread subset.
     trees.sort((a,b)=>hash01(Math.round(a.x),Math.round(a.y),7)-hash01(Math.round(b.x),Math.round(b.y),7));
@@ -324,6 +353,7 @@ export function treeTint(t){
 
 export function createUrbanTrees(map,{
   sourceId='openmaptiles',
+  buildingSources=[],
   createRenderer,
   minZoom=15.5,
   maxTrees=3000,
@@ -356,7 +386,18 @@ export function createUrbanTrees(map,{
     take('water',(f,rings)=>water.push({rings}));
     const exclude=[];
     take('aeroway',(f,rings)=>exclude.push({rings}));
-    take('building',(f,rings)=>exclude.push({rings}));
+    const buildings=[];
+    take('building',(f,rings)=>buildings.push({rings}));
+    for(const id of buildingSources){
+      if(id===sourceId)continue;
+      let fs=[];
+      try{fs=map.querySourceFeatures(id,{sourceLayer:'building'});}catch(error){continue;}
+      for(const f of fs){
+        const g=f.geometry;
+        const polys=g?.type==='Polygon'?[g.coordinates]:g?.type==='MultiPolygon'?g.coordinates:[];
+        for(const poly of polys)buildings.push({rings:poly.map(ring=>ring.map(projector.toLocal))});
+      }
+    }
     take('landuse',(f,rings)=>{
       const c=f.properties?.class;
       if(c==='railway'||c==='industrial'||c==='quarry'||c==='landfill')exclude.push({rings});
@@ -373,7 +414,7 @@ export function createUrbanTrees(map,{
         ?'bridge_'+p.class:p.class;
       for(const line of parts)roads.push({cls,half:ROAD_CLEARANCE[p.class],coords:line.map(projector.toLocal)});
     }
-    return {areas,water,exclude,roads};
+    return {areas,water,exclude,roads,buildings};
   }
 
   function viewBounds(){
@@ -397,8 +438,8 @@ export function createUrbanTrees(map,{
       if(trees.length){trees=[];renderer.setTrees([],REF);onChange();}
       return;
     }
-    const {areas,water,exclude,roads}=readAreas();
-    trees=scatterTrees(areas,water,{maxTrees,bounds:viewBounds(),roads,exclude});
+    const {areas,water,exclude,roads,buildings}=readAreas();
+    trees=scatterTrees(areas,water,{maxTrees,bounds:viewBounds(),roads,exclude,buildings});
     renderer.setTrees(trees.map(t=>{
       const [lng,lat]=projector.toLngLat([t.x,t.y]);
       return {lng,lat,h:t.h,yaw:t.tone*Math.PI*2,variant:t.variant,tint:treeTint(t),width:t.width};
@@ -412,7 +453,7 @@ export function createUrbanTrees(map,{
     timer=setTimeout(rebuild,delay);
   }
   const onMoveEnd=()=>schedule(200);
-  const onData=e=>{if(e.sourceId===sourceId&&e.isSourceLoaded)schedule(400);};
+  const onData=e=>{if((e.sourceId===sourceId||buildingSources.includes(e.sourceId))&&e.isSourceLoaded)schedule(400);};
 
   return {
     setEnabled(on){
