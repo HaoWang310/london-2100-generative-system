@@ -91,7 +91,7 @@ function ensureOverlay(){
   overlay.innerHTML = '<div id="tensorStudioWait" role="status" aria-live="polite">' + 'Preparing the Tensor Studio site…' + '</div>';
   document.body.append(overlay);
   document.addEventListener('keydown', onKey);
-  // (v3.38.2) only the map itself shows through Tensor Studio's transparent page: the map page's own panels, controls
+  // (v3.39.0) only the map itself shows through Tensor Studio's transparent page: the map page's own panels, controls
   // and badges are hidden while it is open (visibility, so nothing moves), and come back on close
   if (!document.getElementById('tensorStudioHideUI')){
     const st = document.createElement('style'); st.id = 'tensorStudioHideUI';
@@ -134,7 +134,7 @@ function restoreMap(){
   try { hostMap.jumpTo(camera); } catch (error){}
   camera = null;
 }
-/* (v3.38.2) the map only holds the vector tiles of its current view, so before the site's streets, water and buildings
+/* (v3.39.0) the map only holds the vector tiles of its current view, so before the site's streets, water and buildings
  * are read, the view is set to the site and its 450 m surround at a zoom that carries buildings (14+), and the tiles
  * are given a moment to arrive */
 function loadedAround(map, ring, padM = 450){
@@ -170,7 +170,7 @@ function fail(error){
   closeTensorStudio();
 }
 
-export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWidth, demHeight, say, onClose}){
+export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWidth, demHeight, say, onClose, mapTheme}){
   onCloseCb = onClose || null;
   const ring = polygon?.[0];
   if (!ring || ring.length < 4) throw new Error('Close the red site boundary first');
@@ -183,7 +183,7 @@ export async function openTensorStudio({map, polygon, assetUrl, demBounds, demWi
       bounds: demBounds, width: demWidth, height: demHeight}).catch(error => { console.warn('Tensor Studio: no elevation', error); return null; });
     session = {say};
     if (!frame && overlay && !overlay.isConnected) ensureOverlay();
-    window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail, view: followView};
+    window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang: lang(), close: closeTensorStudio, fail, view: followView, mapTheme: mapTheme || null};
     showFrame();
   } catch (error){ session = {say}; fail(error); }
 }

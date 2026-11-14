@@ -9,7 +9,7 @@
  * site's OSM streets, rail, water, buildings and the OS Terrain 50 elevation. Tensor Studio reads the EA
  * flood risk itself. Esc, or its "back to the London map" button, returns here with the red boundary kept.
  */
-import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.38.2-english';
+import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.39.0-english';
 
 const SEL_SOURCE='site-selection-source';
 const SEL_FILL='site-selection-fill';
@@ -38,7 +38,7 @@ function pointInRingLngLat(p,ring){
   return inside;
 }
 
-export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,demHeight,say}){
+export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,demHeight,say,getMapTheme}){
   const $=id=>document.getElementById(id);
   let drawing=false,editing=false,dirty=false,confirmed=false,open=false;
   let vertices=[],polygon=null,dragIndex=-1,dragStart=null,dragMoved=false,dragPanWasEnabled=true;
@@ -118,7 +118,7 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
     if(!ready())return false;
     hideAreaPopup();open=true;setButtons();
     try{
-      await openTensorStudio({map,polygon:polygon.map(r=>closeRing(r)),assetUrl,demBounds,demWidth,demHeight,say,
+      await openTensorStudio({map,polygon:polygon.map(r=>closeRing(r)),assetUrl,demBounds,demWidth,demHeight,say,mapTheme:getMapTheme?.(),
         onClose:()=>{open=false;setButtons();}});
     }catch(error){open=false;setButtons();status('Tensor Studio could not open this site: '+(error?.message||error),true);return false;}
     return true;

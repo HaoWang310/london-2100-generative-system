@@ -62,6 +62,12 @@ const TINTS = [
   ['spectral', '光谱混合', 'Spectral Hybrid', ['#0B0B18', '#2E2863', '#6A5CFF', '#33D7C9', '#B7F5FF']] ];
 const BASEPAL = JSON.parse(JSON.stringify(PAL));
 let TINT = 'violet'; try { const t = localStorage.getItem('tensorStudio.tint'); if (TINTS.some(x => x[0] === t)) TINT = t; } catch (e) {}
+// (v8.40) opened from the London map: the look follows the map's own style (its basemap theme), dark only for "Dark tech",
+// and the particles take the palette nearest that style; both can still be changed here, for this visit only (not remembered)
+const FROM_MAP = !!(window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function');
+const MAP_STYLE = FROM_MAP ? (window.__TS.host.mapTheme || 'planning') : null;
+const MAP_TINT = { default: 'glacier', faded: 'sage', planning: 'mono', ocean: 'teal', warm: 'amber', vivid: 'spectral', dark: 'teal' };
+if (FROM_MAP) TINT = MAP_TINT[MAP_STYLE] || 'mono';
 const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
 // (v8.37) the wind's second colour: the complement of the palette's main colour, at the lightness of the wind's first colour
 const rgb2hsl = ([r, g, b]) => { r /= 255; g /= 255; b /= 255; const M = Math.max(r, g, b), m = Math.min(r, g, b), l = (M + m) / 2; if (M === m) return [0, 0, l];
@@ -86,7 +92,7 @@ function tintColours(id){ const T = TINTS.find(x => x[0] === id) || TINTS[0], [c
   return { T, c: [c0, c1, c2, c3, c4], dark: dk, light: lt,
     anim: { dark: { Z: c4, Q: c3, V: c3, Cw: mixH(c2, c4, 0.35), C: c4, ink: c4 }, light: { Z: c2, Q: c2, V: mixH(c2, c1, 0.25), Cw: c1, C: mixH(c2, c3, 0.3), ink: ink } },
     ramp: { Z: [c1, mixH(c1, c2, 0.5), c3, c4], Q: [c2, c4], V: [c0, c2, c3], Cw: [c0, c1, c4], C: [c1, mixH(c2, c3, 0.5), c4] } }; }
-function applyTint(id, quiet){ const K = tintColours(id); TINT = K.T[0]; try { localStorage.setItem('tensorStudio.tint', TINT); } catch (e) {}
+function applyTint(id, quiet){ const K = tintColours(id); TINT = K.T[0]; if (!FROM_MAP) try { localStorage.setItem('tensorStudio.tint', TINT); } catch (e) {}
   PAL.dark = K.dark; PAL.light = K.light; P = PAL[THEME]; window.__TINTCOL = K.anim;
   Object.assign(ENVRAMP, K.ramp); for (const k in ENVIMG) delete ENVIMG[k];   // (called from the boot, after these are made)
   const [c0, c1, c2, c3, c4] = K.c; let st = document.getElementById('tintCSS'); if (!st){ st = document.createElement('style'); st.id = 'tintCSS'; document.head.append(st); }
@@ -106,7 +112,7 @@ function syncTints(){ const box = document.getElementById('tints'), nm = documen
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
 function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
-  try { localStorage.setItem('ts7-theme', t); } catch (e) {}
+  if (!FROM_MAP) try { localStorage.setItem('ts7-theme', t); } catch (e) {}
   baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; PARKIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
 
 /* ------------------------------------------------------------------ data */
@@ -1913,7 +1919,7 @@ let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basema
 // theme, until the user picks a basemap here (then that choice is kept)
 const HOSTVIEW = (window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function') ? window.__TS.host.view : null;
 if (!HOSTVIEW && BASEMAP === 'map') BASEMAP = 'none';
-if (HOSTVIEW){ BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }   // from the map, always the map itself to start with (a switch here lasts this visit)
+if (HOSTVIEW){ BASEMAP = 'map'; const bs = document.getElementById('baseSection'); if (bs) bs.hidden = true; }   // (v8.40) from the map: the map itself, nothing to choose   // from the map, always the map itself to start with (a switch here lasts this visit)
 // the host's map follows this view: centre, zoom and bearing worked out from the plan's grid (British National Grid) at the view centre
 let lastHostView = '';
 function pushHostView(){ if (!HOSTVIEW || BASEMAP !== 'map') return; const geo = window.__TS && window.__TS.geo; if (!geo) return;
@@ -2312,7 +2318,7 @@ window.addEventListener('resize', resize);
 (function boot(){ let t = null; try { t = localStorage.getItem('ts7-theme'); } catch (e) {}
   scaleToSite();   // (v8.31) a small site: closer streets
   applyTint(TINT, true);   // (v8.30) the palette first, then the theme draws with it
-  setTheme(t || 'dark');   // dark by default (reviews are in dark)
+  setTheme(FROM_MAP ? (MAP_STYLE === 'dark' ? 'dark' : 'light') : (t || 'dark'));   // dark by default (reviews are in dark)
   resize(); HOLES = []; buildMask();
   // the current result's field (step 3, settled: the contour 70 %, the year's wind 40 %, the attractors): A at once, then B grows live
   $('nMain').value = 2; $('nSec').value = 2; for (const id of ['nMain', 'nSec']){ const o = $(id).nextElementSibling; if (o) o.textContent = '2'; } $('windOn').checked = true; MONTH = 12;
