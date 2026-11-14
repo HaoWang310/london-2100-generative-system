@@ -10,7 +10,8 @@ const $ = id => document.getElementById(id), v = id => +$(id).value, PI = Math.P
 const SITE_HA = (window.__TS && window.__TS.meta && window.__TS.meta.areaHa) || 210, SIZE_K = window.__TS && window.__TS.host ? Math.max(0.3, Math.min(1, Math.sqrt(SITE_HA / 210))) : 1;
 const AREA_K = SIZE_K * SIZE_K, SLIVER_HA = 0.15 * AREA_K, BIG_HA = 2.5 * AREA_K, PARK_HA = 4 * AREA_K, JOIN_HA = 2 * AREA_K;
 function scaleToSite(){ if (SIZE_K >= 1) return; const set = (id, val, lo) => { const e = $(id); if (!e) return; const mn = +e.min, st = +e.step || 1, want = Math.max(lo != null ? lo : mn, Math.round(val / st) * st); if (want < mn) e.min = want; e.value = want; };
-  set('d1', 300 * SIZE_K, 90); set('d2', 115 * SIZE_K, 40); set('gW', 30 * Math.max(0.4, SIZE_K), 10); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K)); }
+  set('d1', 300 * SIZE_K, 90); set('d2', 115 * SIZE_K, 40); set('gW', 30 * Math.max(0.4, SIZE_K), 10); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K));
+  set('wMax', 18 * SIZE_K, 6); set('wMin', 6 * SIZE_K, 3); }   // (v8.35) the street widths too: 18 / 6 m on the station example, in proportion on a small site
 const clamp = (a, b, c) => Math.max(b, Math.min(c, a));
 
 /* ------------------------------------------------------------------ Parcel 62 only: its land, its anchors, its attractors, its river street */
@@ -1996,22 +1997,22 @@ function strokeVar(g, sw, pad, colour){ // each segment at its own width; round 
     while (k < Pp.length){ const w = st.w[k]; g.beginPath(); g.moveTo(X(Pp[k - 1][0]), Y(Pp[k - 1][1]));
       while (k < Pp.length && st.w[k] === w){ g.lineTo(X(Pp[k][0]), Y(Pp[k][1])); k++; }
       g.lineWidth = (w + pad) * view.s; if (colour) g.strokeStyle = rampCol(w); g.stroke(); } } }
-function drawWidth(){ const w = L_width.width, h = L_width.height, sw = streetWidths();
+function drawWidth(){ const w = L_width.width, h = L_width.height, sw = streetWidths(), WK = Math.max(0.35, SIZE_K);   // (v8.35) fillets and the colour band in proportion to the site
   // 1 the road surface: every street at its width, the land's edge road at the widest, the link; closed by a blur (the fillets)
   const a = mk(); a.width = w; a.height = h; const ga = a.getContext('2d'); ga.setTransform(DPR, 0, 0, DPR, 0, 0); ga.strokeStyle = '#000'; ga.lineCap = 'round'; ga.lineJoin = 'round';
   strokeVar(ga, sw, 0, false);
   ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s;   // (v8.29) the land's edge is not drawn as a road: the streets are the ones grown within the site
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(ga, s_); ga.stroke(); }
-  const m = mk(); m.width = w; m.height = h; const gm = m.getContext('2d'); gm.filter = 'blur(' + Math.max(1, Math.round(6 * view.s * DPR)) + 'px)'; gm.drawImage(a, 0, 0); gm.filter = 'none';
+  const m = mk(); m.width = w; m.height = h; const gm = m.getContext('2d'); gm.filter = 'blur(' + Math.max(1, Math.round(6 * WK * view.s * DPR)) + 'px)'; gm.drawImage(a, 0, 0); gm.filter = 'none';
   const im = gm.getImageData(0, 0, w, h), d = im.data; for (let i = 0; i < d.length; i += 4){ d[i + 3] = d[i + 3] >= 105 ? 255 : 0; } gm.putImageData(im, 0, 0);
   // 2 the colour by width: narrow to wide, the wider drawn last, a little wider than the road so it fills the fillets
   const g = L_width.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round';
   const hiCol = rampCol(Math.max(v('wMax'), v('wMin')));
-  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8) * view.s;
+  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8 * WK) * view.s;
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(g, s_); g.stroke(); }
   const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
   segs.sort((p, q) => p[0] - q[0]);
-  for (const [ww, p0, p1] of segs){ g.strokeStyle = rampCol(ww); g.lineWidth = (ww + 8) * view.s; g.beginPath(); g.moveTo(X(p0[0]), Y(p0[1])); g.lineTo(X(p1[0]), Y(p1[1])); g.stroke(); }
+  for (const [ww, p0, p1] of segs){ g.strokeStyle = rampCol(ww); g.lineWidth = (ww + 8 * WK) * view.s; g.beginPath(); g.moveTo(X(p0[0]), Y(p0[1])); g.lineTo(X(p1[0]), Y(p1[1])); g.stroke(); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0); g.globalCompositeOperation = 'source-over';
   widthDirty = false; widthNumbers(sw); }
 function widthNumbers(sw){ const by = {}; let area = 0;
