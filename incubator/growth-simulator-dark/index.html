@@ -108,6 +108,19 @@ th { font-weight:500; color:var(--dim); text-align:right; font-size:11.5px; padd
 body.resizing, body.resizing * { user-select:none !important; }
 body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resizing.ns, body.resizing.ns * { cursor:ns-resize !important; }
 .panel.collapsed .rz-y { display:none; }
+/* simple controls and the advanced fold */
+#graphwrap { margin:4px 0 14px; } .glab { font-size:12px; color:var(--dim); margin-bottom:4px; }
+.sl .val.custom { color:var(--dim); font-style:italic; }
+.sl input.dim { opacity:.35; }
+.sl .ends { display:flex; justify-content:space-between; color:var(--dim); font-size:11px; margin-top:-2px; }
+.pre.mini { margin-top:-4px; } .pre.mini button { padding:7px 6px; }
+.seedrow { display:flex; gap:8px; align-items:center; } .seedrow button { flex:1; } .seedv { color:var(--grey); font-size:12.5px; margin-top:8px; }
+.advsec { border-top:1px solid var(--line); margin-top:8px; padding-top:6px; }
+.advbtn { width:100%; display:flex; align-items:center; gap:10px; background:transparent; border:0; padding:12px 0; color:var(--grey); font-size:13.5px; font-weight:600; text-align:left; }
+.advbtn:hover { color:var(--ink); border:0; } .advbtn .chev { display:inline-block; font-size:18px; line-height:1; transition:transform .15s; }
+.advsec.open .advbtn .chev { transform:rotate(90deg); }
+.advsec:not(.open) #sliders, .advsec:not(.open) .advnote { display:none; }
+.advnote { color:var(--dim); font-size:12px; line-height:1.45; margin:0 0 6px; }
 #test { display:none; white-space:pre-wrap; font-size:11px; }
 @media (max-width: 900px) {
   #left { left:10px; right:10px; top:10px; bottom:auto; width:auto; max-height:38vh; border-radius:24px; }
@@ -138,12 +151,17 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       <div id="acts"><button id="run" class="big" data-t>Run variation</button><button id="reset" class="big" data-t>Reset to final</button></div>
       <div id="status">Loading the final outcome…</div><div id="prog"><i></i></div>
     </div>
-    <div class="sec">
-      <h2 data-t>How each magnet fades</h2>
+    <div id="graphwrap">
+      <div class="glab" data-t>How each pull fades with distance</div>
       <canvas id="graph"></canvas>
       <div class="sub" id="ratio"></div>
     </div>
-    <div id="sliders"></div>
+    <div id="simple"></div>
+    <div class="advsec">
+      <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt"></span></button>
+      <div class="advnote" data-t>Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom.</div>
+      <div id="sliders"></div>
+    </div>
     <div class="foot" data-t>The release run of the Growth Simulator, cell for cell (50 m). Drag to move, scroll to zoom, double-click to fit. Space plays; F flips between the variation and the final.</div>
     <pre id="test"></pre>
   </div>
@@ -184,7 +202,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 var SIZES = {"data/DMSans.ttf": 238984, "data/VEIN.z": 5031629, "data/SPUR.z": 44268, "data/layer-absorbed.png": 102199, "data/ZONE.z": 17993, "data/layer-roads.png": 777240, "data/final-idx.z": 4250905, "data/layer-aonb.png": 88691, "data/DRAIL.z": 9479870, "data/CAT.z": 24547, "data/BITS.z": 1160918, "data/layer-belt.png": 237219, "data/layer-towns.png": 347006, "data/FIELD.z": 5649243, "data/final-cls.z": 4175, "data/layer-water.png": 460446};
 </script>
 <script>/* EN | 中文: the page's words in Chinese. English is the key; anything missing stays English. */
-var I18N = { zh: { "How each magnet fades": "吸引力随距离衰减", "Seed 42 · the release run · 50 m parcels": "种子 42 · 发布版本 · 50 米地块", "Mode": "模式", "Display": "显示", "Playback": "播放", "View": "视图", "Readout": "数据", "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation.": "2025 年，起点：发布版本生长之前的状态。点击播放观看它生长到 2100 年，或调整设置后点击运行变体。", "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
+var I18N = { zh: { "How each pull fades with distance": "每种吸引力随距离衰减", "Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom.": "原版的每一项设置。上面的控制会同步改动这里；只在这里单独改一项时，上面对应的控制会显示“自定义”。", "Where the city grows": "城市往哪里长", "How hard the stations and the railway pull, and how far.": "车站和铁路线的吸引力有多强、能拉多远。", "Smaller stations, against the main ones": "二级站的分量（相对一级站）", "no pull": "不吸引", "as strong": "一样强", "The railway, against the main stations": "铁路线的分量（相对一级站）", "towns round stations": "围绕车站成团", "a ribbon along the line": "沿铁路长成带", "How far the stations reach": "车站影响范围", "halves at": "减半于", "close": "近", "far": "远", "The shape": "城市的形态", "How the edge frays, how far a town spreads, how tightly it packs.": "边缘有多破碎、组团铺多开、建得多密实。", "Fingers along the threads": "边缘沿细丝伸出指状", "smooth edge": "边缘平滑", "long fingers": "长指状", "How far a town spreads": "组团铺开的范围", "Building beside what is built": "贴着已建区生长", "scattered": "分散", "solid": "密实", "Land and height": "土地与高度", "The best farmland, and how far from a station the city may rise.": "最好的农田，以及离车站多远才能盖高。", "Building on the best farmland": "在最好的农田上建城", "protect it": "保护", "treat it as any land": "和普通土地一样", "How far from a station it rises": "离车站多远开始盖高", "mid": "中层", "high": "高层", "further out": "更远", "Farming": "农业", "Fields and vertical farms, placed against the city's final edge.": "农田和竖向农场，沿城市最终边缘布置。", "Fields seek good soil": "农田优先找好土", "anywhere": "随处", "good soil first": "好土优先", "Fields on good soil near the railway": "铁路旁好土上的农田", "Width of the vertical-farm collar": "竖向农场环带宽度", "Another layout": "换一种布局", "Same rules, another roll of the dice. The release is layout 42.": "规则不变，重新掷一次骰子。发布版是第 42 号布局。", "Roll another layout": "随机换一种", "The release's layout": "回到发布版布局", "Layout": "布局", "the release": "发布版", "Custom": "自定义", "Advanced settings": "高级设置", "settings of the original": "项原始设置", "How each magnet fades": "吸引力随距离衰减", "Seed 42 · the release run · 50 m parcels": "种子 42 · 发布版本 · 50 米地块", "Mode": "模式", "Display": "显示", "Playback": "播放", "View": "视图", "Readout": "数据", "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation.": "2025 年，起点：发布版本生长之前的状态。点击播放观看它生长到 2100 年，或调整设置后点击运行变体。", "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
   "Growth variations": "城市生长变体",
   "Loop City, 2025 to 2100. The final outcome, and what the same rules give when one of them is turned.": "环城，2025 至 2100 年。最终结果，以及调节其中一条规则时，同一套规则会给出什么。",
   "Final outcome": "最终结果", "Variation": "变体", "Final": "最终", "Run variation": "运行变体", "Reset to final": "恢复最终结果",
@@ -756,6 +774,120 @@ var GV = (function () {
       s: [["seed", "Seed", 1, 3000, 1, 0]],
       pre: [["Chance", "same rules, another layout", [["seed 7", { seed: 7 }], ["seed 42", { seed: 42 }], ["seed 2026", { seed: 2026 }]]]] }
   ];
+  // ------------------------------------------------------------------ the simple controls
+  // Each one writes one or more of the original settings. Where only a ratio counts in the engine (the three
+  // weights, VEIN, adjacency: the draw only ranks parcels, so scaling a pair together changes nothing), a single
+  // control holds that ratio and loses nothing. Every control snaps to the release's exact values at its default.
+  var r4 = function (v) { return Math.round(v * 1e4) / 1e4; };
+  var SIMPLE = [
+    { t: "Where the city grows", note: "How hard the stations and the railway pull, and how far.", graph: true, c: [
+      { id: "sec", t: "Smaller stations, against the main ones", k: ["wS"], min: 0, max: 1.3, step: 0.05,
+        get: function (q) { return q.wP > 0 ? q.wS / q.wP : null; }, set: function (v) { P.wS = r4(v * P.wP); },
+        show: function (v) { return fmt(v * 100) + " %"; }, ends: ["no pull", "as strong"] },
+      { id: "line", t: "The railway, against the main stations", k: ["wR"], min: 0, max: 1, step: 0.02,
+        get: function (q) { return q.wP > 0 ? q.wR / q.wP : null; }, set: function (v) { P.wR = r4(v * P.wP); },
+        show: function (v) { return fmt(v * 100) + " %"; }, ends: ["towns round stations", "a ribbon along the line"],
+        pre: [["node city", { wR: 0, sR: 1500 }], ["as run", { wR: 0.6, sR: 1500 }], ["ribbon city", { wR: 2.0, sR: 3000 }]] },
+      { id: "range", t: "How far the stations reach", k: ["dP", "dS"], min: 0.25, max: 2.2, step: 0.05,
+        get: function (q) { var a = q.dP / 9000, b = q.dS / 6000; return Math.abs(a - b) < 1e-6 ? a : null; },
+        set: function (v) { P.dP = Math.round(9000 * v); P.dS = Math.round(6000 * v); },
+        show: function (v) { return T("halves at") + " " + fmt(9 * v * Math.LN2, 1) + " / " + fmt(6 * v * Math.LN2, 1) + " km"; }, ends: ["close", "far"] }] },
+    { t: "The shape", note: "How the edge frays, how far a town spreads, how tightly it packs.", c: [
+      { id: "vein", t: "Fingers along the threads", k: ["va", "vb"], min: 0, max: 1, step: 0.01,
+        get: function (q) { return q.va + q.vb > 0 ? q.vb / (q.va + q.vb) : null; },
+        set: function (v) { var a = (1 - v) * 1.63, b = v * 1.63; if (a > 1) { b /= a; a = 1; } P.va = r4(a); P.vb = r4(b); },
+        show: function (v) { return fmt(v * 100) + " %"; }, ends: ["smooth edge", "long fingers"],
+        pre: [["off", { va: 1.0, vb: 0 }], ["as run", { va: 0.28, vb: 1.35 }], ["hard", { va: 0.10, vb: 2.20 }]] },
+      { id: "reach", t: "How far a town spreads", k: ["reach"], min: 1.1, max: 3, step: 0.05,
+        get: function (q) { return q.reach; }, set: function (v) { P.reach = r4(v); },
+        show: function (v) { return "× " + fmt(v, 2); }, ends: ["tight", "loose"] },
+      { id: "adj", t: "Building beside what is built", k: ["adjA", "adjB"], min: 0, max: 0.92, step: 0.01,
+        get: function (q) { return q.adjA + q.adjB > 0 ? q.adjB / (q.adjA + q.adjB) : null; },
+        set: function (v) { var a = (1 - v) * 1.3, b = v * 1.3; if (a > 1) { b /= a; a = 1; } P.adjA = r4(a); P.adjB = r4(b); },
+        show: function (v) { return fmt(v * 100) + " %"; }, ends: ["scattered", "solid"] }] },
+    { t: "Land and height", note: "The best farmland, and how far from a station the city may rise.", c: [
+      { id: "soil", t: "Building on the best farmland", k: ["soil"], min: 0.1, max: 1, step: 0.05,
+        get: function (q) { return q.soil; }, set: function (v) { P.soil = r4(v); },
+        show: function (v) { return "× " + fmt(v, 2); }, ends: ["protect it", "treat it as any land"],
+        pre: [["protected", { soil: 0.2 }], ["as run", { soil: 0.45 }], ["ignored", { soil: 1.0 }]] },
+      { id: "dens", t: "How far from a station it rises", k: ["rcore", "rmed"], min: 0, max: 1.5, step: 0.05,
+        get: function (q) { var a = q.rcore / 700, b = q.rmed / 1700; return Math.abs(a - b) < 1e-6 ? a : null; },
+        set: function (v) { P.rcore = Math.round(700 * v); P.rmed = Math.round(1700 * v); },
+        show: function (v) { return T("mid") + " " + fmt(700 * v) + " m · " + T("high") + " " + fmt(1700 * v) + " m"; }, ends: ["at the station", "further out"] }] },
+    { t: "Farming", note: "Fields and vertical farms, placed against the city's final edge.", c: [
+      { id: "farmSoil", t: "Fields seek good soil", k: ["farmSoil"], min: 0, max: 1.5, step: 0.1,
+        get: function (q) { return q.farmSoil; }, set: function (v) { P.farmSoil = r4(v); },
+        show: function (v) { return "× " + fmt(v, 1); }, ends: ["anywhere", "good soil first"] },
+      { id: "farmLineK", t: "Fields on good soil near the railway", k: ["farmLineK"], min: 0, max: 4, step: 0.1,
+        get: function (q) { return q.farmLineK; }, set: function (v) { P.farmLineK = r4(v); },
+        show: function (v) { return v ? "× " + fmt(v, 1) : T("off"); }, ends: ["off", "strong"] },
+      { id: "vband", t: "Width of the vertical-farm collar", k: ["vband"], min: 0.5, max: 2.5, step: 0.05,
+        get: function (q) { return q.vband; }, set: function (v) { P.vband = r4(v); },
+        show: function (v) { return "× " + fmt(v, 2); }, ends: ["narrow", "wide"] }] },
+    { t: "Another layout", note: "Same rules, another roll of the dice. The release is layout 42.", seed: true, c: [] }
+  ];
+  var SC = {};
+  function syncSimple() {
+    SIMPLE.forEach(function (g) { g.c.forEach(function (c) {
+      var d = SC[c.id]; if (!d) return;
+      var v = c.get(P), def = c.get(GV.DEFAULTS), ok = v !== null && v >= c.min - 1e-9 && v <= c.max + 1e-9;
+      if (ok) { d.inp.value = v; d.val.textContent = c.show(v); } else { d.inp.value = def; d.val.textContent = T("Custom"); }
+      d.val.classList.toggle("custom", !ok); d.inp.classList.toggle("dim", !ok);
+      d.val.classList.toggle("def", ok && c.k.every(function (k) { return P[k] === GV.DEFAULTS[k]; }));
+    }); });
+    if ($("seedv")) $("seedv").textContent = T("Layout") + " " + P.seed + (P.seed === 42 ? " · " + T("the release") : "");
+  }
+  function syncAll() { Object.keys(SL).forEach(function (k) { SL[k].inp.value = P[k]; showVal(k); }); syncSimple(); markPresets(); }
+  function presetRow(list, mini) {
+    var row = document.createElement("div"); row.className = "pre" + (mini ? " mini" : "");
+    list.forEach(function (b) {
+      var bt = document.createElement("button"); bt.textContent = T(b[0]); bt.dataset.set = JSON.stringify(b[1]);
+      bt.onclick = function () { Object.assign(P, b[1]); syncAll(); changed(); };
+      row.appendChild(bt);
+    });
+    return row;
+  }
+  function buildSimple() {
+    var host = $("simple"); host.innerHTML = ""; SC = {};
+    SIMPLE.forEach(function (g) {
+      var box = document.createElement("div"); box.className = "grp";
+      box.innerHTML = '<div class="gh"><h2>' + T(g.t) + '</h2></div><div class="note">' + T(g.note) + "</div>";
+      if (g.graph) box.appendChild($("graphwrap"));
+      g.c.forEach(function (c) {
+        var el = document.createElement("div"); el.className = "sl";
+        var def = c.get(GV.DEFAULTS), pos = (def - c.min) / (c.max - c.min) * 100;
+        el.innerHTML = '<div class="top"><span>' + T(c.t) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>' +
+          '<div class="ends"><span>' + T(c.ends[0]) + "</span><span>" + T(c.ends[1]) + "</span></div>";
+        var inp = el.querySelector("input");
+        SC[c.id] = { inp: inp, val: el.querySelector(".val") };
+        inp.oninput = function () {
+          var v = +inp.value;
+          if (Math.abs(v - def) < c.step / 2 + 1e-9) c.k.forEach(function (k) { P[k] = GV.DEFAULTS[k]; });   // the release, exactly
+          else c.set(v);
+          syncAll(); changed();
+        };
+        box.appendChild(el);
+        if (c.pre) box.appendChild(presetRow(c.pre, true));
+      });
+      if (g.seed) {
+        var sr = document.createElement("div");
+        sr.innerHTML = '<div class="seedrow"><button id="seedNew">' + T("Roll another layout") + '</button><button id="seed42">' + T("The release's layout") + '</button></div><div class="seedv" id="seedv"></div>';
+        box.appendChild(sr);
+        sr.querySelector("#seedNew").onclick = function () { var n; do { n = 1 + Math.floor(Math.random() * 3000); } while (n === P.seed); P.seed = n; syncAll(); changed(); };
+        sr.querySelector("#seed42").onclick = function () { P.seed = 42; syncAll(); changed(); };
+      }
+      host.appendChild(box);
+    });
+    syncSimple();
+  }
+  var advOpen = false;
+  function buildAdvanced() {
+    var n = 0; GROUPS.forEach(function (g) { n += g.s.length; });
+    document.querySelector(".advsec .advt").textContent = T("Advanced settings") + " · " + n + " " + T("settings of the original");
+    document.querySelector(".advsec").classList.toggle("open", advOpen);
+  }
+  $("advBtn").onclick = function () { advOpen = !advOpen; buildAdvanced(); };
+
   var SL = {};
   function showVal(id) {
     var d = SL[id], v = P[id], u = d.u, txt;
@@ -773,7 +905,7 @@ var GV = (function () {
         el.innerHTML = '<div class="top"><span>' + T(s[1]) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + s[2] + '" max="' + s[3] + '" step="' + s[4] + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>';
         var inp = el.querySelector("input"); inp.value = P[id];
         SL[id] = { inp: inp, val: el.querySelector(".val"), u: s[5] };
-        inp.oninput = function () { P[id] = +inp.value; showVal(id); changed(); };
+        inp.oninput = function () { P[id] = +inp.value; showVal(id); syncSimple(); changed(); };
         box.appendChild(el); showVal(id);
       });
       g.pre.forEach(function (pr) {
@@ -781,14 +913,14 @@ var GV = (function () {
         row.innerHTML = '<span class="lab">' + T("Turn it") + ": " + T(pr[0]) + ", " + T(pr[1]) + "</span>";
         pr[2].forEach(function (b) {
           var bt = document.createElement("button"); bt.textContent = T(b[0]); bt.dataset.set = JSON.stringify(b[1]);
-          bt.onclick = function () { Object.assign(P, b[1]); Object.keys(b[1]).forEach(function (k) { SL[k].inp.value = P[k]; showVal(k); }); changed(); };
+          bt.onclick = function () { Object.assign(P, b[1]); syncAll(); changed(); };
           row.appendChild(bt);
         });
         box.appendChild(row);
       });
       host.appendChild(box);
     });
-    markPresets();
+    markPresets(); buildSimple(); buildAdvanced();
   }
   function markPresets() {
     document.querySelectorAll(".pre button").forEach(function (b) {
@@ -1127,8 +1259,7 @@ var GV = (function () {
   }
   $("run").onclick = runVariation;
   $("reset").onclick = function () {
-    P = Object.assign({}, GV.DEFAULTS); Object.keys(SL).forEach(function (k) { SL[k].inp.value = P[k]; showVal(k); });
-    markPresets(); drawGraph(); setMode("final"); setYear(75);
+    P = Object.assign({}, GV.DEFAULTS); syncAll(); drawGraph(); setMode("final"); setYear(75);
     status(T("Back to the final outcome. Every setting is at the release's value."));
     if (LAY.magnet.on) overlays(true);
   };
@@ -1222,7 +1353,7 @@ var GV = (function () {
     var test = hashArg("test");
     if (test !== null) {
       var prm = test ? JSON.parse(test) : {}; Object.assign(P, prm);
-      Object.keys(SL).forEach(function (k) { SL[k].inp.value = P[k]; showVal(k); }); markPresets(); drawGraph();
+      syncAll(); drawGraph();
       runVariation().then(function (res) {
         stop(); setYear(75); compare(); var z2 = hashArg("zoom"); if (z2) zoomTo(z2);
         var s = res.stats[75], f = D.final.stats[75], a = measure(VAR.tier, 2100, "v" + VAR.id), bb = measure(FINAL.tier, 2100, "f");

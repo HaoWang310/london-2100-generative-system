@@ -16,3 +16,9 @@ The data that was inlined as base64 in the page is now in `data/` as the same by
 Laid out like the London map: the map fills the window, a floating panel on the left holds the controls (mode, run, the magnet curves, every slider) and one on the right holds the display (playback, view, layers, the readout). Both panels collapse. The year and population sit in a pill at the bottom right. The rules and the data are unchanged.
 
 界面改为与伦敦地图一致：地图铺满窗口，左侧浮动面板为控制（模式、运行、吸引力曲线、全部滑块），右侧浮动面板为显示（播放、视图、图层、数据）。两侧面板均可收起，右下角胶囊显示年份与人口。规则与数据未改。
+
+## 2026-11-14 · 简化控制 · Simple controls
+
+The 23 settings are now behind 11 plain controls and one button, with every original setting kept in a folded Advanced section. Where the engine only uses a ratio (the three weights, VEIN base and strength, adjacency base and reward: the draw ranks parcels, so scaling a pair together changes nothing, checked to the parcel), one control holds that ratio. The station fade distances and the density distances are scaled together; the slider limits stop before the land targets go unmet (mid rise beyond about 1,200 m, high rise beyond about 2,600 m, reach under 1.1, vertical band under 0.5). FIELD, the line's fade, contrast and the warp of the density rings are in Advanced only. Every control snaps to the release's exact values at its default, so the default run is unchanged. The engine is unchanged.
+
+23 项设置改为 11 个简明控制加一个按钮，全部原始设置保留在默认收起的「高级设置」中。引擎只用到比例的参数（三个权重、VEIN 基数与强度、邻接基数与奖励：抽签只比较地块排名，成对同比缩放不改变任何地块，已逐格验证）合并为一个比例控制；车站衰减距离、中高层起始距离改为同比缩放，滑块上限停在用地目标仍能长满之处。FIELD、铁路线衰减距离、对比度、密度环扭曲只在高级区。每个控制在默认位置吸附到发布版精确数值，默认运行结果不变。引擎代码未改。
