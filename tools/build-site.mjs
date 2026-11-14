@@ -66,6 +66,21 @@ walk(out);
     const src = readFileSync(target, 'utf8');
     if (!src.includes('/*SRC_HASH*/{}')) throw new Error('growth.js: no /*SRC_HASH*/ placeholder');
     writeFileSync(target, src.replace('/*SRC_HASH*/{}', JSON.stringify(hashes)));
+
+    // The incubator page itself: its <script src> files carry their hash, and the catalogue opens
+    // the page by the hash of its index.html, so after a deploy the browser never shows a cached
+    // page, or a new page with yesterday's controls.js.
+    const page = join(srcDir, 'index.html');
+    if (existsSync(page)) {
+      const html = readFileSync(page, 'utf8').replace(/(<script\s+src=")([^"?#:]+\.js)(")/g, (m, a, f, c) => hashes[f] ? `${a}${f}?h=${hashes[f]}${c}` : m);
+      writeFileSync(page, html);
+      const catPath = join(out, 'incubator/catalogue.json');
+      if (existsSync(catPath)) {
+        const cat = JSON.parse(readFileSync(catPath, 'utf8')), h = createHash('sha256').update(html).digest('hex').slice(0, 10);
+        for (const it of cat.items || []) if (it.href === 'incubator/growth-simulator-dark/') it.href += `?h=${h}`;
+        writeFileSync(catPath, JSON.stringify(cat, null, 2));
+      }
+    }
   }
 }
 console.log(`Built site v${version} (${tag}) -> ${relative(root, out) || out}`);
