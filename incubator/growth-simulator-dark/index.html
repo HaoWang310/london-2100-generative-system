@@ -53,8 +53,8 @@ button.icon { width:44px; height:44px; padding:0; border-radius:16px; font-size:
 .sl .track { position:relative; }
 .sl .tick { position:absolute; top:4px; width:2px; height:12px; background:#6e6e73; pointer-events:none; border-radius:1px; }
 input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:20px; margin:4px 0 0; background:transparent; cursor:pointer; }
-input[type=range]::-webkit-slider-runnable-track { height:4px; background:#2f2f33; border-radius:2px; }
-input[type=range]::-moz-range-track { height:4px; background:#2f2f33; border-radius:2px; }
+input[type=range]::-webkit-slider-runnable-track { height:4px; background:var(--trk, #2f2f33); border-radius:2px; }
+input[type=range]::-moz-range-track { height:4px; background:var(--trk, #2f2f33); border-radius:2px; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:#f5f5f7; border:0; box-shadow:0 1px 4px rgba(0,0,0,.6); position:relative; z-index:1; }
 input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#f5f5f7; border:0; }
 .pre { display:flex; gap:6px; margin:2px 0 12px; flex-wrap:wrap; }
@@ -112,6 +112,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 #graphwrap { margin:4px 0 14px; } .glab { font-size:12px; color:var(--dim); margin-bottom:4px; }
 .sl .val.custom { color:var(--dim); font-style:italic; }
 .sl input.dim { opacity:.35; }
+.sl .warn { display:none; color:#F2555A; font-size:11.5px; margin-top:2px; } .sl.under .warn { display:block; } .sl.under .val { color:#F2555A; }
 .sl .ends { display:flex; justify-content:space-between; color:var(--dim); font-size:11px; margin-top:-2px; }
 .pre.mini { margin-top:-4px; } .pre.mini button { padding:7px 6px; }
 .seedrow { display:flex; gap:8px; align-items:center; } .seedrow button { flex:1; } .seedv { color:var(--grey); font-size:12.5px; margin-top:8px; }
@@ -159,7 +160,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     <div id="simple"></div>
     <div class="advsec">
       <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt" data-t>Advanced settings</span></button>
-      <div class="advnote" data-t>Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom.</div>
+      <div class="advnote" data-t>Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom. A red stretch on a slider marks values where less is built than planned.</div>
       <div id="sliders"></div>
     </div>
     <div class="foot" data-t>The release run of the Growth Simulator, cell for cell (50 m). Drag to move, scroll to zoom, double-click to fit. Space plays; F flips between the variation and the final.</div>
@@ -202,7 +203,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 var SIZES = {"data/DMSans.ttf": 238984, "data/VEIN.z": 5031629, "data/SPUR.z": 44268, "data/layer-absorbed.png": 102199, "data/ZONE.z": 17993, "data/layer-roads.png": 777240, "data/final-idx.z": 4250905, "data/layer-aonb.png": 88691, "data/DRAIL.z": 9479870, "data/CAT.z": 24547, "data/BITS.z": 1160918, "data/layer-belt.png": 237219, "data/layer-towns.png": 347006, "data/FIELD.z": 5649243, "data/final-cls.z": 4175, "data/layer-water.png": 460446};
 </script>
 <script>/* EN | 中文: the page's words in Chinese. English is the key; anything missing stays English. */
-var I18N = { zh: { "How each pull fades with distance": "每种吸引力随距离衰减", "Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom.": "原版的每一项设置。上面的控制会同步改动这里；只在这里单独改一项时，上面对应的控制会显示“自定义”。", "Where the city grows": "城市往哪里长", "How hard the stations and the railway pull, and how far.": "车站和铁路线的吸引力有多强、能拉多远。", "Smaller stations, against the main ones": "二级站的分量（相对一级站）", "no pull": "不吸引", "as strong": "一样强", "The railway, against the main stations": "铁路线的分量（相对一级站）", "towns round stations": "围绕车站成团", "a ribbon along the line": "沿铁路长成带", "How far the stations reach": "车站影响范围", "halves at": "减半于", "close": "近", "far": "远", "The shape": "城市的形态", "How the edge frays, how far a town spreads, how tightly it packs.": "边缘有多破碎、组团铺多开、建得多密实。", "Fingers along the threads": "边缘沿细丝伸出指状", "smooth edge": "边缘平滑", "long fingers": "长指状", "How far a town spreads": "组团铺开的范围", "Building beside what is built": "贴着已建区生长", "scattered": "分散", "solid": "密实", "Land and height": "土地与高度", "The best farmland, and how far from a station the city may rise.": "最好的农田，以及离车站多远才能盖高。", "Building on the best farmland": "在最好的农田上建城", "protect it": "保护", "treat it as any land": "和普通土地一样", "How far from a station it rises": "离车站多远开始盖高", "mid": "中层", "high": "高层", "further out": "更远", "Farming": "农业", "Fields and vertical farms, placed against the city's final edge.": "农田和竖向农场，沿城市最终边缘布置。", "Fields seek good soil": "农田优先找好土", "anywhere": "随处", "good soil first": "好土优先", "Fields on good soil near the railway": "铁路旁好土上的农田", "Width of the vertical-farm collar": "竖向农场环带宽度", "Another layout": "换一种布局", "Same rules, another roll of the dice. The release is layout 42.": "规则不变，重新掷一次骰子。发布版是第 42 号布局。", "Roll another layout": "随机换一种", "The release's layout": "回到发布版布局", "Layout": "布局", "the release": "发布版", "Custom": "自定义", "Advanced settings": "高级设置", "settings of the original": "项原始设置", "How each magnet fades": "吸引力随距离衰减", "Seed 42 · the release run · 50 m parcels": "种子 42 · 发布版本 · 50 米地块", "Mode": "模式", "Display": "显示", "Playback": "播放", "View": "视图", "Readout": "数据", "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation.": "2025 年，起点：发布版本生长之前的状态。点击播放观看它生长到 2100 年，或调整设置后点击运行变体。", "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
+var I18N = { zh: { "How each pull fades with distance": "每种吸引力随距离衰减", "Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom. A red stretch on a slider marks values where less is built than planned.": "原版的每一项设置。上面的控制会同步改动这里；只在这里单独改一项时，上面对应的控制会显示“自定义”。滑块上的红色段表示：调到这里会长不满，建成量少于计划。", "Here the land targets are not met: less is built than planned.": "这里会长不满：建成量少于计划。", "Where the city grows": "城市往哪里长", "How hard the stations and the railway pull, and how far.": "车站和铁路线的吸引力有多强、能拉多远。", "Smaller stations, against the main ones": "二级站的分量（相对一级站）", "no pull": "不吸引", "as strong": "一样强", "The railway, against the main stations": "铁路线的分量（相对一级站）", "towns round stations": "围绕车站成团", "a ribbon along the line": "沿铁路长成带", "How far the stations reach": "车站影响范围", "halves at": "减半于", "close": "近", "far": "远", "The shape": "城市的形态", "How the edge frays, how far a town spreads, how tightly it packs.": "边缘有多破碎、组团铺多开、建得多密实。", "Fingers along the threads": "边缘沿细丝伸出指状", "smooth edge": "边缘平滑", "long fingers": "长指状", "How far a town spreads": "组团铺开的范围", "Building beside what is built": "贴着已建区生长", "scattered": "分散", "solid": "密实", "Land and height": "土地与高度", "The best farmland, and how far from a station the city may rise.": "最好的农田，以及离车站多远才能盖高。", "Building on the best farmland": "在最好的农田上建城", "protect it": "保护", "treat it as any land": "和普通土地一样", "How far from a station it rises": "离车站多远开始盖高", "mid": "中层", "high": "高层", "further out": "更远", "Farming": "农业", "Fields and vertical farms, placed against the city's final edge.": "农田和竖向农场，沿城市最终边缘布置。", "Fields seek good soil": "农田优先找好土", "anywhere": "随处", "good soil first": "好土优先", "Fields on good soil near the railway": "铁路旁好土上的农田", "Width of the vertical-farm collar": "竖向农场环带宽度", "Another layout": "换一种布局", "Same rules, another roll of the dice. The release is layout 42.": "规则不变，重新掷一次骰子。发布版是第 42 号布局。", "Roll another layout": "随机换一种", "The release's layout": "回到发布版布局", "Layout": "布局", "the release": "发布版", "Custom": "自定义", "Advanced settings": "高级设置", "settings of the original": "项原始设置", "How each magnet fades": "吸引力随距离衰减", "Seed 42 · the release run · 50 m parcels": "种子 42 · 发布版本 · 50 米地块", "Mode": "模式", "Display": "显示", "Playback": "播放", "View": "视图", "Readout": "数据", "2025, the start: the release run before it grows. Press Play to watch it grow to 2100, or turn a setting and press Run variation.": "2025 年，起点：发布版本生长之前的状态。点击播放观看它生长到 2100 年，或调整设置后点击运行变体。", "Loading the final outcome…": "正在载入最终结果…", "Could not load the data files. Open this page through a web server (GitHub Pages or a local server), not as a file.": "无法载入数据文件。请通过网页服务器打开（GitHub Pages 或本地服务器），不要直接双击文件打开。",
   "Growth variations": "城市生长变体",
   "Loop City, 2025 to 2100. The final outcome, and what the same rules give when one of them is turned.": "环城，2025 至 2100 年。最终结果，以及调节其中一条规则时，同一套规则会给出什么。",
   "Final outcome": "最终结果", "Variation": "变体", "Final": "最终", "Run variation": "运行变体", "Reset to final": "恢复最终结果",
@@ -755,7 +756,7 @@ var GV = (function () {
           ["va", "VEIN, base", 0, 1, 0.02, 2], ["vb", "VEIN, strength", 0, 2.5, 0.05, 2], ["warp", "Warp of the density rings", 0, 2, 0.05, 2]],
       pre: [["Vein", "how strong the threads are", [["off", { va: 1.0, vb: 0 }], ["as run", { va: 0.28, vb: 1.35 }], ["hard", { va: 0.10, vb: 2.20 }]]]] },
     { id: "draw", t: "The draw", note: "Each year's parcels are drawn by lottery, weighted by the score.",
-      s: [["reach", "Reach of a node", 1, 3, 0.1, 1], ["expo", "Contrast, the power on the score", 1, 3, 0.1, 1],
+      s: [["reach", "Reach of a node", 1, 3, 0.05, 2], ["expo", "Contrast, the power on the score", 1, 3, 0.1, 1],
           ["adjA", "Adjacency, base", 0.1, 1, 0.05, 2], ["adjB", "Adjacency, reward", 0, 2, 0.05, 2]],
       pre: [["Reach", "how far a node spreads for its land", [["tight", { reach: 1.2 }], ["as run", { reach: 1.9 }], ["loose", { reach: 2.8 }]]],
             ["Contrast", "the power on the score", [["flat", { expo: 1.0 }], ["as run", { expo: 1.7 }], ["greedy", { expo: 3.0 }]]],
@@ -821,7 +822,7 @@ var GV = (function () {
       { id: "farmLineK", t: "Fields on good soil near the railway", k: ["farmLineK"], min: 0, max: 4, step: 0.1,
         get: function (q) { return q.farmLineK; }, set: function (v) { P.farmLineK = r4(v); },
         show: function (v) { return v ? "× " + fmt(v, 1) : T("off"); }, ends: ["off", "strong"] },
-      { id: "vband", t: "Width of the vertical-farm collar", k: ["vband"], min: 0.5, max: 2.5, step: 0.05,
+      { id: "vband", t: "Width of the vertical-farm collar", k: ["vband"], min: 0.3, max: 2.5, step: 0.05,
         get: function (q) { return q.vband; }, set: function (v) { P.vband = r4(v); },
         show: function (v) { return "× " + fmt(v, 2); }, ends: ["narrow", "wide"] }] },
     { t: "Another layout", note: "Same rules, another roll of the dice. The release is layout 42.", seed: true, c: [] }
@@ -886,11 +887,20 @@ var GV = (function () {
   }
   $("advBtn").onclick = function () { advOpen = !advOpen; buildAdvanced(); };
 
+  // Values where the land targets go unmet, the other settings at the release's values (measured, 14 Nov 2026).
+  var UNDER = { reach: [1.0, 1.05], rcore: [1200, 2500], rmed: [2500, 4000], vband: [0.25, 0.25] };
+  function warnTrack(inp, id, lo, hi, step) {
+    var w = UNDER[id]; if (!w) return;
+    var a = Math.max(0, (w[0] - step / 2 - lo) / (hi - lo) * 100), b = Math.min(100, (w[1] + step / 2 - lo) / (hi - lo) * 100);
+    inp.style.setProperty("--trk", "linear-gradient(to right, #2f2f33 0 " + a + "%, #8E2A2E " + a + "% " + b + "%, #2f2f33 " + b + "% 100%)");
+  }
+  function isUnder(id) { var w = UNDER[id]; return !!w && P[id] >= w[0] - 1e-9 && P[id] <= w[1] + 1e-9; }
   var SL = {};
   function showVal(id) {
     var d = SL[id], v = P[id], u = d.u, txt;
     if (u === "km") txt = fmt(v / 1000, 1) + " km"; else if (u === "m") txt = fmt(v) + " m"; else if (u === "x") txt = "× " + fmt(v, 2); else txt = fmt(v, u);
     d.val.textContent = txt; d.val.classList.toggle("def", v === GV.DEFAULTS[id]);
+    d.el.classList.toggle("under", isUnder(id));
   }
   function buildSliders() {
     var host = $("sliders"); host.innerHTML = "";
@@ -900,9 +910,10 @@ var GV = (function () {
       g.s.forEach(function (s) {
         var id = s[0], el = document.createElement("div"); el.className = "sl";
         var def = GV.DEFAULTS[id], pos = (def - s[2]) / (s[3] - s[2]) * 100;
-        el.innerHTML = '<div class="top"><span>' + T(s[1]) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + s[2] + '" max="' + s[3] + '" step="' + s[4] + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>';
-        var inp = el.querySelector("input"); inp.value = P[id];
-        SL[id] = { inp: inp, val: el.querySelector(".val"), u: s[5] };
+        el.innerHTML = '<div class="top"><span>' + T(s[1]) + '</span><span class="val"></span></div><div class="track"><input type="range" min="' + s[2] + '" max="' + s[3] + '" step="' + s[4] + '"><span class="tick" style="left:calc(' + pos + '% - 1px)"></span></div>' +
+          (UNDER[id] ? '<div class="warn">' + T("Here the land targets are not met: less is built than planned.") + "</div>" : "");
+        var inp = el.querySelector("input"); inp.value = P[id]; warnTrack(inp, id, s[2], s[3], s[4]);
+        SL[id] = { inp: inp, val: el.querySelector(".val"), u: s[5], el: el };
         inp.oninput = function () { P[id] = +inp.value; showVal(id); syncSimple(); changed(); };
         box.appendChild(el); showVal(id);
       });
