@@ -13,6 +13,9 @@ const KEY = 'tensorStudio.flowMode';
 const SPEED = { slow: { steps: 4, rate: 0.4 }, mid: { steps: 10, rate: 1 }, fast: { steps: 32, rate: 3 } };   // steps: growth steps (5 m each) a frame; rate: recorded frames a frame
 const PHZH = {
   'main streets grow from your anchors': '主路从锚点出发生长',
+  'main streets link the entries and the nodes': '主路连接入口与节点',
+  'main streets: a second way where the network detours': '在绕远处补一条环路',
+  'main streets: every entry joined': '每个入口都接入主路网',
   'main streets along the contour, edge to edge': '主路沿等高线贯通到边界',
   'each circus tied into the main streets': '环形广场接入主路',
   'ring streets round the circuses': '环路围绕广场',
@@ -48,8 +51,8 @@ const STEPS = [
     note: () => L('每个因素给出一个方向，按权重叠成张量场：顺等高线；通风处顺夏季风；冷风强处横切冬季冷风；走廊旁沿走廊（滨水路）；洪水区顺流排水。流线就是道路将要遵循的方向，拖动滑块会实时转向。', 'Each factor gives a direction, weighted into one field: along the contour; along the summer wind where it blows; across the winter cold where it bites; along the corridors beside them (waterside streets); with the flow in the flood zones. The flow lines are the directions the streets will follow; they turn as you move a slider.') },
   { k: 5, zh: '放吸引点', en: 'Attractors', rows: ['pull'],
     note: () => L('点选一种节点，再在地图上单击放置；拖动可移动，右键删除。下面的滑块调节所选种类的吸引强度，每种各自保存。', 'Pick a kind of node, then click on the map to place it; drag to move, right-click to remove. The slider below sets the pull of the kind picked; each kind keeps its own.') },
-  { k: 6, zh: '长主路', en: 'Main streets', rows: ['d1', 'bMains', 'bMem'],
-    note: () => L('主路从锚点出发，沿场的方向每步 5 米生长，遇到别的主路形成十字或 T 路口，不与其他主路并行。打开“优先完成主路”时，还会按主路间距补上贯通的等高线主路，并把环形广场接进路网。', 'Main streets start at the anchors and grow 5 m a step along the field, crossing or making a T where they meet another main street, never running alongside one. With “main streets first”, contour avenues are added at the main spacing and each circus is tied into the network.') },
+  { k: 6, zh: '长主路', en: 'Main streets', rows: ['mMethod', 'd1', 'bMains', 'bMem'],
+    note: () => L(el('mMethod').value === 'stitch' ? '缝合主路：先确定入口、主节点和边界节点之间谁连谁（最小生成树，再在绕远处补环路），再按最低代价在场地上走线——顺着场的方向、避开陡坡和边缘、绕过水体、只能近似垂直跨过走廊。打开“优先完成主路”时，还会按主路间距补上贯通的等高线主路。' : '主路从锚点出发，沿场的方向每步 5 米生长，遇到别的主路形成十字或 T 路口，不与其他主路并行。打开“优先完成主路”时，还会按主路间距补上贯通的等高线主路，并把环形广场接进路网。', el('mMethod').value === 'stitch' ? 'Stitched main streets: first who links to whom among the entries, main nodes and edge nodes (a minimum spanning tree, then loops where it detours), then each link routed at the least cost — along the field, off steep ground and the edge, round the water, across a corridor only near square. With “main streets first”, contour avenues are added at the main spacing.' : 'Main streets start at the anchors and grow 5 m a step along the field, crossing or making a T where they meet another main street, never running alongside one. With “main streets first”, contour avenues are added at the main spacing and each circus is tied into the network.') },
   { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'bGap', 'bFork', 'bInfill', 'bSec6'],
     note: () => L('次路从主路两侧分出，再清理并行和断头的道路。分叉冲突阈值越低，在场方向冲突的地方越容易分出 Y 形岔路；拉到最右为关闭。', 'Second streets branch off the main ones, then streets side by side and open ends are tidied. The lower the fork threshold, the more Y forks where the field pulls two ways; fully right turns it off.') },
   { k: 8, zh: '评价出图', en: 'Review and export', rows: ['fNum', 'bGeo'],
@@ -326,6 +329,7 @@ function setMode(on, first){
   window.__TS_PROCESS_ON = on; document.body.classList.toggle('pm-on', on); bar.hidden = !on; box.hidden = !on;
   for (const x of freeOnly) x.style.display = on ? 'none' : '';
   if (on){ PM.active = true; moveRows(); el('auto').checked = false; MODE = 'B'; T6.setModeQuiet('B'); applySpeed();
+    if (!PM.methodSet){ el('mMethod').value = 'stitch'; PM.methodSet = true; }   // (v8.15) the process mode opens on the stitched main streets
     if (!KPULL) KPULL = { main: 8 * PULL_STEP, sec: 3 * PULL_STEP, edge: 8 * PULL_STEP };   // levels 8, 3, 8 (as the engine's 2.4 and 1.0)
     bindPull();
     PM.valid = 0; PM.reached = 0; PM.frames = []; PM.marks = []; PM.b6 = -1; PM.atB = false; PM.target = 0; go(1); }
