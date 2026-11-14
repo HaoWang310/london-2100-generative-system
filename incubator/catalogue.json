@@ -238,6 +238,42 @@
         }
       ],
       "owner": "HaoWang310"
+    },
+    {
+      "id": "wool-mould-cells",
+      "href": "incubator/wool-mould-cells/",
+      "cover": "assets/catalogue/wool-mould-cells.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "黏菌单元上的毛线 · C12 + C13",
+        "en": "Wool on the mould cells · C12 + C13"
+      },
+      "desc": {
+        "zh": "两个黏菌单元逐步发展为道路网络：锚点、实时松弛的毛线、按连续性读取的道路等级、按真实宽度并带倒角的道路，以及地块。",
+        "en": "Two slime mould cells taken step by step to a road network: anchors, the wool relaxing live, a road hierarchy read by continuity, roads at their real widths with filleted junctions, and parcels."
+      },
+      "tags": [
+        {
+          "zh": "毛线",
+          "en": "Wool"
+        },
+        {
+          "zh": "道路等级",
+          "en": "Road hierarchy"
+        },
+        {
+          "zh": "黏菌单元",
+          "en": "Slime mould cells"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "woolAppsLang",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
+        "hide": [
+          "#langbar"
+        ]
+      }
     }
   ]
 }
