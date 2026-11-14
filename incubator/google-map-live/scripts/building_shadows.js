@@ -94,7 +94,9 @@ export function createBuildingShadowLayer(map,maplibregl,{
   id='building-ground-shadows',
   sourceId,
   sourceLayer='building',
-  beforeId=()=>undefined
+  beforeId=()=>undefined,
+  // Extra casters (e.g. tree crowns): () => [{ring:[[lng,lat],...], height}]
+  extraFootprints=()=>[]
 }={}){
   let sun=null;           // {azimuth, altitude}
   let strength=0.24;
@@ -128,6 +130,15 @@ export function createBuildingShadowLayer(map,maplibregl,{
         }
         out.push({ring,height});
       }
+    }
+    let extra=[];
+    try{extra=extraFootprints()||[];}catch(error){extra=[];}
+    for(const e of extra){
+      if(!e||!e.ring||e.ring.length<3)continue;
+      out.push({
+        ring:e.ring.map(p=>{const m=maplibregl.MercatorCoordinate.fromLngLat(p);return [m.x-origin.x,m.y-origin.y];}),
+        height:e.height
+      });
     }
     return out;
   }

@@ -892,4 +892,7 @@ export const CHINESE_UI = {
   "Vector-field urban road division": "向量场划分城市道路",
   "Expand vector-field urban road division": "展开向量场划分城市道路",
   "Collapse vector-field urban road division": "收起向量场划分城市道路",
+  "Trees in green spaces": "绿化树木",
+  "Procedural trees in parks, woods and other green spaces from zoom 15.5 (a visual impression, not a tree survey)": "在公园、树林等绿地中程序生成的树木，缩放 15.5 级以上显示（仅为视觉效果，并非真实树木普查数据）",
+  "Trees could not load:": "树木无法加载：",
 };
