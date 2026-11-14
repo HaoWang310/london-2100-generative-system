@@ -1,9 +1,9 @@
 // 01 · Growth simulator — the engine, off the page's thread.
 // A classic worker: it loads the incubator's own data/meta.js and engine.js
 // (see source.js), so the workspace runs exactly the incubator's engine.
-// Messages in:  {type:'init', base} · {type:'run', id, params} · {type:'compare', id, runId, year}
+// Messages in:  {type:'init', base} · {type:'prepare', id} · {type:'run', id, params} · {type:'compare', id, runId, year}
 // Messages out: {type:'progress', id, ...} · {type:'result', id, ...} · {type:'error', id, message}
-/* global importScripts, D, GV */
+/* global importScripts, D, GV, GRIDCODEC */
 
 let base = null, engine = null, finalEv = null;
 const runs = new Map();            // runId -> {idx, cls, off}; the latest few, for comparisons
@@ -37,7 +37,7 @@ function ensureEngine(id) {
   const names = ['BITS', 'ZONE', 'CAT', 'SPUR', 'FIELD', 'VEIN', 'DRAIL'];
   engine = Promise.all(names.map(n => fetchBytes(D.arr[n], id, n).then(inflate))).then(bufs => {
     const a = {};
-    names.forEach((n, i) => { a[n] = n === 'DRAIL' ? new Uint16Array(bufs[i]) : new Uint8Array(bufs[i]); });
+    names.forEach((n, i) => { const b = GRIDCODEC.decode(n, bufs[i], D.meta, D.enc); a[n] = n === 'DRAIL' ? new Uint16Array(b) : new Uint8Array(b); });
     GV.init(D.meta, a);
     return GV;
   });
@@ -88,10 +88,14 @@ onmessage = async ({ data: m }) => {
   try {
     if (m.type === 'init') {
       base = m.base;
-      importScripts(base + 'data/meta.js', base + 'engine.js');
+      importScripts(base + 'data/meta.js', base + 'codec.js', base + 'engine.js');
       postMessage({ type: 'ready', id: m.id });
+    } else if (m.type === 'prepare') {          // load the ground in the background, before any run
+      await ensureEngine(m.id);
+      postMessage({ type: 'result', id: m.id });
     } else if (m.type === 'run') {
       await ensureEngine(m.id);
+      postMessage({ type: 'progress', id: m.id, stage: 'ready' });
       const res = await GV.run(m.params, pr => postMessage({ type: 'progress', id: m.id, stage: 'run', pass: pr.pass, year: pr.year }));
       runs.set(m.runId, { idx: res.idx, cls: res.cls, off: res.off });
       for (const k of [...runs.keys()]) if (k !== m.runId) { runs.delete(k); tiers.delete('v' + k); }
