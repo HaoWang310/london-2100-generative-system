@@ -95,7 +95,7 @@ function syncTints(){ const box = document.getElementById('tints'), nm = documen
   for (const b of box.children) b.classList.toggle('on', b.dataset.tint === TINT);
   if (nm){ const T = TINTS.find(x => x[0] === TINT); nm.textContent = String(TINTS.indexOf(T) + 1).padStart(2, '0') + ' ' + (zh ? T[1] : T[2]); } }
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
-function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t); if (typeof autoBasemap === 'function') autoBasemap(t);
+function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);
   try { localStorage.setItem('ts7-theme', t); } catch (e) {}
   baseDirty = true; netDirty = true; widthDirty = true; CELLIMG = null; PARKIMG = null; FLINES = null; UNDERIMG = null; clearTrails(); drawKey(); if (document.getElementById('wRamp')) drawRamp(); if (typeof syncTools === 'function' && document.getElementById('tWind')) try { syncTools(); } catch (e) {} }
@@ -1799,7 +1799,7 @@ function resize(){ DPR = Math.min(2, devicePixelRatio || 1); VW = cv.clientWidth
 function g2d(c){ const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); return g; }
 function pathLine(g, Pp){ g.beginPath(); Pp.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); }
 function pathRings(g, rings){ for (const r of rings){ r.forEach((p, k) => k ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); } }
-function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH);
+function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); if (!(BASEMAPS[BASEMAP] && BASEMAPS[BASEMAP].live)){ g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH); }
   const bm = BASEMAP !== 'none' && drawBasemap(g), ctxOn = $('lCtx').checked && !bm;   // (v8.5) a basemap replaces the drawn context
   if (ctxOn){ g.fillStyle = P.urban; for (const r of D.ctx.urban){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); } }
   if ($('lCont').checked){ g.lineJoin = 'round';
@@ -1890,21 +1890,30 @@ function drawFlood(g){ if (!FR || !SHOWFLOOD) return;
   const fa = floodAvoid(); if (fa){ g.save(); g.strokeStyle = P.waterEdge; g.setLineDash([4, 3]); g.lineWidth = 1; for (const r of FLOOD.zones[fa] || []){ pathLine(g, r); g.stroke(); } g.restore(); } }
 const BASEMAPS = {
   osm: { url: (z, x, y) => 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png', max: 19, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' },
-  light: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/light_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' },
-  dark: { url: (z, x, y, r) => 'https://' + 'abcd'[(x + y) % 4] + '.basemaps.cartocdn.com/dark_all/' + z + '/' + x + '/' + y + r + '.png', max: 20, retina: true, attr: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' } };
+  // (v8.34) the London map itself, seen through a transparent page: the host moves its map with this view (no tiles here)
+  map: { live: true, max: 22, attr: '' }
+};
 let BASEMAP = (() => { try { const b = localStorage.getItem('tensorStudio.basemap'); return BASEMAPS[b] ? b : 'none'; } catch (e){ return 'none'; } })();
 // (v8.33) opened from the London map, the surroundings show as a real map by default: the tile basemap that matches the
 // theme, until the user picks a basemap here (then that choice is kept)
-let BASEMAP_AUTO = false;
-if (D.site){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen'); } catch (e) {} if (!chosen){ BASEMAP_AUTO = true; BASEMAP = 'light'; } }
-function autoBasemap(theme){ if (!BASEMAP_AUTO) return; const want = theme === 'dark' ? 'dark' : 'light'; if (BASEMAP !== want){ BASEMAP = want; baseDirty = true; syncBase(); } }
+const HOSTVIEW = (window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function') ? window.__TS.host.view : null;
+if (!HOSTVIEW && BASEMAP === 'map') BASEMAP = 'none';
+if (HOSTVIEW){ let chosen = null; try { chosen = localStorage.getItem('tensorStudio.basemapChosen'); } catch (e) {} if (!chosen) BASEMAP = 'map'; const b = document.getElementById('bmMap'); if (b) b.hidden = false; }
+// the host's map follows this view: centre, zoom and bearing worked out from the plan's grid (British National Grid) at the view centre
+let lastHostView = '';
+function pushHostView(){ if (!HOSTVIEW || BASEMAP !== 'map') return; const geo = window.__TS && window.__TS.geo; if (!geo) return;
+  const k = view.x.toFixed(2) + ',' + view.y.toFixed(2) + ',' + view.s.toFixed(5) + ',' + VW + ',' + VH; if (k === lastHostView) return; lastHostView = k;
+  const c = geo.bngToWGS84(OX + view.x, OY + view.y), n = geo.bngToWGS84(OX + view.x, OY + view.y + 500), lat = c[1] * PI / 180;
+  const bearing = Math.atan2((n[0] - c[0]) * Math.cos(lat), n[1] - c[1]) * 180 / PI;   // where grid north points, clockwise from true north
+  const zoom = Math.log2(view.s * 40075016.686 * Math.cos(lat) / 512);
+  try { HOSTVIEW({ lng: c[0], lat: c[1], zoom, bearing }); } catch (e) {} }
 const TILES = new Map();
 function tileImg(key, src){ let t = TILES.get(key); if (t) return t; t = new Image(); t.crossOrigin = 'anonymous'; t.decoding = 'async';
   t.onload = () => { baseDirty = true; }; t.onerror = () => { t.failed = true; }; t.src = src; TILES.set(key, t);
   if (TILES.size > 500) TILES.delete(TILES.keys().next().value); return t; }
 // tiles are Web Mercator; the plan is British National Grid, about 1.4° turned and 1.6× scaled here: each tile is drawn through
 // the affine map of its own corners (sub-metre over a tile)
-function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && window.__TS.geo; if (!B || !geo) return false;
+function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && window.__TS.geo; if (!B || !geo) return false; if (B.live) return true;
   const wx = sx => (sx - VW / 2) / view.s + view.x, wy = sy => (VH / 2 - sy) / view.s + view.y;
   const cs = [[0, 0], [VW, 0], [0, VH], [VW, VH]].map(([sx, sy]) => geo.bngToWGS84(OX + wx(sx), OY + wy(sy))), lat0 = cs.reduce((s, c) => s + c[1], 0) / 4;
   const z = clamp(Math.round(Math.log2(156543.03 * Math.cos(lat0 * PI / 180) * view.s * (B.retina ? 1 : Math.min(2, DPR)))), 3, B.max), Z = 2 ** z;
@@ -1920,8 +1929,9 @@ function drawBasemap(g){ const B = BASEMAPS[BASEMAP], geo = window.__TS && windo
     g.drawImage(im, -0.4, -0.4, S + 0.8, S + 0.8); drawn++; }
   g.restore(); return drawn > 0; }   // (v8.33) no tile yet (or offline): the drawn context stays until the tiles arrive
 function syncBase(){ for (const b of document.querySelectorAll('#tgBase button')) b.classList.toggle('on', b.dataset.bm === BASEMAP);
+  document.documentElement.setAttribute('data-bm', BASEMAP); lastHostView = ''; if (HOSTVIEW && BASEMAP !== 'map'){ try { HOSTVIEW(null); } catch (e) {} }
   const el = document.getElementById('bmAttrib'); if (el){ const B = BASEMAPS[BASEMAP]; el.hidden = !B; el.innerHTML = B ? B.attr : ''; window.__TS_INSETS && window.__TS_INSETS(); } }
-for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; BASEMAP_AUTO = false; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); localStorage.setItem('tensorStudio.basemapChosen', '1'); } catch (e) {} baseDirty = true; syncBase(); };
+for (const b of document.querySelectorAll('#tgBase button')) b.onclick = () => { BASEMAP = b.dataset.bm; try { localStorage.setItem('tensorStudio.basemap', BASEMAP); localStorage.setItem('tensorStudio.basemapChosen', '1'); } catch (e) {} baseDirty = true; syncBase(); };
 // how much of the network lies where floods are expected
 let FLAND = null;
 function floodNum(){ const el = document.getElementById('fNum'); if (!el) return; const zh = TS_LANG === 'zh';
@@ -2090,6 +2100,7 @@ let T0 = performance.now(), lastView = '';
 function render(now){
   const vk = view.x.toFixed(2) + ',' + view.y.toFixed(2) + ',' + view.s.toFixed(5) + ',' + VW + ',' + VH;
   if (vk !== lastView){ lastView = vk; baseDirty = netDirty = widthDirty = true; clearTrails(); }
+  pushHostView();
   if (baseDirty) drawBase();
   if (netDirty) drawNet(true); else if (netDrawn < LINES.length) drawNet(false);
   if (FIELDMODE === 'lines' && !FLINES) baseDirty = true, drawBase();
