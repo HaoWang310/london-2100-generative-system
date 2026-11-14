@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road integration · London 2100 module preview</title>
+  <link rel="stylesheet" href="../../shared/ui/theme.css?v=d9cebbd">
+</head>
+<body>
+  <script type="module">
+    import module from './module.js?v=d9cebbd';
+    import { mountPreview } from '../../shared/ui/preview.js?v=d9cebbd';
+    import { woolChildFixture, createBundleWithRoads } from './sample.js?v=d9cebbd';
+    mountPreview({ module, input: async () => createBundleWithRoads(woolChildFixture()),
+      sceneFor: (input, result) => ({ boundary: input.boundary, roads: result.roads, nodes: result.nodes.filter(n => n.kind !== 'joint') }) });
+  </script>
+</body>
+</html>
