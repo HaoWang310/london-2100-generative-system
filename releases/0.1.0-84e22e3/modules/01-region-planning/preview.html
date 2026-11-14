@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Region planning · London 2100 module preview</title>
+  <link rel="stylesheet" href="../../shared/ui/theme.css?v=84e22e3">
+</head>
+<body>
+  <script type="module">
+    import module from './module.js?v=84e22e3';
+    import { mountPreview } from '../../shared/ui/preview.js?v=84e22e3';
+    import { londonFixture } from '../../shared/schemas/fixtures.js?v=84e22e3';
+    mountPreview({ module, input: async () => londonFixture() });
+  </script>
+</body>
+</html>
