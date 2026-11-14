@@ -218,7 +218,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   const fx = { nx: f.nx, ny: f.ny + FILL.north + FILL.south };
   const mesh = gridMesh({ ...meta, YMAX: meta.YMAX + FILL.north * meta.C, NY: fx.ny });
   let strips = null, composed = null, composedFrom = null;
-  const aux = createImageLayer('g01-aux');
+  const aux = createImageLayer('g01-aux'), auxTop = createImageLayer('g01-aux-top');   // under / over the parcels
   let map = null, gl = null, prog = null, buf = null, ibuf = null, tex = null, vao = null, vaoApi = null;
   let uploaded = null, opts = { opacity, edges: false, grain: true, rails: true, fill: true };
   let beforeId;
@@ -345,7 +345,8 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
   function attachMapLibre(m, before, { ground = before } = {}) {
     map = m; beforeId = before;
     map.addLayer(layer, ground && map.getLayer(ground) ? ground : beforeId);
-    map.addLayer(aux.layer, 'g01-growth');                // the steps' images, under the parcels
+    map.addLayer(aux.layer, 'g01-growth');                // the steps' images, under the parcels ...
+    map.addLayer(auxTop.layer, beforeId);                 // ... or over them (an outline)
     map.addSource('g01-rails', { type: 'geojson', data: railsFC() });
     map.addSource('g01-zones', { type: 'geojson', data: zonesFC() });
     map.addLayer({ id: 'g01-zones', type: 'line', source: 'g01-zones', layout: { visibility: 'none' },
@@ -377,7 +378,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
 
   function detachMapLibre() {
     if (!map) return;
-    for (const id of ['g01-names', 'g01-zones', 'g01-stations', 'g01-rails-line', 'g01-aux', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
+    for (const id of ['g01-names', 'g01-zones', 'g01-stations', 'g01-rails-line', 'g01-aux-top', 'g01-aux', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
     for (const id of ['g01-zones', 'g01-stations', 'g01-rails']) if (map.getSource(id)) map.removeSource(id);
     map = null;
   }
@@ -417,7 +418,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     attachMapLibre, detachMapLibre, drawCanvas, sync,
     set(o) { Object.assign(opts, o); sync(); },
     /** The steps' image under the parcels (ground layers, magnet field, edge); null to clear. */
-    setImage: (canvas, rect, o) => aux.setImage(canvas, rect, o),
+    setImage(canvas, rect, o = {}) { (o.top ? auxTop : aux).setImage(canvas, rect, o); (o.top ? aux : auxTop).setImage(null); },
     /** The fill rows (FILL.north then FILL.south, 4 bytes a parcel like the model's cells). */
     setFill(bytes) {
       if (bytes && bytes.length !== (FILL.north + FILL.south) * fx.nx * 4) throw new Error('fill: unexpected size');

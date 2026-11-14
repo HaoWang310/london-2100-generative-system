@@ -126,7 +126,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       }
     } catch (e) { console.warn('Growth step view:', e.message || e); }
     if (!keep()) return;
-    overlay.setImage(img?.canvas || null, img?.rect, { alpha: sh.includes('magnet') ? 0.9 : 1 });
+    overlay.setImage(img?.canvas || null, img?.rect, { alpha: sh.includes('magnet') ? 0.9 : 1, top: img === edge });
     overlay.sync(); viewer.redraw?.();
   }
 
