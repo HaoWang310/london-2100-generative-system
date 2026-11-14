@@ -9,7 +9,7 @@
 ## 分支命名
 
 ```
-module/02-wool-network/<简短描述>      修改某个模块
+module/03-wool-network/<简短描述>      修改某个模块
 shared/<模块名>/<简短描述>              修改公共模块（需要双方都审核）
 incubator/<app 名>/<简短描述>           孵化区独立 app
 app/<简短描述>                          统一外壳
@@ -19,10 +19,10 @@ app/<简短描述>                          统一外壳
 
 ```sh
 git checkout main && git pull
-git checkout -b module/03-tensor-roads/streamline-step
+git checkout -b module/04-tensor-roads/streamline-step
 # … 修改、本地测试 …
 node --test
-git push -u origin module/03-tensor-roads/streamline-step
+git push -u origin module/04-tensor-roads/streamline-step
 # 在 GitHub 上开 Pull Request
 ```
 
@@ -55,7 +55,7 @@ git push -u origin module/03-tensor-roads/streamline-step
 
 ```js
 export default {
-  id: '02-wool-network', level: 'wool', version: '0.1.0',
+  id: '03-wool-network', level: 'wool', version: '0.1.0',
   title: { zh: '…', en: '…' },
   params: [ /* 参数定义，右侧面板自动生成 */ ],
   async run(input, params, { onProgress, signal }) { return /* ScaleBundle */ }

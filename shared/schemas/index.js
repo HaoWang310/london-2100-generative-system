@@ -29,12 +29,12 @@ export const CRS = 'EPSG:27700';
 export const LEVELS = ['london', 'region', 'wool', 'tensor', 'integration'];
 
 export const ROAD_HIERARCHY = [
-  'region-link',   // connections between planning regions (01)
-  'primary',       // Wool regional skeleton (02)
-  'branch',        // Wool branches (02)
-  'secondary',     // Tensor major streamlines (03)
-  'local',         // Tensor minor streamlines (03)
-  'integrated'     // repaired/merged output (04)
+  'region-link',   // connections between planning regions (02)
+  'primary',       // Wool regional skeleton (03)
+  'branch',        // Wool branches (03)
+  'secondary',     // Tensor major streamlines (04)
+  'local',         // Tensor minor streamlines (04)
+  'integrated'     // repaired/merged output (05)
 ];
 
 const isPoint = p => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
@@ -136,7 +136,7 @@ const PARAM_TYPES = ['range', 'select', 'toggle'];
 export function validateModule(m) {
   const errors = [];
   if (!m || typeof m !== 'object') return ['module is not an object'];
-  if (!/^\d\d-[a-z0-9-]+$/.test(m.id || '')) errors.push('id must look like "02-wool-network"');
+  if (!/^\d\d-[a-z0-9-]+$/.test(m.id || '')) errors.push('id must look like "03-wool-network"');
   if (!/^\d+\.\d+\.\d+/.test(m.version || '')) errors.push('version must be semver');
   if (!m.title || !m.title.zh || !m.title.en) errors.push('title {zh, en} required');
   if (typeof m.run !== 'function') errors.push('run(input, params, ctx) required');
