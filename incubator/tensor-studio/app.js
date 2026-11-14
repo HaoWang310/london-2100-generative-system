@@ -946,8 +946,16 @@ function* stitchMains(o){
   // union-find over the places
   const UF = PL.map((_, k) => k), find = k => { while (UF[k] !== k){ UF[k] = UF[UF[k]]; k = UF[k]; } return k; }, unite = (a, b) => { UF[find(a)] = find(b); };
   // the cells a main street runs through, each with the place it belongs to (for ending a link on the network)
-  const USED = new Int32Array(Ncell).fill(-1), USEDL = new Int32Array(Ncell).fill(-1);
-  for (const P of PL) if (P.hole){ const circ = LINES.find(l => l.circus && !l.dead && Math.hypot(l.pts[0][0] - P.hole.x - P.hole.r, l.pts[0][1] - P.hole.y) < 2); if (circ){ P.circ = circ; for (const q of circ.pts){ const i = ci(q[0], q[1]); if (i >= 0){ USED[i] = P.id; USEDL[i] = circ.id; } } } }
+  const USED = new Int32Array(Ncell).fill(-1), USEDL = new Int32Array(Ncell).fill(-1), DU = new Float32Array(Ncell).fill(1e9);
+  // (v8.17) a street laid marks the cells it runs through and, within 12 m, the band it owns (a link reaching the band has
+  // reached the street); DU is the distance to the nearest street laid, up to 60 m (beside a street is dear: no doubling)
+  const BAND = 12, BESIDE = 60;
+  function markUsed(pts, owner, lid){ const q = [];
+    for (const p of pts){ const i = ci(p[0], p[1]); if (i < 0) continue; if (USED[i] < 0 || DU[i] > 0){ USED[i] = owner; USEDL[i] = lid; } if (DU[i] > 0){ DU[i] = 0; q.push(i); } }
+    for (let h = 0; h < q.length; h++){ const k = q[h], r = (k / nx) | 0, c = k % nx;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++){ if (!dr && !dc) continue; const rr = r + dr, cc = c + dc; if (rr < 0 || cc < 0 || rr >= ny || cc >= nx) continue; const j = rr * nx + cc, nd = DU[k] + Math.hypot(dr, dc) * cell;
+        if (nd < DU[j] && nd <= BESIDE){ DU[j] = nd; q.push(j); if (nd <= BAND && USED[j] < 0){ USED[j] = USED[k]; USEDL[j] = USEDL[k]; } } } } }
+  for (const P of PL) if (P.hole){ const circ = LINES.find(l => l.circus && !l.dead && Math.hypot(l.pts[0][0] - P.hole.x - P.hole.r, l.pts[0][1] - P.hole.y) < 2); if (circ){ P.circ = circ; markUsed(circ.pts, P.id, circ.id); } }
   // 2 the links: candidates within a piece; two entries link only across the land (not along its edge)
   const cand = [];
   for (let a = 0; a < PL.length; a++) for (let b = a + 1; b < PL.length; b++){ const A = PL[a], B = PL[b]; if (A.comp !== B.comp) continue; const d = Math.hypot(A.x - B.x, A.y - B.y); if (d > STITCH.MAX_LINK || d < 40) continue;
@@ -974,7 +982,7 @@ function* stitchMains(o){
         const t = TH[i]; if (t === t){ const s = Math.abs(Math.sin(2 * (th - t))); cost *= 1 + STITCH.ALIGN * s * (0.3 + 0.7 * CLAR[i]); }
         if (Z) cost += L * STITCH.SLOPE * Math.abs(Z[j] - Z[i]) / L;
         if (ED[j] < 70 && !nearEnds) cost *= 1 + (STITCH.EDGE_COST - 1) * (1 - ED[j] / 70);
-        if (USED[j] >= 0 && !nearEnds) cost *= loop ? STITCH.LOOP_AVOID : STITCH.REUSE;
+        if (!nearEnds){ if (DU[j] <= BAND) cost *= loop ? STITCH.LOOP_AVOID : STITCH.REUSE; else if (DU[j] < BESIDE) cost *= 1 + 0.9 * (1 - (DU[j] - BAND) / (BESIDE - BAND)); }
         const ng = g + cost; if (ng < G[j]){ G[j] = ng; PREV[j] = i; pushH(ng + 0.95 * Math.hypot(cx(j) - hx, cy(j) - hy), j); } } }
     return -1; }
   const pathTo = e => { const out = []; for (let i = e; i >= 0; i = PREV[i]) out.push(i); return out.reverse(); };
@@ -983,13 +991,13 @@ function* stitchMains(o){
   const okPts = (P, raw) => P.every(q => inLand(q[0], q[1]) && !inRail(q[0], q[1]));
   const EDGES = [];   // the links made: [a, b, length]
   // lay a route as a main street, drawn a few points a frame
-  function* lay(A, B, cells, endCell, loop){
+  function* lay(A, B, cells, endCell, loop, ign){ ign = ign || [];
     let raw = cells.map(i => [cx(i), cy(i)]);
     if (A.kind === 'entry') raw = [A.s0.slice(), [A.x, A.y]].concat(raw);
     else if (A.circ){ const q0 = raw[0], r0 = A.circ.pts.reduce((b, q) => Math.hypot(q[0] - q0[0], q[1] - q0[1]) < Math.hypot(b[0] - q0[0], b[1] - q0[1]) ? q : b, A.circ.pts[0]); raw.unshift(r0.slice()); A.circ.hits = (A.circ.hits || 0) + 1; }
     // the end: on a place's own point, a circus ring or a street already laid
     let endLine = null, endPt = raw[raw.length - 1];
-    if (USEDL[endCell] >= 0){ const c = nearB(endPt[0], endPt[1], 14, -1, [], null, false, LV1); if (c){ endLine = LINES[c[3]]; endPt = [c[1], c[2]]; raw[raw.length - 1] = endPt; } }
+    if (USEDL[endCell] >= 0){ const c = nearB(endPt[0], endPt[1], BAND + 14, -1, ign, null, false, LV1); if (c){ endLine = LINES[c[3]]; endPt = [c[1], c[2]]; raw[raw.length - 1] = endPt; } }
     else if (B.kind === 'entry' && B.isPort.has(endCell)){ raw.push([B.x, B.y], B.s0.slice()); endPt = B.s0; }
     else if (B.circ && B.isPort.has(endCell)){ const r0 = B.circ.pts.reduce((b, q) => Math.hypot(q[0] - endPt[0], q[1] - endPt[1]) < Math.hypot(b[0] - endPt[0], b[1] - endPt[1]) ? q : b, B.circ.pts[0]); raw.push(r0.slice()); endPt = r0; endLine = B.circ; }
     // the grid's staircase simplified (Douglas-Peucker, 14 m, a straight run kept only if it stays on land and off the
@@ -999,21 +1007,30 @@ function* stitchMains(o){
       for (let k = 1; k < Q.length - 1; k++){ const d = Math.abs((Q[k][0] - a[0]) * dy - (Q[k][1] - a[1]) * dx) / L; if (d > bd){ bd = d; bi = k; } }
       if (bd <= tol && segOK(a, b)) return [a, b]; if (bi < 0) bi = Q.length >> 1; const l1 = rdp(Q.slice(0, bi + 1), tol), l2 = rdp(Q.slice(bi), tol); return l1.slice(0, -1).concat(l2); };
     let P = rdp(raw, 14); for (let it = 0; it < 3; it++){ const s = chaikin(P); if (!okPts(s)) break; P = s; }
-    P = resample(P, 5); if (P.length < 2) return 0;
-    const l = newLine(1, [P[0], P[1]], 1, 0, 'stitch'); l.stitched = true; l.ends = ['T', 'T'];
-    for (let k = 2; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l.pts.push(b); hashPt(l, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); if (k % 3 === 0) yield 1; }
-    // culverts where it crosses a watercourse or a corridor
-    let inZ = false, z0 = null; for (const q of P){ const z = inZone(q[0], q[1]); if (z && !inZ) z0 = q; if (!z && inZ && z0) CULVERTS.push({ x: (z0[0] + q[0]) / 2, y: (z0[1] + q[1]) / 2 }); inZ = z; }
-    if (endLine){ endLine.hits = (endLine.hits || 0) + 1; addNode(endPt[0], endPt[1], true); EVENTS.push({ x: endPt[0], y: endPt[1], k: 'join' }); }
-    for (const q of P){ const i = ci(q[0], q[1]); if (i >= 0 && USED[i] < 0){ USED[i] = A.id; USEDL[i] = l.id; } }
-    // the side-street buds along it (for step 7), as a grown main street lays them
-    { const d2 = v('d2'); let acc = 0, side = l.id % 2 ? 1 : -1;
-      for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / L, dy = (b[1] - a[1]) / L; acc += L;
-        const tM = fieldAtT(b[0], b[1]), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071, gap = d2 * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, b[0], b[1]) : 0.75);
-        if (acc < gap || k < 6 || P.length - k < 6) continue;
-        const px = -dy * side, py = dx * side; let u = tM === null ? [px, py] : nearestAxis(tM, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
-        BUDS.push({ x: b[0], y: b[1], u, parent: l }); side = -side; acc = 0; } }
-    EDGES.push([A.id, B.id, plen(P)]); return 1; }
+    P = resample(P, 5); if (P.length < 2) return null;
+    // (v8.17) where the route runs on a main street already laid (within 12 m) it has joined it: only the parts off the
+    // network are laid, each its own street, its ends put on the street it leaves or meets (a T or a crossroads)
+    const onEx = P.map(q => !!nearB(q[0], q[1], BAND, -1, ign, null, false, LV1)), runs = []; let cur = null;
+    P.forEach((q, k) => { if (!onEx[k]){ if (!cur) cur = { s: k, pts: [] }; cur.pts.push(q); } else if (cur){ cur.e = k; runs.push(cur); cur = null; } }); if (cur){ cur.e = P.length; runs.push(cur); }
+    const res = { ok: true, startLine: null, lines: [] };
+    for (const run of runs){ const pts = run.pts.slice();
+      for (const [k, at] of [[run.s - 1, 0], [run.e, 1]]){ if (k < 0 || k >= P.length) continue; const c = nearB(P[k][0], P[k][1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
+        if (at === 0) pts.unshift([c[1], c[2]]); else pts.push([c[1], c[2]]); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; addNode(c[1], c[2], true); EVENTS.push({ x: c[1], y: c[2], k: 'join' }); }
+      if (pts.length < 2 || (plen(pts) < 25 && runs.length > 1)) continue;
+      const l = newLine(1, [pts[0], pts[1]], 1, 0, 'stitch'); l.stitched = true; l.ends = ['T', 'T']; res.lines.push(l); if (run.s === 0) res.startLine = l;
+      for (let k = 2; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l.pts.push(b); hashPt(l, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); if (k % 3 === 0) yield 1; }
+      // culverts where it crosses a watercourse or a corridor
+      let inZ = false, z0 = null; for (const q of pts){ const z = inZone(q[0], q[1]); if (z && !inZ) z0 = q; if (!z && inZ && z0) CULVERTS.push({ x: (z0[0] + q[0]) / 2, y: (z0[1] + q[1]) / 2 }); inZ = z; }
+      markUsed(pts, A.id, l.id);
+      // the side-street buds along it (for step 7), as a grown main street lays them
+      { const d2 = v('d2'); let acc = 0, side = l.id % 2 ? 1 : -1;
+        for (let k = 1; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / L, dy = (b[1] - a[1]) / L; acc += L;
+          const tM = fieldAtT(b[0], b[1]), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071, gap = d2 * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, b[0], b[1]) : 0.75);
+          if (acc < gap || k < 6 || pts.length - k < 6) continue;
+          const px = -dy * side, py = dx * side; let u = tM === null ? [px, py] : nearestAxis(tM, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
+          BUDS.push({ x: b[0], y: b[1], u, parent: l }); side = -side; acc = 0; } } }
+    if (endLine){ endLine.hits = (endLine.hits || 0) + 1; addNode(endPt[0], endPt[1], true); }
+    EDGES.push([A.id, B.id, plen(P)]); return res; }
   // the tree
   for (const [, a, b] of cand){ if (find(a) === find(b)) continue; const A = PL[a], B = PL[b], rb = find(b);
     // a link to a node goes all the way to it (through the streets it meets: crossroads); one to an entry may end on the
@@ -1035,14 +1052,15 @@ function* stitchMains(o){
     if (!USED.some((u, i) => u >= 0 && COMP[i] === S.comp)) continue;
     PHASE = 'main streets: the local centres joined';
     const e1 = route(S, S, i => USED[i] >= 0 && COMP[i] === S.comp, false); if (e1 < 0) continue;
-    const B1 = PL[USED[e1]] || S; if (!(yield* lay(S, B1, pathTo(e1), e1, false))) continue;
-    const x1 = cx(e1), y1 = cy(e1), d1 = Math.hypot(x1 - S.x, y1 - S.y), first = LINES.length - 1;
+    const B1 = PL[USED[e1]] || S, r1 = yield* lay(S, B1, pathTo(e1), e1, false); if (!r1) continue;
+    const x1 = cx(e1), y1 = cy(e1), d1 = Math.hypot(x1 - S.x, y1 - S.y), first = r1.startLine ? r1.startLine.id : -2;
     const e2 = route(S, S, i => USED[i] >= 0 && COMP[i] === S.comp && USEDL[i] !== first && Math.hypot(cx(i) - x1, cy(i) - y1) > Math.max(150, d1) && ((cx(i) - S.x) * (x1 - S.x) + (cy(i) - S.y) * (y1 - S.y)) < 0, true);
     // failing the far side, any side at least 60 degrees round from the first link (never back along it)
     let e2x = e2; if (e2x < 0){ const ax = x1 - S.x, ay = y1 - S.y, aL = Math.hypot(ax, ay) || 1;
       e2x = route(S, S, i => { if (!(USED[i] >= 0 && COMP[i] === S.comp && USEDL[i] !== first)) return false; const bx = cx(i) - S.x, by = cy(i) - S.y, bL = Math.hypot(bx, by) || 1; return (ax * bx + ay * by) / (aL * bL) < 0.5 && Math.hypot(cx(i) - x1, cy(i) - y1) > 120; }, true); }
     // the two links made one street through the node (so no pass sees an end there)
-    if (e2x >= 0 && (yield* lay(S, PL[USED[e2x]] || S, pathTo(e2x), e2x, true))){ const l1 = LINES[first], l2 = LINES[LINES.length - 1];
+    const r2 = e2x >= 0 ? yield* lay(S, PL[USED[e2x]] || S, pathTo(e2x), e2x, true, first >= 0 ? [first] : []) : null;   // (its start, on the first link at the node, is not 'on the network')
+    if (r2 && r1.startLine && r2.startLine){ const l1 = r1.startLine, l2 = r2.startLine;
       const pts = l1.pts.slice().reverse().concat(l2.pts.slice(1)); l2.dead = true; l1.pts = []; for (let k = 0; k < pts.length; k++){ const a = pts[Math.max(0, k - 1)], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l1.pts.push(b); hashPt(l1, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); }
       l1.ends = ['T', 'T']; l1.through = true; rehashAll(); } }
   // an entry still alone (its piece of land too small, or nothing to reach) grows into the land along the field, as before
