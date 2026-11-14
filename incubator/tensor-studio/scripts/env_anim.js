@@ -63,7 +63,7 @@ function spawn(k){
   if (k === 'V' || k === 'Cw'){ const p = landSpot(); return p ? { x: p[0], y: p[1], px: p[0], py: p[1], age: 0, life: 50 + rnd() * 110, w: k } : null; }
   if (k === 'C'){ const p = landSpot(); return p ? { x: p[0], y: p[1], px: p[0], py: p[1], age: 0, life: 40 + rnd() * 80, w: rnd() < 0.5 ? 'V' : 'Cw' } : null; }
   return null; }
-function counts(k){ const a = Math.min(1.6, Math.max(0.6, (cv.width * cv.height) / (2800 * 1800))); return Math.round({ Q: 2600, V: 1700, Cw: 1700, C: 1500, Z: 0 }[k] * a); }
+function counts(k){ const a = Math.min(1.6, Math.max(0.6, (cv.width * cv.height) / (2800 * 1800))); return Math.round({ Q: 2600, V: 1700, Cw: 1700, C: 1500, Z: 0 }[k] * a * (EA.gain == null ? 1 : EA.gain)); }   // (v8.28) gain: fewer particles for a weaker wish
 function restart(now){ EA.t0 = now; EA.parts = []; EA.lights = []; clearTrail(); EA.cycle++; }
 
 EA.start = function(k){ if (RM || !ENV || !k || k === 'off'){ EA.stop(); return; } EA.on = true; EA.k = k; EA.cycle = 0; restart(performance.now());
