@@ -1812,9 +1812,12 @@ function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); if (!(BAS
   const bm = BASEMAP !== 'none' && drawBasemap(g), ctxOn = $('lCtx').checked && !bm;   // (v8.5) a basemap replaces the drawn context
   if (ctxOn){ g.fillStyle = P.urban; for (const r of D.ctx.urban){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); } }
   if ($('lCont').checked){ g.lineJoin = 'round';
+    // (v8.38) on a map site the contours (and their labels) stay inside the red line: the map round it is the context
+    const clipC = !!D.site; if (clipC){ g.save(); g.beginPath(); pathRings(g, D.pieces.map(p => p.outer)); g.clip(); }
     for (const c of D.contours){ const idx = c.z % 5 === 0; g.strokeStyle = idx ? P.contourIdx : P.contour; g.lineWidth = idx ? 1.0 : 0.6; pathLine(g, c.p); g.stroke(); }
     g.fillStyle = P.label; g.font = '10px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    if (view.s > 0.18) for (const [x, y, a, t] of D.labels){ g.save(); g.translate(X(x), Y(y)); let r = -a; if (r > PI / 2) r -= PI; if (r < -PI / 2) r += PI; g.rotate(r); g.fillText(t, 0, 0); g.restore(); } }
+    if (view.s > 0.18) for (const [x, y, a, t] of D.labels){ if (clipC && !D.pieces.some(q => inRing([x, y], q.outer))) continue; g.save(); g.translate(X(x), Y(y)); let r = -a; if (r > PI / 2) r -= PI; if (r < -PI / 2) r += PI; g.rotate(r); g.fillText(t, 0, 0); g.restore(); }
+    if (clipC) g.restore(); }
   if (ctxOn){ g.fillStyle = P.room; for (const r of D.ctx.room){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); }
     for (const rb of D.ctx.rib){ g.fillStyle = P.rib[rb.c]; g.beginPath(); pathRings(g, rb.r); g.fill('evenodd'); }
     g.strokeStyle = P.lane; g.lineWidth = 0.8; for (const l of D.ctx.lanes){ pathLine(g, l); g.stroke(); }
