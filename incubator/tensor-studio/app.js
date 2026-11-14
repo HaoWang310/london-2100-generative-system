@@ -66,7 +66,7 @@ let TINT = 'violet'; try { const t = localStorage.getItem('tensorStudio.tint'); 
 // and the particles take the palette nearest that style; both can still be changed here, for this visit only (not remembered)
 const FROM_MAP = !!(window.__TS && window.__TS.host && typeof window.__TS.host.view === 'function');
 const MAP_STYLE = FROM_MAP ? (window.__TS.host.mapTheme || 'planning') : null;
-const MAP_TINT = { default: 'glacier', faded: 'sage', planning: 'mono', ocean: 'teal', warm: 'amber', vivid: 'spectral', dark: 'teal' };
+const MAP_TINT = { default: 'glacier', faded: 'sage', planning: 'violet', ocean: 'teal', warm: 'amber', vivid: 'spectral', dark: 'teal' };
 if (FROM_MAP) TINT = MAP_TINT[MAP_STYLE] || 'mono';
 const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
 // (v8.37) the wind's second colour: the complement of the palette's main colour, at the lightness of the wind's first colour
