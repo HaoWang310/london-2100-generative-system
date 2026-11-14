@@ -997,21 +997,98 @@ function squareEnds(){ let n = 0; rehashAll();
       insertOn(q.par, T); rehashAll(); n++; ok = true; break; } }
   rehashAll(); netDirty = widthDirty = true; return n; }
 // (v8.24) a block the streets could not cut down (still over 4 ha that can be built on, among the corridors) is kept as
-// a park: green on the map, in the export and in the figures
+// a park: green on the map, in the export and in the figures; (v8.25) so is a sliver under 0.15 ha that is left (between
+// main streets and the edge, where no second street can go): a pocket park
 function markParks(maxHa){ maxHa = maxHa || 4; const { lab, W, H, c } = CELLS, BH = buildHa(), mask = new Uint8Array(W * H), list = [];
-  const ids = new Map(); for (let i = 0; i < BH.length; i++) if (BH[i] > maxHa) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0 }) - 1);
+  const ids = new Map(); for (let i = 0; i < BH.length; i++){ if (BH[i] > maxHa) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0 }) - 1);
+    else if (CELLS.areas[i] > 0.004 && CELLS.areas[i] < 0.15) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0, pocket: true }) - 1); }   // (v8.25) a sliver left between main streets and the edge: a pocket park
   for (let i = 0; i < W * H; i++){ const k = ids.get(lab[i]); if (k === undefined) continue; mask[i] = 1; const q = list[k]; q.n++; q.x += (i % W + 0.5) * c; q.y += D.h - (((i / W) | 0) + 0.5) * c; }
   for (const q of list){ q.ha = +(q.n * c * c / 1e4).toFixed(2); q.x /= q.n || 1; q.y /= q.n || 1; delete q.n; }
   PARKS = list.length ? { mask, W, H, c, list } : null; PARKIMG = null; return list.length; }
 function drawParks(g){ if (!PARKS || SCRUB) return;   // (not while a frame of the growth is shown)
-  if (!PARKIMG){ const { mask, W, H } = PARKS, oc = mk(); oc.width = W; oc.height = H; const gg = oc.getContext('2d'), im = gg.createImageData(W, H), col = THEME === 'dark' ? [48, 209, 88, 70] : [52, 168, 83, 64];
-    for (let i = 0; i < W * H; i++){ if (!mask[i]) continue; im.data[4 * i] = col[0]; im.data[4 * i + 1] = col[1]; im.data[4 * i + 2] = col[2]; im.data[4 * i + 3] = col[3]; }
+  if (!PARKIMG){ // drawn 4x finer, the mask read between its pixels (a soft, even edge, not the 5 m steps)
+    const { mask, W, H } = PARKS, U = 4, oc = mk(); oc.width = W * U; oc.height = H * U; const gg = oc.getContext('2d'), im = gg.createImageData(W * U, H * U), col = THEME === 'dark' ? [48, 209, 88, 70] : [52, 168, 83, 64];
+    const at = (x, y) => mask[clamp(y, 0, H - 1) * W + clamp(x, 0, W - 1)];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++){ if (!at(x, y) && !at(x + 1, y) && !at(x, y + 1) && !at(x + 1, y + 1) && !at(x - 1, y) && !at(x, y - 1)) continue;
+      for (let v = 0; v < U; v++) for (let u = 0; u < U; u++){ const fx = x + (u + 0.5) / U - 0.5, fy = y + (v + 0.5) / U - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+        const m = at(x0, y0) * (1 - tx) * (1 - ty) + at(x0 + 1, y0) * tx * (1 - ty) + at(x0, y0 + 1) * (1 - tx) * ty + at(x0 + 1, y0 + 1) * tx * ty; if (m < 0.35) continue;
+        const k = 4 * ((y * U + v) * W * U + x * U + u), a = clamp((m - 0.35) / 0.3, 0, 1); im.data[k] = col[0]; im.data[k + 1] = col[1]; im.data[k + 2] = col[2]; im.data[k + 3] = col[3] * a; } }
     gg.putImageData(im, 0, 0); PARKIMG = oc; }
   g.save(); g.imageSmoothingEnabled = true; g.drawImage(PARKIMG, X(0), Y(D.h), PARKS.W * PARKS.c * view.s, PARKS.H * PARKS.c * view.s); g.restore(); }
 // a park for the export: its raster rows as rectangles (one MultiPolygon)
 function parkPolys(){ if (!PARKS) return []; const { mask, W, H, c } = PARKS, out = [];
   for (let r = 0; r < H; r++){ let x0 = -1; for (let x = 0; x <= W; x++){ const on = x < W && mask[r * W + x]; if (on && x0 < 0) x0 = x; if (!on && x0 >= 0){ const y1 = D.h - r * c, y0 = y1 - c, a = x0 * c, b = x * c; out.push([[[a, y0], [b, y0], [b, y1], [a, y1], [a, y0]]]); x0 = -1; } } }
   return out; }
+// (v8.25) a "lens": a second street whose two ends both lie on one other street, running close beside it between them
+// (a fork whose two arms meet again, or a street curving out and back into the same street), leaving a long thin block
+// between the two that no one can use. The second street goes, unless another street ends on it (then it stays)
+function dropLens(){ let n = 0; rehashAll();
+  const onLine = (e, m) => { for (const q of m.pts) if (Math.abs(q[0] - e[0]) < 8 && Math.abs(q[1] - e[1]) < 8 && Math.hypot(q[0] - e[0], q[1] - e[1]) < 8) return true; return false; };
+  const live = LINES.filter(l => !l.dead && l.pts.length > 1 && l.level >= 1 && !l.circus);
+  const order = live.filter(l => l.level === 2).sort((a, b) => plen(a.pts) - plen(b.pts));
+  for (const A of order){ if (A.dead) continue; const L = plen(A.pts); if (L < 20) continue; const e0 = A.pts[0], e1 = A.pts[A.pts.length - 1]; if (Math.hypot(e0[0] - e1[0], e0[1] - e1[1]) < 15) continue;
+    for (const B of live){ if (B === A || B.dead || !onLine(e0, B) || !onLine(e1, B)) continue;
+      const [s0] = arcOf(B.pts, e0), [s1] = arcOf(B.pts, e1), sb = Math.abs(s1 - s0); if (sb < 15) continue;
+      // how far apart: the mean and the most, A's points from B
+      let sum = 0, mx = 0, k = 0; for (const q of A.pts){ const d = arcOf(B.pts, q)[1]; sum += d; mx = Math.max(mx, d); k++; }
+      const mean = sum / (k || 1); if (mean > 30 || mx > 50 || L > 2.2 * sb) continue;
+      // another street ending on A (away from its two ends, or at an end where B is not) would be left hanging: keep A
+      // who would be left hanging if A went: a street ending on A and on nothing else. One that ends within 4 m of B is moved
+      // onto B; B itself, ending on A, is cut back to A's end nearer that end of it (its stretch beside A goes, A stays)
+      const hang = []; for (const C of LINES){ if (C.dead || C === A || C.pts.length < 2) continue;
+        for (const side of [0, 1]){ const e = side ? C.pts[0] : C.pts[C.pts.length - 1]; if (!A.pts.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)) continue;
+          if (LINES.some(D => D !== A && D !== C && !D.dead && D.pts.length > 1 && D.pts.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 1.5))) continue; hang.push({ C, side, e }); } }
+      // (a street ending on A near one of A's ends, where A meets a third street: it takes over that junction)
+      { const plan = []; for (const h of hang){ const [sh] = arcOf(A.pts, h.e); let best = null;
+          for (const [X, sX] of [[e0, 0], [e1, L]]){ if (Math.abs(sh - sX) > 20) continue; const o = nearB(X[0], X[1], 1.5, A.id, [h.C.id], null, false, null); if (!o || LINES[o[3]].hole) continue; best = X; }
+          if (!best) break; plan.push([h, best]); }
+        if (hang.length && plan.length === hang.length){ for (const [h, X] of plan){ const P = h.C.pts, idx = h.side ? 0 : P.length - 1, far = Math.hypot(P[idx][0] - X[0], P[idx][1] - X[1]); if (far < 5) P[idx] = X.slice(); else if (h.side) P.unshift(X.slice()); else P.push(X.slice()); }
+          A.dead = true; A.lens = true; n++; rehashAll(); break; } }
+      if (hang.some(h => h.C === B)){ if (B.level !== 2 || hang.length > 1) continue; const h = hang[0], sE = arcOf(B.pts, h.e)[0], cutAt = Math.abs(s0 - sE) < Math.abs(s1 - sE) ? [s0, e0] : [s1, e1];
+        const P = B.pts, keep = [], gone = []; let acc = 0; for (let k = 0; k < P.length; k++){ if (k) acc += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); ((acc <= cutAt[0]) === (sE > cutAt[0]) ? keep : gone).push(P[k]); }
+        if (plen(keep) < 20 || LINES.some(D => D !== A && D !== B && !D.dead && D.pts.length > 1 && [D.pts[0], D.pts[D.pts.length - 1]].some(e => gone.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)))) continue;
+        if (sE > cutAt[0]) keep.push(cutAt[1].slice()); else keep.unshift(cutAt[1].slice()); B.pts = keep; B.lensCut = true; n++; rehashAll(); break; }
+      if (hang.some(h => arcOf(B.pts, h.e)[1] > 4)) continue;
+      for (const h of hang){ const [sh] = arcOf(B.pts, h.e), T = atArc(B.pts, sh).p; if (h.side) h.C.pts[0] = T; else h.C.pts[h.C.pts.length - 1] = T; insertOn(B, T); }
+      A.dead = true; A.lens = true; n++; rehashAll(); break; } }
+  netDirty = widthDirty = true; return n; }
+// (v8.25) a sliver: a block under 0.15 ha between streets (not on the water or the land's edge) is joined to the block next
+// to it by taking away one of the second streets round it: the shortest that leaves no street hanging (a street ending
+// on it, within 4 m of another, is moved onto that one)
+function looseEnds(){ let n = 0; for (const l of LINES){ if (l.dead || l.level === 0 || l.circus || l.pts.length < 2) continue; const a0 = l.pts[0], a1 = l.pts[l.pts.length - 1]; if (Math.hypot(a0[0] - a1[0], a0[1] - a1[1]) < 0.5) continue;
+    for (const p of [a0, a1]) if (!near(p[0], p[1], 1.5, null, false, null, l.id) && !l.pts.slice(5, -5).some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 1.5)) n++; } return n; }
+function dropStreet(A){ const hang = [], cut = [], before = looseEnds();
+  for (const C of LINES){ if (C.dead || C === A || C.pts.length < 2) continue;
+    for (const side of [0, 1]){ const e = side ? C.pts[0] : C.pts[C.pts.length - 1]; if (!A.pts.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)) continue;
+      if (nearB(e[0], e[1], 1.5, C.id, [A.id], null, false, null)) continue;
+      const o = nearB(e[0], e[1], 4, C.id, [A.id], null, false, null); if (o && !LINES[o[3]].hole){ hang.push([C, side, o]); continue; }
+      if (C.level !== 2 || C.circus) return false; cut.push([C, side ? 1 : 0]); } }   // (a second street left hanging: cut back to its last junction)
+  const keep = LINES.filter(l => !l.dead).map(l => [l, l.pts.slice(), l.ends.slice()]);
+  for (const [C, side, o] of hang){ const T = [o[1], o[2]]; if (side) C.pts[0] = T; else C.pts[C.pts.length - 1] = T; }
+  A.dead = true; rehashAll();
+  for (const [C, side] of cut){ cutBack(C, side); if (!C.dead){ const e = side ? C.pts[0] : C.pts[C.pts.length - 1], o = nearB(e[0], e[1], 4.5, C.id, [], null, false, null); if (o){ if (side) C.pts[0] = [o[1], o[2]]; else C.pts[C.pts.length - 1] = [o[1], o[2]]; } } rehashAll(); }
+  const undo = () => { for (const [l, pts, ends] of keep){ l.pts = pts; l.ends = ends; l.dead = false; } rehashAll(); };
+  if (looseEnds() > before || cut.some(([C]) => !C.dead && plen(C.pts) < 20)){ undo(); return false; }   // (it would leave an open end, or a stub: undone)
+  return undo; }
+function dropSlivers(){ let n = 0;
+  for (let round = 0; round < 6; round++){ readCells(); rehashAll(); const { lab, W, H, c, areas } = CELLS; let made = 0; const touched = new Set(), pix = new Map();
+    for (let j = 0; j < W * H; j++){ const L_ = lab[j]; if (L_ < 0) continue; const a = areas[L_]; if (!(a > 0.004 && a < 0.15)) continue; let p = pix.get(L_); if (!p){ p = []; pix.set(L_, p); } p.push(j); }
+    for (const [L_, P] of pix){
+      // its edge: the pixels next to a street (or off the land: then it is a shore piece, left alone)
+      const cnt = new Map(); let shore = false;
+      for (const j of P){ if (shore) break; const x = j % W, y = (j / W) | 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H){ shore = true; break; } const p = yy * W + xx; if (lab[p] === L_) continue;
+          const wx = (xx + 0.5) * c, wy = D.h - (yy + 0.5) * c; if (!inLand(wx, wy) || inZone(wx, wy)){ const h = nearB(wx, wy, 8, -1, [], null, false, null); if (!h || LINES[h[3]].level === 0){ shore = true; break; } }
+          const h = nearB(wx, wy, 7, -1, [], null, false, null); if (h) cnt.set(h[3], (cnt.get(h[3]) || 0) + 1); } }
+      if (shore) continue;
+      if ([...cnt.keys()].some(id => touched.has(id))) continue;   // (a street round it already changed this round: next round)
+      const cands = [...cnt.keys()].map(id => LINES[id]).filter(l => !l.dead && l.level === 2 && !l.circus && cnt.get(l.id) >= 3).sort((p, q) => plen(p.pts) - plen(q.pts));
+      for (const A of cands){ const ends = LINES.filter(C => !C.dead && C !== A && C.pts.length > 1 && [C.pts[0], C.pts[C.pts.length - 1]].some(e => A.pts.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)));
+        const undo = dropStreet(A); if (!undo) continue;
+        { readCells(); const nl = CELLS.lab[P[0]], na = nl >= 0 ? CELLS.areas[nl] : 0; if (na > 2.0){ undo(); readCells(); continue; } }   // (the block it joins stays under 2 ha)
+        A.sliver = true; made++; touched.add(A.id); for (const C of ends) touched.add(C.id); for (const id of cnt.keys()) touched.add(id); break; } }
+    n += made; if (!made) break; }
+  netDirty = widthDirty = true; return n; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -1420,9 +1497,11 @@ function* growBranching(){
     for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
     holeTrim(); dropSide(); holeTrim(); alignShared();
     shoreStreets(1.5); splitBlocks(1.5); holeTrim();   // (v8.23) the waterside streets, then the big blocks cut
+    dropLens(); dropSlivers();   // (v8.25) no thin lens of a block between two streets, no sliver of a block
     crossJoin(); squareEnds();   // (v8.23) crossroads across the main streets, and square junctions
     roundKinks(); smoothBends(); tidyNet();
     rehashAll();
+    rehashAll(); for (const e of EVENTS) if (!nearB(e.x, e.y, 4, -1, [], null, false, null)) e.gone = true;   // (v8.25) the mark of a street taken away goes with it
     PHASE = 'done'; FINISHED = true; readCells(); markParks(4); measures(); finishRun(); return; }
 }
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
@@ -1512,7 +1591,7 @@ function drawUnder(g){ if (!CLAR) return;
   g.save(); g.beginPath(); for (const p of D.pieces) pathRings(g, [p.outer, ...p.holes]); g.clip('evenodd'); g.imageSmoothingEnabled = true;
   g.drawImage(UNDERIMG, X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); g.restore(); }
 function drawEvents(){ const r = clamp(view.s * 8, 2.4, 5.5);
-  for (const e of (SCRUB ? EVENTS.slice(0, SCRUB.ev) : EVENTS)){ const x = X(e.x), y = Y(e.y); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
+  for (const e of (SCRUB ? EVENTS.slice(0, SCRUB.ev) : EVENTS)){ if (e.gone) continue; const x = X(e.x), y = Y(e.y); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
     if (e.k === 'branch' || e.k === 'edge-branch' || e.k === 'spoke'){ ctx.fillStyle = P.evBranch; ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0, 2 * PI); ctx.fill(); }
     else if (e.k === 'fork'){ ctx.strokeStyle = P.evFork; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + r * 1.3); ctx.lineTo(x, y); ctx.lineTo(x - r, y - r); ctx.moveTo(x, y); ctx.lineTo(x + r, y - r); ctx.stroke(); }
     else if (e.k === 'merge'){ ctx.fillStyle = P.evFork; ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0, 2 * PI); ctx.fill(); }
