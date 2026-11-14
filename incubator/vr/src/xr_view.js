@@ -107,6 +107,7 @@ const M4 = {
     const z = nrm(sub(eye, at)), x = nrm(cr(up, z)), y = cr(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dt(x, eye), -dt(y, eye), -dt(z, eye), 1]); },
   basis(x, y, z, p, s){ return new Float32Array([x[0] * s[0], x[1] * s[0], x[2] * s[0], 0, y[0] * s[1], y[1] * s[1], y[2] * s[1], 0, z[0], z[1], z[2], 0, p[0], p[1], p[2], 1]); }
 };
+const R_WORLD = 2.2e7;   // the widest view, in metres: the whole world on the table
 const yawOf = (fx, fz) => Math.atan2(-fx, -fz);   // the yaw that turns (0,0,-1) onto (fx, ·, fz)
 const rotY = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c]; };
 
@@ -183,13 +184,13 @@ export function open(api, lang = 'zh', opt = {}){
 
   // state
   const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
-  let failN = 0, lastErr = '';
+  let failN = 0, lastErr = '', curZ = 14;
   const streamInfo = () => { let n = 0, c = 0, st2 = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; if (T.styled) st2++; } return { tiles: n, count: c, styled: st2, loading: loadingN, failed: failN, err: lastErr }; };
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
   const streamLine = () => { const i = streamInfo(); return lang === 'zh'
-      ? `移动加载 · 已加载 ${i.tiles} 块` + (i.styled ? `（${i.styled} 块已用 app 样式）` : '') + ` · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '') + (pe() ? ` · app 样式报错 ${pe().n} 次：${pe().first}` : '')
-      : `streaming · ${i.tiles} tiles` + (i.styled ? ` (${i.styled} in the app's look)` : '') + ` · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : '') + (pe() ? ` · map style errors ${pe().n}: ${pe().first}` : ''); };
+      ? `移动加载 · 层级 ${curZ} · 已加载 ${i.tiles} 块` + (i.styled ? `（${i.styled} 块已用 app 样式）` : '') + ` · ${i.count} 栋建筑` + (i.loading ? ` · 正在加载 ${i.loading} 块` : '') + (i.failed ? ` · 失败 ${i.failed} 次：${i.err}` : '') + (pe() ? ` · app 样式报错 ${pe().n} 次：${pe().first}` : '')
+      : `streaming · zoom ${curZ} · ${i.tiles} tiles` + (i.styled ? ` (${i.styled} in the app's look)` : '') + ` · ${i.count} buildings` + (i.loading ? ` · loading ${i.loading}` : '') + (i.failed ? ` · ${i.failed} failed: ${i.err}` : '') + (pe() ? ` · map style errors ${pe().n}: ${pe().first}` : ''); };
   const pe = () => { const e = api.stream?.painter?.errors; return e && e.n ? e : null; };
   const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? streamLine() + ' · ' : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
@@ -230,24 +231,34 @@ export function open(api, lang = 'zh', opt = {}){
   function updateTiles(t, fx, fy, r){
     clip = [fx, -fy, r];
     if (!api.stream || t - lastUpd < 250) return; lastUpd = t;
-    const want = api.stream.near(fx, fy, r), keep = new Set(api.stream.near(fx, fy, r * 1.35 + 200));
-    for (const [k, T] of tiles) if (!keep.has(k)){ freeTile(T); tiles.delete(k); }
-    for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || tiles.size >= 40) break;
-      const T = { ready: false, count: 0 }; tiles.set(k, T); loadingN++; status();
+    // the zoom level follows how far you see; the previous level stays underneath until the new one is in
+    const z = api.stream.zoomFor ? api.stream.zoomFor(r) : 14; curZ = z;
+    const want = api.stream.near(fx, fy, r, z), keep = new Set(api.stream.near(fx, fy, r * 1.35 + 200, z));
+    const allIn = want.every(k => tiles.get(k)?.ready);
+    let freed = 0;
+    for (const [k, T] of tiles){ const same = T.z === z;
+      if ((same && !keep.has(k)) || (!same && (allIn || !T.ready || t - (T.left ||= t) > 8000))){ freeTile(T); tiles.delete(k); freed++; } else if (same) T.left = 0; }
+    if (freed) status();
+    let mine = 0; for (const T of tiles.values()) if (T.z === z) mine++;
+    for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || mine >= 40) break;
+      const T = { ready: false, count: 0, z: api.stream.zOf ? api.stream.zOf(k) : 14 }; tiles.set(k, T); loadingN++; mine++; status();
       api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
         T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status();
         if (d.upgrade) d.upgrade.then(cv => { if (!cv || tiles.get(k) !== T) return; gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); }).catch(e => console.warn('map style tile', e)); })
         .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
           setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
   }
-  const baseMesh = api.stream ? mesh(gl, prog, (() => { const E = 80000, c = [0.90, 0.89, 0.86];
+  const baseMesh = api.stream ? mesh(gl, prog, (() => { const E = 4e7, c = [0.90, 0.89, 0.86];
     return { v: new Float32Array([-E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, -E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0]), i: new Uint32Array([0, 1, 2, 1, 3, 2]) }; })()) : null;
   function drawTiles(P, V, M){
     gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
     gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(4, 8); gl.bindVertexArray(baseMesh.vao); gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
     gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, clip);
     gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
-    for (const T of tiles.values()) if (T.ready){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);   // a level being replaced sits just under the new one
+    for (const T of tiles.values()) if (T.ready && T.z !== curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    for (const T of tiles.values()) if (T.ready && T.z === curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
     gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
     gl.uniform3fv(prog.u.uTint, api.stream.painter?.building || [0.95, 0.94, 0.92]);
     if (st.bld) for (const T of tiles.values()) if (T.ready && T.mesh){ gl.bindVertexArray(T.mesh.vao); gl.drawElements(gl.TRIANGLES, T.mesh.n, gl.UNSIGNED_INT, 0); }
@@ -282,13 +293,13 @@ export function open(api, lang = 'zh', opt = {}){
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
     else { cam.yaw = drag.c.yaw - dx * 4; cam.pitch = Math.max(0.08, Math.min(1.52, drag.c.pitch + dy * 3)); } });
   cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('contextmenu', e => e.preventDefault());
-  cv.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.12, Math.min(5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
   function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0.067, 0.067, 0.075, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
-    if (api.stream) updateTiles(t, cam.tx / unit, -cam.tz / unit, Math.max(400, Math.min(2500, cam.dist / unit * 0.55)));
-    drawScene(M4.persp(0.7, w / h, 0.01, 50), M4.look(eye, [cam.tx, 0, cam.tz]), M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit }); }
+    if (api.stream) updateTiles(t, cam.tx / unit, -cam.tz / unit, Math.max(400, Math.min(R_WORLD, cam.dist / unit * 0.55)));
+    drawScene(M4.persp(0.7, w / h, Math.max(0.002, cam.dist * 0.01), cam.dist * 20 + 50), M4.look(eye, [cam.tx, 0, cam.tz]), M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit }); }
   raf = requestAnimationFrame(frame);
 
   // ---- headset
@@ -365,7 +376,7 @@ export function open(api, lang = 'zh', opt = {}){
           else {   // turn and scale about the table centre (the anchor), so the place under it stays put
             const c = M.anchor || M.pos;
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
-            if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
+            if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? 0.45 / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
         if (key === 'left' && panel && hit(3)) panelOn = !panelOn;
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
@@ -386,7 +397,7 @@ export function open(api, lang = 'zh', opt = {}){
       if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk) gl.clearColor(0.78, 0.84, 0.9, 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       if (api.stream){ const at = st.walk ? head : M.anchor, d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw);
-        updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(2500, 0.45 / M.s))); }
+        updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(R_WORLD, 0.45 / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
       // the app panel: above the left hand, turned to you; rays from the other hands point at it
