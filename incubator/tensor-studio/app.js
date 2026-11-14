@@ -1013,9 +1013,19 @@ function* stitchMains(o){
     const onEx = P.map(q => !!nearB(q[0], q[1], BAND, -1, ign, null, false, LV1)), runs = []; let cur = null;
     P.forEach((q, k) => { if (!onEx[k]){ if (!cur) cur = { s: k, pts: [] }; cur.pts.push(q); } else if (cur){ cur.e = k; runs.push(cur); cur = null; } }); if (cur){ cur.e = P.length; runs.push(cur); }
     const res = { ok: true, startLine: null, lines: [] };
+    // (v8.18) a short stretch on the network between two parts (under 60 m: the route crossed a street) is one crossing:
+    // both parts end on the same point of the street crossed, where the route's line meets it, so it is a crossroads
+    const crossAt = new Map();
+    for (let n = 1; n < runs.length; n++){ const g0 = runs[n - 1].e, g1 = runs[n].s; if (plen(P.slice(g0 - 1, g1 + 1)) > 60) continue;
+      const mid = P[(g0 + g1) >> 1], c = nearB(mid[0], mid[1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
+      const Ls = LINES[c[3]].pts; let best = null, bd = Infinity;   // the street's point nearest the route's line across the gap
+      for (const q of Ls){ const a = P[g0 - 1], b = P[Math.min(g1, P.length - 1)], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, d = Math.abs((q[0] - a[0]) * dy - (q[1] - a[1]) * dx) / L, t = ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / (L * L);
+        if (t >= -0.2 && t <= 1.2 && d < bd){ bd = d; best = q; } }
+      const pt = best && bd < 15 ? best.slice() : [c[1], c[2]]; crossAt.set(g0, { pt, line: c[3] }); crossAt.set(-g1, { pt, line: c[3] }); }
     for (const run of runs){ const pts = run.pts.slice();
-      for (const [k, at] of [[run.s - 1, 0], [run.e, 1]]){ if (k < 0 || k >= P.length) continue; const c = nearB(P[k][0], P[k][1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
-        if (at === 0) pts.unshift([c[1], c[2]]); else pts.push([c[1], c[2]]); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; addNode(c[1], c[2], true); EVENTS.push({ x: c[1], y: c[2], k: 'join' }); }
+      for (const [k, at] of [[run.s - 1, 0], [run.e, 1]]){ if (k < 0 || k >= P.length) continue;
+        const x = at === 1 ? crossAt.get(run.e) : crossAt.get(-run.s), c = x ? [0, x.pt[0], x.pt[1], x.line] : nearB(P[k][0], P[k][1], BAND + 14, -1, ign, null, false, LV1); if (!c) continue;
+        if (at === 0) pts.unshift([c[1], c[2]]); else pts.push([c[1], c[2]]); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; addNode(c[1], c[2], true); if (!x || at === 1) EVENTS.push({ x: c[1], y: c[2], k: x ? 'cross' : 'join' }); }
       if (pts.length < 2 || (plen(pts) < 25 && runs.length > 1)) continue;
       const l = newLine(1, [pts[0], pts[1]], 1, 0, 'stitch'); l.stitched = true; l.ends = ['T', 'T']; res.lines.push(l); if (run.s === 0) res.startLine = l;
       for (let k = 2; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l.pts.push(b); hashPt(l, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); if (k % 3 === 0) yield 1; }
@@ -1037,8 +1047,7 @@ function* stitchMains(o){
     // network already joined to it (a T)
     const toNode = B.kind !== 'entry' || A.kind !== 'entry', [S, E] = A.kind === 'entry' && B.kind !== 'entry' ? [A, B] : B.kind === 'entry' && A.kind !== 'entry' ? [B, A] : [A, B], re = find(E.id);
     const end = route(S, E, toNode ? (i => E.isPort.has(i)) : (i => E.isPort.has(i) || (USED[i] >= 0 && find(USED[i]) === re)), false); if (end < 0) continue;
-    if (yield* lay(S, E, pathTo(end), end, false)) unite(a, b); continue;
-    const ok = yield* lay(A, B, pathTo(end), end, false); if (ok) unite(a, b); }
+    if (yield* lay(S, E, pathTo(end), end, false)) unite(a, b); }
   // every place joined: one the tree left out (no link it could take) goes to the nearest main street of its land
   { const deg = PL.map(() => 0); for (const [a, b] of EDGES){ deg[a]++; deg[b]++; }
     for (const A of PL){ if (deg[A.id]) continue; if (!USED.some((u, i) => u >= 0 && COMP[i] === A.comp)) continue;
