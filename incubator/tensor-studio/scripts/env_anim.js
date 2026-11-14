@@ -93,7 +93,7 @@ function stepRain(g, sx, col, keepSpawning){ const f = F.Q;
     const fade = Math.min(1, p.age / 10, (p.life - p.age) / 20);
     g.globalAlpha = fade * (0.18 + 0.82 * q * q); g.lineWidth = 0.7 + 2.2 * q;
     g.beginPath(); g.moveTo(X(p.px), Y(p.py)); g.lineTo(X(p.x), Y(p.y)); g.stroke(); } }
-function drawStatic(ctx, k, a){ if (a <= 0.003) return; ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = a;
+function drawStatic(ctx, k, a){ if (a <= 0.003) return; ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); siteClip(ctx); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = a;
   ctx.drawImage(envImg(k), X(-cell / 2), Y((ny - 0.5) * cell), nx * cell * view.s, ny * cell * view.s); ctx.restore(); }
 const ease = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t), seg = (t, a, b) => ease((t - a) / (b - a));
 
@@ -114,8 +114,8 @@ EA.draw = function(ctx, now){ if (!EA.on) return; const k = EA.k, P = EA.period(
     drawStatic(ctx, 'V', 0.55 * sw * endFade); drawStatic(ctx, 'Cw', 0.6 * cw * endFade); }
   else if (k === 'Z') base = 0.82 * seg(t, P * 0.12, P * 0.8) * endFade;
   drawStatic(ctx, k, base);
-  // the trails, with a soft glow in the dark theme
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // the trails, with a soft glow in the dark theme (v8.39: on a map site, inside the red line)
+  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); siteClip(ctx); ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (dark){ const gg = glow.getContext('2d'); gg.setTransform(1, 0, 0, 1, 0, 0); gg.clearRect(0, 0, glow.width, glow.height); gg.imageSmoothingEnabled = true; gg.drawImage(trail, 0, 0, glow.width, glow.height);
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9; ctx.imageSmoothingEnabled = true; ctx.drawImage(glow, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
   ctx.drawImage(trail, 0, 0); ctx.restore();
@@ -123,7 +123,7 @@ EA.draw = function(ctx, now){ if (!EA.on) return; const k = EA.k, P = EA.period(
   if (k === 'Z'){ const { cs, z0, z1 } = contours(), lev = z0 + (z1 - z0) * seg(t, 0.15, P * 0.78);
     ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     // beyond the site the lit contours stay faint; within it the full effect (clipped to the land)
-    ctx.globalAlpha = 0.16 * endFade; ctx.strokeStyle = C.Z; ctx.lineWidth = 0.8; for (const c of cs){ if (c.z > lev) break; pathLine(ctx, c.p); ctx.stroke(); }
+    if (!D.site){ ctx.globalAlpha = 0.16 * endFade; ctx.strokeStyle = C.Z; ctx.lineWidth = 0.8; for (const c of cs){ if (c.z > lev) break; pathLine(ctx, c.p); ctx.stroke(); } }
     ctx.beginPath(); for (const pc of D.pieces){ pc.outer.forEach((q, n) => n ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1]))); ctx.closePath(); } ctx.clip();
     for (const c of cs){ if (c.z > lev) break; const fresh = clamp(1 - (lev - c.z) / 1.6, 0, 1);
       ctx.globalAlpha = (0.32 + 0.68 * fresh) * endFade; ctx.strokeStyle = fresh > 0.02 ? C.Z : C.ink; ctx.lineWidth = 0.8 + 2.4 * fresh;
