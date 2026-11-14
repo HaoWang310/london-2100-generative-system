@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.39.0: entering a site passes the map's basemap style to Tensor Studio, which picks its light/dark look and particle palette to match.
+
 Version 3.38.0: while Tensor Studio is open its page is transparent outside the site and the map underneath follows its view (centre, zoom, bearing), so the surroundings are the map itself; the camera and the selection layers come back on close.
 
 Version 3.37.0 replaces the old isolated-site hydro lab (rainfall, flood
