@@ -122,3 +122,20 @@ test('the engine, read from the incubator, grows the release totals', { timeout:
   const n = [0, 0, 0, 0, 0, 0]; for (let i = 0; i < N; i++) n[classAt(cells, i, 75)]++;
   assert.ok(Math.abs((n[1] + n[2] + n[3]) * M.CELL - 837.8) < 0.1, 'built area 837.8 km²');
 });
+
+test('the fill reaches the 70 km circle and stays outside the model grid', async () => {
+  const { fillRows } = await import('../overlay.js');
+  const F = fillRows(M), z = inflateSync(readFileSync(new URL('../data/fill-strips.z', import.meta.url)));
+  assert.deepEqual(F, { north: 78, south: 263 });
+  assert.equal(z.length, (F.north + F.south) * M.NX * 4);
+  let n = 0, outside = 0;
+  for (let r = 0; r < F.north + F.south; r++) {
+    const N = r < F.north ? M.YMAX + (F.north - r - 0.5) * M.C : M.YMAX - M.NY * M.C - (r - F.north + 0.5) * M.C;
+    for (let c = 0; c < M.NX; c++) {
+      if (!z[(r * M.NX + c) * 4]) continue;
+      n++; if (Math.hypot(M.XMIN + (c + 0.5) * M.C - M.LON[0], N - M.LON[1]) > 70000) outside++;
+    }
+  }
+  assert.ok(n > 5000, `filled parcels ${n}`);
+  assert.equal(outside, 0);
+});
