@@ -1575,10 +1575,11 @@ function* growBranching(){
     for (const l of LINES) if (!l.dead && l.level === 2 && plen(l.pts) < 1) l.dead = true;   // (a side street that never grew: a point on its parent)
     // (v7) a main street left under 150 m long (a stub where the rest was cut or turned second) is a second street
     for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
-    holeTrim(); dropSide(); holeTrim(); alignShared();
-    shoreStreets(1.5); splitBlocks(1.5); holeTrim();   // (v8.23) the waterside streets, then the big blocks cut
-    dropLens(); dropSlivers();   // (v8.25) no thin lens of a block between two streets, no sliver of a block
-    crossJoin(); squareEnds();   // (v8.23) crossroads across the main streets, and square junctions
+    // (v8.28) the finishing passes, a frame apart: the page keeps drawing while they run
+    PHASE = 'the blocks tidied'; holeTrim(); dropSide(); holeTrim(); alignShared(); netDirty = true; yield 1;
+    shoreStreets(1.5); netDirty = true; yield 1; splitBlocks(1.5); holeTrim(); netDirty = true; yield 1;   // (v8.23) the waterside streets, then the big blocks cut
+    dropLens(); dropSlivers(); netDirty = true; yield 1;   // (v8.25) no thin lens of a block between two streets, no sliver of a block
+    crossJoin(); squareEnds(); netDirty = true; yield 1;   // (v8.23) crossroads across the main streets, and square junctions
     roundKinks(); smoothBends(); tidyNet();
     rehashAll();
     rehashAll(); for (const e of EVENTS) if (!nearB(e.x, e.y, 4, -1, [], null, false, null)) e.gone = true;   // (v8.25) the mark of a street taken away goes with it

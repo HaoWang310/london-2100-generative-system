@@ -31,6 +31,7 @@ const PHZH = {
   'every end meets a street': '每个端点都接到道路上',
   'every main street ends on a main street': '主路端点接到主路上',
   'main streets done': '主路完成',
+  'the blocks tidied': '整理地块与路口',
   'done': '完成' };
 const ph = p => zh() ? (PHZH[p] || p) : p;
 const DIRZH = { N: '北', NE: '东北', E: '东', SE: '东南', S: '南', SW: '西南', W: '西', NW: '西北' };
@@ -58,7 +59,7 @@ const STEPS = [
   { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'wDens', 'bGap', 'bFork', 'bInfill'],
     note: () => L('次路从主路两侧分出，再清理并行和断头的道路；过大的地块沿水岸和走廊补一条滨水路，再横切开，仍切不开的（可建面积超过 4 公顷）保留为绿地；两条次路夹出的细长地块和小于 0.15 公顷的碎地块，去掉其中一条次路并入旁边，去不掉的作为口袋绿地；锐角路口掰正，主路两侧相距 25 m 内的次路接成十字。舒适度与节点定疏密：舒适处和节点附近次路更密，风大、低洼处更稀（0 % 为均匀）。分叉冲突阈值越低，在场方向冲突的地方越容易分出 Y 形岔路；拉到最右为关闭。', 'Second streets branch off the main ones, then streets side by side and open ends are tidied; a block still too big gets a waterside street along the water or corridor, then a cut across, and one that still cannot be cut (over 4 ha that can be built on) is kept as a park; a thin lens between two second streets, or a sliver under 0.15 ha, loses one of its second streets and joins the block next to it, or else is kept as a pocket park; sharp junctions are squared, and second streets meeting a main street from its two sides within 25 m meet at one crossroads. Comfort and nodes set the density: closer where it is comfortable and near the nodes, wider where it is windy or low (0 %: even). The lower the fork threshold, the more Y forks where the field pulls two ways; fully right turns it off.') },
   { k: 8, zh: '评价出图', en: 'Review and export', rows: ['fNum', 'bGeo'],
-    note: () => L('综合评分把地块、路网、气候、地形、水五组各打 0–100 分，按权重加权；“方案比较”自动试 16 组设置并排序，可一键采用。下面是路网指标与上一个方案的对比；道路按宽度显示。', 'The score rates five groups (blocks, network, climate, terrain, water) 0-100 each, weighted; Compare runs tries 16 settings and ranks them, and one can be taken in a click. Below, the network against the previous run; streets drawn at width.') } ];
+    note: () => L('综合评分把地块、路网、气候、地形、水五组各打 0–100 分，按权重加权；“方案比较”按你设定的数量自动试多组设置，在地图上展示每个方案的生成过程，排序后可预览、一键采用。下面是路网指标与上一个方案的对比；道路按宽度显示。', 'The score rates five groups (blocks, network, climate, terrain, water) 0-100 each, weighted; Compare runs tries as many settings as you set, shows each one being made on the map, ranks them; any can be previewed or taken in a click. Below, the network against the previous run; streets drawn at width.') } ];
 
 /* ------------------------------------------------------------------ the panel */
 const panel = el('panel'), homes = new Map();
@@ -126,7 +127,8 @@ const cmpBox = document.createElement('div'); cmpBox.className = 'pmCmp';
 STEPS[7].extra.append(scoreBox, cmpBox, metTbl);
 const curSet = () => Object.fromEntries(VARY.map(([id]) => [id, +el(id).value]));
 const totalOf = g => { let tw = 0, ts = 0; for (const [k] of GROUPS){ if (g[k] == null) continue; tw += PM.w[k]; ts += PM.w[k] * g[k]; } return tw ? ts / tw : 0; };
-function curScore(){ const m = METR || PM.lastM; if (!m) return null; if (PM.sc && PM.sc.m === m) return PM.sc.s; const s = T6.scoreRun(PM.w); PM.sc = { m, s }; return s; }
+function curScore(){ const C = PM.cmp; if (C && C.preview != null && C.list[C.preview]){ const c = C.list[C.preview]; return { groups: c.groups, raw: c.raw, fail: c.fail }; }
+  const m = METR || PM.lastM; if (!m) return null; if (PM.sc && PM.sc.m === m) return PM.sc.s; const s = T6.scoreRun(PM.w); PM.sc = { m, s }; return s; }
 function scoreHTML(){ const s = curScore(); if (!s) return ''; const t = totalOf(s.groups);
   let h = '<div class="pmSHead"><span>' + L('综合评分', 'Score') + '</span><b>' + Math.round(t) + '</b><i>/ 100</i></div>';
   if (s.fail.length) h += '<p class="pmWarn">' + L('有 ' + s.fail[0].n + ' 条断头路（不计分，但需要处理）', s.fail[0].n + ' open end(s): not scored, but a fault') + '</p>';
@@ -138,35 +140,114 @@ scoreBox.addEventListener('input', e => { const k = e.target.dataset && e.target
   try { localStorage.setItem('tensorStudio.scoreW', JSON.stringify(PM.w)); } catch (err) {} const s = curScore(); if (s) scoreBox.querySelector('.pmSHead b').textContent = Math.round(totalOf(s.groups)); renderCmp(); });
 // the settings to try: the current ones first, then a spread over the ranges (a Latin hypercube, the same each time)
 function samples(base, n){ let r = 12345; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647, out = [Object.assign({}, base)];
+  if (n < 2) return out;
   const cols = VARY.map(() => { const a = Array.from({ length: n - 1 }, (_, i) => i); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; });
   for (let i = 0; i < n - 1; i++){ const s = {}; VARY.forEach(([id, , , lo, hi, st], c) => { const u = (cols[c][i] + rnd()) / (n - 1); s[id] = Math.round((lo + u * (hi - lo)) / st) * st; }); out.push(s); }
   return out; }
-async function compareRuns(){ if (PM.cmp && PM.cmp.running) return; stopAuto(); stopPlay(); const base = curSet(), sn0 = T6.snapB(), list = samples(base, 16);
-  PM.cmp = { running: true, i: 0, n: list.length, list: [], stop: false }; renderCmp();
-  for (let i = 0; i < list.length; i++){ await sleep(40); if (PM.cmp.stop || !PM.active) break;
-    const s = T6.quietRun(list[i]); PM.cmp.list.push({ set: list[i], groups: s.groups, raw: s.raw, fail: s.fail, cur: i === 0, img: T6.thumbOf(132).toDataURL() }); PM.cmp.i = i + 1; renderCmp(); }
-  // back to this run, as it was
-  for (const [id] of VARY) el(id).value = base[id]; buildTarget(); if (sn0){ T6.setSnapB(sn0); T6.restoreSnap(sn0); } PM.sc = null;
-  PM.cmp.running = false; renderCmp(); ui(); }
+// (v8.28) the second round, coarse to fine: settings close to the two best of the first round (each value moved by up to 15 %
+// of its range), none tried twice
+const setKey = s => VARY.map(([id]) => s[id]).join(',');
+function refine(m){ const C = PM.cmp, best = C.list.filter(c => !c.fail.length).sort((a, b) => totalOf(b.groups) - totalOf(a.groups)).slice(0, 2);
+  if (!best.length) return samples(C.base, m + 1).slice(1);
+  let r = 777; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647, seen = new Set(C.list.map(c => setKey(c.set))), out = [];
+  for (let k = 0; out.length < m && k < m * 40; k++){ const par = best[k % best.length].set, s = {};
+    VARY.forEach(([id, , , lo, hi, st]) => { s[id] = clamp(Math.round((par[id] + (rnd() * 2 - 1) * 0.15 * (hi - lo)) / st) * st, lo, hi); });
+    const kk = setKey(s); if (seen.has(kk)) continue; seen.add(kk); out.push(s); }
+  return out.length ? out : samples(C.base, m + 1).slice(1); }
+// (v8.28) how many, and how much of each run is shown on the map
+PM.cmpN = 16; PM.cmpShow = 'full';
+try { const n = +localStorage.getItem('tensorStudio.cmpN'); if (n >= 4 && n <= 48) PM.cmpN = n; const m = localStorage.getItem('tensorStudio.cmpShow'); if (['full', 'roads', 'off'].includes(m)) PM.cmpShow = m; } catch (e) {}
+const SHOWS = [['full', '完整过程', 'Whole process'], ['roads', '只看道路', 'Streets only'], ['off', '不展示', 'No display']];
+const PER = { full: 8.8, roads: 5, off: 2.3 };   // seconds a run (station P2)
+function estimate(){ const s = Math.round(PM.cmpN * PER[PM.cmpShow]), m = Math.floor(s / 60), r = s % 60; return L('约 ' + (m ? m + ' 分 ' : '') + r + ' 秒', 'about ' + (m ? m + ' min ' : '') + r + ' s'); }
+// over the map: the stage of the run being shown, the score as it lands, and the runs so far in a strip
+const stageEl = document.createElement('div'); stageEl.id = 'pmStage'; stageEl.hidden = true;
+const popEl = document.createElement('div'); popEl.id = 'pmPop';
+const stripEl = document.createElement('div'); stripEl.id = 'pmStrip'; stripEl.hidden = true;
+document.body.append(stageEl, popEl, stripEl);
+function overMap(){ const ins = window.__TS_INSETS ? window.__TS_INSETS() : { l: 0, r: 0 }; return { l: ins.l, w: innerWidth - ins.l - ins.r }; }
+function placeOver(){ const m = overMap(); stageEl.style.left = (m.l + m.w / 2) + 'px'; popEl.style.left = (m.l + m.w / 2) + 'px';
+  const bw = parseFloat(bar.style.width) || 600; stripEl.style.left = bar.style.left; stripEl.style.maxWidth = bw + 'px'; }
+addEventListener('resize', placeOver);
+function stage(txt){ stageEl.hidden = !txt; stageEl.innerHTML = txt || ''; placeOver(); }
+async function popScore(c, best){ const t = Math.round(totalOf(c.groups)); popEl.innerHTML = '<b>' + t + '</b><span>' + (best ? L('新的最高分', 'Best so far') : L('第 ' + PM.cmp.list.length + ' 个方案', 'Run ' + PM.cmp.list.length)) + '</span>';
+  popEl.classList.toggle('best', !!best); placeOver(); popEl.classList.add('show'); await sleep(900); popEl.classList.remove('show'); await sleep(200); }
+function ranked(){ const C = PM.cmp; return C ? C.list.map((c, i) => ({ c, i, t: totalOf(c.groups) - (c.fail.length ? 100 : 0) })).sort((a, b) => b.t - a.t) : []; }
+function strip(){ const C = PM.cmp; if (!PM.active || PM.cur !== 8 || !C || !C.list.length){ stripEl.hidden = true; return; }
+  const top = ranked()[0];
+  stripEl.innerHTML = C.list.map((c, i) => '<button type="button" class="pmTh' + (top && top.i === i ? ' best' : '') + (C.preview === i ? ' view' : '') + '" data-i="' + i + '" title="' + VARY.map(([id, z, e]) => L(z, e) + ' ' + c.set[id]).join(' · ') + '">' +
+    '<img alt="" src="' + c.img + '"><span>' + Math.round(totalOf(c.groups)) + (c.cur ? L(' 当前', ' now') : c.round === 2 ? L(' 细', ' fine') : '') + '</span></button>').join('');
+  stripEl.hidden = false; placeOver(); const last = stripEl.lastElementChild; if (C.running && last) last.scrollIntoView({ block: 'nearest', inline: 'end' }); }
+stripEl.addEventListener('click', e => { const b = e.target.closest('.pmTh'); if (!b || !PM.cmp || PM.cmp.running) return; preview(+b.dataset.i); });
+// a run of the comparison looked at on the map (its network as it was grown); the run of the settings comes back after
+function preview(i){ const C = PM.cmp, c = C && C.list[i]; if (!c) return; if (c.cur || C.preview === i){ unpreview(); ui(); return; }
+  T6.restoreSnap(c.snap); C.preview = i; PM.sc = null; layers(8); ui(); }
+function unpreview(){ const C = PM.cmp; if (!C || C.preview == null) return; C.preview = null; if (C.sn0){ T6.setSnapB(C.sn0); T6.restoreSnap(C.sn0); } PM.sc = null; layers(PM.cur); }
+// one run shown on the map: the climate (its two winds, as strong as their weights), the tensor field turning to its weights,
+// then the streets growing; its score
+async function showRun(set, i){ const C = PM.cmp, ok = () => !C.stop && PM.active, A = window.ENVANIM, head = L('方案 ' + (i + 1) + ' / ' + C.n, 'Run ' + (i + 1) + ' of ' + C.n) + (i >= C.n1 ? L(' · 细调', ' · fine') : '');
+  for (const [id] of VARY){ el(id).value = set[id]; setOut(id); }
+  T6.resetNet();
+  if (PM.cmpShow === 'full'){
+    if (A && ENV && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      for (const [k, w, z, e] of [['V', set.wSum, '夏季通风', 'Summer air'], ['Cw', set.wWin, '冬季冷风', 'Winter cold']]){
+        stage('<b>' + head + '</b><span>' + L('气候 · ' + z + ' 权重 ' + w, 'Climate · ' + e + ' weight ' + w) + '</span>');
+        A.gain = 0.12 + 0.88 * Math.min(1, w / 80); T6.setEnv(k); A.start(k); await sleep(1000); if (!ok()) return null; }
+      A.stop(); A.gain = 1; T6.setEnv('off'); }
+    stage('<b>' + head + '</b><span>' + L('张量场 · 等高线 ' + set.wC + ' · 夏风 ' + set.wSum + ' · 冬风 ' + set.wWin, 'Tensor field · contour ' + set.wC + ' · summer ' + set.wSum + ' · winter ' + set.wWin) + '</span>');
+    setField('move'); buildTarget(); await sleep(1300); if (!ok()) return null; setField('off'); }
+  else { buildTarget(); T6.settleField(); }
+  stage('<b>' + head + '</b><span>' + L('道路生长 · 次路间距 ' + set.d2 + ' m · 疏密 ' + set.wDens + '%', 'Streets growing · second streets ' + set.d2 + ' m apart · density ' + set.wDens + ' %') + '</span>');
+  MODE = 'B'; T6.setModeQuiet('B'); PM.target = 0; GEN = growBranching(); T6.resume();
+  while (GEN){ await sleep(50); if (!ok()){ GEN = null; GROWING = false; return null; } }
+  return T6.scoreRun(); }
+function stopShow(){ const A = window.ENVANIM; if (A){ A.stop(); A.gain = 1; } T6.setEnv('off'); if (GEN){ GEN = null; GROWING = false; } stage(''); popEl.classList.remove('show'); }
+async function compareRuns(){ if (PM.cmp && PM.cmp.running) return; stopAuto(); stopPlay(); unpreview();
+  const base = curSet(), sn0 = T6.snapB(), N = PM.cmpN, n1 = Math.min(N, Math.max(3, Math.round(N * 2 / 3))), wasW = el('lWidth').checked;
+  PM.cmp = { running: true, i: 0, n: N, n1, list: [], stop: false, base, sn0, preview: null };
+  el('lWidth').checked = false; el('lEvents').checked = false; T6.syncTools(); renderCmp(); strip();
+  let queue = samples(base, n1);
+  for (let i = 0; i < N; i++){
+    if (i === n1) queue = queue.concat(refine(N - n1));
+    if (PM.cmp.stop || !PM.active || !queue[i]) break; const set = queue[i]; let s;
+    if (PM.cmpShow === 'off'){ await sleep(30); if (PM.cmp.stop) break; s = T6.quietRun(set); }
+    else { s = await showRun(set, i); if (!s) break; }
+    const prevBest = ranked()[0], c = { set, groups: s.groups, raw: s.raw, fail: s.fail, cur: i === 0, round: i < n1 ? 1 : 2, img: T6.thumbOf(132).toDataURL(), snap: T6.snapB() };
+    PM.cmp.list.push(c); PM.cmp.i = i + 1; renderCmp(); strip();
+    if (PM.cmpShow !== 'off') await popScore(c, !c.fail.length && (!prevBest || totalOf(c.groups) > prevBest.t)); }
+  // back to the run of the settings, as it was
+  stopShow(); for (const [id] of VARY){ el(id).value = base[id]; setOut(id); } buildTarget(); T6.settleField();
+  if (sn0){ T6.setSnapB(sn0); T6.restoreSnap(sn0); } PM.sc = null; PM.cmp.running = false; PM.cmp.stop = false;
+  el('lWidth').checked = wasW; layers(PM.cur); if (PM.cur !== 8) go(PM.cur, true); renderCmp(); strip(); ui(); }
 function setOut(id){ const e = el(id), o = e && e.nextElementSibling; if (o && o.tagName === 'OUTPUT') o.textContent = e.value + (['wC', 'wDens'].includes(id) ? ' %' : ''); }
-async function applyRun(c){ stopAuto(); stopPlay(); for (const [id] of VARY){ el(id).value = c.set[id]; setOut(id); } PM.cmp.applied = c;
+async function applyRun(c){ stopAuto(); stopPlay(); unpreview(); for (const [id] of VARY){ el(id).value = c.set[id]; setOut(id); } PM.cmp.applied = c;
   onChange(4); const tok = ++PM.tok, ok = () => tok === PM.tok; PM.auto = true; ui();
   go(6, true); await stepGrowth(6); if (!ok()) return; go(7, true); await stepGrowth(7); if (!ok()) return; await sleep(400); if (!ok()) return; go(8, true); PM.auto = false; PM.sc = null; ui(); }
-function renderCmp(){ if (!PM.active) return; const C = PM.cmp;
-  let h = '<div class="pmCHead"><b>' + L('方案比较', 'Compare runs') + '</b>' + (C && C.running ? '<button type="button" class="pmLink" data-act="stop">' + L('停止', 'Stop') + '</button>' : '') + '</div>';
-  h += '<p class="pmHint">' + L('保持你放的节点和主路间距不变，自动改变次路间距、等高线、夏季通风、冬季挡风和疏密，跑 16 个方案（约 35 秒），按总分排序。', 'Your nodes and the main-street spacing stay; the second-street spacing, contour, summer air, winter shelter and density vary over 16 runs (about 35 s), ranked by the score.') + '</p>';
-  if (!C || (!C.running && !C.list.length)) h += '<div class="pmActs"><button type="button" class="primary" data-act="run">' + L('自动比较 16 个方案', 'Compare 16 runs') + '</button></div>';
+function estText(){ return L(PM.cmpN + ' 个方案，', PM.cmpN + ' runs, ') + estimate() + (PM.cmpShow === 'full' ? L('。主视图依次展示每个方案的气候、张量场和道路生长。', '. The map shows each run\'s climate, tensor field and streets growing.') : PM.cmpShow === 'roads' ? L('。主视图只展示道路生长。', '. The map shows the streets growing.') : L('。在后台计算，不展示过程。', '. Worked out without showing it.')); }
+function renderCmp(){ if (!PM.active) return; const C = PM.cmp, running = !!(C && C.running);
+  let h = '<div class="pmCHead"><b>' + L('方案比较', 'Compare runs') + '</b>' + (running ? '<button type="button" class="pmLink" data-act="stop">' + L('停止', 'Stop') + '</button>' : '') + '</div>';
+  if (!running){
+    h += '<p class="pmHint">' + L('你放的节点和主路间距不变，自动改变次路间距、等高线、夏季通风、冬季挡风和疏密。先在整个范围里均匀试 2/3 的方案，再在前两名附近细调剩下的 1/3，按总分排序。', 'Your nodes and the main-street spacing stay; the second-street spacing, contour, summer air, winter shelter and density vary. Two thirds of the runs spread over the whole range, the last third close to the best two; ranked by the score.') + '</p>';
+    h += '<div class="pmCCtl"><label>' + L('方案数', 'Runs') + '</label><input type="range" min="4" max="48" step="4" value="' + PM.cmpN + '" data-ctl="n" aria-label="' + L('方案数', 'Runs') + '"><output>' + PM.cmpN + '</output></div>';
+    h += '<div class="pmCCtl"><label>' + L('展示', 'Show') + '</label><div class="pmSeg">' + SHOWS.map(([k, z, e]) => '<button type="button" data-show="' + k + '" class="' + (PM.cmpShow === k ? 'on' : '') + '">' + L(z, e) + '</button>').join('') + '</div></div>';
+    h += '<p class="pmHint pmEst">' + estText() + '</p>'; }
+  if (!C || (!running && !C.list.length)) h += '<div class="pmActs"><button type="button" class="primary" data-act="run">' + L('开始比较', 'Start') + '</button></div>';
   else {
-    if (C.running) h += '<div class="pmProg"><i style="width:' + Math.round(100 * C.i / C.n) + '%"></i></div><p class="pmHint">' + L('正在试第 ' + Math.min(C.i + 1, C.n) + ' / ' + C.n + ' 个方案…', 'Trying run ' + Math.min(C.i + 1, C.n) + ' of ' + C.n + '…') + '</p>';
-    const rows = C.list.map((c, i) => ({ c, i, t: totalOf(c.groups) - (c.fail.length ? 100 : 0) })).sort((a, b) => b.t - a.t), cur = rows.find(r => r.c.cur), top = rows.slice(0, 3); if (cur && !top.includes(cur)) top.push(cur);
-    h += '<div class="pmCList">' + top.map((r, n) => { const c = r.c, t = totalOf(c.groups), d = cur && !c.cur ? t - totalOf(cur.c.groups) : null;
-      return '<div class="pmCCard' + (c.cur ? ' cur' : '') + '"><img alt="" src="' + c.img + '"><div class="pmCInfo"><div class="pmCT"><b>' + Math.round(t) + '</b><span>' + (c.cur ? L('当前方案', 'This run') : L('第 ' + (rows.indexOf(r) + 1) + ' 名', 'No. ' + (rows.indexOf(r) + 1))) + (d != null ? ' · ' + (d >= 0 ? '+' : '') + d.toFixed(1) : '') + '</span></div>' +
+    if (running) h += '<div class="pmProg"><i style="width:' + Math.round(100 * C.i / C.n) + '%"></i></div><p class="pmHint">' + L('已完成 ' + C.i + ' / ' + C.n + ' 个方案' + (C.i >= C.n1 ? '（细调阶段）' : ''), C.i + ' of ' + C.n + ' runs done' + (C.i >= C.n1 ? ' (fine-tuning)' : '')) + '</p>';
+    const rows = ranked(), cur = rows.find(r => r.c.cur), top = rows.slice(0, 3); if (cur && !top.includes(cur)) top.push(cur);
+    if (C.preview != null && !running) h += '<p class="pmHint pmPrev">' + L('地图上正在预览第 ' + (C.preview + 1) + ' 个方案；再点一次底部缩略图回到当前方案。', 'Previewing run ' + (C.preview + 1) + ' on the map; click its thumbnail again to go back.') + '</p>';
+    h += '<div class="pmCList">' + top.map(r => { const c = r.c, t = totalOf(c.groups), d = cur && !c.cur ? t - totalOf(cur.c.groups) : null;
+      return '<div class="pmCCard' + (c.cur ? ' cur' : '') + (C.preview === r.i ? ' view' : '') + '"><img alt="" src="' + c.img + '" data-pv="' + r.i + '"><div class="pmCInfo"><div class="pmCT"><b>' + Math.round(t) + '</b><span>' + (c.cur ? L('当前方案', 'This run') : L('第 ' + (rows.indexOf(r) + 1) + ' 名', 'No. ' + (rows.indexOf(r) + 1))) + (d != null ? ' · ' + (d >= 0 ? '+' : '') + d.toFixed(1) : '') + (c.round === 2 ? L(' · 细调', ' · fine') : '') + '</span></div>' +
         '<div class="pmCG">' + GROUPS.map(([k, z, e]) => '<span>' + L(z, e) + ' ' + (c.groups[k] == null ? '—' : Math.round(c.groups[k])) + '</span>').join('') + '</div>' +
         '<div class="pmCS">' + VARY.map(([id, z, e]) => L(z, e) + ' ' + c.set[id]).join(' · ') + '</div>' + (c.fail.length ? '<div class="pmWarn">' + L('有断头路', 'open ends') + '</div>' : '') +
-        (!c.cur && !C.running ? '<button type="button" class="pmLink" data-act="use" data-i="' + r.i + '">' + L('用这个方案', 'Use this run') + '</button>' : '') + '</div></div>'; }).join('') + '</div>';
-    if (!C.running) h += '<div class="pmActs"><button type="button" data-act="run">' + L('重新比较', 'Compare again') + '</button></div>'; }
+        (!c.cur && !running ? '<button type="button" class="pmLink" data-act="use" data-i="' + r.i + '">' + L('用这个方案', 'Use this run') + '</button>' : '') + '</div></div>'; }).join('') + '</div>';
+    if (!running) h += '<div class="pmActs"><button type="button" data-act="run">' + L('重新比较', 'Compare again') + '</button></div>'; }
   cmpBox.innerHTML = h; }
-cmpBox.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
+cmpBox.addEventListener('input', e => { if (e.target.dataset.ctl !== 'n') return; PM.cmpN = +e.target.value; e.target.nextElementSibling.textContent = PM.cmpN; try { localStorage.setItem('tensorStudio.cmpN', PM.cmpN); } catch (err) {}
+  const est = cmpBox.querySelector('.pmEst'); if (est) est.textContent = estText(); });
+cmpBox.addEventListener('click', e => { const sh = e.target.closest('[data-show]'); if (sh){ PM.cmpShow = sh.dataset.show; try { localStorage.setItem('tensorStudio.cmpShow', PM.cmpShow); } catch (err) {} renderCmp(); return; }
+  const pv = e.target.closest('[data-pv]'); if (pv && PM.cmp && !PM.cmp.running){ preview(+pv.dataset.pv); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
   if (a === 'run') compareRuns(); else if (a === 'stop' && PM.cmp) PM.cmp.stop = true; else if (a === 'use' && PM.cmp) applyRun(PM.cmp.list[+b.dataset.i]); });
 
 // the timeline, at the bottom between the two panels
@@ -183,14 +264,14 @@ el('pmRange').addEventListener('input', e => { stopAuto(); stopPlay(); if (GEN &
 // clear of the wind rose (bottom left of the map) and the scale bar (bottom right) where there is room
 function placeBar(){ const ins = window.__TS_INSETS ? window.__TS_INSETS() : { l: 0, r: 0 }, room = innerWidth - ins.l - ins.r, side = room > 900 ? 150 : 12, W = room - 2 * side;
   const w = Math.max(260, Math.min(720, W)); bar.style.width = w + 'px'; bar.style.left = (ins.l + side + Math.max(0, (W - w) / 2)) + 'px'; }
-addEventListener('resize', placeBar); new ResizeObserver(placeBar).observe(panel); new ResizeObserver(placeBar).observe(el('displayPanel'));
+addEventListener('resize', () => { placeBar(); placeOver(); }); new ResizeObserver(() => { placeBar(); placeOver(); }).observe(panel); new ResizeObserver(() => { placeBar(); placeOver(); }).observe(el('displayPanel'));
 // parts of the display panel that belong to the free mode
 const freeOnly = [el('tgMode')?.closest('.dpSection'), el('tResult')].filter(Boolean);
 
 /* ------------------------------------------------------------------ the engine's hooks */
 T6.setProc({
   stopAt: p => PM.active && PM.target === 6 && p === SECOND,
-  steps: () => PM.active ? SPEED[PM.speed].steps : 0,
+  steps: () => PM.active ? (PM.cmp && PM.cmp.running ? 40 : SPEED[PM.speed].steps) : 0,
   record(done){ if (!PM.active || !PM.target) return; PM.frames.push(recordFrame()); PM.runEV = EVENTS; PM.runCul = CULVERTS; mark(PM.frames.length - 1, PHASE); barLive(); },
   onStop(p){ if (!PM.active || p !== SECOND) return; PM.b6 = PM.frames.length - 1; PM.frames[PM.b6].phase = 'main streets done'; PM.atB = true; PM.target = 0; PM.valid = 6; PM.reached = Math.max(PM.reached, 6); ui(); settle(); },
   onDone(){ if (!PM.active || !PM.target) return; if (PM.b6 < 0) PM.b6 = PM.frames.length - 1; PM.atB = false; PM.target = 0; PM.valid = 7; PM.reached = Math.max(PM.reached, 7);
@@ -227,6 +308,8 @@ function layers(k){
   FROZEN = false; baseDirty = netDirty = widthDirty = true; syncTools(); }
 function go(k, auto){
   if (k < 1 || k > 8) return; PM.envTok++;
+  if (PM.cmp && PM.cmp.running && k !== 8) PM.cmp.stop = true;   // (v8.28) leaving step 8 stops a comparison
+  if (PM.cmp && PM.cmp.preview != null && k !== 8) unpreview();
   PM.cur = k; PM.reached = Math.max(PM.reached, k); world(k);
   if (k === 2 && !auto) envTour(++PM.envTok);
   ui(); const li = STEPS[k - 1].li; requestAnimationFrame(() => li.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
@@ -365,6 +448,7 @@ function ui(){ if (!PM.active) return;
     'Land ' + PM.area.base.toFixed(1) + ' ha; kept clear of flooding ' + (PM.area.base - PM.area.use).toFixed(1) + ' ha; ' + PM.area.use.toFixed(1) + ' ha left for streets.') : (FR ? L('洪水风险未参与。', 'Flood risk is off.') : L('此场地不在 EA 洪水数据范围内。', 'No EA flood data for this site.'))) + gTxt;
   metTbl.innerHTML = PM.cur === 8 ? metHTML() : '';
   if (PM.cur === 8){ scoreBox.innerHTML = scoreHTML(); renderCmp(); } else { scoreBox.innerHTML = ''; cmpBox.innerHTML = ''; }
+  strip();
   if (PM.cur === 8) floodNum();
   el('pmStepT').textContent = stepCap();
   el('pmPlay').innerHTML = PM.playing || growing ? PAUSE : PLAY; el('pmPlay').disabled = !(PM.frames.length || growing) || PM.cur < 6;

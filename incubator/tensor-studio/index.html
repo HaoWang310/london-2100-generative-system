@@ -408,6 +408,20 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
 .pmCG{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:11px;color:var(--ink);margin:2px 0;font-variant-numeric:tabular-nums}
 .pmCS{font-size:10.5px;line-height:1.4;color:var(--grey)}
 .pmCCard .pmLink{margin-top:4px;padding:0}
+.pmCCard.view{border-color:var(--accent)}.pmCCard img{cursor:pointer}
+.pmCCtl{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:8px;margin:6px 0}.pmCCtl label{font-size:12px;color:var(--grey)}.pmCCtl output{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);min-width:20px;text-align:right}
+.pmCCtl .pmSeg{grid-column:2 / 4}
+.pmSeg{display:flex;background:var(--fill);border-radius:8px;padding:2px;gap:2px}.pmSeg button{flex:1;border:0;background:none;color:var(--grey);font:inherit;font-size:11.5px;padding:5px 4px;border-radius:6px;cursor:pointer}.pmSeg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.pmPrev{color:var(--accent)}
+#pmStage{position:fixed;z-index:12;top:72px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;background:rgba(14,14,16,.88);border:1px solid #2f2f34;border-radius:12px;color:#f5f5f7;font-size:12px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:none;white-space:nowrap}
+#pmStage[hidden]{display:none}#pmStage b{font-weight:600;font-size:12.5px}#pmStage span{color:#c7c7cc}
+#pmPop{position:fixed;z-index:13;top:42%;transform:translate(-50%,-50%) scale(.92);opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:14px 26px;border-radius:18px;background:rgba(14,14,16,.86);color:#f5f5f7;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#pmPop.show{opacity:1;transform:translate(-50%,-50%) scale(1)}#pmPop b{font-size:52px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}#pmPop span{font-size:12px;color:#c7c7cc;margin-top:4px}#pmPop.best b{color:#30d158}
+#pmStrip{position:fixed;z-index:12;bottom:80px;display:flex;gap:4px;padding:6px;background:rgba(14,14,16,.88);border:1px solid #2f2f34;border-radius:12px;overflow-x:auto;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#pmStrip[hidden]{display:none}
+.pmTh{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px solid transparent;border-radius:9px;background:none;padding:2px;color:#f5f5f7;font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}
+.pmTh img{width:52px;height:52px;border-radius:6px;display:block}.pmTh.best{border-color:#30d158}.pmTh.view{border-color:#0a84ff}
+@media (prefers-reduced-motion: reduce){#pmPop{transition:none}}
 .pmMet{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin:4px 0 6px}
 .pmMet th{font-weight:500;color:var(--grey);text-align:right;padding:3px 0}
 .pmMet td{padding:4px 0;border-top:1px solid var(--line);text-align:right;color:var(--ink)}
@@ -488,7 +502,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.27" data-en="Station P2 example · v8.27">车站 P2 示例 · v8.27</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.28" data-en="Station P2 example · v8.28">车站 P2 示例 · v8.28</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -652,10 +666,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.27.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.27.0';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.27.0';
-const V = '8.27.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.28.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.28.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.28.0';
+const V = '8.28.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
