@@ -4,8 +4,8 @@
 一个在统一地图工作空间中，从伦敦全域逐级生成城市路网的设计软件：
 
 ```
-伦敦真实地理 (00) → 大区域划分 (01) → Wool 羊毛算法区域主路 (02)
-                → Tensor 张量场局部道路 (03) → 路网整合 (04) → 方案输出 (05)
+伦敦真实地理 (00) → 城市生长模拟 (01) → 大区域划分 (02) → Wool 羊毛算法区域主路 (03)
+                → Tensor 张量场局部道路 (04) → 路网整合 (05) → 方案输出 (06)
 ```
 
 - 计算坐标系：**EPSG:27700**（英国国家格网，米），仅在地图显示时转换为 WGS84
@@ -23,7 +23,7 @@
 | 路径 | 用途 |
 |---|---|
 | `app/` | 统一 App 外壳：左侧模块导航、中央地图、右侧参数面板、底部时间轴 |
-| `modules/00-london-map` … `05-catalogue-export` | 六个功能模块，每个可独立运行、预览和测试 |
+| `modules/00-london-map` … `06-catalogue-export` | 功能模块，每个可独立运行、预览和测试 |
 | `shared/geo-core` | EPSG:27700 坐标转换与几何计算 |
 | `shared/schemas` | 模块之间的标准数据接口 `ScaleBundle` |
 | `shared/state` | 多尺度工作空间状态（逐级进入 / 返回，保留各级结果） |
@@ -41,7 +41,7 @@
 ```sh
 python3 -m http.server 8000
 # 打开 http://localhost:8000/            统一 App
-# 打开 http://localhost:8000/modules/02-wool-network/preview.html   单独预览某个模块
+# 打开 http://localhost:8000/modules/03-wool-network/preview.html   单独预览某个模块
 node --test                               # 运行全部测试
 ```
 

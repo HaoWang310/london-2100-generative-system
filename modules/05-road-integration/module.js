@@ -1,4 +1,4 @@
-// 04 · Road integration — merge all scales into one continuous network.
+// 05 · Road integration — merge all scales into one continuous network.
 //
 // Input: a ScaleBundle whose `roads` holds every road to integrate (the app
 // gathers the Wool result plus all Tensor results under it). Output: the same
@@ -12,7 +12,7 @@ import {
 } from '../../shared/geo-core/index.js';
 
 const mod = {
-  id: '04-road-integration',
+  id: '05-road-integration',
   level: 'integration',
   version: '0.1.0',
   title: { zh: '路网整合', en: 'Road integration' },
