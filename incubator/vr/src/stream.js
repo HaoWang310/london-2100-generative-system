@@ -4,7 +4,8 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.17';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.18';
+import { treesForTile, carsForTile } from './features.js?v=0.18';
 
 const ZMAX = 14, R = 6378137, WORLD = 2 * Math.PI * R;
 const tileM = z => WORLD / 2 ** z;   // Web Mercator metres per tile side at zoom z
@@ -55,15 +56,18 @@ export function osmStream(lat, lon, opt = {}){
       g.fillStyle = GROUND_COLOUR; g.fillRect(0, 0, PX, PX);   // land; seas come as water polygons at every zoom
       const bld = paintLayers(g, [t], (tt, ext) => q => [q[0] / ext * PX, q[1] / ext * PX], PX / size);
       // buildings (z13–14 only): keep those whose centroid is inside this tile, so neighbours never draw one twice
-      let B = { mesh: null, count: 0 };
-      if (z >= 13){ const [x0, y1] = planOf(z, x, y), plan = ext => q => [x0 + q[0] / ext * size, y1 - q[1] / ext * size], list = [];
+      let B = { mesh: null, count: 0 }, trees = null, cars = null;
+      const [px0, py1] = planOf(z, x, y), plan = ext => q => [px0 + q[0] / ext * size, py1 - q[1] / ext * size];
+      // street level only: trees in green spaces and vehicle paths along the larger streets (drawn when the app's switches are on)
+      if (z >= 14){ trees = treesForTile(t.layers, plan, size, x, y); cars = carsForTile(t.layers, plan, size, x, y); }
+      if (z >= 13){ const x0 = px0, y1 = py1, list = [];
         for (const { f } of bld){ const P = plan(f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0;
           for (const part of f.parts){ if (part.length < 4) continue; list.push({ ring: part.map(P), h, h0 }); } }
         B = buildingMesh(list.filter(o => area(o.ring) < 0), 0, 0, size, size, x0, y1 - size, [1, 1, 1]); }   // white; xr_view tints them with the app's building colour
       // with the map app at hand: the same tile in the app's own look follows when it is drawn
       const upgrade = opt.painter ? opt.painter.render(z, x, y, alive) : null;
       const [x0, y1] = planOf(z, x, y);
-      return { z, canvas: cv, quad: [x0, y1 - size, x0 + size, y1], mesh: B.mesh, count: B.count, upgrade };
+      return { z, canvas: cv, quad: [x0, y1 - size, x0 + size, y1], mesh: B.mesh, count: B.count, trees, cars, upgrade };
     }
   };
 }

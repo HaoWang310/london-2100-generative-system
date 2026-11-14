@@ -7,6 +7,17 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - 这个文件夹**只读场景文件**，不引用其他 app 的代码，格式见 [`docs/SCENE-FORMAT.md`](docs/SCENE-FORMAT.md)。所以可以和 Tensor Studio 同时开发：那边继续改算法，这边改三维和交互，互不影响。
 - 它和其他 app 在同一个网址下，以后可以直接读取正在运行的 Tensor Studio，不用再导出文件。
 
+## 天气、光照、阴影、树、小车（v0.18）
+
+这些在 app 里是额外画在地图上的，VR 截取的地面里没有，所以 VR 自己用三维做了一遍，并**跟着 app 面板上的按钮和开关**（`src/app_state.js` 每 0.3 秒读一次 app 页面）。光照和天气的颜色、太阳方向直接用 app 自己的 `scripts/map_atmosphere.js` 里的预设（只读导入），所以和 app 一致。
+- **光照**：黎明 / 白天 / 黄昏 / 夜晚 / 实时（按地图中心的真实太阳位置）。改变太阳方向、光的颜色和强弱、天空颜色；地面的颜色变化来自 app 样式本身
+- **天气**：雨（雨丝）、雪（飘落的雪花）、雾（越远越白）；桌面模式在圆盘上方的一个圆柱里，1:1 漫游时在你周围
+- **建筑阴影**：按太阳方向投到地面，重叠处不会更黑；夜晚没有，雨雾雪里变淡（与 app 相同的系数）
+- **绿化树木**：在 OSM 的公园、林地、草地里随机种树（每块瓦片最多约 2200 棵，只在街道级）；与 app 一样只是视觉示意
+- **街道小车**：沿主要道路行驶、靠左，桌面模式下按比例放大一些以便看见
+- 没有 app 时（`index.html`）可以用 `?fx=trees,cars,rain,night` 这样的参数试效果（可选：dawn/day/dusk/night、clear/fog/rain/snow、trees、cars、noshadows）
+- 修复：圆盘下的底色原来是一块超大的平面，深度精度不够时会盖住一半地图（也会引起闪烁），现在只画在可见的圆周围
+
 ## 从街道缩到全世界（v0.16）
 
 移动加载现在分级：圆盘里看到的范围越大，用的瓦片越粗——z14（街道，带建筑，一块约 1.5 公里）一直到 z0–1（整个世界）。缩小时可以一路看到伦敦、英国、欧洲、全世界，放大回来自动换回街道和建筑。
@@ -99,6 +110,8 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 | `src/stream.js` | 移动加载：按瓦片读取、绘制、拉伸建筑 |
 | `src/map_painter.js` | 用 app 地图自己的样式渲染 VR 地面瓦片 |
 | `src/app_panel.js` | 从 app 页面读取控制面板，画成 VR 面板，按钮转发给 app |
+| `src/app_state.js` | 读取 app 当前的光照、天气和显示开关（用 app 的预设） |
+| `src/features.js` | 每块瓦片的树和小车路径 |
 | `data/*.scene.json` | 场景；`data/scenes.json` 是顶栏菜单的列表 |
 | `tools/build-scene-hydro-lab.py` | 从 `../google-map-live/assets` 生成 Hydro Lab 场景（需要 numpy 和 Pillow；参数是网格倍数，默认 6 = 300 m） |
 | `tools/export-from-tensor-studio.mjs` | 无界面运行 Tensor Studio，导出场景（在本文件夹里运行） |
