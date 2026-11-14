@@ -12,8 +12,8 @@
 //   A = flood risk on / off · B = table ↔ walk 1 : 1 · X = existing streets · Y = put it back in front of me
 // Hands: pinch = grab, two pinches = scale.
 
-import { defaultEnv } from './app_state.js?v=0.19';
-import { writeCars } from './features.js?v=0.19';
+import { defaultEnv } from './app_state.js?v=0.20';
+import { writeCars } from './features.js?v=0.20';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -185,6 +185,7 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}
 #tsXR .appPanel{position:absolute;right:16px;top:64px;width:min(620px,48vw);max-height:calc(100% - 120px);overflow:auto;border-radius:18px;pointer-events:auto;box-shadow:0 18px 50px #0007}
 #tsXR .appPanel canvas{position:static;display:block;width:100%;height:auto}
+#tsXR.immersive .appPanel,#tsXR .appPanel.closed{display:none}
 #tsXR.immersive{background:transparent;pointer-events:none}#tsXR.immersive .bar>*,#tsXR.immersive .note{pointer-events:auto}`;
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
@@ -197,6 +198,10 @@ export function open(api, lang = 'zh', opt = {}){
   const pm = { mode: panel ? 'hand' : 'off', c: null, w: 0.36, grab: null };
   window.__vrPanel = pm;   // for checking from the console / tests
   if (panel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(panel.canvas); root.append(box);
+    // the on-screen copy of the panel (for the mouse): a bar button folds it; in VR / MR it is always hidden (the headset has its own)
+    const pb = document.createElement('button'); pb.className = 'on'; pb.textContent = lang === 'zh' ? '面板' : 'Panel';
+    pb.onclick = () => { box.classList.toggle('closed'); pb.classList.toggle('on', !box.classList.contains('closed')); };
+    root.querySelector('.bar .sp').before(pb);
     const uv = e => { const r = panel.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
     panel.canvas.addEventListener('pointermove', e => { panel.setHover(panel.hitAt(...uv(e))); panel.canvas.style.cursor = panel.hitAt(...uv(e)) != null ? 'pointer' : 'default'; });
     panel.canvas.addEventListener('pointerleave', () => panel.setHover(null));
