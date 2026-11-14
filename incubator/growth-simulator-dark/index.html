@@ -158,7 +158,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     </div>
     <div id="simple"></div>
     <div class="advsec">
-      <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt"></span></button>
+      <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt" data-t>Advanced settings</span></button>
       <div class="advnote" data-t>Every setting of the original, one by one. The controls above move these; change one here alone and the control above it shows Custom.</div>
       <div id="sliders"></div>
     </div>
@@ -882,8 +882,6 @@ var GV = (function () {
   }
   var advOpen = false;
   function buildAdvanced() {
-    var n = 0; GROUPS.forEach(function (g) { n += g.s.length; });
-    document.querySelector(".advsec .advt").textContent = T("Advanced settings") + " · " + n + " " + T("settings of the original");
     document.querySelector(".advsec").classList.toggle("open", advOpen);
   }
   $("advBtn").onclick = function () { advOpen = !advOpen; buildAdvanced(); };
