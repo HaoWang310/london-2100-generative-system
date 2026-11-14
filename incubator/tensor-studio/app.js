@@ -1916,14 +1916,14 @@ function drawWidth(){ const w = L_width.width, h = L_width.height, sw = streetWi
   // 1 the road surface: every street at its width, the land's edge road at the widest, the link; closed by a blur (the fillets)
   const a = mk(); a.width = w; a.height = h; const ga = a.getContext('2d'); ga.setTransform(DPR, 0, 0, DPR, 0, 0); ga.strokeStyle = '#000'; ga.lineCap = 'round'; ga.lineJoin = 'round';
   strokeVar(ga, sw, 0, false);
-  ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0 && !l.hole){ pathLine(ga, l.pts); ga.stroke(); } }   // (v8.8) the shores of water and flood zones are not roads
+  ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s;   // (v8.29) the land's edge is not drawn as a road: the streets are the ones grown within the site
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(ga, s_); ga.stroke(); }
   const m = mk(); m.width = w; m.height = h; const gm = m.getContext('2d'); gm.filter = 'blur(' + Math.max(1, Math.round(6 * view.s * DPR)) + 'px)'; gm.drawImage(a, 0, 0); gm.filter = 'none';
   const im = gm.getImageData(0, 0, w, h), d = im.data; for (let i = 0; i < d.length; i += 4){ d[i + 3] = d[i + 3] >= 105 ? 255 : 0; } gm.putImageData(im, 0, 0);
   // 2 the colour by width: narrow to wide, the wider drawn last, a little wider than the road so it fills the fillets
   const g = L_width.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round';
   const hiCol = rampCol(Math.max(v('wMax'), v('wMin')));
-  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8) * view.s; for (const l of LINES){ if (!l.dead && l.level === 0 && !l.hole){ pathLine(g, l.pts); g.stroke(); } }
+  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8) * view.s;
   for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(g, s_); g.stroke(); }
   const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
   segs.sort((p, q) => p[0] - q[0]);
