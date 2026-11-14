@@ -5,7 +5,7 @@
 // Messages out: {type:'progress', id, ...} · {type:'result', id, ...} · {type:'error', id, message}
 /* global importScripts, D, GV, GRIDCODEC */
 
-let base = null, v = '', engine = null, finalEv = null;
+let base = null, hash = {}, engine = null, finalEv = null;
 const runs = new Map();            // runId -> {idx, cls, off}; the latest few, for comparisons
 const tiers = new Map();           // key -> {applied, tier}
 const cache = new Map();
@@ -15,8 +15,10 @@ async function inflate(buf) {
   return new Response(new Blob([buf]).stream().pipeThrough(ds)).arrayBuffer();
 }
 
+const src = p => base + p + (hash[p] ? `?h=${hash[p]}` : '');   // see SRC_HASH in growth.js
+
 async function fetchBytes(path, id, label) {
-  const r = await fetch(base + path + v);
+  const r = await fetch(src(path));
   if (!r.ok) throw new Error(`${path}: ${r.status}`);
   if (!r.body || !r.body.getReader) return r.arrayBuffer();
   const reader = r.body.getReader(), parts = [];
@@ -87,8 +89,8 @@ function samePlace(a, b) {
 onmessage = async ({ data: m }) => {
   try {
     if (m.type === 'init') {
-      base = m.base; v = m.v || '';
-      importScripts(base + 'data/meta.js' + v, base + 'codec.js' + v, base + 'engine.js' + v);
+      base = m.base; hash = m.hash || {};
+      importScripts(src('data/meta.js'), src('codec.js'), src('engine.js'));
       postMessage({ type: 'ready', id: m.id });
     } else if (m.type === 'prepare') {          // load the ground in the background, before any run
       await ensureEngine(m.id);
