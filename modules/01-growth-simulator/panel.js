@@ -149,6 +149,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   }
 
   // -------------------------------------------------------------- 生成流程: the steps
+  const STEPS = () => s.GVC.STEPS || [];       // an older controls.js has none: then no flow, nothing breaks
   const ctlById = id => { for (const g of s.GVC.SIMPLE) for (const c of g.c) if (c.id === id) return c; return null; };
   // a step marked live shows the outcome; once the settings differ from what it shows, it waits for a run
   const outdated = () => (s.mode === 'variation' && s.variation ? growth.stale() : !growth.isDefault());
@@ -156,7 +157,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     if (!el.steps) return;
     const R = s.mode === 'variation' && s.variation ? s.variation : s.final, x = { D: s.D, P: s.P, stats: R.stats[75], fmt, T }, old = outdated();
     for (const card of el.steps.children) {
-      const st = s.GVC.STEPS.find(q => q.id === card.dataset.id);
+      const st = STEPS().find(q => q.id === card.dataset.id);
       let txt = ''; try { txt = st.sum(x); } catch { txt = ''; }
       card.querySelector('.ss').textContent = txt;
       card.classList.toggle('pending', Boolean(st.live) && old);
@@ -165,7 +166,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   }
   function openStepAt(id) {
     openStep = id;
-    const st = s.GVC.STEPS.find(q => q.id === id) || null;
+    const st = STEPS().find(q => q.id === id) || null;
     stepsSync();
     onStep(st);
     if (st?.graph) requestAnimationFrame(drawGraph);
@@ -185,8 +186,8 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     };
     const next = () => {
       if (!flowing) return;
-      if (i >= s.GVC.STEPS.length) { stopFlow(); return; }
-      const st = s.GVC.STEPS[i++];
+      if (i >= STEPS().length) { stopFlow(); return; }
+      const st = STEPS()[i++];
       openStepAt(st.id);
       el.steps.querySelector(`[data-id="${st.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       if (st.id === 'pass1' || st.id === 'pass2') grow(next);
@@ -209,7 +210,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   }
   function buildSteps() {
     graph = h('canvas', { class: 'g01-graph' }); ratio = h('p', { class: 'muted small' });
-    el.steps = h('div', { class: 'g01-steps' }, s.GVC.STEPS.map(st => {
+    el.steps = h('div', { class: 'g01-steps' }, STEPS().map(st => {
       const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Run the variation to update this step.')));
       if (st.graph) body.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
       // what the step lays on the map
@@ -231,6 +232,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
       return card;
     }));
     el.flow = h('button', { type: 'button', class: 'btn g01-flowbtn', onclick: playFlow }, T(flowing ? 'Stop' : 'Play the whole process'));
+    if (!STEPS().length) return h('div');
     return h('div', { class: 'g01-sec' }, h('div', { class: 'g01-flowhead' }, h('div', { class: 'eyebrow' }, T('How the city is made')), el.flow), el.steps);
   }
 
