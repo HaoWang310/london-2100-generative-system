@@ -433,7 +433,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
 .pmKD{grid-column:2;font-size:11.5px;line-height:1.45;color:var(--grey)}
 .pmDot{grid-row:1 / span 2;align-self:start;margin-top:2px;width:14px;height:14px;border-radius:50%;box-sizing:border-box}
 .pmDot.main{border:2.5px solid #0a84ff;background:radial-gradient(circle,#0a84ff 0 3px,transparent 3.5px)}
-.pmDot.sec{width:10px;height:10px;margin:4px 2px 0;border:0;border-radius:1.5px;background:#64d2ff}
+.pmDot.sec{width:12px;height:12px;margin:3px 1px 0;border:0;border-radius:1.5px;background:#ff9f0a}
 .pmDot.edge{width:14px;height:13px;margin:2px 0 0;border-radius:0;background:#bf5af2;clip-path:polygon(50% 0,100% 100%,0 100%)}
 .pmKRow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--grey);margin:0 2px 2px}
 .pmLink{border:0;background:none;color:var(--accent);font:inherit;font-size:11.5px;padding:2px 0;cursor:pointer}
@@ -631,10 +631,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.13.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.13.0';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.13.0';
-const V = '8.13.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.13.1';
+import { floodForSite } from './scripts/flood_risk.js?v=8.13.1';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.13.1';
+const V = '8.13.1', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
