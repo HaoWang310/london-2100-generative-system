@@ -283,11 +283,11 @@ export function open(api, lang = 'zh', opt = {}){
       if (!ok) continue; const b = document.createElement('button'); b.className = 'go'; b.textContent = label; b.onclick = () => startXR(mode); xrBox.append(b); }
   })();
 
-  function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 420; const g = c.getContext('2d');
-    g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 420, r) : g.rect(0, 0, 1024, 420); g.fill();
+  function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 470; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 470, r) : g.rect(0, 0, 1024, 470); g.fill();
     g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
     g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(s.replace('{x}', xLabel), 44, 140 + i * 52));
-    if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 392 - 14); }
+    if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 438); }
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
   function quad(){ const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
@@ -374,7 +374,7 @@ export function open(api, lang = 'zh', opt = {}){
         const left = [...session.inputSources].find(s => s.handedness === 'left'), lp = left && poseOf(frame, left);
         if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
-          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.0903]));
+          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
           gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
         gl.bindVertexArray(null); } };
