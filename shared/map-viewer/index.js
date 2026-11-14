@@ -182,13 +182,19 @@ async function createMapLibreViewer(el, opts) {
 
   // Module overlays sit under the labels and under the workspace's own layers and 3D buildings;
   // the analysis layers go under the overlays.
+  // A module's ground layer (01's parcels) sits under the basemap's water and roads, so real rivers
+  // and streets cut through it: the first water / waterway layer, else the first road layer.
+  const groundBefore = () => {
+    const ids = layerIds();
+    return ids.find(id => /^(water|waterway)([_-]|$)/.test(id)) || ids.find(id => /^(tunnel|road|highway|bridge)[_-]/.test(id));
+  };
   const overlayBefore = () => (lm && map.getLayer(lm.buildingLayer) ? lm.buildingLayer : map.getLayer('l2100-buildings') ? 'l2100-buildings' : firstSymbol);
   if (lm) lmPanel = mountDisplayPanel(el, lm, { source: t('dp.source') });
 
   return {
     kind: 'maplibre',
     map,
-    addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore()); lm?.restack(); },
+    addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore(), { ground: groundBefore() }); lm?.restack(); },
     london: lm,
     removeOverlay(id) { overlays.get(id)?.detachMapLibre?.(); overlays.delete(id); },
     redraw() { for (const o of overlays.values()) o.sync?.(); map.triggerRepaint(); },
