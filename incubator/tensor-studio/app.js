@@ -3,6 +3,14 @@
 'use strict';
 const D = window.__TS.D;   // set by index.html: the site from the London map, or the station P2 example
 const $ = id => document.getElementById(id), v = id => +$(id).value, PI = Math.PI, NL = String.fromCharCode(10);
+/* (v8.31) SITE SCALE: the settings were tuned on the 210 ha station example. A site from the London map can be a tenth of
+ * that, where 300 m between main streets gives one street. SIZE_K is the square root of the area ratio (20 ha → 0.31),
+ * clamped to 0.3-1; the spacings, the corridor width, the circus and the place merging distance are scaled by it once
+ * when the site loads (the sliders keep their ranges, so the user can still go back up) */
+const SITE_HA = (window.__TS && window.__TS.meta && window.__TS.meta.areaHa) || 210, SIZE_K = window.__TS && window.__TS.host ? Math.max(0.3, Math.min(1, Math.sqrt(SITE_HA / 210))) : 1;
+const AREA_K = SIZE_K * SIZE_K, SLIVER_HA = 0.15 * AREA_K, BIG_HA = 2.5 * AREA_K, PARK_HA = 4 * AREA_K, JOIN_HA = 2 * AREA_K;
+function scaleToSite(){ if (SIZE_K >= 1) return; const set = (id, val, lo) => { const e = $(id); if (!e) return; const mn = +e.min, st = +e.step || 1, want = Math.max(lo != null ? lo : mn, Math.round(val / st) * st); if (want < mn) e.min = want; e.value = want; };
+  set('d1', 300 * SIZE_K, 90); set('d2', 115 * SIZE_K, 40); set('gW', 30 * Math.max(0.4, SIZE_K), 10); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K)); }
 const clamp = (a, b, c) => Math.max(b, Math.min(c, a));
 
 /* ------------------------------------------------------------------ Parcel 62 only: its land, its anchors, its attractors, its river street */
@@ -129,7 +137,7 @@ let GZ = null, GD = null, GA = null, GKEY = '', GINFO = null, GIMG = null;
 const corrOn = () => !!(window.__TS.D.env && window.__TS.envFns) && !!document.getElementById('gOn')?.checked;
 function buildCorridors(){ const on = corrOn(), key = on ? v('gW') + ':' + document.getElementById('gQ').value : 'off'; if (key === GKEY) return; GKEY = key; GIMG = null;
   if (!on){ GZ = GD = GA = null; GINFO = null; return; }
-  const g = window.__TS.envFns.corridors(window.__TS.D.env, D.landMask || null, nx, ny, cell, { minHa: +document.getElementById('gQ').value, half: v('gW') / 2 });
+  const g = window.__TS.envFns.corridors(window.__TS.D.env, D.landMask || null, nx, ny, cell, { minHa: +document.getElementById('gQ').value, half: v('gW') / 2, minLen: 100 * SIZE_K });
   GZ = g.mask; GD = g.dist; GA = g.axis; GINFO = { cells: g.cells, areaHa: g.areaHa, share: g.share, minHa: g.minHa, raised: g.raised }; }
 function axisOf(frm, job){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return job === 'along' ? a : a + PI / 2; }
 // (v8.5) flood risk (EA): the class of each 10 m cell, the higher of surface water and rivers & sea (0 none … 4 high)
@@ -307,7 +315,7 @@ function addLine(l){ l.id = LINES.length; LINES.push(l); const Pp = l.pts;
     let bk = HASH.get(key); if (!bk){ bk = []; HASH.set(key, bk); } bk.push(Pp[k][0], Pp[k][1], l.id, dx / n, dy / n); } return l; }
 function near(x, y, d, dir, par, levels, skip){ const r = Math.ceil(d / HC), cx = Math.floor(x / HC), cy = Math.floor(y / HC); let best = null;
   for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++){ const bk = HASH.get((cx + i) + ',' + (cy + j)); if (!bk) continue;
-    for (let k = 0; k < bk.length; k += 5){ const lid = bk[k + 2]; if (lid === skip) continue; const L = LINES[lid]; if (L.dead || (levels && !levels.has(L.level))) continue;
+    for (let k = 0; k < bk.length; k += 5){ const lid = bk[k + 2]; if (lid === skip) continue; const L = LINES[lid]; if (L.dead || (levels && !levels.has(L.level)) || (NOBLD && L.building)) continue;
       const dd = Math.hypot(bk[k] - x, bk[k + 1] - y); if (dd >= d) continue;
       if (dir){ const dot = Math.abs(bk[k + 3] * dir[0] + bk[k + 4] * dir[1]); if (par && dot < 0.75) continue; if (!par && dot > 0.6) continue; }
       if (!best || dd < best[0]) best = [dd, bk[k], bk[k + 1], lid, bk[k + 3], bk[k + 4]]; } }
@@ -407,7 +415,7 @@ function resetNet(){
   // (v7) the land's edge in two kinds: a wool road's edge (streets meet it) and a shore, of water or the station ring (they do not)
   if (D.edges){ for (const r of D.edges.road) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: false });
     for (const r of (D.edges.shared || [])) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: false, shared: true });
-    for (const r of D.edges.shore) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: true }); }
+    for (const r of D.edges.shore){ const bld = !!(D.buildingHoles || []).some(b => b.length === r.length && Math.abs(b[0][0] - r[0][0]) < 0.6 && Math.abs(b[0][1] - r[0][1]) < 0.6); addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: true, building: bld }); } }
   else for (const p of D.pieces){ for (const r of [p.outer, ...p.holes]) addLine({ level: 0, fam: 0, pts: densify(r, 4), ends: ['edge', 'edge'], ring: true, hole: r !== p.outer }); }
   // (v8.5) a flood zone kept clear is a shore, as water is: its edge inside the land, which streets follow or stop at
   { const fa = floodAvoid(); if (fa) for (const ring of FLOOD.zones[fa] || []){ const pts = densify(ring, 4), ins = pts.map(p => inLandNoHoles(p[0], p[1]));
@@ -436,9 +444,10 @@ function gridAt(a, x, y){ return a ? a[cellAt(x, y)] : 0; }
 function partAxis(Ca, Sa, x, y){ const q = sampleCS(Ca, Sa, x, y); if (!q || Math.hypot(q[0], q[1]) < 1e-9) return null; return 0.5 * Math.atan2(q[1], q[0]); }
 // of the two axes of a cross (t, t + 90 degrees), the one nearest a heading, pointing the heading's way
 function nearestAxis(t, hx, hy){ let best = null, bd = -1; for (const a of [t, t + PI / 2]){ let ux = Math.cos(a), uy = Math.sin(a), d = ux * hx + uy * hy; if (d < 0){ ux = -ux; uy = -uy; d = -d; } if (d > bd){ bd = d; best = [ux, uy]; } } return best; }
+let NOBLD = false;   // (v8.31) true while checking for room: building rings do not count as streets
 function nearB(x, y, d, own, ign, dir, par, levels){ const r = Math.ceil(d / HC), cx = Math.floor(x / HC), cy = Math.floor(y / HC); let best = null;
   for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++){ const bk = HASH.get((cx + i) + ',' + (cy + j)); if (!bk) continue;
-    for (let k = 0; k < bk.length; k += 5){ const lid = bk[k + 2]; if (lid === own || (ign.length && ign.includes(lid))) continue; const L = LINES[lid]; if (L.dead || (levels && !levels.has(L.level))) continue;
+    for (let k = 0; k < bk.length; k += 5){ const lid = bk[k + 2]; if (lid === own || (ign.length && ign.includes(lid))) continue; const L = LINES[lid]; if (L.dead || (levels && !levels.has(L.level)) || (NOBLD && L.building)) continue;
       const dd = Math.hypot(bk[k] - x, bk[k + 1] - y); if (dd >= d) continue;
       if (dir){ const dot = Math.abs(bk[k + 3] * dir[0] + bk[k + 4] * dir[1]); if (par && dot < 0.75) continue; if (!par && dot > 0.6) continue; }
       if (!best || dd < best[0]) best = [dd, bk[k], bk[k + 1], lid, bk[k + 3], bk[k + 4]]; } }
@@ -516,13 +525,13 @@ function sideRuns(){ const runs = new Map(), live = LINES.filter(l => !l.dead &&
       const x = P[i][0], y = P[i][1], ux = (P[i][0] - P[i - 1][0]) / sl, uy = (P[i][1] - P[i - 1][1]) / sl, cx = Math.floor(x / HC), cy = Math.floor(y / HC), seen = new Set();
       for (let a = -5; a <= 5; a++) for (let b = -5; b <= 5; b++){ const bk = HASH.get((cx + a) + ',' + (cy + b)); if (!bk) continue;
         for (let q = 0; q < bk.length; q += 5){ const lid = bk[q + 2]; if (lid === l.id || seen.has(lid)) continue; const L = LINES[lid]; if (L.dead || L.circus || L.level === 0) continue;
-          const dd = Math.hypot(bk[q] - x, bk[q + 1] - y), Dm = (l.level === 1 && L.level === 1) ? 75 : (l.level === 1 || L.level === 1) ? 45 : 40; if (dd < 4 || dd > Dm) continue;
+          const dd = Math.hypot(bk[q] - x, bk[q + 1] - y), Dm = ((l.level === 1 && L.level === 1) ? 75 : (l.level === 1 || L.level === 1) ? 45 : 40) * Math.max(0.45, SIZE_K); if (dd < 4 || dd > Dm) continue;   // (v8.31) scaled to the site
           if (Math.abs(bk[q + 3] * ux + bk[q + 4] * uy) < 0.94) continue; seen.add(lid); } }
       for (const lid of seen){ const k = l.id + ':' + lid; let e = runs.get(k); if (!e){ e = []; runs.set(k, e); } e.push(i); } } }
   const out = [];
   for (const [k, idx] of runs){ const [a, b] = k.split(':').map(Number), P = LINES[a].pts; let best = null, s0 = idx[0], prev = idx[0];
     // (a little stricter than the check: runs from 45 m, so whatever the check would count is cleaned)
-    const close = (i0, i1) => { let L = 0; for (let i = i0 + 1; i <= i1; i++) L += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); if (L >= 45 && (!best || L > best[2])) best = [i0, i1, L]; };
+    const close = (i0, i1) => { let L = 0; for (let i = i0 + 1; i <= i1; i++) L += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); if (L >= 45 * Math.max(0.45, SIZE_K) && (!best || L > best[2])) best = [i0, i1, L]; };
     for (let j = 1; j < idx.length; j++){ if (idx[j] - prev > 4){ close(s0, prev); s0 = idx[j]; } prev = idx[j]; } close(s0, prev);
     if (best) out.push({ a, b, k0: best[0], k1: best[1], L: best[2] }); }
   return out; }
@@ -603,6 +612,10 @@ function* sweepOpen(trimOnly){ PHASE = 'no open ends'; rehashAll();
         n++; if (trimOnly || !extendEnd(l, side, 220, null)) trimEnd(l, side); } }
     if (!n) break; yield 1; }
   netDirty = widthDirty = true; }
+// (v8.31) a building ahead: the street turns along its side instead of ending (whichever way is nearer its heading, up to 90
+// degrees, 15 degrees a try); null when both ways are blocked
+function deflect(x, y, dx, dy){ const qx = x + dx * 5, qy = y + dy * 5; if (!(D.buildingHoles || []).some(r => inRing([qx, qy], r))) return null;   // (a building, not the site's edge or water)
+  const a0 = Math.atan2(dy, dx); for (let k = 1; k <= 6; k++) for (const sg of [1, -1]){ const a = a0 + sg * k * 15 * PI / 180, ex = Math.cos(a), ey = Math.sin(a); if (inLand(x + ex * 5, y + ey * 5) && inLand(x + ex * 12, y + ey * 12)) return [ex, ey]; } return null; }
 function tipEnd(tp, why, d){ tp.done = true; TIPMAP.delete(tp.l.id); tp.l.ends[0] = why; const L = plen(tp.l.pts);
   // a stub goes, unless a street has been built on it: under 20 m, or under 25 m and not ended on a street, or stopped alongside one early
   if (!tp.l.kids && !tp.l.hits && why !== 'near' && ((why !== 'J' && L < 20) || (why !== 'T' && why !== 'Y' && why !== 'J' && L < 25))) tp.l.dead = true;
@@ -628,8 +641,9 @@ function bendTo(tp, tg, ctrl, skipIds){ const cx = tp.x + tp.hx * ctrl, cy = tp.
   for (const p of add){ const dx = p[0] - tp.x, dy = p[1] - tp.y, n = Math.hypot(dx, dy) || 1; tp.hx = dx / n; tp.hy = dy / n; push(tp, p); } return true; }
 function ownHit(tp, x, y){ const Pp = tp.l.pts, n = Pp.length - 14; for (let i = 0; i < n; i++){ const q = Pp[i]; if (Math.abs(q[0] - x) < 6.5 && Math.abs(q[1] - y) < 6.5 && Math.hypot(q[0] - x, q[1] - y) < 6.5) return q; } return null; }
 // room for a side street here, going u: nothing leaving (or meeting) the parent here the same way, nothing alongside, no street just ahead
-function canBranch(x, y, u, pid){ const d = v('d2'), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
-  if (!inLand(ax, ay) || (inZone(ax, ay) && !culvertOK(ax, ay, u)) || inRail(ax, ay) || inRail(x, y)) return false;   // (v7: a ditch ahead is fine if the street will cross it square)
+function canBranch(x, y, u, pid){ NOBLD = true; try { return canBranch_(x, y, u, pid); } finally { NOBLD = false; } }
+function canBranch_(x, y, u, pid){ const d = v('d2'), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
+  if (!inLand(ax, ay) || !inLand(x + u[0] * 10, y + u[1] * 10) || (inZone(ax, ay) && !culvertOK(ax, ay, u)) || inRail(ax, ay) || inRail(x, y)) return false;   // (v7: a ditch ahead is fine if the street will cross it square)
   if (nearNode(x, y, d * 0.25)) return false;   // a junction already here
   if (nearB(x, y, d * 0.35, -1, ig, u, true, null)) return false;
   if (nearB(ax, ay, d * 0.45, -1, ig, u, true, null)) return false;
@@ -658,8 +672,8 @@ function tipStep(tp, o){
     tp.turn = (tp.turn || 0) + tr; if (Math.abs(tp.turn) > 120 * PI / 180) return tipEnd(tp, 'near', d); }   // no curls: 120 degrees in all at most
   // no bundles of main streets: one heading into a junction of main streets steers round it (5 degrees a step, away from it)
   if (tp.level === 1 && o.mainsT){ const nd = mainNodeAhead(x, y, dx, dy); if (nd){ const sd = Math.sign(dx * (nd[2] - y) - dy * (nd[1] - x)) || 1, a0 = Math.atan2(dy, dx) - sd * 5 * PI / 180; dx = Math.cos(a0); dy = Math.sin(a0); } }
-  const nx_ = x + dx * 5, ny_ = y + dy * 5;
-  if (!inLand(nx_, ny_)) return tipEnd(tp, 'edge', d);
+  let nx_ = x + dx * 5, ny_ = y + dy * 5;
+  if (!inLand(nx_, ny_)){ const df = deflect(x, y, dx, dy); if (!df || (tp.bends = (tp.bends || 0) + 1) > 6) return tipEnd(tp, 'edge', d); dx = df[0]; dy = df[1]; nx_ = x + dx * 5; ny_ = y + dy * 5; }
   tp.hx = dx; tp.hy = dy;
   if (inRail(nx_, ny_)){ const far = railCross(x, y, dx, dy); if (!far) return tipEnd(tp, 'bank', d); push(tp, far); tp.L += Math.hypot(far[0] - x, far[1] - y); return true; }
   if (tp.L > 15 && alongRail(nx_, ny_, dx, dy)) return tipEnd(tp, 'near', d);   // (v7) never along the rail
@@ -668,6 +682,7 @@ function tipStep(tp, o){
   // 1 it meets a street
   for (let tries = 0; tries < 4; tries++){
     const c = nearB(nx_, ny_, 6.5, tp.l.id, ig, null, false, lv); if (!c) break; const other = LINES[c[3]], ot = TIPMAP.get(c[3]);
+    if (other.building){ const df = deflect(x, y, dx, dy); if (!df || (tp.bends = (tp.bends || 0) + 1) > 8){ ig.push(c[3]); continue; } dx = df[0]; dy = df[1]; nx_ = x + dx * 5; ny_ = y + dy * 5; tp.hx = dx; tp.hy = dy; continue; }   // (v8.31) a building: turn along it
     if (ot && ot !== tp && ot.hx * dx + ot.hy * dy < -0.5 && Math.hypot(ot.x - nx_, ot.y - ny_) < 14){   // head on: the two become one street
       push(tp, [ot.x, ot.y]); ot.l.ends[0] = 'J'; ot.done = true; TIPMAP.delete(ot.l.id); EVENTS.push({ x: ot.x, y: ot.y, k: 'meet' }); return tipEnd(tp, 'J', d); }
     if (Math.hypot(c[1] - x, c[2] - y) < 5.5){ tp.ig.push({ id: c[3], until: tp.L + 15 }); ig.push(c[3]); continue; }   // it has just been met, here
@@ -723,8 +738,9 @@ function curveInto6(tp, hit, ahead, ctrl){ let ux = hit[4], uy = hit[5]; if (ux 
     add.push(k === 16 ? [tg[0], tg[1]] : [bx, by]); }
   for (const p of add){ const dx = p[0] - tp.x, dy = p[1] - tp.y, n = Math.hypot(dx, dy) || 1; tp.hx = dx / n; tp.hy = dy / n; push(tp, p); }
   LINES[hit[3]].hits = (LINES[hit[3]].hits || 0) + 1; EVENTS.push({ x: tg[0], y: tg[1], k: 'merge' }); return true; }
-function canBranch6(x, y, u, pid){ const d = d2At(x, y), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
-  if (!inLand(ax, ay) || (inZone(ax, ay) && !culvertOK(ax, ay, u)) || inRail(ax, ay) || inRail(x, y)) return false;   // (v7: a ditch ahead is fine if the street will cross it square)
+function canBranch6(x, y, u, pid){ NOBLD = true; try { return canBranch6_(x, y, u, pid); } finally { NOBLD = false; } }
+function canBranch6_(x, y, u, pid){ const d = d2At(x, y), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
+  if (!inLand(ax, ay) || !inLand(x + u[0] * 10, y + u[1] * 10) || (inZone(ax, ay) && !culvertOK(ax, ay, u)) || inRail(ax, ay) || inRail(x, y)) return false;   // (v7: a ditch ahead is fine if the street will cross it square)
   if (nearB(x, y, d * 0.3, -1, ig, u, true, null)) return false;
   if (nearB(ax, ay, d * 0.45, -1, ig, u, true, null)) return false;
   if (nearB(x + u[0] * 34, y + u[1] * 34, 18, -1, ig, null, false, null)) return false;
@@ -744,8 +760,8 @@ function tipStep6(tp, o){
   if (t === null) return tipEnd6(tp, 'flat', d);
   const ax = nearestAxis(t, tp.hx, tp.hy), k = clamp((0.10 + 0.30 * gridAt(CLAR, x, y)) * o.memK, 0.02, 0.95);
   let dx = tp.hx * (1 - k) + ax[0] * k, dy = tp.hy * (1 - k) + ax[1] * k; const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
-  const nx_ = x + dx * 5, ny_ = y + dy * 5;
-  if (!inLand(nx_, ny_)) return tipEnd6(tp, 'edge', d);
+  let nx_ = x + dx * 5, ny_ = y + dy * 5;
+  if (!inLand(nx_, ny_)){ const df = deflect(x, y, dx, dy); if (!df || (tp.bends = (tp.bends || 0) + 1) > 6) return tipEnd6(tp, 'edge', d); dx = df[0]; dy = df[1]; nx_ = x + dx * 5; ny_ = y + dy * 5; }
   tp.hx = dx; tp.hy = dy;
   if (inRail(nx_, ny_)){ const far = railCross(x, y, dx, dy); if (!far) return tipEnd6(tp, 'bank', d); push(tp, far); tp.L += Math.hypot(far[0] - x, far[1] - y); return true; }
   if (tp.L > 15 && alongRail(nx_, ny_, dx, dy)) return tipEnd6(tp, 'near', d);   // (v7) never along the rail
@@ -754,6 +770,7 @@ function tipStep6(tp, o){
   // 1 it meets a street
   for (let tries = 0; tries < 4; tries++){
     const c = nearB(nx_, ny_, 6.5, tp.l.id, ig, null, false, LV012); if (!c) break; const other = LINES[c[3]], ot = TIPMAP.get(c[3]);
+    if (other.building){ const df = deflect(x, y, dx, dy); if (!df || (tp.bends = (tp.bends || 0) + 1) > 8){ ig.push(c[3]); continue; } dx = df[0]; dy = df[1]; nx_ = x + dx * 5; ny_ = y + dy * 5; tp.hx = dx; tp.hy = dy; continue; }   // (v8.31) a building: turn along it
     if (ot && ot !== tp && ot.hx * dx + ot.hy * dy < -0.5 && Math.hypot(ot.x - nx_, ot.y - ny_) < 14){
       push(tp, [ot.x, ot.y]); ot.l.ends[0] = 'J'; ot.done = true; TIPMAP.delete(ot.l.id); EVENTS.push({ x: ot.x, y: ot.y, k: 'meet' }); return tipEnd6(tp, 'J', d); }
     if (Math.hypot(c[1] - x, c[2] - y) < 5.5){ tp.ig.push({ id: c[3], until: tp.L + 15 }); ig.push(c[3]); continue; }
@@ -1063,7 +1080,7 @@ function squareEnds(){ let n = 0; rehashAll();
 // main streets and the edge, where no second street can go): a pocket park
 function markParks(maxHa){ maxHa = maxHa || 4; const { lab, W, H, c } = CELLS, BH = buildHa(), mask = new Uint8Array(W * H), list = [];
   const ids = new Map(); for (let i = 0; i < BH.length; i++){ if (BH[i] > maxHa) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0 }) - 1);
-    else if (CELLS.areas[i] > 0.004 && CELLS.areas[i] < 0.15) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0, pocket: true }) - 1); }   // (v8.25) a sliver left between main streets and the edge: a pocket park
+    else if (CELLS.areas[i] > 0.004 && CELLS.areas[i] < SLIVER_HA) ids.set(i, list.push({ ha: 0, x: 0, y: 0, n: 0, pocket: true }) - 1); }   // (v8.25) a sliver left between main streets and the edge: a pocket park
   for (let i = 0; i < W * H; i++){ const k = ids.get(lab[i]); if (k === undefined) continue; mask[i] = 1; const q = list[k]; q.n++; q.x += (i % W + 0.5) * c; q.y += D.h - (((i / W) | 0) + 0.5) * c; }
   for (const q of list){ q.ha = +(q.n * c * c / 1e4).toFixed(2); q.x /= q.n || 1; q.y /= q.n || 1; delete q.n; }
   PARKS = list.length ? { mask, W, H, c, list } : null; PARKIMG = null; return list.length; }
@@ -1134,7 +1151,7 @@ function dropStreet(A){ const hang = [], cut = [], before = looseEnds();
   return undo; }
 function dropSlivers(){ let n = 0;
   for (let round = 0; round < 6; round++){ readCells(); rehashAll(); const { lab, W, H, c, areas } = CELLS; let made = 0; const touched = new Set(), pix = new Map();
-    for (let j = 0; j < W * H; j++){ const L_ = lab[j]; if (L_ < 0) continue; const a = areas[L_]; if (!(a > 0.004 && a < 0.15)) continue; let p = pix.get(L_); if (!p){ p = []; pix.set(L_, p); } p.push(j); }
+    for (let j = 0; j < W * H; j++){ const L_ = lab[j]; if (L_ < 0) continue; const a = areas[L_]; if (!(a > 0.004 && a < SLIVER_HA)) continue; let p = pix.get(L_); if (!p){ p = []; pix.set(L_, p); } p.push(j); }
     for (const [L_, P] of pix){
       // its edge: the pixels next to a street (or off the land: then it is a shore piece, left alone)
       const cnt = new Map(); let shore = false;
@@ -1147,7 +1164,7 @@ function dropSlivers(){ let n = 0;
       const cands = [...cnt.keys()].map(id => LINES[id]).filter(l => !l.dead && l.level === 2 && !l.circus && cnt.get(l.id) >= 3).sort((p, q) => plen(p.pts) - plen(q.pts));
       for (const A of cands){ const ends = LINES.filter(C => !C.dead && C !== A && C.pts.length > 1 && [C.pts[0], C.pts[C.pts.length - 1]].some(e => A.pts.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)));
         const undo = dropStreet(A); if (!undo) continue;
-        { readCells(); const nl = CELLS.lab[P[0]], na = nl >= 0 ? CELLS.areas[nl] : 0; if (na > 2.0){ undo(); readCells(); continue; } }   // (the block it joins stays under 2 ha)
+        { readCells(); const nl = CELLS.lab[P[0]], na = nl >= 0 ? CELLS.areas[nl] : 0; if (na > JOIN_HA){ undo(); readCells(); continue; } }   // (the block it joins stays under 2 ha)
         A.sliver = true; made++; touched.add(A.id); for (const C of ends) touched.add(C.id); for (const id of cnt.keys()) touched.add(id); break; } }
     n += made; if (!made) break; }
   netDirty = widthDirty = true; return n; }
@@ -1200,9 +1217,9 @@ function scoreRun(w){ w = w || SCORE_W0; const E = D.env, W_ = windPref(); const
   raw.steep = 100 * steep / (Lall || 1); raw.offField = offL ? off / offL * 180 / PI : 0;
   g.terrain = E && E.slope ? (lin(raw.steep, 5, 0) + lin(raw.offField, 25, 8)) / 2 : lin(raw.offField, 25, 8);
   if (FR){ raw.flood = 100 * fl / (Lall || 1); g.water = lin(raw.flood, 10, 0); } else g.water = null;
-  { if (CELLS){ const BH = buildHa(); raw.big = Array.from(BH).filter(a => a > 2.5).length; } else raw.big = 0;
+  { if (CELLS){ const BH = buildHa(); raw.big = Array.from(BH).filter(a => a > BIG_HA).length; } else raw.big = 0;
     raw.pockets = PARKS ? PARKS.list.filter(q => q.pocket).length : 0; raw.med = MEAS.med || 0;
-    g.blocks = (lin(raw.big, 4, 0) + lin(raw.pockets, 30, 0) + band(raw.med, 0.3, 1.5, 0.05, 3)) / 3; }
+    g.blocks = (lin(raw.big, 4, 0) + lin(raw.pockets, 30, 0) + band(raw.med, 0.3 * AREA_K, 1.5 * AREA_K, 0.05 * AREA_K, 3 * AREA_K)) / 3; }
   { raw.X = MEAS.X || 0; raw.dens = MEAS.dens || 0; let ac = 0, n = 0; for (const q of secEnds()){ n++; if (endAngle(q.l, q.side, q.par, q.e) < 60) ac++; } raw.acute = n ? 100 * ac / n : 0;
     let dbl = 0; for (const l of LINES){ if (l.dead || l.level !== 1 || l.circus) continue; const P = l.pts; for (let k = 1; k < P.length; k++){ const a = P[k - 1], q = P[k], L = Math.hypot(q[0] - a[0], q[1] - a[1]) || 1, c = nearB(q[0], q[1], 22, l.id, [], [(q[0] - a[0]) / L, (q[1] - a[1]) / L], true, LV1); if (c && !LINES[c[3]].circus) dbl += L; } } raw.doubled = dbl / 2;
     g.network = (lin(raw.X, 0, 15) + band(raw.dens, 12, 16, 8, 20) + lin(raw.acute, 25, 5) + lin(raw.doubled, 200, 0)) / 4; }
@@ -1335,7 +1352,7 @@ function* closeGen6(){ PHASE = 'every end meets a street';
  *   at a cost (a culvert). A tree link may end on any main street already joined to its far place (a T); a link reuses
  *   the streets already laid (cheaper) so links share trunks; a loop avoids them (dearer) so it is a second way
  * 4 the route smoothed (and kept on land), drawn as a main street; the side-street buds laid along it for step 7 */
-const STITCH = { PLACE_MERGE: 60, MAX_LINK: 2000, EDGE_COST: 1.8, ALIGN: 1.6, SLOPE: 12, ZONE_ANGLE: 60, ZONE_COST: 30, REUSE: 0.55, LOOP_AVOID: 2.5, LOOP_RATIO: 1.7 };
+const STITCH = { PLACE_MERGE: 60 * Math.max(0.5, SIZE_K), MAX_LINK: 2000, EDGE_COST: 1.8, ALIGN: 1.6, SLOPE: 12, ZONE_ANGLE: 60, ZONE_COST: 30, REUSE: 0.55, LOOP_AVOID: 2.5, LOOP_RATIO: 1.7 };
 function* stitchMains(o){
   PHASE = 'main streets link the entries and the nodes';
   const Ncell = nx * ny, ci = (x, y) => { const c = Math.round(x / cell), r = Math.round(y / cell); return c < 0 || r < 0 || c >= nx || r >= ny ? -1 : r * nx + c; }, cx = i => (i % nx) * cell, cy = i => ((i / nx) | 0) * cell;
@@ -1381,7 +1398,7 @@ function* stitchMains(o){
   for (let a = 0; a < PL.length; a++) for (let b = a + 1; b < PL.length; b++){ const A = PL[a], B = PL[b]; if (A.comp !== B.comp) continue; const d = Math.hypot(A.x - B.x, A.y - B.y); if (d > STITCH.MAX_LINK || d < 40) continue;
     // two entries link only across the land, not along its edge (unless their piece of land has no node to link through)
     if (A.kind === 'entry' && B.kind === 'entry'){ const hub = PL.some(C => C.comp === A.comp && C.kind !== 'entry');
-      if (hub){ if (d < 400) continue; const m = ci((A.x + B.x) / 2, (A.y + B.y) / 2); if (m < 0 || ED[m] < 80) continue; } else if (d < 150) continue; }
+      if (hub){ if (d < 400 * SIZE_K) continue; const m = ci((A.x + B.x) / 2, (A.y + B.y) / 2); if (m < 0 || ED[m] < 80 * SIZE_K) continue; } else if (d < 150 * SIZE_K) continue; }
     cand.push([d, a, b]); }
   cand.sort((p, q) => p[0] - q[0]);
   // 3 a route on the grid (A*: 16 moves, the costs above); goal(i) says where it may end
@@ -1512,10 +1529,10 @@ function* stitchMains(o){
     // the pairs: on far sides (inward directions opposed), at least 500 m apart, the straight line between them over land
     const pairs = [];
     for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++){ const A = ends[i], B = ends[j]; if (A.P.comp !== B.P.comp) continue;
-      const d = Math.hypot(A.P.x - B.P.x, A.P.y - B.P.y); if (d < 500) continue; const ux = (B.P.x - A.P.x) / d, uy = (B.P.y - A.P.y) / d;
+      const d = Math.hypot(A.P.x - B.P.x, A.P.y - B.P.y); if (d < 500 * SIZE_K) continue; const ux = (B.P.x - A.P.x) / d, uy = (B.P.y - A.P.y) / d;
       if (A.n[0] * B.n[0] + A.n[1] * B.n[1] > -0.3 || A.n[0] * ux + A.n[1] * uy < 0.4 || -(B.n[0] * ux + B.n[1] * uy) < 0.4) continue;
       let land = 0; for (let k = 1; k < 10; k++){ const x = A.P.x + ux * d * k / 10, y = A.P.y + uy * d * k / 10; if (inLand(x, y)) land++; } if (land < 8) continue;
-      if ([0.25, 0.5, 0.75].some(f => { const m = ci(A.P.x + ux * d * f, A.P.y + uy * d * f); return m < 0 || ED[m] < 80; })) continue;   // (across the land, not along its edge)
+      if ([0.25, 0.5, 0.75].some(f => { const m = ci(A.P.x + ux * d * f, A.P.y + uy * d * f); return m < 0 || ED[m] < 80 * SIZE_K; })) continue;   // (across the land, not along its edge)
       pairs.push([d * (A.P.gate ? 1 : 1.15) * (B.P.gate ? 1 : 1.15), A.P, B.P, ux, uy, d]); }   // (entries preferred: they meet the outside's roads)
     pairs.sort((p, q) => q[0] - p[0]);
     let made = 0; const maxThrough = 8;
@@ -1626,16 +1643,16 @@ function* growBranching(){
     yield* mainsEnd(); mainsFinal(); despike();
     for (const l of LINES) if (!l.dead && l.level === 2 && plen(l.pts) < 1) l.dead = true;   // (a side street that never grew: a point on its parent)
     // (v7) a main street left under 150 m long (a stub where the rest was cut or turned second) is a second street
-    for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
+    for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150 * SIZE_K) l.level = 2;   // (a circus's spoke stays a main street, however short)
     // (v8.28) the finishing passes, a frame apart: the page keeps drawing while they run
     PHASE = 'the blocks tidied'; holeTrim(); dropSide(); holeTrim(); alignShared(); netDirty = true; yield 1;
-    shoreStreets(1.5); netDirty = true; yield 1; splitBlocks(1.5); holeTrim(); netDirty = true; yield 1;   // (v8.23) the waterside streets, then the big blocks cut
+    shoreStreets(1.5 * AREA_K); netDirty = true; yield 1; splitBlocks(1.5 * AREA_K); holeTrim(); netDirty = true; yield 1;   // (v8.23) the waterside streets, then the big blocks cut
     dropLens(); dropSlivers(); netDirty = true; yield 1;   // (v8.25) no thin lens of a block between two streets, no sliver of a block
     crossJoin(); squareEnds(); netDirty = true; yield 1;   // (v8.23) crossroads across the main streets, and square junctions
     roundKinks(); smoothBends(); tidyNet();
     rehashAll();
     rehashAll(); for (const e of EVENTS) if (!nearB(e.x, e.y, 4, -1, [], null, false, null)) e.gone = true;   // (v8.25) the mark of a street taken away goes with it
-    PHASE = 'done'; FINISHED = true; readCells(); markParks(4); measures(); finishRun(); return; }
+    PHASE = 'done'; FINISHED = true; readCells(); markParks(PARK_HA); measures(); finishRun(); return; }
 }
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
     for (let round = 0; round < 3; round++){ let made = 0;
@@ -2259,6 +2276,7 @@ window.addEventListener('resize', resize);
 
 /* ------------------------------------------------------------------ start */
 (function boot(){ let t = null; try { t = localStorage.getItem('ts7-theme'); } catch (e) {}
+  scaleToSite();   // (v8.31) a small site: closer streets
   applyTint(TINT, true);   // (v8.30) the palette first, then the theme draws with it
   setTheme(t || 'dark');   // dark by default (reviews are in dark)
   resize(); HOLES = []; buildMask();
