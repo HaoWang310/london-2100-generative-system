@@ -107,7 +107,7 @@ function showFrame(){
     frame = document.createElement('iframe');
     frame.title = 'Tensor Studio';
     frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#000';
-    frame.src = new URL('../../tensor-studio/index.html', import.meta.url).href;   // from google-map-live/scripts/
+    frame.src = new URL('../../tensor-studio/index.html?r=' + Date.now(), import.meta.url).href;   // from google-map-live/scripts/; ?r= defeats the Pages cache so a new Tensor Studio arrives at once
     overlay.append(frame);
     frame.addEventListener('load', () => { try { frame.contentWindow.addEventListener('keydown', onKey); } catch (error){} });
   }
