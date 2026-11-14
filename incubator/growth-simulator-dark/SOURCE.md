@@ -22,3 +22,18 @@ Laid out like the London map: the map fills the window, a floating panel on the 
 The 23 settings are now behind 11 plain controls and one button, with every original setting kept in a folded Advanced section. Where the engine only uses a ratio (the three weights, VEIN base and strength, adjacency base and reward: the draw ranks parcels, so scaling a pair together changes nothing, checked to the parcel), one control holds that ratio. The station fade distances and the density distances are scaled together; the slider limits stop before the land targets go unmet (mid rise beyond about 1,200 m, high rise beyond about 2,600 m, reach under 1.1, vertical band under 0.5). FIELD, the line's fade, contrast and the warp of the density rings are in Advanced only. Every control snaps to the release's exact values at its default, so the default run is unchanged. The engine is unchanged.
 
 23 项设置改为 11 个简明控制加一个按钮，全部原始设置保留在默认收起的「高级设置」中。引擎只用到比例的参数（三个权重、VEIN 基数与强度、邻接基数与奖励：抽签只比较地块排名，成对同比缩放不改变任何地块，已逐格验证）合并为一个比例控制；车站衰减距离、中高层起始距离改为同比缩放，滑块上限停在用地目标仍能长满之处。FIELD、铁路线衰减距离、对比度、密度环扭曲只在高级区。每个控制在默认位置吸附到发布版精确数值，默认运行结果不变。引擎代码未改。
+
+## 2026-11-14 · 拆分文件 · Split into files
+
+The page is now four files, so the main workspace's 01 module can load the same engine, controls and data instead of a copy:
+
+| File | Holds |
+|---|---|
+| `index.html` | the page: layout, map drawing, playback |
+| `engine.js` | the engine `GV`, unchanged |
+| `controls.js` | the words (`I18N`), every original setting (`GVC.GROUPS`), the simple controls (`GVC.SIMPLE`), the red stretches (`GVC.UNDER`) |
+| `data/meta.js` | the release's meta and stats (`D`, `SIZES`) |
+
+Change these here and the workspace follows. The page looks and runs exactly as before: the same run, with the release's settings and with others, gives identical results, and its screenshots are identical pixel for pixel.
+
+页面拆成四个文件，主程序的 01 模块直接读取同一份引擎、控制与数据。以后在这里修改，主程序跟着变。页面外观和运行完全不变：同样设置的运行结果一致，截图逐像素相同。
