@@ -169,7 +169,8 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
   // 2. the land: the site, less the water (and, if asked, the buildings)
   const sBox = bboxOf(site);
   const cutters = WA.filter(pg => Math.abs(ringArea(pg[0])) >= 150 && boxHit(bboxOf(pg[0]), sBox));
-  if (keepBuildings) cutters.push(...BL.filter(pg => boxHit(bboxOf(pg[0]), sBox)));
+  const nWater = cutters.length; if (keepBuildings) cutters.push(...BL.filter(pg => boxHit(bboxOf(pg[0]), sBox)));
+  const bldRings = keepBuildings ? cutters.slice(nWater).map(pg => pg[0]) : [];   // (v8.31) the engine tells a building hole from water
   let pieces = [], cut = [];
   if (clip && cutters.length){
     try { const mp = clip.difference([site], ...cutters.map(pg => pg));
@@ -274,6 +275,7 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
     ctx: { water: WA, room: [], streams: WW.map(f => f.pts), urban: [], bld: BL, lanes, prim, rib: [], parcels: [] },
     fixed: { link: [], bridges: [], streets: [] },
     edges: { road: pieces.map(p => p.outer), shore: pieces.flatMap(p => p.holes), shared: [] },
+    buildingHoles: bldRings.map(r => r.map(q => [r1(q[0]), r1(q[1])])),
     station: { cells: [], foot: [], street: [] },
     site: { ring: closeRing(ring), areaHa: +(area / 1e4).toFixed(2), sideM: Math.round(side), elevation: zOK >= 0.5 * N ? [+zl.toFixed(1), +zh.toFixed(1)] : null, meanSlopePct: +(100 * ms).toFixed(2) }
   };
