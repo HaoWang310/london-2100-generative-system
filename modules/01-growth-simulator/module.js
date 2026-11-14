@@ -140,6 +140,8 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     growth, display, container,
     get state() { return growth.state; },
     get active() { return active; },
+    /** True while the panel's 生成流程 drives the year itself. */
+    get stepping() { return Boolean(panel?.stepping?.()); },
     ring: () => (growth.state.loaded ? gridRing(growth.state.D.meta) : null),
     async open() {
       active = true;

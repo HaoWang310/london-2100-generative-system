@@ -47,3 +47,9 @@ The first pass is new on the map. The release's is stored in `data/pass1-idx.z` 
 控制分到九个步骤中，顺序即模型生成城市的过程：选范围、读地面、铺铁路、定目标、算吸引力、第一遍（城市长到哪里）、布置农业、第二遍（城市与农田一起长）、结果。每一步是一张卡片：勾、一行来自运行结果的数字（`GVC.STEPS[].sum`）和该步的控制；展开时地图切换到这一步用到的图层（地面、磁力场、第一遍城市及其边缘）。依赖运行结果的步骤在设置改动后显示空心圆，运行变体后恢复为勾。「播放全流程」依次展开每一步，两遍生长各从 2025 播到 2100。
 
 第一遍城市首次显示在地图上：发布版存于 `data/pass1-*.z`（由 `tools/pass1.mjs` 生成，并核对人口 12,222,179），变体在运行时记录。为此 `GV.run` 增加可选的第三个参数 `onYear`，不传时引擎行为与结果均不变。主程序 01 模块使用同一组步骤。
+
+## 2026-11-14 · 下一步 · Walking the steps
+
+The steps are now walked in order. **Start** opens step 1; each step's **Next** ticks it green and opens the next. A step can be changed or left at the defaults. When a step that shows the outcome (6–9) is reached with settings that differ from what is shown, the loop is grown with them first (the release is used when every setting is at its default); the two passes play 2025–2100, and the last step gives the result. Changing a setting in a step un-ticks the steps from there on. **Play the whole process** walks the same way on its own. The main workspace's 01 module does the same.
+
+步骤改为按顺序逐步完成：「开始」打开第 1 步，每一步的「下一步」把它标成绿色勾并进入下一步。每一步可以改参数，也可以不改直接用默认值。到达显示结果的步骤（6–9）时，如果参数与当前显示的不同，先按新参数生成（全部为默认值时直接用发布版）；两遍生长各播放 2025–2100，最后一步给出结果。在某一步改了参数，从这一步起后面的勾会清除。「播放全流程」按同样方式自动走完。主程序 01 模块相同。

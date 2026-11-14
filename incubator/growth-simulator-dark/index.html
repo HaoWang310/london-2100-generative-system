@@ -119,9 +119,15 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 .step .sh { display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; background:none; border:0; color:inherit; padding:12px 14px; cursor:pointer; font:inherit; }
 .step .ck { flex:0 0 24px; height:24px; border-radius:50%; background:#f2f2f2; color:#111; position:relative; margin-top:0; box-sizing:border-box;
   display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12.5px; line-height:1; font-variant-numeric:tabular-nums; }
-.step .ck::after { content:""; position:absolute; right:-3px; bottom:-3px; width:12px; height:12px; border-radius:50%; background:#0b0b0c no-repeat center / 8px 8px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23f2f2f2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-.step.pending .ck { background:transparent; color:#8e8e93; border:1.5px solid #6e6e73; } .step.pending .ck::after { display:none; }
+.step .ck::after { display:none; content:""; position:absolute; right:-4px; bottom:-4px; width:14px; height:14px; border-radius:50%; background:#30D158 no-repeat center / 8px 8px; box-shadow:0 0 0 2px #0b0b0d;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23ffffff' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.step.done .ck::after { display:block; }
+.step.locked .ck { background:transparent; color:#8e8e93; border:1.5px solid #3a3a3e; }
+.step.locked .sh { cursor:default; } .step.locked .st b { color:#c7c7cc; } .step.locked .chev { visibility:hidden; }
+.step.open .ck { box-shadow:0 0 0 3px rgba(255,255,255,.12); }
+button.nx { display:block; width:100%; margin:12px 0 4px; padding:11px 12px; border-radius:14px; background:#f2f2f2; color:#111; border:0; font-weight:600; font-size:13.5px; }
+button.nx:hover { background:#fff; } button.nx:disabled { opacity:.6; cursor:progress; }
+#flowStart { margin:4px 0 10px; } .flowlead { margin:-2px 0 8px; font-size:12.5px; }
 .step .st { flex:1; min-width:0; } .step .st b { display:block; font-size:14.5px; font-weight:600; }
 .step .ss { display:block; color:var(--grey); font-size:12px; margin-top:3px; line-height:1.45; }
 .step .chev { color:var(--dim); transition:transform .2s; margin-top:2px; } .step.open .chev { transform:rotate(90deg); }
@@ -177,6 +183,8 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       <div class="sub" id="ratio"></div>
     </div>
     <div class="flowhead"><h2 data-t>How the city is made</h2><button id="flowBtn" data-t>Play the whole process</button></div>
+    <div class="sub flowlead" data-t>Walk through the steps with Next. Change the settings in a step, or leave them and go on with the defaults.</div>
+    <button id="flowStart" class="nx"></button>
     <div id="steps"></div>
     <div class="advsec">
       <button id="advBtn" class="advbtn"><span class="chev">›</span><span class="advt" data-t>Advanced settings</span></button>
@@ -340,13 +348,16 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     return sr;
   }
   // ------------------------------------------------------------------ the steps: the research process, one card each
-  var STEPS = GVC.STEPS, openStep = null, LAY0 = null, flowing = false, flowT = 0, flowI = 0;
+  var STEPS = GVC.STEPS, openStep = null, LAY0 = null, flowing = false, flowT = 0, flowTok = 0, growTok = 0, growing = false;
+  // walked in order with Next: reached = the furthest step opened, DONE = the steps passed (a green tick)
+  var reached = -1, DONE = {}, busy = false;
+  function stepIx(id) { for (var i = 0; i < STEPS.length; i++) if (STEPS[i].id === id) return i; return -1; }
   function buildSimple() {
     var host = $("steps"); host.innerHTML = ""; SC = {};
     STEPS.forEach(function (st, n) {
       var card = document.createElement("div"); card.className = "step" + (openStep === st.id ? " open" : ""); card.dataset.id = st.id;
       card.innerHTML = '<button class="sh"><span class="ck">' + (n + 1) + '</span><span class="st"><b>' + T(st.t) + '</b><span class="ss"></span></span><span class="chev">›</span></button>' +
-        '<div class="sb"><div class="note">' + T(st.note) + '</div><div class="stale">' + T("Run the variation to update this step.") + "</div></div>";
+        '<div class="sb"><div class="note">' + T(st.note) + '</div><div class="stale">' + T("Settings changed: the next step grows the loop with them.") + "</div></div>";
       var body = card.querySelector(".sb");
       if (st.graph) body.appendChild(GRAPHWRAP);
       (st.c || []).forEach(function (id) {
@@ -354,7 +365,8 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
         var c = ctlById(id); if (!c) return;
         body.appendChild(makeControl(c)); if (c.pre) body.appendChild(presetRow(c.pre, true));
       });
-      card.querySelector(".sh").onclick = function () { stopFlow(); openStepAt(openStep === st.id ? null : st.id); };
+      var nb = document.createElement("button"); nb.className = "nx"; nb.onclick = nextStep; body.appendChild(nb);
+      card.querySelector(".sh").onclick = function () { if (n > reached || busy) return; stopFlow(); openStepAt(openStep === st.id ? null : st.id); };
       host.appendChild(card);
     });
     syncSimple(); stepsSync();
@@ -364,12 +376,17 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     if (!$("steps")) return;
     var R = mode === "variation" && VAR ? VAR : FINAL, stats = (R ? R.ev.stats : D.final.stats)[75];
     var x = { D: D, P: P, stats: stats, fmt: fmt, T: T }, old = stale();
-    document.querySelectorAll("#steps .step").forEach(function (card) {
-      var st = STEPS.filter(function (q) { return q.id === card.dataset.id; })[0], txt = "";
+    document.querySelectorAll("#steps .step").forEach(function (card, i) {
+      var st = STEPS[i], txt = "", last = i === STEPS.length - 1, nb = card.querySelector(".nx");
       try { txt = st.sum(x); } catch (e) { txt = ""; }
       card.querySelector(".ss").textContent = txt;
-      card.classList.toggle("pending", !!st.live && old);
+      card.classList.toggle("done", !!DONE[st.id]);
+      card.classList.toggle("locked", i > reached);
+      card.classList.toggle("pending", st.id === openStep && !!st.live && old);
+      nb.disabled = busy;
+      nb.textContent = busy ? T("Growing the loop…") : last ? T(DONE[st.id] ? "Start again" : "Show the result") : T("Next") + " · " + T(STEPS[i + 1].t);
     });
+    if ($("flowStart")) { $("flowStart").hidden = reached >= 0; $("flowStart").textContent = T("Start") + " · " + T(STEPS[0].t); }
   }
   // the first pass (step 6): the release's from data/, a variation's recorded while it runs
   var P1F = null, P1V = null, p1Load = null, showP1 = false;
@@ -398,31 +415,81 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     buildLayers(); overlays(false).then(draw); draw();
     if (st.graph) drawGraph();
   }
-  // Play the whole process: each step in turn, the two passes growing 2025 to 2100
+  // Next, and Play the whole process: each step in turn; a step that shows the outcome grows the loop
+  // when it is reached with new settings, the two passes play 2025 to 2100
+  function grow() {
+    var tok = ++growTok; growing = true;
+    return new Promise(function (res) {
+      var y = 0; setYear(0);
+      var it = setInterval(function () {
+        if (tok !== growTok) { clearInterval(it); if (tok === growTok - 1) growing = false; res(false); return; }
+        y += 1; setYear(Math.min(75, y));
+        if (y >= 75) { clearInterval(it); growing = false; res(true); }
+      }, 80);
+    });
+  }
+  function goTo(i) {
+    var st = STEPS[i]; if (!st) return Promise.resolve();
+    reached = Math.max(reached, i);
+    var ready = Promise.resolve();
+    if (st.live && stale()) {
+      if (isDefault()) setMode("final");          // the release is the default run
+      else { busy = true; openStepAt(st.id); stepsSync(); ready = runVariation(true).then(function () { busy = false; }, function (e) { busy = false; status(String(e && e.message || e)); }); }
+    }
+    return ready.then(function () {
+      openStepAt(st.id); stepsSync();
+      var card = document.querySelector('#steps .step[data-id="' + st.id + '"]'); if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      var g = st.id === "pass1" ? loadP1().then(grow) : st.id === "pass2" ? grow() : null;
+      if (!g && (st.id === "farm" || st.id === "result")) setYear(75);
+      return g;
+    }).then(function () { if (i === STEPS.length - 1) DONE[st.id] = true; stepsSync(); });
+  }
+  function restart() { stopFlow(); DONE = {}; reached = -1; openStepAt(null); stepsSync(); }
+  function nextStep() {
+    if (busy) return;
+    var was = growing; stopFlow();
+    if (was) { growing = false; setYear(75); }
+    var i = openStep ? stepIx(openStep) : reached, last = STEPS.length - 1;
+    if (i >= last) { if (DONE[STEPS[last].id]) restart(); else goTo(last); return; }
+    if (i >= 0) DONE[STEPS[i].id] = true;
+    if (!view.user) fit();
+    goTo(i + 1);
+  }
+  function settingsChanged() {                // a setting changed in step k: the steps after it are walked again
+    var k = openStep ? stepIx(openStep) : -1;
+    if (k < 0 || flowing) return;
+    STEPS.forEach(function (q, j) { if (j >= k) delete DONE[q.id]; });
+    reached = k;
+  }
   function stopFlow() {
+    growTok++;
     if (!flowing) return;
-    flowing = false; clearTimeout(flowT); clearInterval(flowI); $("flowBtn").textContent = T("Play the whole process");
+    flowing = false; flowTok++; clearTimeout(flowT); $("flowBtn").textContent = T("Play the whole process");
   }
   function playFlow() {
     if (flowing) { stopFlow(); return; }
-    stop(); flowing = true; $("flowBtn").textContent = T("Stop");
-    var i = 0;
-    function grow(then) {                       // 2025 to 2100 in about six seconds
-      var y = 0; setYear(0);
-      flowI = setInterval(function () { if (!flowing) return; y += 1; setYear(Math.min(75, y)); if (y >= 75) { clearInterval(flowI); flowT = setTimeout(then, 1600); } }, 80);
-    }
-    function next() {
-      if (!flowing) return;
-      if (i >= STEPS.length) { stopFlow(); return; }
-      var st = STEPS[i++]; openStepAt(st.id);
-      var card = document.querySelector('#steps .step[data-id="' + st.id + '"]'); if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      if (st.id === "pass1") loadP1().then(function () { grow(next); });
-      else if (st.id === "pass2") grow(next);
-      else { if (st.id === "farm" || st.id === "result") setYear(75); flowT = setTimeout(next, st.id === "result" ? 4000 : 3400); }
-    }
+    if (busy) return;
+    stop();
+    if (DONE[STEPS[STEPS.length - 1].id]) restart();
+    flowing = true; $("flowBtn").textContent = T("Stop");
+    var tok = ++flowTok, i = Math.max(0, openStep ? stepIx(openStep) : reached);
     if (!view.user) fit();
-    next();
+    function wait(ms) { return new Promise(function (r) { flowT = setTimeout(r, ms); }); }
+    function one() {
+      if (tok !== flowTok) return;
+      if (i >= STEPS.length) { stopFlow(); return; }
+      var st = STEPS[i];
+      goTo(i).then(function () {
+        if (tok !== flowTok) return;
+        return wait(st.id === "pass1" || st.id === "pass2" ? 1000 : i === STEPS.length - 1 ? 0 : 2600).then(function () {
+          if (tok !== flowTok) return;
+          DONE[st.id] = true; stepsSync(); i++; one();
+        });
+      });
+    }
+    one();
   }
+  $("flowStart").onclick = nextStep;
   $("flowBtn").onclick = playFlow;
   var advOpen = false;
   function buildAdvanced() {
@@ -482,7 +549,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
   function isDefault() { return Object.keys(GV.DEFAULTS).every(function (k) { return P[k] === GV.DEFAULTS[k]; }); }
   var magTimer = null;
   function changed() {
-    markPresets(); drawGraph(); stepsSync();
+    settingsChanged(); markPresets(); drawGraph(); stepsSync();
     if (ranWith && JSON.stringify(ranWith) !== JSON.stringify(P)) status(T("Settings changed. Press Run variation to grow the loop with them."));
     if (LAY.magnet.on || LAY.field.on || LAY.vein.on) { clearTimeout(magTimer); magTimer = setTimeout(function () { overlays(true); }, 350); }
   }
@@ -790,7 +857,7 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
     return engineReady;
   }
   var runId = 0, running = false;
-  function runVariation() {
+  function runVariation(quiet) {               // quiet: for the steps, which play the passes themselves
     if (running) return Promise.resolve(null);
     running = true; stop(); $("run").disabled = true; $("reset").disabled = true;
     var t0 = performance.now(), params = Object.assign({}, P);
@@ -813,11 +880,11 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
       var s = res.stats[75].km2, built = s.l + s.m + s.h, farmed = s.fh + s.fv;
       status(T("Grown in") + " " + fmt((performance.now() - t0) / 1000, 1) + " s. " + fmt(built, 1) + " km² " + T("built") + ", " + fmt(farmed, 1) + " km² " + T("farmed") + ", " + fmt(res.stats[75].pop) + " " + T("people") + ".");
       if (!LAY.edge.everSet) { LAY.edge.on = true; LAY.edge.everSet = true; buildLayers(); }
-      setMode("variation"); setYear(0); start();
+      setMode("variation"); setYear(0); if (quiet !== true) start();
       return res;
     });
   }
-  $("run").onclick = runVariation;
+  $("run").onclick = function () { runVariation(); };
   $("reset").onclick = function () {
     P = Object.assign({}, GV.DEFAULTS); syncAll(); drawGraph(); setMode("final"); setYear(75);
     status(T("Back to the final outcome. Every setting is at the release's value."));
