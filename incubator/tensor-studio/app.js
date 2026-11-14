@@ -1028,6 +1028,23 @@ function* stitchMains(o){
       PHASE = 'main streets: every entry joined';
       const end = route(A, A, i => USED[i] >= 0 && COMP[i] === A.comp, false); if (end < 0) continue; const B = PL[USED[end]] || A;
       if (yield* lay(A, B, pathTo(end), end, false)) deg[A.id]++; } }
+  // (v8.16) the local nodes (neighbourhood centres) on the main network: each joined by two main streets from two sides,
+  // so it sits on a street that runs through it (the first to the nearest main street, the second away from the first)
+  for (const a of attractorsOn()){ if (a.main) continue; const port = nearPass(a.x, a.y, 40); if (port < 0) continue;
+    const S = { kind: 'sec', x: a.x, y: a.y, ports: [port], id: PL.length, comp: COMP[port] }; S.isPort = new Set(S.ports); PL.push(S); UF.push(S.id);
+    if (!USED.some((u, i) => u >= 0 && COMP[i] === S.comp)) continue;
+    PHASE = 'main streets: the local centres joined';
+    const e1 = route(S, S, i => USED[i] >= 0 && COMP[i] === S.comp, false); if (e1 < 0) continue;
+    const B1 = PL[USED[e1]] || S; if (!(yield* lay(S, B1, pathTo(e1), e1, false))) continue;
+    const x1 = cx(e1), y1 = cy(e1), d1 = Math.hypot(x1 - S.x, y1 - S.y), first = LINES.length - 1;
+    const e2 = route(S, S, i => USED[i] >= 0 && COMP[i] === S.comp && USEDL[i] !== first && Math.hypot(cx(i) - x1, cy(i) - y1) > Math.max(150, d1) && ((cx(i) - S.x) * (x1 - S.x) + (cy(i) - S.y) * (y1 - S.y)) < 0, true);
+    // failing the far side, any side at least 60 degrees round from the first link (never back along it)
+    let e2x = e2; if (e2x < 0){ const ax = x1 - S.x, ay = y1 - S.y, aL = Math.hypot(ax, ay) || 1;
+      e2x = route(S, S, i => { if (!(USED[i] >= 0 && COMP[i] === S.comp && USEDL[i] !== first)) return false; const bx = cx(i) - S.x, by = cy(i) - S.y, bL = Math.hypot(bx, by) || 1; return (ax * bx + ay * by) / (aL * bL) < 0.5 && Math.hypot(cx(i) - x1, cy(i) - y1) > 120; }, true); }
+    // the two links made one street through the node (so no pass sees an end there)
+    if (e2x >= 0 && (yield* lay(S, PL[USED[e2x]] || S, pathTo(e2x), e2x, true))){ const l1 = LINES[first], l2 = LINES[LINES.length - 1];
+      const pts = l1.pts.slice().reverse().concat(l2.pts.slice(1)); l2.dead = true; l1.pts = []; for (let k = 0; k < pts.length; k++){ const a = pts[Math.max(0, k - 1)], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l1.pts.push(b); hashPt(l1, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); }
+      l1.ends = ['T', 'T']; l1.through = true; rehashAll(); } }
   // an entry still alone (its piece of land too small, or nothing to reach) grows into the land along the field, as before
   { const deg = PL.map(() => 0); for (const [a, b] of EDGES){ deg[a]++; deg[b]++; } let grew = false;
     for (const A of PL){ if (A.kind !== 'entry' || deg[A.id]) continue; const t = fieldAtT(A.x, A.y), u = (t === null || A.station) ? A.n : nearestAxis(t, A.n[0], A.n[1]);
