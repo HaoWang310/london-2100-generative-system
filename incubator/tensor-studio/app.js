@@ -989,6 +989,10 @@ function* stitchMains(o){
   const chaikin = P => { const out = [P[0]]; for (let k = 0; k < P.length - 1; k++){ const a = P[k], b = P[k + 1]; out.push([0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]], [0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]]); } out.push(P[P.length - 1]); return out; };
   const resample = (P, s) => { const out = [P[0]]; let acc = 0; for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]); let t = s - acc; while (t <= L){ out.push([a[0] + (b[0] - a[0]) * t / L, a[1] + (b[1] - a[1]) * t / L]); t += s; } acc = L - (t - s); } const e = P[P.length - 1], l = out[out.length - 1]; if (Math.hypot(e[0] - l[0], e[1] - l[1]) > 1) out.push(e); return out; };
   const okPts = (P, raw) => P.every(q => inLand(q[0], q[1]) && !inRail(q[0], q[1]));
+  const segOK = (a, b) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / 4); for (let k = 1; k < n; k++){ const x = a[0] + (b[0] - a[0]) * k / n, y = a[1] + (b[1] - a[1]) * k / n; if (!inLand(x, y) || inRail(x, y)) return false; } return true; };
+  // (v8.20) rounded corner by corner: a corner whose rounding would leave the land (or touch the rail) keeps its point
+  const chaikinSafe = Q => { const out = [Q[0]]; for (let k = 1; k < Q.length - 1; k++){ const a = Q[k - 1], b = Q[k], c = Q[k + 1], p1 = [0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]], p2 = [0.75 * b[0] + 0.25 * c[0], 0.75 * b[1] + 0.25 * c[1]];
+      if (okPts([p1, p2]) && segOK(p1, p2)) out.push(p1, p2); else out.push(b); } out.push(Q[Q.length - 1]); return out; };
   const EDGES = [];   // the links made: [a, b, length]
   // lay a route as a main street, drawn a few points a frame
   function* lay(A, B, cells, endCell, loop, ign){ ign = ign || [];
@@ -1002,21 +1006,22 @@ function* stitchMains(o){
     else if (B.circ && B.isPort.has(endCell)){ const r0 = B.circ.pts.reduce((b, q) => Math.hypot(q[0] - endPt[0], q[1] - endPt[1]) < Math.hypot(b[0] - endPt[0], b[1] - endPt[1]) ? q : b, B.circ.pts[0]); raw.push(r0.slice()); endPt = r0; endLine = B.circ; }
     // the grid's staircase simplified (Douglas-Peucker, 14 m, a straight run kept only if it stays on land and off the
     // zones it does not cross square), then rounded (Chaikin, three times, as long as it stays on land)
-    const segOK = (a, b) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / 4); for (let k = 1; k < n; k++){ const x = a[0] + (b[0] - a[0]) * k / n, y = a[1] + (b[1] - a[1]) * k / n; if (!inLand(x, y) || inRail(x, y)) return false; } return true; };
     const rdp = (Q, tol) => { if (Q.length < 3) return Q.slice(); const a = Q[0], b = Q[Q.length - 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1; let bi = -1, bd = -1;
       for (let k = 1; k < Q.length - 1; k++){ const d = Math.abs((Q[k][0] - a[0]) * dy - (Q[k][1] - a[1]) * dx) / L; if (d > bd){ bd = d; bi = k; } }
       if (bd <= tol && segOK(a, b)) return [a, b]; if (bi < 0) bi = Q.length >> 1; const l1 = rdp(Q.slice(0, bi + 1), tol), l2 = rdp(Q.slice(bi), tol); return l1.slice(0, -1).concat(l2); };
-    let P = rdp(raw, loop === 'through' ? 24 : 14); for (let it = 0; it < 3; it++){ const s = chaikin(P); if (!okPts(s)) break; P = s; }
+    let P = rdp(raw, loop === 'through' ? 24 : 14); for (let it = 0; it < 3; it++) P = chaikinSafe(P);
     P = resample(P, 5); if (P.length < 2) return null;
     // (v8.17) where the route runs on a main street already laid (within 12 m) it has joined it: only the parts off the
     // network are laid, each its own street, its ends put on the street it leaves or meets (a T or a crossroads)
-    const onEx = P.map(q => !!nearB(q[0], q[1], BAND, -1, ign, null, false, LV1)), runs = []; let cur = null;
+    const onEx = P.map((q, k) => { if (nearB(q[0], q[1], BAND, -1, ign, null, false, LV1)) return true; const a = P[Math.max(0, k - 1)], b = P[Math.min(P.length - 1, k + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const c = nearB(q[0], q[1], 22, -1, ign, [(b[0] - a[0]) / L, (b[1] - a[1]) / L], true, LV1); return !!(c && !LINES[c[3]].circus); }), runs = []; let cur = null;
     P.forEach((q, k) => { if (!onEx[k]){ if (!cur) cur = { s: k, pts: [] }; cur.pts.push(q); } else if (cur){ cur.e = k; runs.push(cur); cur = null; } }); if (cur){ cur.e = P.length; runs.push(cur); }
     const res = { ok: true, startLine: null, lines: [] };
     // (v8.19) a short stretch on the network between two parts (under 60 m) is the route crossing a street: the two parts
     // are one street running on through it (a crossroads, the street crossed left whole); only a long stretch along a street
     // is the route following the network, and is not laid again
     for (let n = runs.length - 1; n > 0; n--){ const A_ = runs[n - 1], B_ = runs[n]; if (plen(P.slice(A_.e - 1, B_.s + 1)) > 60) continue;
+      { const a = P[A_.e - 1], b = P[B_.s], m = P[(A_.e + B_.s) >> 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; if (nearB(m[0], m[1], 22, -1, ign, [(b[0] - a[0]) / L, (b[1] - a[1]) / L], true, LV1)) continue; }   // (along a street, not across it: no)
       const mid = P[(A_.e + B_.s) >> 1], c = nearB(mid[0], mid[1], BAND + 14, -1, ign, null, false, LV1); if (c){ addNode(c[1], c[2], true); LINES[c[3]].hits = (LINES[c[3]].hits || 0) + 1; EVENTS.push({ x: c[1], y: c[2], k: 'cross' }); }
       A_.pts = A_.pts.concat(P.slice(A_.e, B_.s), B_.pts); A_.e = B_.e; runs.splice(n, 1); }
     const crossAt = new Map();
@@ -1069,6 +1074,7 @@ function* stitchMains(o){
     const r2 = e2x >= 0 ? yield* lay(S, PL[USED[e2x]] || S, pathTo(e2x), e2x, true, first >= 0 ? [first] : []) : null;   // (its start, on the first link at the node, is not 'on the network')
     if (r2 && r1.startLine && r2.startLine){ const l1 = r1.startLine, l2 = r2.startLine;
       const pts = l1.pts.slice().reverse().concat(l2.pts.slice(1)); l2.dead = true; l1.pts = []; for (let k = 0; k < pts.length; k++){ const a = pts[Math.max(0, k - 1)], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l1.pts.push(b); hashPt(l1, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); }
+      { let Q = l1.pts; for (let it = 0; it < 2; it++) Q = chaikinSafe(Q); Q = resample(Q, 5); l1.pts = []; for (let k = 0; k < Q.length; k++){ const a = Q[Math.max(0, k - 1)], b = Q[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; l1.pts.push(b); hashPt(l1, b, (b[0] - a[0]) / L, (b[1] - a[1]) / L); } }   // (v8.20) the corner at the node rounded
       l1.ends = ['T', 'T']; l1.through = true; rehashAll(); } }
   // (v8.19) THROUGH ROUTES, in place of the grown contour avenues: main streets right across the land, edge to edge, from
   // one entry (or a gate on the edge) to one on the far side, wherever no main street already runs alongside within 0.75 x
