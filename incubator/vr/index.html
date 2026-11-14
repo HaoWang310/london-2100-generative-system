@@ -12,9 +12,9 @@
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
 <script type="module">
-import { open } from './src/xr_view.js?v=0.11';
+import { open } from './src/xr_view.js?v=0.12';
 import { apiFromScene } from './src/scene.js';
-import { streamApi } from './src/stream.js?v=0.11';
+import { streamApi } from './src/stream.js?v=0.12';
 const q = new URLSearchParams(location.search), lang = q.get('lang') === 'en' ? 'en' : 'zh';
 const msg = document.getElementById('msg'), drop = document.getElementById('drop');
 let view = null;

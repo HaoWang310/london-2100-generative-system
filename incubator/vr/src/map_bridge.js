@@ -6,12 +6,18 @@
 // for a moment; the next event any map fires hands us the instance (a window resize makes one at once),
 // and the wrapper is removed straight away.
 
-export async function findMap(frame, ms = 4000){
+/** The MapLibre module the map page itself uses (same realm, same instance). */
+export async function mapLib(frame){
   const win = frame.contentWindow, doc = frame.contentDocument;
   if (!win || !doc) throw new Error('the map page is not loaded');
   const url = win.performance.getEntriesByType('resource').map(e => e.name).find(n => /maplibre-gl[^/]*\.mjs/.test(n));
   if (!url) throw new Error('MapLibre has not loaded in the map page yet');
-  const lib = await new win.Function('u', 'return import(u)')(url);
+  return new win.Function('u', 'return import(u)')(url);
+}
+
+export async function findMap(frame, ms = 4000){
+  const win = frame.contentWindow;
+  const lib = await mapLib(frame);
   const Map = lib.Map || lib.default?.Map; if (!Map) throw new Error('MapLibre Map class not found');
   const own = Object.prototype.hasOwnProperty.call(Map.prototype, 'fire'), orig = Map.prototype.fire;
   let found = null;

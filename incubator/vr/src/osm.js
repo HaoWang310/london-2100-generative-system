@@ -75,7 +75,8 @@ export function earcut(ring){
 const WALL = [0.86, 0.84, 0.81], ROOF = [0.95, 0.94, 0.92];
 /** list: [{ ring: [[x, y]…] closed, plan metres, y north; h: top; h0: base }] · cx, cy: plan point at the model centre · W, H: keep only centroids inside 0…W × 0…H
  *  Duplicates (a building cut by a tile edge arrives once per tile) are dropped. Returns { mesh: { v, i } in xr_view's layout, count }. */
-export function buildingMesh(list, cx, cy, W, H, x0 = 0, y0 = 0){
+export function buildingMesh(list, cx, cy, W, H, x0 = 0, y0 = 0, colour = null){
+  const ROOFc = colour || ROOF, WALLc = colour ? colour.map(c => c * 0.86) : WALL;
   const v = [], idx = [], seen = new Set(); let count = 0;
   for (const it of list){ let ring = it.ring; if (ring.length < 4) continue;
     if (area2(ring) > 0) ring = ring.slice().reverse();   // walls below assume clockwise (y north)
@@ -84,11 +85,11 @@ export function buildingMesh(list, cx, cy, W, H, x0 = 0, y0 = 0){
     if (mx < x0 || my < y0 || mx >= x0 + W || my >= y0 + H) continue;
     const key = Math.round(mx * 2) + ':' + Math.round(my * 2) + ':' + Math.round(h); if (seen.has(key)) continue; seen.add(key); count++;
     for (let i = 0; i < ring.length - 1; i++){ const a = ring[i], b = ring[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); if (L < 0.05) continue;
-      const n = [-dy / L, 0, -dx / L], o = v.length / 12, k = 0.92 + 0.08 * Math.abs(n[0]), col = WALL.map(c => c * k);
+      const n = [-dy / L, 0, -dx / L], o = v.length / 12, k = 0.92 + 0.08 * Math.abs(n[0]), col = WALLc.map(c => c * k);
       for (const [q, y] of [[a, h0], [b, h0], [a, h], [b, h]]) v.push(q[0] - cx, y, -(q[1] - cy), 0, 0, n[0], n[1], n[2], ...col, 0);
       idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2); }
     const o = v.length / 12, pts = ring.slice(0, -1);
-    for (const q of pts) v.push(q[0] - cx, h, -(q[1] - cy), 0, 0, 0, 1, 0, ...ROOF, 0);
+    for (const q of pts) v.push(q[0] - cx, h, -(q[1] - cy), 0, 0, 0, 1, 0, ...ROOFc, 0);
     for (const [a, b, c] of earcut(pts)) idx.push(o + a, o + b, o + c); }
   return { mesh: { v: new Float32Array(v), i: new Uint32Array(idx) }, count };
 }

@@ -15,7 +15,8 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - **1:1 漫游**：只加载你周围 1.5 公里，边走边加载
 - 电脑预览：右键拖动平移，滚轮缩放
 - 同时最多 40 块瓦片（约几万栋建筑），保证 Quest 3S 流畅
-- 目前地面是 OSM 底图，**还没有地图里的分析图层**（洪水、汇水等），这些要在完整版里按瓦片加进来；要看带图层的静态截图，用 `map.html?mode=capture`
+- **从 `map.html` 打开时，地面和 app 地图一模一样**（v0.12）：`src/map_painter.js` 在地图页面里用 app 当前的样式（主题、标注、开着的图层）另开一个隐藏地图，按瓦片渲染成贴图替换上去；建筑颜色也取 app 的设置。每块先显示简化样式，app 样式画好后替换，左下角会写「几块已用 app 样式」。换了主题或图层，退出 VR 再进一次即可
+- 直接从 `index.html?scene=osm:…` 打开（没有地图）时，地面仍是简化的 OSM 样式
 
 ## 从伦敦地图进入 VR（v0.4 起）
 
@@ -78,6 +79,7 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 | `src/from_map.js` | 截图、建筑、打开视图 |
 | `src/osm.js` | OpenFreeMap 矢量瓦片解码、地面贴图、建筑体块 |
 | `src/stream.js` | 移动加载：按瓦片读取、绘制、拉伸建筑 |
+| `src/map_painter.js` | 用 app 地图自己的样式渲染 VR 地面瓦片 |
 | `data/*.scene.json` | 场景；`data/scenes.json` 是顶栏菜单的列表 |
 | `tools/build-scene-hydro-lab.py` | 从 `../google-map-live/assets` 生成 Hydro Lab 场景（需要 numpy 和 Pillow；参数是网格倍数，默认 6 = 300 m） |
 | `tools/export-from-tensor-studio.mjs` | 无界面运行 Tensor Studio，导出场景（在本文件夹里运行） |
