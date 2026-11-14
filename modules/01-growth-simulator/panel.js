@@ -9,7 +9,7 @@ import { PALETTE } from './overlay.js';
 
 // Words this panel adds to the incubator's own (controls.js I18N), for the map display.
 const EXTRA_ZH = {
-  'Display': '显示', 'Growth': '生长', 'Rail and stations': '铁路与车站', 'Parcel outlines when zoomed in': '放大时显示地块边线', 'Finer grains when zoomed in (illustrative)': '放大时细分颗粒（细部为示意）',
+  'Display': '显示', 'Growth': '生长', 'Rail and stations': '铁路与车站', 'Parcel outlines when zoomed in': '放大时显示地块边线', 'Finer grains when zoomed in (illustrative)': '放大时细分颗粒（细部为示意）', 'Fill the 70 km circle beyond the model (illustrative)': '补全 70 km 圆内的缺口（示意）',
   'Opacity': '不透明度', 'Keep as background on the other levels': '在其他层级保留为背景',
   'Could not load the data files.': '无法载入数据文件。', 'Loading the final outcome…': '正在载入最终结果…'
 };
@@ -225,7 +225,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
     const op = h('input', { type: 'range', min: 0.2, max: 1, step: 0.05, value: display.opacity });
     op.addEventListener('input', () => onDisplay({ opacity: +op.value }));
     container.append(h('div', { class: 'g01-sec' }, h('div', { class: 'eyebrow' }, T('Display')),
-      sw('show', T('Growth')), sw('rails', T('Rail and stations')), sw('grain', T('Finer grains when zoomed in (illustrative)')), sw('edges', T('Parcel outlines when zoomed in')),
+      sw('show', T('Growth')), sw('rails', T('Rail and stations')), sw('grain', T('Finer grains when zoomed in (illustrative)')), sw('fill', T('Fill the 70 km circle beyond the model (illustrative)')), sw('edges', T('Parcel outlines when zoomed in')),
       h('div', { class: 'param' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T('Opacity'))), op),
       sw('background', T('Keep as background on the other levels'))));
 
