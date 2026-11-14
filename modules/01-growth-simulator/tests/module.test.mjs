@@ -113,7 +113,8 @@ test('run() gives a valid EPSG:27700 bundle of the loop', async () => {
 test('the engine, read from the incubator, grows the release totals', { timeout: 180000 }, async () => {
   const GV = evaluateEngine(read('engine.js'));
   const arr = {};
-  for (const n of ['BITS', 'ZONE', 'CAT', 'SPUR', 'FIELD', 'VEIN', 'DRAIL']) { const b = unz(D.arr[n]); arr[n] = n === 'DRAIL' ? new Uint16Array(b) : new Uint8Array(b); }
+  const GRIDCODEC = new Function(`${read('codec.js')}\nreturn GRIDCODEC;`)();
+  for (const n of ['BITS', 'ZONE', 'CAT', 'SPUR', 'FIELD', 'VEIN', 'DRAIL']) { const b = GRIDCODEC.decode(n, unz(D.arr[n]), M, D.enc); arr[n] = n === 'DRAIL' ? new Uint16Array(b) : new Uint8Array(b); }
   GV.init(M, arr);
   const res = await GV.run({});
   assert.equal(res.stats[75].pop, 12222179);

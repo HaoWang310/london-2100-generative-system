@@ -128,14 +128,21 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
   function statusLine() {
     if (!el.status) return;
     let txt = '';
-    if (s.running) txt = s.status === 'load' ? T("Loading the model's ground…") : `${T(s.status === 'pass1' ? 'First pass: finding where the city ends' : 'Second pass: the city and its farmland')} · ${s.statusYear || ''}`;
+    const mb = n => fmt(n / 1048576, 1), ground = () => `${mb(growth.groundLoaded())} / ${mb(s.groundTotal)} MB`;
+    if (s.running) {
+      txt = s.status === 'load' ? `${T("Loading the model's ground…")} ${ground()}`
+        : s.status === 'prep' ? T('Growing the loop…')
+        : `${T(s.status === 'pass1' ? 'First pass: finding where the city ends' : 'Second pass: the city and its farmland')} · ${s.statusYear || ''}`;
+    }
     else if (growth.stale()) txt = T('Settings changed. Press Run variation to grow the loop with them.');
     else if (s.variation && s.mode === 'variation') {
       const k = s.variation.stats[75].km2;
       txt = `${T('Grown in')} ${fmt(s.variation.ms / 1000, 1)} s. ${fmt(k.l + k.m + k.h, 1)} km² ${T('built')}, ${fmt(k.fh + k.fv, 1)} km² ${T('farmed')}, ${fmt(s.variation.stats[75].pop)} ${T('people')}.`;
     }
+    if (!txt && s.ground === 'loading') txt = `${T("Loading the model's ground…")} ${ground()}`;   // in the background
     el.status.textContent = txt;
-    el.prog.style.width = `${(s.running ? s.progress : 0) * 100}%`;
+    const loading = s.status === 'load' && s.running && s.groundTotal;
+    el.prog.style.width = `${(loading ? Math.min(1, growth.groundLoaded() / s.groundTotal) : s.running ? s.progress : 0) * 100}%`;
     el.run.disabled = s.running; el.reset.disabled = s.running;
   }
 

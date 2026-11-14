@@ -21,6 +21,7 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
     P: null, mode: 'final', year: 0,
     final: null, variation: null,             // {ev:{idx,cls,off}, stats, cells}
     ranWith: null, runId: 0, running: false, progress: 0, status: '',
+    ground: 'idle', groundBytes: {}, groundTotal: 0,   // the engine's ground grids: idle | loading | ready
     compare: null
   };
   let worker = null, nextId = 0;
@@ -51,6 +52,7 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
       const [meta, controls] = await Promise.all([fetchOk(s.base + 'data/meta.js'), fetchOk(s.base + 'controls.js')]);
       Object.assign(s, evaluateShared(meta, controls));
       s.N = s.D.meta.NX * s.D.meta.NY;
+      s.groundTotal = Object.values(s.D.arr).reduce((t, p) => t + (s.SIZES[p] || 0), 0);
       const [idx, cls] = await Promise.all([fetchOk(s.base + s.D.final.idx, 'buf').then(inflate), fetchOk(s.base + s.D.final.cls, 'buf').then(inflate)]);
       const ev = { idx: new Uint32Array(idx), cls: new Uint8Array(cls), off: s.D.final.off };
       s.final = { ev, stats: s.D.final.stats, cells: cellsFromEvents(s.N, ev) };
@@ -70,11 +72,28 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
     return { ...new Function(`${text}\nreturn GV.DEFAULTS;`)() };
   }
 
+  // Ground download progress, from the worker's per-file byte counts.
+  const onGround = pr => {
+    if (pr.stage === 'load') { s.groundBytes[pr.label] = pr.bytes; if (s.ground === 'idle') s.ground = 'loading'; }
+    else if (pr.stage === 'ready') s.ground = 'ready';
+  };
+  /** Load the engine's ground grids in the background, so a run can start straight away. */
+  function prepare() {
+    if (!s.loaded || s.ground !== 'idle') return;
+    s.ground = 'loading'; emit('progress');
+    call({ type: 'prepare' }, pr => { onGround(pr); emit('progress'); })
+      .then(() => { s.ground = 'ready'; emit('progress'); })
+      .catch(() => { s.ground = 'idle'; s.groundBytes = {}; emit('progress'); });
+  }
+  const groundLoaded = () => Object.values(s.groundBytes).reduce((t, n) => t + n, 0);
+
   const shown = () => (s.mode === 'variation' && s.variation ? s.variation : s.final);
 
   return {
     state: s,
     load,
+    prepare,
+    groundLoaded,
     shown,
     stats: (y = s.year) => shown().stats[y],
     finalStats: (y = s.year) => s.final.stats[y],
@@ -86,12 +105,12 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
     stale: () => Boolean(s.ranWith && JSON.stringify(s.ranWith) !== JSON.stringify(s.P)),
     async run() {
       if (s.running) return null;
-      s.running = true; s.progress = 0; s.status = 'load'; emit('running');
+      s.running = true; s.progress = 0; s.status = s.ground === 'ready' ? 'prep' : 'load'; emit('running');
       const params = { ...s.P }, t0 = performance.now(), runId = ++s.runId;
       try {
         const res = await call({ type: 'run', params, runId }, pr => {
           if (pr.stage === 'run') { s.progress = ((pr.pass - 1) * 76 + (pr.year - 2025) + 1) / 152; s.status = pr.pass === 1 ? 'pass1' : 'pass2'; s.statusYear = pr.year; }
-          else { s.status = 'load'; s.loadedBytes = pr.bytes; }
+          else { onGround(pr); s.status = s.ground === 'ready' ? 'prep' : 'load'; }
           emit('progress');
         });
         const ev = { idx: res.idx, cls: res.cls, off: res.off };
