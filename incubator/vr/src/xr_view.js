@@ -12,6 +12,9 @@
 //   A = flood risk on / off · B = table ↔ walk 1 : 1 · X = existing streets · Y = put it back in front of me
 // Hands: pinch = grab, two pinches = scale.
 
+import { defaultEnv } from './app_state.js?v=0.18';
+import { writeCars } from './features.js?v=0.18';
+
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
@@ -107,6 +110,7 @@ const M4 = {
     const z = nrm(sub(eye, at)), x = nrm(cr(up, z)), y = cr(z, x); return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -dt(x, eye), -dt(y, eye), -dt(z, eye), 1]); },
   basis(x, y, z, p, s){ return new Float32Array([x[0] * s[0], x[1] * s[0], x[2] * s[0], 0, y[0] * s[1], y[1] * s[1], y[2] * s[1], 0, z[0], z[1], z[2], 0, p[0], p[1], p[2], 1]); }
 };
+const ENV0 = defaultEnv();
 const R_WORLD = 2.2e7;   // the widest view, in metres: the whole world on the table
 const yawOf = (fx, fz) => Math.atan2(-fx, -fz);   // the yaw that turns (0,0,-1) onto (fx, ·, fz)
 const rotY = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c]; };
@@ -115,19 +119,36 @@ const rotY = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * 
 const VS = `#version 300 es
 in vec3 aPos; in vec2 aSide; in vec3 aNor; in vec3 aCol; in float aKind;
 uniform mat4 uP, uV, uM; uniform float uExag, uWidth, uLift; uniform vec3 uTint;
-out vec3 vCol; out vec3 vN; out vec2 vMP;
+out vec3 vCol; out vec3 vN; out vec2 vMP; out vec3 vP;
 void main(){ vec3 p = aPos; p.y = p.y * uExag + aKind * uLift; p.xz += aSide * uWidth;
-  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = mat3(uM) * aNor; vCol = aCol * uTint; vMP = p.xz; }`;
+  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = aNor; vCol = aCol * uTint; vMP = p.xz; vP = p; }`;   // normals stay in model space: the sun is fixed to the map's north
 const FS = `#version 300 es
-precision highp float; in vec3 vCol; in vec3 vN; in vec2 vMP; uniform float uAlpha; uniform vec3 uClip; out vec4 o;
-void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; vec3 n = normalize(vN); float l = 0.58 + 0.42 * max(dot(n, normalize(vec3(-0.45, 0.85, 0.35))), 0.0); o = vec4(vCol * l, uAlpha); }`;
+precision highp float; in vec3 vCol; in vec3 vN; in vec2 vMP; in vec3 vP; uniform float uAlpha, uAmb, uDif; uniform vec3 uClip, uLight, uLightCol, uEye; uniform vec4 uFog; uniform vec2 uFogR; out vec4 o;
+void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; vec3 n = normalize(vN); float l = uAmb + uDif * max(dot(n, uLight), 0.0);
+  float f = uFog.a * clamp((distance(vP, uEye) - uFogR.x) / max(uFogR.y - uFogR.x, 0.001), 0.0, 1.0); o = vec4(mix(vCol * l * uLightCol, uFog.rgb, f), uAlpha); }`;
 const VT = `#version 300 es
-in vec3 aPos; in vec2 aUV; uniform mat4 uP, uV, uM; out vec2 vUV; out vec2 vMP; void main(){ vUV = aUV; vMP = aPos.xz; gl_Position = uP * uV * uM * vec4(aPos, 1.0); }`;
+in vec3 aPos; in vec2 aUV; uniform mat4 uP, uV, uM; out vec2 vUV; out vec2 vMP; out vec3 vP; void main(){ vUV = aUV; vMP = aPos.xz; vP = aPos; gl_Position = uP * uV * uM * vec4(aPos, 1.0); }`;
 const FT = `#version 300 es
-precision highp float; in vec2 vUV; in vec2 vMP; uniform sampler2D uT; uniform vec3 uClip; out vec4 o; void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; o = texture(uT, vUV); if (o.a < 0.02) discard; }`;
+precision highp float; in vec2 vUV; in vec2 vMP; in vec3 vP; uniform sampler2D uT; uniform vec3 uClip, uEye; uniform vec4 uFog; uniform vec2 uFogR; out vec4 o;
+void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; o = texture(uT, vUV); if (o.a < 0.02) discard;
+  float f = uFog.a * clamp((distance(vP, uEye) - uFogR.x) / max(uFogR.y - uFogR.x, 0.001), 0.0, 1.0); o.rgb = mix(o.rgb, uFog.rgb, f); }`;
+// building shadows: every vertex slides along the sun's direction down to the ground; the stencil keeps overlaps from doubling
+const VSH = `#version 300 es
+in vec3 aPos; uniform mat4 uP, uV, uM; uniform vec2 uSh; out vec2 vMP;
+void main(){ vec3 p = aPos; p.xz -= uSh * p.y; p.y = 0.0; vMP = p.xz; gl_Position = uP * uV * uM * vec4(p, 1.0); }`;
+const FSH = `#version 300 es
+precision highp float; in vec2 vMP; uniform vec3 uClip; uniform float uA; out vec4 o;
+void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; o = vec4(0.0, 0.0, 0.0, uA); }`;
+// rain and snow: world-space points and short lines
+const VPT = `#version 300 es
+in vec3 aPos; uniform mat4 uP, uV; uniform float uPt; void main(){ gl_Position = uP * uV * vec4(aPos, 1.0); gl_PointSize = max(1.5, uPt / max(gl_Position.w, 0.001)); }`;
+const FPT = `#version 300 es
+precision highp float; uniform vec4 uCol; uniform float uRound; out vec4 o;
+void main(){ if (uRound > 0.5){ vec2 d = gl_PointCoord - 0.5; if (dot(d, d) > 0.25) discard; } o = uCol; }`;
 
 function program(gl, vs, fs){ const p = gl.createProgram();
   for (const [t, s] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]){ const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh); if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); gl.attachShader(p, sh); }
+  gl.bindAttribLocation(p, 0, 'aPos');
   gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
   const u = {}; for (let i = 0, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i < n; i++){ const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
   return { p, u }; }
@@ -178,9 +199,17 @@ export function open(api, lang = 'zh', opt = {}){
     panel.canvas.addEventListener('pointerleave', () => panel.setHover(null));
     panel.canvas.addEventListener('click', e => { const i = panel.hitAt(...uv(e)); if (i != null) panel.press(i); }); }
   const cv = root.querySelector('canvas'), note = root.querySelector('.note');
-  const gl = cv.getContext('webgl2', { antialias: true, alpha: true, xrCompatible: true });
+  const gl = cv.getContext('webgl2', { antialias: true, alpha: true, stencil: true, xrCompatible: true });
   if (!gl){ note.textContent = 'WebGL2 is not available.'; return null; }
-  const prog = program(gl, VS, FS), tex = program(gl, VT, FT);
+  const prog = program(gl, VS, FS), tex = program(gl, VT, FT), shProg = program(gl, VSH, FSH), ptProg = program(gl, VPT, FPT);
+  // lighting, weather and switches: from the app (opt.env) or plain daylight
+  const envFn = opt.env || (() => ENV0); let env = envFn();
+  /** fog: e = eye / centre in model space, r0…r1 the distances over which it thickens, a its full strength */
+  let fogSet = { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: [1, 1, 1] };
+  function setEnvUniforms(){
+    gl.useProgram(prog.p); gl.uniform3fv(prog.u.uLight, env.dir); gl.uniform3fv(prog.u.uLightCol, env.lightColour); gl.uniform1f(prog.u.uAmb, env.ambient); gl.uniform1f(prog.u.uDif, env.diffuse);
+    for (const pr of [prog, tex]){ gl.useProgram(pr.p); gl.uniform3fv(pr.u.uEye, fogSet.e); gl.uniform2f(pr.u.uFogR, fogSet.r0, fogSet.r1); gl.uniform4f(pr.u.uFog, fogSet.c[0], fogSet.c[1], fogSet.c[2], fogSet.a); } }
+  const noFog = pr => { gl.useProgram(pr.p); gl.uniform4f(pr.u.uFog, 0, 0, 0, 0); };
 
   // state
   const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
@@ -227,7 +256,8 @@ export function open(api, lang = 'zh', opt = {}){
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return { vao, b }; }
   function freeTile(T){   // also for a tile dropped half-built (waiting for its picture)
     if (T.tex){ gl.deleteTexture(T.tex); T.tex = null; } if (T.quad){ gl.deleteVertexArray(T.quad.vao); gl.deleteBuffer(T.quad.b); T.quad = null; }
-    if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); T.mesh = null; } T.ready = false; }
+    if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); T.mesh = null; }
+    if (T.treeMesh){ gl.deleteVertexArray(T.treeMesh.vao); gl.deleteBuffer(T.treeMesh.vb); gl.deleteBuffer(T.treeMesh.ib); T.treeMesh = null; } T.ready = false; }
   /** fx, fy: focus in plan metres; r: radius in metres */
   function updateTiles(t, fx, fy, r){
     clip = [fx, -fy, r];
@@ -249,6 +279,7 @@ export function open(api, lang = 'zh', opt = {}){
       const T = { ready: false, count: 0, z: api.stream.zOf ? api.stream.zOf(k) : 14 }; tiles.set(k, T); loadingN++; mine++; status();
       api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
         T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count;
+        T.treeData = d.trees && d.trees.count ? d.trees : null; T.cars = d.cars && d.cars.count ? d.cars.paths : null;   // built on the GPU only when their switch is on
         // with the app's look coming, show the tile only once it is in that look (no plain-then-styled flash);
         // the plain paint is the fallback if the app's picture fails or takes over 10 s
         if (!d.upgrade){ T.tex = groundTexture(d.canvas); T.ready = true; status(); return; }
@@ -261,21 +292,66 @@ export function open(api, lang = 'zh', opt = {}){
         .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
           setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
   }
-  const baseMesh = api.stream ? mesh(gl, prog, (() => { const E = 4e7, c = [0.90, 0.89, 0.86];
-    return { v: new Float32Array([-E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, E, 0, 0, 0, 1, 0, ...c, 0, -E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0, E, -0.3, -E, 0, 0, 0, 1, 0, ...c, 0]), i: new Uint32Array([0, 1, 2, 1, 3, 2]) }; })()) : null;
+  // the plain disc under the tiles: a square just around the visible circle, rebuilt as the circle moves
+  // (one huge fixed quad lost depth precision and showed through the map)
+  const baseV = new Float32Array(4 * STRIDE), baseMesh = api.stream ? mesh(gl, prog, { v: baseV, i: new Uint32Array([0, 1, 2, 1, 3, 2]) }) : null;
+  let baseKey = '';
+  function updateBase(){ const [cx, cz, r] = clip, key = cx.toFixed(1) + ',' + cz.toFixed(1) + ',' + r.toFixed(1); if (key === baseKey) return; baseKey = key;
+    const E = r * 1.05, c = [0.90, 0.89, 0.86]; let k = 0;
+    for (const [x, z] of [[cx - E, cz + E], [cx + E, cz + E], [cx - E, cz - E], [cx + E, cz - E]]){ baseV.set([x, 0, z, 0, 0, 0, 1, 0, ...c, 0], k); k += STRIDE; }
+    gl.bindBuffer(gl.ARRAY_BUFFER, baseMesh.vb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, baseV); }
   function drawTiles(P, V, M){
     gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
-    gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(4, 8); gl.bindVertexArray(baseMesh.vao); gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
+    updateBase(); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(4, 8); gl.bindVertexArray(baseMesh.vao); gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
     gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, clip);
     gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
     gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);   // a level being replaced sits just under the new one
     for (const T of tiles.values()) if (T.ready && T.z !== curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
     gl.disable(gl.POLYGON_OFFSET_FILL);
     for (const T of tiles.values()) if (T.ready && T.z === curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    // building shadows on the ground: the same meshes, flattened along the sun's direction, each pixel darkened once
+    if (st.bld && env.shadow > 0){ const ly = Math.max(env.dir[1], 0.14);
+      gl.useProgram(shProg.p); gl.uniformMatrix4fv(shProg.u.uP, false, P); gl.uniformMatrix4fv(shProg.u.uV, false, V); gl.uniformMatrix4fv(shProg.u.uM, false, M);
+      gl.uniform3fv(shProg.u.uClip, clip); gl.uniform2f(shProg.u.uSh, env.dir[0] / ly, env.dir[2] / ly); gl.uniform1f(shProg.u.uA, env.shadow);
+      gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE); gl.depthMask(false);
+      gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-2, -4); gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.EQUAL, 0, 0xff); gl.stencilOp(gl.KEEP, gl.KEEP, gl.INCR);
+      for (const T of tiles.values()) if (T.ready && T.mesh && T.z === curZ){ gl.bindVertexArray(T.mesh.vao); gl.drawElements(gl.TRIANGLES, T.mesh.n, gl.UNSIGNED_INT, 0); }
+      gl.disable(gl.STENCIL_TEST); gl.disable(gl.POLYGON_OFFSET_FILL); gl.depthMask(true); gl.disable(gl.BLEND); }
     gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
     gl.uniform3fv(prog.u.uTint, api.stream.painter?.building || [0.95, 0.94, 0.92]);
     if (st.bld) for (const T of tiles.values()) if (T.ready && T.mesh){ gl.bindVertexArray(T.mesh.vao); gl.drawElements(gl.TRIANGLES, T.mesh.n, gl.UNSIGNED_INT, 0); }
+    // trees and vehicles are not in the app's style, so night and weather darken them here
+    const k = 1 - 0.62 * env.night; gl.uniform3f(prog.u.uTint, k * (1 - 0.25 * env.night), k * (1 - 0.15 * env.night), k);
+    if (env.trees) for (const T of tiles.values()) if (T.ready && T.treeData && T.z === curZ){
+      if (!T.treeMesh) T.treeMesh = mesh(gl, prog, T.treeData);
+      gl.bindVertexArray(T.treeMesh.vao); gl.drawElements(gl.TRIANGLES, T.treeMesh.n, gl.UNSIGNED_INT, 0); }
+    if (env.cars){ const now = performance.now();
+      if (now - carT > 12){ carT = now; const paths = []; for (const T of tiles.values()) if (T.ready && T.cars && T.z === curZ) paths.push(...T.cars);
+        carN = writeCars(carBuf, paths, now / 1000, carScale); gl.bindBuffer(gl.ARRAY_BUFFER, carMesh.vb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, carBuf, 0, carN * STRIDE); }
+      if (carN){ gl.bindVertexArray(carMesh.vao); gl.drawElements(gl.TRIANGLES, carN / 4 * 6, gl.UNSIGNED_INT, 0); } }
     gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.bindVertexArray(null); }
+  // vehicles: one buffer rewritten every frame (24 vertices a box)
+  const CAR_MAX = 700, carBuf = new Float32Array(CAR_MAX * 24 * STRIDE);
+  const carMesh = mesh(gl, prog, { v: carBuf, i: (() => { const a = new Uint32Array(CAR_MAX * 36); for (let c = 0, k = 0; c < CAR_MAX * 6; c++){ const b = c * 4; a[k++] = b; a[k++] = b + 2; a[k++] = b + 1; a[k++] = b + 1; a[k++] = b + 2; a[k++] = b + 3; } return a; })() });
+  let carT = 0, carN = 0, carScale = 1;
+  // rain and snow: particles in a cylinder (centre c, radius rw, height hw, world space) that loop from top to bottom
+  const PN = 1100, pSeed = new Float32Array(PN * 4); for (let i = 0; i < PN * 4; i++) pSeed[i] = Math.random();
+  const pBuf = new Float32Array(PN * 6), pVao = gl.createVertexArray(), pVb = gl.createBuffer();
+  gl.bindVertexArray(pVao); gl.bindBuffer(gl.ARRAY_BUFFER, pVb); gl.bufferData(gl.ARRAY_BUFFER, pBuf, gl.DYNAMIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 12, 0); gl.bindVertexArray(null);
+  function drawWeather(P, V, c, rw, hw, vpH, yaw = 0){
+    const rain = env.weather === 'rain', snow = env.weather === 'snow'; if (!rain && !snow) return;
+    const t = performance.now() / 1000, fall = rain ? 2.6 : 0.22, len = hw * 0.07; let n = 0;
+    for (let i = 0; i < PN; i++){ const a = pSeed[i * 4] * 6.2832, rr = Math.sqrt(pSeed[i * 4 + 1]) * rw, ph = (pSeed[i * 4 + 2] + t * fall * (0.7 + 0.6 * pSeed[i * 4 + 3])) % 1;
+      let x = c[0] + Math.cos(a) * rr, z = c[2] + Math.sin(a) * rr; const y = c[1] + hw * (1 - ph);
+      if (snow){ x += Math.sin(t * 0.9 + i) * rw * 0.02; z += Math.cos(t * 0.7 + i * 1.7) * rw * 0.02; pBuf[n++] = x; pBuf[n++] = y; pBuf[n++] = z; }
+      else { pBuf[n++] = x; pBuf[n++] = y; pBuf[n++] = z; pBuf[n++] = x + len * 0.12; pBuf[n++] = y + len; pBuf[n++] = z; } }
+    gl.useProgram(ptProg.p); gl.uniformMatrix4fv(ptProg.u.uP, false, P); gl.uniformMatrix4fv(ptProg.u.uV, false, V);
+    gl.uniform1f(ptProg.u.uPt, rw * 0.011 * vpH * P[5] * 0.5); gl.uniform1f(ptProg.u.uRound, snow ? 1 : 0);
+    const dim = 1 - 0.45 * env.night; gl.uniform4f(ptProg.u.uCol, (snow ? 1 : 0.78) * dim, (snow ? 1 : 0.84) * dim, (snow ? 1 : 0.94) * dim, snow ? 0.92 : 0.5);
+    gl.bindVertexArray(pVao); gl.bindBuffer(gl.ARRAY_BUFFER, pVb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, pBuf, 0, n);
+    gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    gl.drawArrays(snow ? gl.POINTS : gl.LINES, 0, n / 3);
+    gl.depthMask(true); gl.disable(gl.BLEND); gl.bindVertexArray(null); }
   /** after the app's look changed: draw every loaded tile again */
   function repaintTiles(){ if (!api.stream?.repaint) return; let n = 0;
     for (const [k, T] of tiles) if (T.ready){ n++; T.styled = false; api.stream.repaint(k, () => tiles.get(k) === T).then(cv => { if (!cv || tiles.get(k) !== T) return; gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); }).catch(() => {}); }
@@ -285,6 +361,7 @@ export function open(api, lang = 'zh', opt = {}){
   const unit = 1 / terrain.size;   // the model is 1 unit across in the page preview
   function drawScene(P, V, M, o){
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+    setEnvUniforms();
     gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.uP, false, P); gl.uniformMatrix4fv(prog.u.uV, false, V); gl.uniformMatrix4fv(prog.u.uM, false, M);
     gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]);
     if (api.stream){ drawTiles(P, V, M); return; }
@@ -309,10 +386,19 @@ export function open(api, lang = 'zh', opt = {}){
   cv.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
   function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0.067, 0.067, 0.075, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    env = envFn(); const sky = skyColour();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); if (api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.067, 0.067, 0.075, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
     if (api.stream) updateTiles(t, cam.tx / unit, -cam.tz / unit, Math.max(400, Math.min(R_WORLD, cam.dist / unit * 0.55)));
-    drawScene(M4.persp(0.7, w / h, Math.max(0.002, cam.dist * 0.01), cam.dist * 20 + 50), M4.look(eye, [cam.tx, 0, cam.tz]), M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit }); }
+    // haze thickens from the middle of the disc to its rim
+    fogSet = api.stream ? { e: [clip[0], 0, clip[1]], r0: clip[2] * 0.3, r1: clip[2] * 1.05, a: env.haze, c: env.fog } : { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: env.fog };
+    carScale = Math.max(1, clip[2] / 600);
+    const Pm = M4.persp(0.7, w / h, Math.max(0.002, cam.dist * 0.01), cam.dist * 20 + 50), Vm = M4.look(eye, [cam.tx, 0, cam.tz]);
+    drawScene(Pm, Vm, M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit });
+    if (api.stream){ const rw = clip[2] * unit; drawWeather(Pm, Vm, [cam.tx, 0, cam.tz], rw, rw * 0.8, h); } }
+  // the sky behind the model: the app's sky colour, greyed by the weather
+  function skyColour(){ const a = Math.min(1, env.haze * 1.3); return [0, 1, 2].map(k => (env.sky[k] * (1 - a) + env.fog[k] * a) * (env.weather === 'rain' ? 0.7 : 1)); }
   raf = requestAnimationFrame(frame);
 
   // ---- headset
@@ -346,7 +432,7 @@ export function open(api, lang = 'zh', opt = {}){
     root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'go'; exitB.textContent = lang === 'zh' ? '退出 VR' : 'Exit VR';
     exitB.onclick = () => session.end().catch(() => {}); xrBox.append(exitB); xrBox.querySelectorAll('button:not(:last-child)').forEach(b => b.hidden = true);
     const xr = { frames: 0, views: 0, err: '', mode };
-    session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true }), depthNear: 0.02, depthFar: 100 });
+    session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
     const tableScale = 0.9 / terrain.size;   // 90 cm across on the table
@@ -407,12 +493,18 @@ export function open(api, lang = 'zh', opt = {}){
           const r = rotY([base.pos[0] - base.mid[0], base.pos[1] - base.mid[1], base.pos[2] - base.mid[2]], d); M.s = base.s * k; M.pos = [mid[0] + r[0] * k, mid[1] + r[1] * k, mid[2] + r[2] * k]; M.yaw = base.yaw + d; } }
       // draw
       const layer = session.renderState.baseLayer; gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-      if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk) gl.clearColor(0.78, 0.84, 0.9, 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      env = envFn(); const sky = skyColour();
+      if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk || api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
       if (api.stream){ const at = st.walk ? head : M.anchor, d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw);
         updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(R_WORLD, 0.45 / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
+      // haze: on the table it thickens towards the rim; walking, the far edge of what is loaded fades into the sky
+      if (api.stream && st.walk){ const hm = focusModel(head), hz = env.haze;
+        fogSet = { e: [hm[0], 1.6, hm[1]], r0: 150 * (1 - 0.7 * hz), r1: 1450, a: Math.max(0.92, hz), c: [0, 1, 2].map(k => env.horizon[k] * (1 - hz) + env.fog[k] * hz) }; carScale = 1; }
+      else if (api.stream){ fogSet = { e: [clip[0], 0, clip[1]], r0: clip[2] * 0.3, r1: clip[2] * 1.05, a: env.haze, c: env.fog }; carScale = Math.max(1, clip[2] / 600); }
+      else fogSet = { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: env.fog };
       // the app panel: above the left hand, turned to you; rays from the other hands point at it
       panelTick(t); panelPose = null; rayHit.clear();
       const leftS = [...session.inputSources].find(s => s.handedness === 'left'), lpp = leftS && poseOf(frame, leftS);
@@ -434,8 +526,9 @@ export function open(api, lang = 'zh', opt = {}){
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         drawScene(P, V, Mm, o);
+        if (api.stream){ if (st.walk) drawWeather(P, V, [head[0], 0, head[2]], 14, 16, vp.height); else if (M.anchor) drawWeather(P, V, [M.anchor[0], M.pos[1], M.anchor[2]], 0.45, 0.42, vp.height); }
         // controller rays
-        gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
+        noFog(prog); noFog(tex); gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
         for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue;
           const len = rayHit.has(s) ? s.__panelT / 0.6 : 1, sc = M4.id(); sc[10] = len;   // a ray that meets the panel ends on it
           gl.uniformMatrix4fv(prog.u.uM, false, M4.mul(rp.transform.matrix, sc)); gl.bindVertexArray(ray.vao); gl.drawElements(gl.LINES, 2, gl.UNSIGNED_INT, 0); }
