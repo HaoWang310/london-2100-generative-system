@@ -5,8 +5,8 @@
 //   3. the camera goes back exactly as it was, and the VR view opens over the map
 // Closing the view (or leaving the headset) returns to the map as it was. Call: openFromMap(map, 'zh' | 'en').
 
-import { open } from './xr_view.js?v=0.9';
-import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.9';
+import { open } from './xr_view.js?v=0.10';
+import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.10';
 
 const R = 6378137, MAX_TEX = 4096, MIN_ZOOM = 15;
 const merc = ([lon, lat]) => [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))];
