@@ -113,10 +113,10 @@ const rotY = (v, a) => { const c = Math.cos(a), s = Math.sin(a); return [v[0] * 
 // ---------------------------------------------------------------- renderer
 const VS = `#version 300 es
 in vec3 aPos; in vec2 aSide; in vec3 aNor; in vec3 aCol; in float aKind;
-uniform mat4 uP, uV, uM; uniform float uExag, uWidth, uLift;
+uniform mat4 uP, uV, uM; uniform float uExag, uWidth, uLift; uniform vec3 uTint;
 out vec3 vCol; out vec3 vN; out vec2 vMP;
 void main(){ vec3 p = aPos; p.y = p.y * uExag + aKind * uLift; p.xz += aSide * uWidth;
-  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = mat3(uM) * aNor; vCol = aCol; vMP = p.xz; }`;
+  gl_Position = uP * uV * uM * vec4(p, 1.0); vN = mat3(uM) * aNor; vCol = aCol * uTint; vMP = p.xz; }`;
 const FS = `#version 300 es
 precision highp float; in vec3 vCol; in vec3 vN; in vec2 vMP; uniform float uAlpha; uniform vec3 uClip; out vec4 o;
 void main(){ if (uClip.z > 0.0 && distance(vMP, uClip.xy) > uClip.z) discard; vec3 n = normalize(vN); float l = 0.58 + 0.42 * max(dot(n, normalize(vec3(-0.45, 0.85, 0.35))), 0.0); o = vec4(vCol * l, uAlpha); }`;
@@ -161,12 +161,21 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;max-width:calc(100% - 32px);color:rgba(235,235,245,.85);font-size:12px;pointer-events:none;background:rgba(28,28,30,.82);padding:6px 12px;border-radius:999px;backdrop-filter:blur(12px)}
 #tsXR label{display:flex;gap:6px;align-items:center;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px}
 #tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}
+#tsXR .appPanel{position:absolute;right:16px;top:64px;width:min(620px,48vw);max-height:calc(100% - 120px);overflow:auto;border-radius:18px;pointer-events:auto;box-shadow:0 18px 50px #0007}
+#tsXR .appPanel canvas{position:static;display:block;width:100%;height:auto}
 #tsXR.immersive{background:transparent;pointer-events:none}#tsXR.immersive .bar>*,#tsXR.immersive .note{pointer-events:auto}`;
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
 <button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="bld" class="on">${L.buildings}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
 <span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${opt.closeLabel || L.close + ' ✕'}</button>`}</div><div class="note"></div>`;
   document.body.append(root);
+  // the app's control panel (opt.panel, src/app_panel.js): beside the view on a screen, on the left hand in the headset
+  const panel = opt.panel || null; let panelOn = !!panel;
+  if (panel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(panel.canvas); root.append(box);
+    const uv = e => { const r = panel.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+    panel.canvas.addEventListener('pointermove', e => { panel.setHover(panel.hitAt(...uv(e))); panel.canvas.style.cursor = panel.hitAt(...uv(e)) != null ? 'pointer' : 'default'; });
+    panel.canvas.addEventListener('pointerleave', () => panel.setHover(null));
+    panel.canvas.addEventListener('click', e => { const i = panel.hitAt(...uv(e)); if (i != null) panel.press(i); }); }
   const cv = root.querySelector('canvas'), note = root.querySelector('.note');
   const gl = cv.getContext('webgl2', { antialias: true, alpha: true, xrCompatible: true });
   if (!gl){ note.textContent = 'WebGL2 is not available.'; return null; }
@@ -185,6 +194,8 @@ export function open(api, lang = 'zh', opt = {}){
   const status = () => { const n = snap.lines.length; note.textContent = (n ? L.streets(n) + ' · ' : '') + (api.stream ? streamLine() + ' · ' : api.buildings ? api.buildings + (lang === 'zh' ? ' 栋建筑 · ' : ' buildings · ') : '') + (api.note ? api.note + ' · ' : '') + L.hint + (api.finished() ? '' : ' · ' + L.grow); };
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
+  if (panel && api.stream) panel.setFooter(() => streamLine());
+  let panelT = 0; const panelTick = t => { if (panel && t - panelT > 400){ panelT = t; panel.draw(); } };
   const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
   let lastCheck = 0; const follow = t => { if (t - lastCheck < 600) return; lastCheck = t; const s = sigOf(); if (s !== st.sig){ st.sig = s; refresh(false); } };
 
@@ -238,15 +249,20 @@ export function open(api, lang = 'zh', opt = {}){
     gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
     for (const T of tiles.values()) if (T.ready){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
     gl.useProgram(prog.p); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0); gl.uniform1f(prog.u.uExag, 1);
+    gl.uniform3fv(prog.u.uTint, api.stream.painter?.building || [0.95, 0.94, 0.92]);
     if (st.bld) for (const T of tiles.values()) if (T.ready && T.mesh){ gl.bindVertexArray(T.mesh.vao); gl.drawElements(gl.TRIANGLES, T.mesh.n, gl.UNSIGNED_INT, 0); }
-    gl.bindVertexArray(null); }
+    gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.bindVertexArray(null); }
+  /** after the app's look changed: draw every loaded tile again */
+  function repaintTiles(){ if (!api.stream?.repaint) return; let n = 0;
+    for (const [k, T] of tiles) if (T.ready){ n++; T.styled = false; api.stream.repaint(k, () => tiles.get(k) === T).then(cv => { if (!cv || tiles.get(k) !== T) return; gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); }).catch(() => {}); }
+    status(); return n; }
 
   // drawing, shared by the page and the headset
   const unit = 1 / terrain.size;   // the model is 1 unit across in the page preview
   function drawScene(P, V, M, o){
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.uP, false, P); gl.uniformMatrix4fv(prog.u.uV, false, V); gl.uniformMatrix4fv(prog.u.uM, false, M);
-    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : [0, 0, -1]);
+    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]);
     if (api.stream){ drawTiles(P, V, M); return; }
     gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
     if (gTex){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4); }
@@ -267,7 +283,7 @@ export function open(api, lang = 'zh', opt = {}){
     else { cam.yaw = drag.c.yaw - dx * 4; cam.pitch = Math.max(0.08, Math.min(1.52, drag.c.pitch + dy * 3)); } });
   cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.12, Math.min(5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
-  function frame(t){ raf = requestAnimationFrame(frame); if (xrSession) return; follow(t);
+  function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(0.067, 0.067, 0.075, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
@@ -326,8 +342,11 @@ export function open(api, lang = 'zh', opt = {}){
       if (P.length === 1) base = { one: true, h: P[0].p, hy: P[0].yaw, pos: M.pos.slice(), yaw: M.yaw, s: M.s };
       else { const a = P[0].p, b = P[1].p; base = { one: false, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], d: Math.hypot(a[0] - b[0], a[2] - b[2], a[1] - b[1]) || 1e-3, ang: yawOf(b[0] - a[0], b[2] - a[2]), pos: M.pos.slice(), yaw: M.yaw, s: M.s }; } };
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
-    const add = e => { grabs.set(e.inputSource, true); base = 'pending'; }, rem = e => { if (grabs.delete(e.inputSource)) base = 'pending'; };
-    session.addEventListener('selectstart', add); session.addEventListener('squeezestart', add); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
+    const rayHit = new Map();   // input source → panel item under its ray
+    const add = (e, select) => { if (select && panelOn && rayHit.get(e.inputSource) != null){ panel.press(rayHit.get(e.inputSource)); return; }
+      grabs.set(e.inputSource, true); base = 'pending'; }, rem = e => { if (grabs.delete(e.inputSource)) base = 'pending'; };
+    let panelPose = null, panelTex = null, panelVer = -1;
+    session.addEventListener('selectstart', e => add(e, true)); session.addEventListener('squeezestart', e => add(e, false)); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
     session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); xrBox.querySelectorAll('button').forEach(b => b.hidden = false); status(); });
     const xrNote = () => { note.textContent = (lang === 'zh' ? `${mode === 'immersive-ar' ? 'MR' : 'VR'} 运行中 · 第 ${xr.frames} 帧 · ${xr.views} 个视图` : `${mode} · frame ${xr.frames} · ${xr.views} views`)
       + (api.stream ? ' · ' + streamLine() : '') + (xr.err ? (lang === 'zh' ? ' · 出错：' : ' · error: ') + xr.err : ''); };
@@ -348,6 +367,7 @@ export function open(api, lang = 'zh', opt = {}){
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
             if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
+        if (key === 'left' && panel && hit(3)) panelOn = !panelOn;
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
@@ -369,16 +389,39 @@ export function open(api, lang = 'zh', opt = {}){
         updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(2500, 0.45 / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
+      // the app panel: above the left hand, turned to you; rays from the other hands point at it
+      panelTick(t); panelPose = null; rayHit.clear();
+      const leftS = [...session.inputSources].find(s => s.handedness === 'left'), lpp = leftS && poseOf(frame, leftS);
+      if (panel && panelOn && lpp){ const sx = 0.36, sy = sx * panel.aspect(), c = [lpp.p[0], lpp.p[1] + 0.06 + sy / 2, lpp.p[2]];
+        const z = [head[0] - c[0], head[1] - c[1], head[2] - c[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
+        const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
+        panelPose = { c, x, y, z, sx, sy };
+        let hov = null;
+        for (const s of session.inputSources){ if (s === leftS || !s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue; const m = rp.transform.matrix;
+          const o = [m[12], m[13], m[14]], d = [-m[8], -m[9], -m[10]], den = d[0] * z[0] + d[1] * z[1] + d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
+          const tt = ((c[0] - o[0]) * z[0] + (c[1] - o[1]) * z[1] + (c[2] - o[2]) * z[2]) / den; if (tt <= 0 || tt > 4) continue;
+          const q = [o[0] + d[0] * tt - c[0], o[1] + d[1] * tt - c[1], o[2] + d[2] * tt - c[2]], u = (q[0] * x[0] + q[1] * x[1] + q[2] * x[2]) / sx + 0.5, v = 0.5 - (q[0] * y[0] + q[1] * y[1] + q[2] * y[2]) / sy;
+          if (u < 0 || u > 1 || v < 0 || v > 1) continue; const i = panel.hitAt(u, v); s.__panelT = tt; if (i != null){ rayHit.set(s, i); hov = i; } else rayHit.set(s, null); }
+        panel.setHover(hov);
+        if (panel.version !== panelVer){ panelVer = panel.version; if (!panelTex) panelTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, panelTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, panel.canvas); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); } }
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         drawScene(P, V, Mm, o);
         // controller rays
-        gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
-        for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue; gl.uniformMatrix4fv(prog.u.uM, false, rp.transform.matrix); gl.bindVertexArray(ray.vao); gl.drawElements(gl.LINES, 2, gl.UNSIGNED_INT, 0); }
+        gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
+        for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue;
+          const len = rayHit.has(s) ? s.__panelT / 0.6 : 1, sc = M4.id(); sc[10] = len;   // a ray that meets the panel ends on it
+          gl.uniformMatrix4fv(prog.u.uM, false, M4.mul(rp.transform.matrix, sc)); gl.bindVertexArray(ray.vao); gl.drawElements(gl.LINES, 2, gl.UNSIGNED_INT, 0); }
         // help card above the left hand, turned to face you
         const left = [...session.inputSources].find(s => s.handedness === 'left'), lp = left && poseOf(frame, left);
-        if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
+        if (panelPose && panelTex){ const { c, x, y, z, sx, sy } = panelPose;
+          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, c, [sx, sy]));
+          gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, panelTex); gl.uniform1i(tex.u.uT, 0);
+          gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
+        else if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
@@ -389,6 +432,6 @@ export function open(api, lang = 'zh', opt = {}){
 
   const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; for (const T of tiles.values()) freeTile(T); tiles.clear(); opt.onClose?.({ focus: api.stream && clip[2] > 0 ? [clip[0], -clip[1]] : null }); };
   if (btn('close')) btn('close').onclick = close; addEventListener('keydown', function esc(e){ if (e.key === 'Escape' && OPEN){ close(); removeEventListener('keydown', esc); } });
-  OPEN = { close, state: st, refresh };
+  OPEN = { close, state: st, refresh, repaintTiles };
   return OPEN;
 }
