@@ -190,6 +190,7 @@ async function createMapLibreViewer(el, opts) {
     map,
     addOverlay(o) { if (overlays.has(o.id)) return; overlays.set(o.id, o); o.attachMapLibre?.(map, overlayBefore()); lm?.restack(); },
     london: lm,
+    setPanelDocked(on) { lmPanel?.setDocked(on); },
     removeOverlay(id) { overlays.get(id)?.detachMapLibre?.(); overlays.delete(id); },
     redraw() { for (const o of overlays.values()) o.sync?.(); map.triggerRepaint(); },
     setScene(scene) {

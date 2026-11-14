@@ -291,6 +291,7 @@ function render() {
   if (entry && viewer) {
     viewer.setScene(sceneFor(entry));
     viewer.setProgress(activeTool === 'growth' ? 1 : progress);
+    viewer.setPanelDocked?.(activeTool === 'growth');      // in 01 the map display panel hugs the map's right edge
   }
 }
 
