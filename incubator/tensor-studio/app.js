@@ -20,14 +20,14 @@ const PAL = {
   light: { bg:'#f2f2f4', land:'#ffffff', landShadow:'rgba(0,0,0,0.08)', edge:'#1d1d1f', contour:'rgba(0,0,0,0.07)', contourIdx:'rgba(0,0,0,0.16)', label:'#8e8e93',
     water:'#d9e8f6', waterEdge:'#6aa6dc', stream:'#6aa6dc', room:'rgba(0,113,227,0.05)', bld:'#e5e5ea', urban:'rgba(0,0,0,0.025)', lane:'#e8e8ed',
     prim:'#1d1d1f', rib:{M:'#c7c7cc',A:'#d1d1d6',B:'#dcdce0',C:'#e5e5ea'}, main:'#1d1d1f', second:'#8e8e93', grow:'#0071e3', glow:'rgba(0,113,227,0.28)',
-    anchor:'#1d1d1f', attr:'#0071e3', attr2:'#32ade6', attrE:'#af52de', bridge:'#1d1d1f', culvert:'#0071e3', width:'#1d1d1f',
+    anchor:'#1d1d1f', attr:'#0071e3', attr2:'#f08a00', attrE:'#af52de', bridge:'#1d1d1f', culvert:'#0071e3', width:'#1d1d1f',
     flow:[[0,113,227],[99,99,102],[255,149,0]], flowBlend:'source-over', flowAlpha:0.42, fade:0.03,
     fieldLine:'rgba(0,113,227,0.45)', fieldLine2:'rgba(0,0,0,0.18)', wLo:[209,209,214], wHi:[29,29,31], wind:{west:'#0071e3',north:'#5ac8fa',east:'#ff9500',south:'#34c759'}, windAlong:'#0071e3', windAcross:'#ff9500', ghost:'rgba(0,0,0,0.25)', cells:['#fafafa','#efeff2','#e2e2e7','#d1d1d6','#bcbcc2'], cross:'rgba(0,0,0,0.32)', evBranch:'#0071e3', evFork:'#ff9500', evCross:'#1d1d1f', evInfill:'#34c759', other:'rgba(255,149,0,0.6)', uTeal:[0,113,227], uOrange:[255,149,0] },
   // dark: the references (deep plum-charcoal ground, cream linework, teal water, orange heat, sage canopy)
   dark: { bg:'#000000', land:'#111113', landShadow:'rgba(0,0,0,0)', edge:'#f5f5f7', contour:'rgba(255,255,255,0.06)', contourIdx:'rgba(255,255,255,0.15)', label:'#8e8e93',
     water:'#0c2238', waterEdge:'#409cff', stream:'#409cff', room:'rgba(10,132,255,0.07)', bld:'#2c2c2e', urban:'rgba(255,255,255,0.025)', lane:'#232325',
     prim:'#f5f5f7', rib:{M:'#3a3a3c',A:'#444446',B:'#3a3a3c',C:'#2c2c2e'}, main:'#f5f5f7', second:'#8e8e93', grow:'#0a84ff', glow:'rgba(10,132,255,0.5)',
-    anchor:'#f5f5f7', attr:'#0a84ff', attr2:'#64d2ff', attrE:'#bf5af2', bridge:'#f5f5f7', culvert:'#0a84ff', width:'#f5f5f7',
+    anchor:'#f5f5f7', attr:'#0a84ff', attr2:'#ff9f0a', attrE:'#bf5af2', bridge:'#f5f5f7', culvert:'#0a84ff', width:'#f5f5f7',
     flow:[[10,132,255],[235,235,245],[255,159,10]], flowBlend:'source-over', flowAlpha:0.36, fade:0.03,
     fieldLine:'rgba(10,132,255,0.55)', fieldLine2:'rgba(255,255,255,0.22)', wLo:[72,72,74], wHi:[245,245,247], wind:{west:'#0a84ff',north:'#64d2ff',east:'#ff9f0a',south:'#30d158'}, windAlong:'#0a84ff', windAcross:'#ff9f0a', ghost:'rgba(255,255,255,0.2)', cells:['#111113','#19191b','#222225','#2c2c30','#3a3a3e'], cross:'rgba(255,255,255,0.28)', evBranch:'#0a84ff', evFork:'#ff9f0a', evCross:'#f5f5f7', evInfill:'#30d158', other:'rgba(255,159,10,0.65)', uTeal:[10,132,255], uOrange:[255,159,10] }
 };
@@ -1490,14 +1490,14 @@ function render(now){
   const tt = (now - T0) / 1000;
   // (v8.12) each kind its own colour and size: main blue and large, local cyan and small, edge purple; the dot and the
   // pulse grow with the kind's pull, the faint circle is its reach
-  for (const a of attractorsOn()){ const col = a.kind === 'edge' ? P.attrE : a.main ? P.attr : P.attr2, sz = a.kind === 'sec' ? 3 : 4.5, pf = clamp(a.pull / 2.4, 0.15, 1.3), x = X(a.x), y = Y(a.y);
+  for (const a of attractorsOn()){ const col = a.kind === 'edge' ? P.attrE : a.main ? P.attr : P.attr2, sz = a.kind === 'sec' ? 4.5 : 4.5, pf = clamp(a.pull / 2.4, 0.15, 1.3), x = X(a.x), y = Y(a.y);
     ctx.globalAlpha = 0.22; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.arc(x, y, a.reach * view.s, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
     for (let k = 0; k < 2; k++){ const ph = ((tt * 0.6 + k * 0.5) % 1), r = sz + 3 + ph * (a.reach * view.s * 0.55 * pf); ctx.strokeStyle = col; ctx.globalAlpha = (1 - ph) * 0.6 * Math.min(1, 0.35 + pf); ctx.lineWidth = a.kind === 'sec' ? 1.1 : 1.8; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.stroke(); }
     const rr = sz + 2.2 * pf; ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.strokeStyle = THEME === 'dark' ? '#000' : '#fff'; ctx.lineWidth = 1.5;
     // (v8.13) the shape tells the kind: main a circle, local a square, edge a triangle
     if (a.kind === 'edge'){ const h = rr * 1.25; ctx.beginPath(); ctx.moveTo(x, y - h * 1.05); ctx.lineTo(x + h, y + h * 0.75); ctx.lineTo(x - h, y + h * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (a.kind === 'main'){ ctx.beginPath(); ctx.arc(x, y, rr + 2.5, 0, 2 * PI); ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, rr, 0, 2 * PI); ctx.fill(); }
-    else { const h = rr * 0.9; ctx.beginPath(); ctx.rect(x - h, y - h, 2 * h, 2 * h); ctx.fill(); ctx.stroke(); } }
+    else { const h = rr * 1.05; ctx.beginPath(); ctx.rect(x - h, y - h, 2 * h, 2 * h); ctx.fill(); ctx.stroke(); } }
   drawScale(); drawRose(); hud(); }
 function drawScale(){ const want = VW * 0.16 / view.s; let m = 50; for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if (s <= want) m = s;
   const x1 = VW - 24 - (window.__TS_INSETS ? window.__TS_INSETS().rb : 0), x0 = x1 - m * view.s, y = VH - 26; for (let k = 0; k < 4; k++){ ctx.fillStyle = k % 2 ? P.bg : P.main; ctx.fillRect(x0 + m * view.s * k / 4, y, m * view.s / 4, 5); }
