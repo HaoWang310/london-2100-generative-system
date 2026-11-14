@@ -4,7 +4,7 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.16';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.17';
 
 const ZMAX = 14, R = 6378137, WORLD = 2 * Math.PI * R;
 const tileM = z => WORLD / 2 ** z;   // Web Mercator metres per tile side at zoom z
@@ -24,7 +24,8 @@ export function osmStream(lat, lon, opt = {}){
     /** plan metres → { lat, lng } */
     toLatLng(px, py){ const mx = px / K + mx0, my = py / K + my0; return { lng: mx / R * 180 / Math.PI, lat: (2 * Math.atan(Math.exp(my / R)) - Math.PI / 2) * 180 / Math.PI }; },
     /** the zoom that puts about three tiles across a circle of radius r (14 = streets with buildings … 0 = the world) */
-    zoomFor(r){ return Math.max(0, Math.min(ZMAX, Math.round(Math.log2(3 * sizeOf(0) / (2 * r))))); },
+    zoomExact(r){ return Math.log2(3 * sizeOf(0) / (2 * r)); },
+    zoomFor(r){ return Math.max(0, Math.min(ZMAX, Math.round(this.zoomExact(r)))); },
     /** keys "z/x/y" of tiles whose square touches the circle (px, py, r) in plan metres, nearest first */
     near(px, py, r, z = this.zoomFor(r)){
       const out = [], n = 2 ** z, size = sizeOf(z);

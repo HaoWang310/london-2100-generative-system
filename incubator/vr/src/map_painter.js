@@ -6,7 +6,7 @@
 // Extrusions are hidden there (VR extrudes the buildings itself), and the app's building colour is reported so the
 // VR prisms match. The app map itself is only read (getStyle), never changed.
 
-import { mapLib } from './map_bridge.js?v=0.16';
+import { mapLib } from './map_bridge.js?v=0.17';
 
 const PX = 1024, Z = 15;   // Z: only the starting view
 
