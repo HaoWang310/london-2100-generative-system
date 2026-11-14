@@ -32,7 +32,7 @@ void main() { v_uv = a_uv; gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0); }`;
 const FS = `
 precision highp float;
 uniform sampler2D u_cells; uniform vec2 u_grid; uniform float u_year; uniform float u_opacity; uniform float u_edge;
-uniform float u_smooth; uniform float u_aa;
+uniform float u_smooth; uniform float u_aa; uniform float u_round;
 uniform vec3 u_c1; uniform vec3 u_c2; uniform vec3 u_c3; uniform vec3 u_c4; uniform vec3 u_c5;
 uniform float u_show; varying vec2 v_uv;
 float classOf(vec2 cell) {
@@ -52,7 +52,7 @@ void main() {
   if (u_smooth > 0.5) {
     vec2 p = v_uv * u_grid - 0.5;
     vec2 i0 = floor(p), t = p - i0;
-    t = t * t * (3.0 - 2.0 * t);
+    t = smoothstep(0.5 - u_round, 0.5 + u_round, t);   // u_round: how far from a parcel edge the rounding reaches
     float a = classOf(i0), b = classOf(i0 + vec2(1.0, 0.0)), c = classOf(i0 + vec2(0.0, 1.0)), d = classOf(i0 + vec2(1.0, 1.0));
     float wa = (1.0 - t.x) * (1.0 - t.y), wb = t.x * (1.0 - t.y), wc = (1.0 - t.x) * t.y, wd = t.x * t.y;
     // weight of each candidate class (the four corners' classes)
@@ -182,6 +182,7 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
       const smooth = opts.smooth && cellPx >= 3;
       gl.uniform1f(gl.getUniformLocation(prog, 'u_smooth'), smooth ? 1 : 0);
       gl.uniform1f(gl.getUniformLocation(prog, 'u_aa'), smooth ? Math.min(0.5, 2.4 / cellPx) : 0.0);
+      gl.uniform1f(gl.getUniformLocation(prog, 'u_round'), opts.round ?? 0.24);
       for (const k of [1, 2, 3, 4, 5]) gl.uniform3fv(gl.getUniformLocation(prog, `u_c${k}`), rgb(PALETTE[k]));
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.drawElements(gl.TRIANGLES, mesh.index.length, gl.UNSIGNED_SHORT, 0);
