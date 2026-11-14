@@ -139,3 +139,19 @@ test('the fill reaches the 70 km circle and stays outside the model grid', async
   assert.ok(n > 5000, `filled parcels ${n}`);
   assert.equal(outside, 0);
 });
+
+test('生成流程: the steps hold every simple control once, summarise, and the first pass is in the data', () => {
+  const ids = GVC.SIMPLE.flatMap(g => g.c.map(c => c.id)), inSteps = GVC.STEPS.flatMap(s => s.c || []).filter(id => id !== 'seed');
+  assert.deepEqual([...inSteps].sort(), [...ids].sort());
+  assert.ok(GVC.STEPS.some(s => (s.c || []).includes('seed')));
+  const fmt = (v, d = 0) => v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d }), T = t => t;
+  for (const st of GVC.STEPS) {
+    assert.ok(I18N.zh[st.t], `zh ${st.t}`);
+    const line = st.sum({ D, P: { ...evaluateEngine(read('engine.js')).DEFAULTS }, stats: D.final.stats[75], fmt, T });
+    assert.equal(typeof line, 'string'); assert.ok(line.length > 4, st.id);
+  }
+  for (const k of ['idx', 'cls', 'off']) assert.ok(D.pass1[k], `pass1.${k}`);
+  const p1 = cellsFromEvents(N, { idx: new Uint32Array(unz(D.pass1.idx)), cls: new Uint8Array(unz(D.pass1.cls)), off: D.pass1.off });
+  let built = 0; for (let i = 0; i < N; i++) { const c = classAt(p1, i, 75); if (c >= 1 && c <= 3) built++; }
+  assert.ok(built * 0.0025 > 300, `first pass builds ${built * 0.0025} km²`);
+});

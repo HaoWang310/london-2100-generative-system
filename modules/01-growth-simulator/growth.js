@@ -114,13 +114,22 @@ export function createGrowth({ base = sourceBase(), onChange = () => {} } = {}) 
           emit('progress');
         });
         const ev = { idx: res.idx, cls: res.cls, off: res.off };
-        s.variation = { ev, stats: res.stats, cells: cellsFromEvents(s.N, ev), id: runId, ms: performance.now() - t0 };
+        s.variation = { ev, stats: res.stats, cells: cellsFromEvents(s.N, ev), pass1: res.pass1, id: runId, ms: performance.now() - t0 };
         s.ranWith = params; s.mode = 'variation'; s.compare = null;
         return s.variation;
       } finally {
         s.running = false; s.progress = 0; s.status = 'done'; emit('ran');
       }
     },
+    /** The release's first pass (step 6), as cells; loaded once, on demand. */
+    loadPass1() {
+      if (!s.pass1Final) s.pass1Final = Promise.all([fetchOk(s.base + s.D.pass1.idx, 'buf').then(inflate), fetchOk(s.base + s.D.pass1.cls, 'buf').then(inflate)])
+        .then(([i, c]) => cellsFromEvents(s.N, { idx: new Uint32Array(i), cls: new Uint8Array(c), off: s.D.pass1.off }));
+      s.pass1Final.catch(() => { s.pass1Final = null; });
+      return s.pass1Final;
+    },
+    /** The score each parcel gets with these settings (step 5): 1..255 on a log scale, 0 = never built. */
+    magnet(params = s.P) { return call({ type: 'magnet', params: { ...params } }, pr => { onGround(pr); emit('progress'); }).then(r => r.magnet); },
     async compareAt(y = s.year) {
       if (!s.variation) return null;
       const r = await call({ type: 'compare', runId: s.variation.id, year: y });

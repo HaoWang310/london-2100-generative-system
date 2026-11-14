@@ -16,10 +16,11 @@ const EXTRA_ZH = {
 
 const fmt = (v, d = 0) => v.toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export function createPanel(container, growth, { onDisplay = () => {}, display }) {
+export function createPanel(container, growth, { onDisplay = () => {}, onStep = () => {}, display }) {
   const s = growth.state;
   const T = str => (getLang() === 'zh' && (s.I18N?.zh?.[str] || EXTRA_ZH[str])) || str;
   let advOpen = false, SC = {}, SL = {}, graph = null, ratio = null, cmpTimer = null, cmpFor = '';
+  let openStep = null, flowing = false, flowT = 0, flowI = 0;
   const el = {};
 
   // -------------------------------------------------------------- settings (ported from the incubator page)
@@ -49,7 +50,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
     });
   }
   function syncAll() { for (const k of Object.keys(SL)) { SL[k].inp.value = s.P[k]; showVal(k); } syncSimple(); markPresets(); drawGraph(); }
-  const changed = () => { syncAll(); growth.setParams({}); };
+  const changed = () => { syncAll(); growth.setParams({}); stepsSync(); };
   const presetRow = list => h('div', { class: 'g01-pre' }, list.map(b => {
     const bt = h('button', { type: 'button', class: 'btn', onclick: () => { Object.assign(s.P, b[1]); changed(); } }, T(b[0]));
     bt.dataset.set = JSON.stringify(b[1]);
@@ -146,6 +147,85 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
     el.run.disabled = s.running; el.reset.disabled = s.running;
   }
 
+  // -------------------------------------------------------------- 生成流程: the steps
+  const ctlById = id => { for (const g of s.GVC.SIMPLE) for (const c of g.c) if (c.id === id) return c; return null; };
+  // a step marked live shows the outcome; once the settings differ from what it shows, it waits for a run
+  const outdated = () => (s.mode === 'variation' && s.variation ? growth.stale() : !growth.isDefault());
+  function stepsSync() {
+    if (!el.steps) return;
+    const R = s.mode === 'variation' && s.variation ? s.variation : s.final, x = { D: s.D, P: s.P, stats: R.stats[75], fmt, T }, old = outdated();
+    for (const card of el.steps.children) {
+      const st = s.GVC.STEPS.find(q => q.id === card.dataset.id);
+      let txt = ''; try { txt = st.sum(x); } catch { txt = ''; }
+      card.querySelector('.ss').textContent = txt;
+      card.classList.toggle('pending', Boolean(st.live) && old);
+      card.classList.toggle('open', st.id === openStep);
+    }
+  }
+  function openStepAt(id) {
+    openStep = id;
+    const st = s.GVC.STEPS.find(q => q.id === id) || null;
+    stepsSync();
+    onStep(st);
+    if (st?.graph) requestAnimationFrame(drawGraph);
+  }
+  function stopFlow() {
+    if (!flowing) return;
+    flowing = false; clearTimeout(flowT); clearInterval(flowI);
+    if (el.flow) el.flow.textContent = T('Play the whole process');
+  }
+  function playFlow() {
+    if (flowing) { stopFlow(); return; }
+    flowing = true; el.flow.textContent = T('Stop');
+    let i = 0;
+    const grow = then => {                    // 2025 to 2100 in about six seconds
+      let y = 0; growth.setYear(0);
+      flowI = setInterval(() => { if (!flowing) return; y += 1; growth.setYear(Math.min(75, y)); if (y >= 75) { clearInterval(flowI); flowT = setTimeout(then, 1600); } }, 80);
+    };
+    const next = () => {
+      if (!flowing) return;
+      if (i >= s.GVC.STEPS.length) { stopFlow(); return; }
+      const st = s.GVC.STEPS[i++];
+      openStepAt(st.id);
+      el.steps.querySelector(`[data-id="${st.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (st.id === 'pass1' || st.id === 'pass2') grow(next);
+      else { if (st.id === 'farm' || st.id === 'result') growth.setYear(75); flowT = setTimeout(next, st.id === 'result' ? 4000 : 3400); }
+    };
+    next();
+  }
+  function control(c) {
+    const def = c.get(s.DEFAULTS), [inp, tr] = track(c.min, c.max, c.step, def), val = h('span', { class: 'param-value' });
+    SC[c.id] = { inp, val };
+    inp.addEventListener('input', () => { const v = +inp.value; c.set(s.P, Math.abs(v - def) < c.step / 2 + 1e-9 ? def : v); changed(); });
+    return [h('div', { class: 'param g01-sl' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T(c.t)), val), tr,
+      h('div', { class: 'g01-ends' }, h('span', {}, T(c.ends[0])), h('span', {}, T(c.ends[1])))), c.pre ? presetRow(c.pre) : null];
+  }
+  function seedRow() {
+    el.seedv = h('p', { class: 'muted small' });
+    return [h('div', { class: 'g01-acts' },
+      h('button', { class: 'btn', onclick: () => { let n; do { n = 1 + Math.floor(Math.random() * 3000); } while (n === s.P.seed); s.P.seed = n; changed(); } }, T('Roll another layout')),
+      h('button', { class: 'btn', onclick: () => { s.P.seed = 42; changed(); } }, T("The release's layout"))), el.seedv];
+  }
+  function buildSteps() {
+    graph = h('canvas', { class: 'g01-graph' }); ratio = h('p', { class: 'muted small' });
+    el.steps = h('div', { class: 'g01-steps' }, s.GVC.STEPS.map(st => {
+      const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Run the variation to update this step.')));
+      if (st.graph) body.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
+      for (const id of st.c || []) {
+        const parts = id === 'seed' ? seedRow() : ctlById(id) ? control(ctlById(id)) : [];
+        for (const p of parts) if (p) body.append(p);
+      }
+      const card = h('div', { class: 'g01-step' },
+        h('button', { type: 'button', class: 'sh', onclick: () => { stopFlow(); openStepAt(openStep === st.id ? null : st.id); } },
+          h('span', { class: 'ck' }), h('span', { class: 'st' }, h('b', {}, T(st.t)), h('span', { class: 'ss' })), h('span', { class: 'chev' }, '›')),
+        body);
+      card.dataset.id = st.id;
+      return card;
+    }));
+    el.flow = h('button', { type: 'button', class: 'btn g01-flowbtn', onclick: playFlow }, T(flowing ? 'Stop' : 'Play the whole process'));
+    return h('div', { class: 'g01-sec' }, h('div', { class: 'g01-flowhead' }, h('div', { class: 'eyebrow' }, T('How the city is made')), el.flow), el.steps);
+  }
+
   // -------------------------------------------------------------- build
   function build() {
     container.replaceChildren();
@@ -171,27 +251,8 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
       h('div', { class: 'g01-sec' },
         h('div', { class: 'g01-yrow' }, el.year, el.which), el.pop, h('p', { class: 'muted small' }, T('people living in the loop')), el.land));
 
-    // simple controls
-    graph = h('canvas', { class: 'g01-graph' }); ratio = h('p', { class: 'muted small' });
-    for (const g of s.GVC.SIMPLE) {
-      const box = h('div', { class: 'g01-sec' }, h('div', { class: 'eyebrow' }, T(g.t)), h('p', { class: 'muted small' }, T(g.note)));
-      if (g.graph) box.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
-      for (const c of g.c) {
-        const def = c.get(s.DEFAULTS), [inp, tr] = track(c.min, c.max, c.step, def), val = h('span', { class: 'param-value' });
-        SC[c.id] = { inp, val };
-        inp.addEventListener('input', () => { const v = +inp.value; c.set(s.P, Math.abs(v - def) < c.step / 2 + 1e-9 ? def : v); changed(); });
-        box.append(h('div', { class: 'param g01-sl' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T(c.t)), val), tr,
-          h('div', { class: 'g01-ends' }, h('span', {}, T(c.ends[0])), h('span', {}, T(c.ends[1])))));
-        if (c.pre) box.append(presetRow(c.pre));
-      }
-      if (g.seed) {
-        el.seedv = h('p', { class: 'muted small' });
-        box.append(h('div', { class: 'g01-acts' },
-          h('button', { class: 'btn', onclick: () => { let n; do { n = 1 + Math.floor(Math.random() * 3000); } while (n === s.P.seed); s.P.seed = n; changed(); } }, T('Roll another layout')),
-          h('button', { class: 'btn', onclick: () => { s.P.seed = 42; changed(); } }, T("The release's layout"))), el.seedv);
-      }
-      container.append(box);
-    }
+    // the steps (the simple controls, each in the step it belongs to)
+    container.append(buildSteps());
 
     // advanced
     const adv = h('div', { class: `g01-adv ${advOpen ? 'open' : ''}` });
@@ -229,7 +290,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
       h('div', { class: 'param' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T('Opacity'))), op),
       sw('background', T('Keep as background on the other levels'))));
 
-    syncAll(); readout(); statusLine();
+    syncAll(); readout(); statusLine(); stepsSync();
     requestAnimationFrame(drawGraph);
   }
 
@@ -238,11 +299,13 @@ export function createPanel(container, growth, { onDisplay = () => {}, display }
     update(what) {
       if (what === 'loaded' || what === 'error' || what === 'lang') { build(); return; }
       if (!s.loaded) return;
-      if (what === 'params' || what === 'mode' || what === 'ran') { statusLine(); readout(); if (what !== 'params') syncAll(); }
+      if (what === 'params' || what === 'mode' || what === 'ran') { statusLine(); readout(); if (what !== 'params') syncAll(); stepsSync(); }
       if (what === 'year') readout();
       if (what === 'progress' || what === 'running') statusLine();
     },
-    resize: drawGraph
+    resize: drawGraph,
+    /** Close the open step (the map back to the outcome) and stop the flow. */
+    closeSteps() { stopFlow(); if (openStep) openStepAt(null); }
   };
 }
 
@@ -267,6 +330,21 @@ export const PANEL_CSS = `
 .g01-land th { font-weight: 500; color: var(--text-3); text-align: right; font-size: 11px; }
 .g01-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
 .g01-graph { width: 100%; height: 130px; display: block; }
+.g01-flowhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.g01-flowhead .eyebrow { margin: 0; }
+.g01-flowbtn { height: 26px; padding: 0 12px; border-radius: 999px; font-size: 12px; }
+.g01-step { border: 1px solid var(--hairline); border-radius: 12px; margin: 6px 0; background: rgba(255,255,255,.015); transition: border-color .15s, background .15s; }
+.g01-step.open { border-color: var(--hairline-strong); background: rgba(255,255,255,.04); }
+.g01-step .sh { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 10px 12px; cursor: pointer; font: inherit; }
+.g01-step .ck { flex: 0 0 20px; height: 20px; border-radius: 50%; background: #f2f2f2; position: relative; margin-top: 1px; box-sizing: border-box; }
+.g01-step .ck::after { content: ""; position: absolute; left: 7px; top: 3px; width: 5px; height: 10px; border: solid #111; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.g01-step.pending .ck { background: transparent; border: 1.5px solid var(--text-3); } .g01-step.pending .ck::after { display: none; }
+.g01-step .st { flex: 1; min-width: 0; } .g01-step .st b { display: block; font-size: 13.5px; font-weight: 600; }
+.g01-step .ss { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.g01-step .chev { color: var(--text-3); transition: transform .2s; margin-top: 1px; } .g01-step.open .chev { transform: rotate(90deg); }
+.g01-step .sb { display: none; padding: 0 12px 8px; } .g01-step.open .sb { display: block; }
+.g01-step .sb .note { color: var(--text-3); font-size: 12px; line-height: 1.45; margin: 0 0 8px; }
+.g01-step .stale { display: none; color: #EFA65C; font-size: 12px; margin: 0 0 8px; } .g01-step.open.pending .stale { display: block; }
 .g01-glab { margin: 6px 0 2px !important; }
 .g01-sl .param-value.def { color: var(--text-3); } .g01-sl .param-value { color: #EFA65C; }
 .g01-sl .param-value.custom { color: var(--text-3); font-style: italic; }
