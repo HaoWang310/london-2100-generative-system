@@ -55,12 +55,12 @@ function injectCss() {
 }
 
 /**
- * The tool the app mounts. display: {show, rails, edges, opacity, background}.
+ * The tool the app mounts. display: {show, rails, smooth, edges, opacity, background}.
  * onState(what) fires on 'loaded' | 'year' | 'mode' | 'params' | 'progress' | 'ran' | 'error'.
  */
 export function createGrowthTool(viewer, { onState = () => {} } = {}) {
   injectCss();
-  const display = { show: true, rails: true, edges: true, opacity: 0.9, background: true };
+  const display = { show: true, rails: true, smooth: true, edges: false, opacity: 0.9, background: true };
   let active = false, overlay = null, panel = null;
   const container = globalThis.document ? document.createElement('div') : null;
 
@@ -81,13 +81,13 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       meta: s.D.meta, rails: s.D.rails, stations: s.D.meta.NODES, opacity: display.opacity,
       get: () => ({ cells: growth.shown()?.cells || null, year: s.year, show: visible() })
     });
-    overlay.set({ edges: display.edges, rails: display.rails, opacity: display.opacity });
+    overlay.set({ edges: display.edges, smooth: display.smooth, rails: display.rails, opacity: display.opacity });
     viewer.addOverlay?.(overlay);
   }
 
   if (container) panel = createPanel(container, growth, {
     display,
-    onDisplay: change => { Object.assign(display, change); overlay?.set({ edges: display.edges, rails: display.rails, opacity: display.opacity }); viewer.redraw?.(); }
+    onDisplay: change => { Object.assign(display, change); overlay?.set({ edges: display.edges, smooth: display.smooth, rails: display.rails, opacity: display.opacity }); viewer.redraw?.(); }
   });
 
   return {
