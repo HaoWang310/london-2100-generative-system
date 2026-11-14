@@ -3,6 +3,19 @@
    Chinese shown when the UI language is set to zh. Terminology follows the
    original Chinese wording preserved in ui_english_dictionary.js. */
 export const CHINESE_UI = {
+  "Tensor-field street generation": "张量场生成街道",
+  "Expand tensor-field street generation": "展开张量场生成街道",
+  "Collapse tensor-field street generation": "收起张量场生成街道",
+  "Red boundary · OS Terrain 50 · OSM streets, water and buildings · EA flood risk": "红线边界 · OS Terrain 50 · OSM 道路、水体与建筑 · EA 洪水风险",
+  "Enter site · Tensor-field streets": "进入场地 · 张量场生成街道",
+  "After the second Enter confirms the site, double-click inside the red boundary or click here": "第二次回车确认场地后，在红色边界内双击或点击这里",
+  "Inside the site, Tensor Studio opens over the map: terrain, runoff, wind and flood risk shape a tensor field; main and second streets grow from it round the existing buildings; the result is scored, compared and exported. Esc returns here.": "进入场地后，张量场工作室会覆盖在地图上打开：地形、汇水、风和洪水风险叠成张量场，主路和次路顺着它、绕开现有建筑生长；结果可评分、比较和导出。按 Esc 返回这里。",
+  "Boundary confirmed: double-click inside the red outline or click Enter site": "边界已确认：在红色轮廓内双击，或点击「进入场地」",
+  "Press Enter to confirm the boundary first, then double-click inside to enter the site.": "请先按回车确认边界，再在边界内双击进入场地。",
+  "Preparing the Tensor Studio site…": "正在准备张量场场地…",
+  "Tensor Studio could not open this site:": "张量场工作室无法打开这个场地：",
+  "Site tools failed to load": "场地工具加载失败",
+  "OSM map is available, but the site tools could not load:": "OSM 地图可用，但场地工具无法加载：",
   "Local flood simulation: Terrain uses the same OS Terrain 50 raster reprojected to EPSG:3857 at 50 m resolution. Buildings come from current OSM / OpenFreeMap vector tiles and block runoff through footprints. Decorative water on building bases informs visualization and planning direction only, not the simulated water budget. The browser approximates rainfall-runoff propagation with mass-conserving terrain routing and highlights buildings when footprints or adjacent depths reach 5 cm. This conceptual urban-design comparison must not replace engineering flood modelling with 1 m LiDAR, sewer networks and 2D shallow-water equations.": "局部洪涝模拟：地形使用同一份 OS Terrain 50 栅格，重投影到 EPSG:3857，分辨率 50 m。建筑来自当前 OSM / OpenFreeMap 矢量瓦片，以其轮廓阻挡径流。建筑底部的装饰性水体仅用于可视化和规划方向判断，不计入模拟水量平衡。浏览器以质量守恒的地形汇流近似降雨–径流传播，当建筑轮廓或相邻水深达到 5 cm 时高亮该建筑。这是概念性的城市设计对比，不能替代基于 1 m LiDAR、排水管网与二维浅水方程的工程洪水模型。",
   "The regional overview was retrieved from the official WMS on 2026-10-11 at 12.5 m sampling in EPSG:27700, summarized into 25 m display cells and aligned to the EPSG:3857 catchment extent. At street scale, official present-day flood-risk tiles are requested at OSM EPSG:3857 coordinates and the higher available class is shown per pixel, without 25 m aggregation. Display cells may be around 1–3 m at typical London street zooms; they do not add modelling accuracy. Both scales share the same legend and 70 km clipping. Blank areas do not imply zero risk. If detailed service is unavailable, the overview remains visible with a notice.": "区域概览图于 2026-10-11 从官方 WMS 获取，在 EPSG:27700 下以 12.5 m 采样，汇总为 25 m 显示单元并对齐到 EPSG:3857 汇水范围。在街道尺度下，官方当前洪水风险瓦片按 OSM EPSG:3857 坐标请求，逐像素显示可用的较高等级，不做 25 m 聚合。在伦敦常见的街道缩放级别下，显示单元约为 1–3 m；这并不提升模型精度。两种尺度共用同一图例与 70 km 裁剪。空白区域不代表风险为零。若详细服务不可用，概览图将继续显示并给出提示。",
   "Terrain: Environment Agency LiDAR Composite DTM 1 m (Open Government Licence). The site caches a terrain overview retrieved on 2026-10-11 and aligned to the same EPSG:3857 extent as the catchment raster. Since v3.21.16, browser Workers generate Web Mercator XYZ tiles locally rather than requesting EA WMS/WMTS while navigating, zooming or tilting. Visible detail depends on the cached overview resolution and is not equivalent to loading individual 1 m DEM pixels.": "地形：英国环境署 LiDAR Composite DTM 1 m（开放政府许可）。站点缓存了 2026-10-11 获取的地形概览图，并对齐到与汇水栅格相同的 EPSG:3857 范围。自 v3.21.16 起，浏览器 Worker 在本地生成 Web Mercator XYZ 瓦片，平移、缩放或倾斜时不再请求 EA WMS/WMTS。可见细节取决于缓存概览图的分辨率，不等同于逐像素加载 1 m DEM。",
