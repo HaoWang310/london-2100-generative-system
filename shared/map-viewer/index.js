@@ -92,7 +92,9 @@ async function createMapLibreViewer(el, opts) {
   // weather, 3D city, shadows, trees, vehicles, search, analysis layers. They capture the basemap's own
   // layers, so they load before anything else is added. If they cannot load, the muted dark basemap stays.
   const overlays = new Map();
-  const overlayFloor = () => (map.getStyle()?.layers || []).find(l => [...overlays.keys()].some(p => l.id.startsWith(`${p}-`)))?.id;
+  // getLayersOrder() lists custom WebGL layers too (getStyle() leaves them out), so the growth layer counts.
+  const layerIds = () => map.getLayersOrder?.() ?? (map.getStyle()?.layers || []).map(l => l.id);
+  const overlayFloor = () => layerIds().find(id => [...overlays.keys()].some(p => id.startsWith(`${p}-`)));
   let lm = null, lmPanel = null;
   try {
     lm = await withTimeout(loadLondonMap({ map, maplibregl, version: new URL(import.meta.url).search, analysisBefore: overlayFloor, theme: 'dark',
