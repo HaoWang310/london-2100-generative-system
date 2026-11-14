@@ -131,21 +131,24 @@ class MeshBuilder{
 }
 
 const BARK=[0.36,0.27,0.2];
-const LEAF=[0.36,0.55,0.27];
-const NEEDLE=[0.22,0.4,0.25];
+// Muted olive / sage foliage like park trees seen from above.
+const LEAF=[0.34,0.43,0.24];
+const NEEDLE=[0.21,0.33,0.22];
 
 /* Unit-height tree models (1 = tree height). */
 export function buildTreeModels(){
   // Broadleaf.
   const b=new MeshBuilder();
-  b.limb([0,0,0],[0,0,0.5],0.035,0.022,BARK,7);
-  b.limb([0,0,0.36],[0.12,0.05,0.56],0.016,0.009,BARK,5);
-  b.limb([0,0,0.4],[-0.1,-0.08,0.6],0.015,0.008,BARK,5);
-  const coreB=p=>0.72+0.28*Math.min(1,Math.hypot(p[0],p[1],(p[2]-0.66)*1.4)/0.28);
+  b.limb([0,0,0],[0,0,0.46],0.04,0.024,BARK,7);
+  b.limb([0,0,0.3],[0.14,0.05,0.5],0.018,0.01,BARK,5);
+  b.limb([0,0,0.34],[-0.12,-0.09,0.54],0.017,0.009,BARK,5);
+  b.limb([0,0,0.38],[0.02,0.15,0.58],0.015,0.008,BARK,5);
+  const coreB=p=>0.6+0.4*Math.min(1,Math.hypot(p[0],p[1],(p[2]-0.64)*1.3)/0.32);
+  // A fuller, rounder crown of overlapping clumps reaching lower down.
   const clumps=[
-    [0,0,0.7,0.27,0.27,0.24],[0.15,0.06,0.6,0.17,0.17,0.15],[-0.14,-0.07,0.62,0.18,0.17,0.15],
-    [0.03,-0.15,0.66,0.16,0.16,0.14],[-0.05,0.16,0.68,0.16,0.16,0.14],[0.06,0.02,0.88,0.17,0.17,0.13],
-    [-0.1,0.05,0.82,0.14,0.14,0.12]
+    [0,0,0.66,0.3,0.3,0.26],[0.18,0.05,0.55,0.19,0.19,0.16],[-0.17,-0.06,0.56,0.2,0.19,0.16],
+    [0.04,-0.18,0.58,0.18,0.18,0.15],[-0.04,0.18,0.6,0.18,0.18,0.15],[0.13,-0.11,0.72,0.17,0.17,0.15],
+    [-0.12,0.12,0.74,0.17,0.17,0.15],[0.05,0.03,0.86,0.19,0.19,0.14],[-0.09,-0.09,0.8,0.15,0.15,0.13]
   ];
   clumps.forEach(([x,y,z,rx,ry,rz],i)=>b.clump(x,y,z,rx,ry,rz,i*1.7+0.3,LEAF,coreB));
   // Conifer.
@@ -196,7 +199,7 @@ void main(){
   // Soft wrap so the shadowed side is not black.
   float wrap=max((dot(n,u_sun)+0.35)/1.35,0.0);
   vec3 amb=mix(u_ground,u_sky,n.z*0.5+0.5);
-  vec3 c=v_color*(amb+u_light*(0.55*d+0.45*wrap));
+  vec3 c=v_color*(amb+u_light*(0.5*d+0.3*wrap));
   c=mix(c,u_tint.rgb*0.6+c*0.4,u_tint.a);
   o=vec4(c,1.0);
 }`;
@@ -299,11 +302,11 @@ export function createTreeRenderer(map,maplibregl,{id='urban-trees-3d-models',be
       gl.uniformMatrix4fv(loc.matrix,false,m);
       const az=sun.azimuth*Math.PI/180,alt=Math.max(4,sun.altitude)*Math.PI/180;
       gl.uniform3f(loc.sun,Math.sin(az)*Math.cos(alt),Math.cos(az)*Math.cos(alt),Math.sin(alt));
-      const lc=hexRgb(sun.color),li=(0.55+sun.intensity)*(1-0.55*sun.night);
+      const lc=hexRgb(sun.color),li=(0.45+0.9*sun.intensity)*(1-0.55*sun.night);
       gl.uniform3f(loc.light,lc[0]*li,lc[1]*li,lc[2]*li);
       const amb=1-0.6*sun.night;
-      gl.uniform3f(loc.sky,0.55*amb,0.6*amb,0.68*amb);
-      gl.uniform3f(loc.ground,0.32*amb,0.33*amb,0.3*amb);
+      gl.uniform3f(loc.sky,0.5*amb,0.54*amb,0.6*amb);
+      gl.uniform3f(loc.ground,0.24*amb,0.25*amb,0.22*amb);
       const tc=hexRgb(tint.color);
       gl.uniform4f(loc.utint,tc[0],tc[1],tc[2],Math.min(0.85,tint.amount));
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);

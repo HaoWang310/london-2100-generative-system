@@ -116,7 +116,7 @@ export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=
         const variant=conifer?'conifer':columnar?'columnar':'broadleaf';
         const h=def.height[0]+(def.height[1]-def.height[0])*u;
         const width=0.85+0.35*hash01(i,j,salt+6);
-        const r=h*width*(conifer?0.24:columnar?0.13:0.32);
+        const r=h*width*(conifer?0.24:columnar?0.13:0.36);
         cells.set(key,{x,y,cls:area.cls,h,r,conifer,variant,width,tone:hash01(i,j,salt+5)});
       }
     }
