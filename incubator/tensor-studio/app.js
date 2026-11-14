@@ -644,7 +644,7 @@ function tipStep(tp, o){
   // 4 a side street, one side then the other. Along the field's main direction they are far apart where the field is clear,
   // across it close together: so blocks run long along the field (on clear ground) and about 0.75 x d2 deep
   const tM = fieldAtT(nx_, ny_), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071;
-  const gap = d2 * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
+  const gap = d2 * secK(nx_, ny_) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
   if (tp.acc >= gap && tp.L > 30){ let made = false;
     for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = t2 === null ? [px, py] : nearestAxis(t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
       if (tp.level === 1 && o.phase === 1){ BUDS.push({ x: nx_, y: ny_, u, parent: tp.l }); made = true; tp.side = -s; break; }
@@ -671,7 +671,7 @@ function curveInto6(tp, hit, ahead, ctrl){ let ux = hit[4], uy = hit[5]; if (ux 
     add.push(k === 16 ? [tg[0], tg[1]] : [bx, by]); }
   for (const p of add){ const dx = p[0] - tp.x, dy = p[1] - tp.y, n = Math.hypot(dx, dy) || 1; tp.hx = dx / n; tp.hy = dy / n; push(tp, p); }
   LINES[hit[3]].hits = (LINES[hit[3]].hits || 0) + 1; EVENTS.push({ x: tg[0], y: tg[1], k: 'merge' }); return true; }
-function canBranch6(x, y, u, pid){ const d = v('d2'), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
+function canBranch6(x, y, u, pid){ const d = d2At(x, y), ig = [pid], ax = x + u[0] * 20, ay = y + u[1] * 20;
   if (!inLand(ax, ay) || (inZone(ax, ay) && !culvertOK(ax, ay, u)) || inRail(ax, ay) || inRail(x, y)) return false;   // (v7: a ditch ahead is fine if the street will cross it square)
   if (nearB(x, y, d * 0.3, -1, ig, u, true, null)) return false;
   if (nearB(ax, ay, d * 0.45, -1, ig, u, true, null)) return false;
@@ -686,7 +686,7 @@ function tryFork6(tp, d){ const x = tp.x, y = tp.y, tc = partAxis(PC, PS, x, y),
   tp.ig.push({ id: l.id, until: tp.L + ignLen }); tp.follow = keepC ? 'c' : 'o'; tp.fLeft = d * 1.2; tp.fAcc = 0;
   tp.l.hits = (tp.l.hits || 0) + 1; tp.l.kids++; EVENTS.push({ x, y, k: 'fork' }); }
 function tipStep6(tp, o){
-  const x = tp.x, y = tp.y, d = v('d2'), d2 = v('d2');
+  const x = tp.x, y = tp.y, d = d2At(x, y), d2 = v('d2');
   let t = null; if (tp.fLeft > 0){ t = tp.follow === 'c' ? partAxis(PC, PS, x, y) : partAxis(OC_, OS_, x, y); tp.fLeft -= 5; }
   if (t === null) t = fieldAtT(x, y);
   if (t === null) return tipEnd6(tp, 'flat', d);
@@ -717,7 +717,7 @@ function tipStep6(tp, o){
   if (o.forkT < 0.55 && tp.fAcc >= 0.9 * d && tp.L > 30 && gridAt(CONF, nx_, ny_) > o.forkT) tryFork6(tp, d);
   // 4 a side street, one side then the other: far apart along the field where it is clear, close across it
   const tM = fieldAtT(nx_, ny_), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071;
-  const gap = d2 * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
+  const gap = d2 * secK(nx_, ny_) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, nx_, ny_) : 0.75);
   if (tp.acc >= gap && tp.L > 30){ let made = false;
     for (const s of [tp.side, -tp.side]){ const px = -dy * s, py = dx * s, t2 = fieldAtT(nx_, ny_); let u = t2 === null ? [px, py] : nearestAxis(t2, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
       if (canBranch6(nx_, ny_, u, tp.l.id) && spawn(tp.l, nx_, ny_, u, 'branch', tp)){ made = true; tp.side = -s; break; } }
@@ -798,6 +798,8 @@ function roundKinks(){ let n = 0; rehashAll();
       const ha = Math.atan2(e[1] - A[1], e[0] - A[0]), hb = Math.atan2(Bp[1] - e[1], Bp[0] - e[0]); let t = Math.abs(((hb - ha) % (2 * PI) + 3 * PI) % (2 * PI) - PI); if (t < 45 * PI / 180) continue;
       const curve = []; for (let k = 0; k <= 16; k++){ const u = k / 16; curve.push([(1 - u) * (1 - u) * A[0] + 2 * (1 - u) * u * e[0] + u * u * Bp[0], (1 - u) * (1 - u) * A[1] + 2 * (1 - u) * u * e[1] + u * u * Bp[1]]); }
       if (curve.some(q => !inLand(q[0], q[1]) || nearB(q[0], q[1], 6, l.id, [m.id], null, false, null))) continue;
+      { const sl = side === 0 ? l.pts.slice(l.pts.length - kl - 1) : l.pts.slice(0, kl + 1), sm = ms === 1 ? m.pts.slice(0, km + 1) : m.pts.slice(m.pts.length - km - 1);   // (v8.23) another street ending on what is replaced: no
+        if (LINES.some(o => !o.dead && o !== l && o !== m && o.pts.length > 1 && [o.pts[0], o.pts[o.pts.length - 1]].some(e => sl.concat(sm).some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)))) continue; }
       const half1 = curve.slice(0, 9), half2 = curve.slice(8);
       if (side === 0) l.pts = l.pts.slice(0, l.pts.length - kl).concat(half1); else l.pts = half1.slice().reverse().concat(l.pts.slice(kl));
       if (ms === 1) m.pts = half2.concat(m.pts.slice(km)); else m.pts = m.pts.slice(0, m.pts.length - km).concat(half2.slice().reverse());
@@ -862,6 +864,138 @@ function tidyNet(){ const live = () => LINES.filter(l => !l.dead && l.pts.length
       for (const [k, X] of list){ const a = l.pts[k - 1], b = l.pts[k];   // (a point within 1 m of the crossing moves onto it; otherwise one is put in)
         if (Math.hypot(a[0] - X[0], a[1] - X[1]) < 1 && k - 1 > 0) l.pts[k - 1] = X.slice(); else if (Math.hypot(b[0] - X[0], b[1] - X[1]) < 1 && k < l.pts.length - 1) l.pts[k] = X.slice(); else l.pts.splice(k, 0, X.slice()); } } }
   rehashAll(); netDirty = widthDirty = true; return { demoted, culverts, nodes, knots }; }
+/* (v8.23) SECOND STREETS, the better blocks:
+ * density  the second streets' spacing scaled where the climate is comfortable (closer) or windy and wet (wider), and
+ *          closer near the nodes; the strength is the step-7 slider (0: an even spacing)
+ * shore    a waterside street along the water and the corridors, about 32 m in from the bank, from street to street,
+ *          where a block is still too big
+ * split    a block still too big cut across, tried from several points and in both of the field's directions
+ * cross    two second streets meeting a main street from its two sides within 25 m of each other meet it at one point
+ * square   a second street meeting a street at under 70 degrees has its last 25 m bent to meet it square
+ */
+let SECK = null;
+function secK(x, y){ if (!SECK){ const w = (v('wDens') || 0) / 100; SECK = { w, lo: 0, hi: 1, qlo: 0, qhi: 1, at: attractorsOn() };
+    const E = D.env; if (E && E.C){ let a = 1e9, b = -1e9, qa = 1e9, qb = -1e9; const M = D.landMask; for (let i = 0; i < N; i++){ if (M && !M[i]) continue; a = Math.min(a, E.C[i]); b = Math.max(b, E.C[i]); qa = Math.min(qa, E.Q[i]); qb = Math.max(qb, E.Q[i]); } SECK.lo = a; SECK.hi = b; SECK.qlo = qa; SECK.qhi = qb; } }
+  const K = SECK; if (!K.w) return 1; const E = D.env; let f = 1;
+  if (E && E.C){ const c = (gridAt(E.C, x, y) - K.lo) / ((K.hi - K.lo) || 1), q = (gridAt(E.Q, x, y) - K.qlo) / ((K.qhi - K.qlo) || 1); f += K.w * (0.35 - 0.7 * c) + K.w * 0.3 * Math.max(0, q - 0.5); }
+  for (const a of K.at){ const d = Math.hypot(a.x - x, a.y - y), R = a.reach * 1.3; if (d < R) f *= 1 - K.w * 0.3 * (1 - d / R); }
+  return clamp(f, 0.6, 1.45); }
+const d2At = (x, y) => v('d2') * secK(x, y);
+// the blocks' area that can be built on (corridors left out), ha, by label
+function buildHa(){ const { lab, W, H, c, areas } = CELLS, out = new Float64Array(areas.length);
+  for (let i = 0; i < W * H; i++){ const L_ = lab[i]; if (L_ < 0) continue; const x = (i % W + 0.5) * c, y = D.h - (((i / W) | 0) + 0.5) * c; if (!inZone(x, y)) out[L_] += c * c / 1e4; } return out; }
+// is this cut clear of streets alongside it (parallel within 22 m), away from its two ends?
+function cutClear(pts){ let acc = 0; const tot = plen(pts);
+  for (let k = 1; k < pts.length; k++){ const q = pts[k], pq = pts[k - 1], sl = Math.hypot(q[0] - pq[0], q[1] - pq[1]); acc += sl; if (acc < 25 || tot - acc < 25 || sl < 0.5) continue;
+    if (nearB(q[0], q[1], 22, -1, [], [(q[0] - pq[0]) / sl, (q[1] - pq[1]) / sl], true, new Set([1, 2]))) return false; }
+  return true; }
+// the waterside streets
+function shoreStreets(maxHa){ const OFF = 32; let made = 0;
+  const BD = new Float32Array(N).fill(1e9), Q = new Int32Array(N); let h = 0, t = 0;
+  const seed = i => { if (BD[i] > 0){ BD[i] = 0; Q[t++] = i; } };
+  for (const l of LINES) if (!l.dead && l.level === 0 && l.hole && !(plen(l.pts) < 400 && Math.hypot(l.pts[0][0] - l.pts[l.pts.length - 1][0], l.pts[0][1] - l.pts[l.pts.length - 1][1]) < 5)) for (const p of l.pts) seed(cellAt(p[0], p[1]));   // (water, the station ring and a flood zone kept clear; not a small pond, which the line passes by)
+  for (let i = 0; i < N; i++){ const x = (i % nx) * cell, y = ((i / nx) | 0) * cell; if (GZ && GZ[i]) seed(i); }
+  if (!t) return 0;
+  // (a chamfer distance, spread over the land)
+  for (let pass = 0; pass < 2; pass++) for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++){ const rr = pass ? ny - 1 - r : r, cc = pass ? nx - 1 - c : c, i = rr * nx + cc; let b = BD[i];
+    for (const [dc, dr, w] of [[-1, 0, 1], [0, -1, 1], [-1, -1, 1.414], [1, -1, 1.414]]){ const c2 = cc + (pass ? -dc : dc), r2 = rr + (pass ? -dr : dr); if (c2 < 0 || r2 < 0 || c2 >= nx || r2 >= ny) continue; const v2 = BD[r2 * nx + c2] + w * cell; if (v2 < b) b = v2; }
+    BD[i] = b; }
+  { const S = blur(BD, 1.6); for (let i = 0; i < N; i++) BD[i] = S[i]; }   // (a smooth distance: the raster's steps would make the line jitter)
+  const bd = (x, y) => { const fx = clamp(x / cell, 0, nx - 1.001), fy = clamp(y / cell, 0, ny - 1.001), c0 = Math.floor(fx), r0 = Math.floor(fy), u = fx - c0, w = fy - r0, i = r0 * nx + c0;
+    return BD[i] * (1 - u) * (1 - w) + BD[i + 1] * u * (1 - w) + BD[i + nx] * (1 - u) * w + BD[i + nx + 1] * u * w; };
+  const grad = (x, y) => { const gx = bd(x + 10, y) - bd(x - 10, y), gy = bd(x, y + 10) - bd(x, y - 10), n = Math.hypot(gx, gy) || 1; return [gx / n, gy / n]; };
+  const why = globalThis.__SHW || null, half = (x0, y0, sg) => { const pts = []; let x = x0, y = y0, g = grad(x, y), hx = -g[1] * sg, hy = g[0] * sg; const R = r => { if (why) why.push([r, Math.round(x0), Math.round(y0), sg, Math.round(x), Math.round(y), pts.length]); return null; };
+    // (where the line turns too hard or drifts, after 60 m: it ends on the nearest street ahead within 90 m, straight, if the way is clear)
+    const finish = r => { if (pts.length < 12) return R(r); let best = null;
+      for (let a = -120; a <= 120; a += 10){ const ca = Math.cos(a * PI / 180), sa = Math.sin(a * PI / 180), ux = hx * ca - hy * sa, uy = hx * sa + hy * ca;
+        for (let d = 5; d <= 90; d += 5){ const qx = x + ux * d, qy = y + uy * d; if (!inLand(qx, qy) || inZone(qx, qy) || inRail(qx, qy)) break; const h = nearB(qx, qy, 5, -1, [], null, false, null); if (h){ if (!LINES[h[3]].hole && (!best || d < best[0])) best = [d, h[1], h[2]]; break; } } }
+      if (!best) return R(r); pts.push([best[1], best[2]]); return pts; };
+    for (let k = 0; k < 200; k++){ g = grad(x, y); let tx = -g[1], ty = g[0]; if (tx * hx + ty * hy < 0){ tx = -tx; ty = -ty; } if (tx * hx + ty * hy < Math.cos(45 * PI / 180)) return finish('turn');
+      hx = tx; hy = ty; let nx2 = x + hx * 5, ny2 = y + hy * 5; const e = OFF - bd(nx2, ny2); nx2 += g[0] * e * 0.5; ny2 += g[1] * e * 0.5;
+      if (!inLand(nx2, ny2)) return R('land');
+      if (inZone(nx2, ny2)){ let far = null; if (culvertOK(x, y, [hx, hy])) for (let d = 5; d <= 40; d += 5){ const qx = x + hx * d, qy = y + hy * d; if (!inLand(qx, qy) || inRail(qx, qy)) break; if (!inZone(qx, qy)){ far = [qx, qy]; break; } }
+        if (!far) return finish('zone'); pts.push(far); x = far[0]; y = far[1]; continue; }   // (across a corridor on a culvert, square-ish; tidyNet draws it) if (inRail(nx2, ny2)) return R('rail'); if (Math.abs(OFF - bd(nx2, ny2)) > 12) return finish('off');
+      const hit = nearB(nx2, ny2, 6, -1, [], null, false, null); if (hit){ if (LINES[hit[3]].hole) return finish('hole'); pts.push([hit[1], hit[2]]); return pts; }
+      if (k > 8 && Math.hypot(nx2 - x0, ny2 - y0) < 8) return R('loop');
+      { const pr = k > 4 && nearB(nx2, ny2, 20, -1, [], [hx, hy], true, LV012); if (pr && !LINES[pr[3]].hole){ pts.push([nx2, ny2], [pr[1], pr[2]]); return pts; } }   // (a street alongside: it runs into it)   // (round a pond and back: no street to end on)
+      pts.push([nx2, ny2]); x = nx2; y = ny2; } return R('long'); };
+  for (let round = 0; round < 6; round++){ readCells(); rehashAll(); const { lab, W, c } = CELLS, BH = buildHa(), best = new Map();
+    for (let i = 0; i < N; i++){ if (Math.abs(BD[i] - OFF) > cell * 0.55) continue; const x = (i % nx) * cell, y = ((i / nx) | 0) * cell; if (!inLand(x, y) || inZone(x, y) || inRail(x, y)) continue;
+      const L_ = lab[Math.floor((D.h - y) / c) * W + Math.floor(x / c)]; if (!(L_ >= 0) || BH[L_] <= maxHa) continue;
+      let room = 0; for (const r of [25, 35, 50, 70]){ if (nearB(x, y, r, -1, [], null, false, null)) break; room = r; } if (room < 25) continue;
+      if (!best.has(L_)) best.set(L_, []); best.get(L_).push([room, x, y]); }
+    let n = 0;
+    for (const [, cands] of best){ cands.sort((p, q) => q[0] - p[0]); const tried = []; let pts = null, x0 = 0, y0 = 0;
+      if (why) why.push(['block', round, cands.length, Math.round(cands[0][1]), Math.round(cands[0][2])]);
+      for (const [, cx_, cy_] of cands){ if (tried.length >= 5) break; if (tried.some(t => Math.hypot(t[0] - cx_, t[1] - cy_) < 60)) continue; tried.push([cx_, cy_]);   // (up to five starts, 60 m apart)
+        const a = half(cx_, cy_, 1), b = half(cx_, cy_, -1); if (!a || !b) continue;
+        let P = b.slice().reverse().concat([[cx_, cy_]], a);
+        { const ch = Math.hypot(P[P.length - 1][0] - P[0][0], P[P.length - 1][1] - P[0][1]); if (ch < 0.35 * plen(P)){ if (why) why.push(['bend', Math.round(cx_), Math.round(cy_)]); continue; } }   // (no U round a pocket of water)
+        if (plen(P) < 80 || !cutClear(P)){ if (why) why.push(['short/clear', Math.round(cx_), Math.round(cy_), Math.round(plen(P))]); continue; }
+        for (let it = 0; it < 2; it++){ const Q = [P[0]]; for (let k = 0; k < P.length - 1; k++){ const p = P[k], q = P[k + 1]; if (k > 0) Q.push([0.75 * p[0] + 0.25 * q[0], 0.75 * p[1] + 0.25 * q[1]]); if (k < P.length - 2) Q.push([0.25 * p[0] + 0.75 * q[0], 0.25 * p[1] + 0.75 * q[1]]); } Q.push(P[P.length - 1]); if (Q.every(q => inLand(q[0], q[1]) && !inZone(q[0], q[1]))) P = Q; }   // (rounded)
+        if (why) why.push(['ok', Math.round(cx_), Math.round(cy_), Math.round(plen(P))]); pts = P; x0 = cx_; y0 = cy_; break; }
+      if (!pts) continue;
+      const l = newLine(2, pts, 1, 0, 'shore'); l.ends = ['T', 'T']; EVENTS.push({ x: x0, y: y0, k: 'split' }); n++; rehashAll(); }
+    made += n; if (!n) break; }
+  rehashAll(); netDirty = widthDirty = true; return made; }
+// a point on a street at arc length s, and the street's direction there
+function atArc(P, s){ let acc = 0; for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc + L >= s || k === P.length - 1){ const t = L ? clamp((s - acc) / L, 0, 1) : 0; return { p: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], d: [(b[0] - a[0]) / (L || 1), (b[1] - a[1]) / (L || 1)], k }; } acc += L; } return { p: P[0].slice(), d: [1, 0], k: 1 }; }
+function arcOf(P, q){ let acc = 0, best = 1e9, s = 0; for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1e-9, t = clamp(((q[0] - a[0]) * (b[0] - a[0]) + (q[1] - a[1]) * (b[1] - a[1])) / (L * L), 0, 1), x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, d = Math.hypot(x - q[0], y - q[1]); if (d < best){ best = d; s = acc + t * L; } acc += L; } return [s, best]; }
+// the second street l's end on its side `side` (0: its last point) brought to the point T on the street par, its last stretch
+// (about 25 m) a curve that meets par square; false (and nothing changed) if the curve leaves the land, crosses a corridor
+// or the rail, comes near another street, or another street ends on the stretch it replaces
+function retail(l, side, T, par, back){ back = back || 25; const RW = r => { if (globalThis.__RTW) globalThis.__RTW.push(r); return false; }; const P = side === 0 ? l.pts.slice() : l.pts.slice().reverse(); if (plen(P) < 40) return RW('len');
+  let acc = 0, kP = P.length - 1; for (let k = P.length - 1; k > 0; k--){ acc += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); if (acc >= back){ kP = k - 1; break; } } if (kP >= P.length - 2) return RW('kP');
+  const A = P[kP], h = (() => { const z = P[Math.max(0, kP - 3)], L = Math.hypot(A[0] - z[0], A[1] - z[1]) || 1; return [(A[0] - z[0]) / L, (A[1] - z[1]) / L]; })();
+  const [sT] = arcOf(par.pts, T), tg = atArc(par.pts, sT).d; let nrm = [-tg[1], tg[0]]; if ((A[0] - T[0]) * nrm[0] + (A[1] - T[1]) * nrm[1] < 0) nrm = [-nrm[0], -nrm[1]];
+  const D_ = Math.hypot(T[0] - A[0], T[1] - A[1]); if (D_ < 8) return RW('D8'); const k1 = 0.4 * D_, C1 = [A[0] + h[0] * k1, A[1] + h[1] * k1], C2 = [T[0] + nrm[0] * k1, T[1] + nrm[1] * k1];
+  const n = Math.max(4, Math.round(D_ / 4)), curve = []; for (let j = 1; j <= n; j++){ const u = j / n, a = (1 - u) ** 3, b = 3 * (1 - u) ** 2 * u, c = 3 * (1 - u) * u * u, d = u ** 3; curve.push([a * A[0] + b * C1[0] + c * C2[0] + d * T[0], a * A[1] + b * C1[1] + c * C2[1] + d * T[1]]); }
+  curve[curve.length - 1] = T.slice();
+  const E0 = P[P.length - 1], old = P.slice(kP + 1, -1); for (const L2 of LINES){ if (L2.dead || L2 === l || L2 === par || L2.pts.length < 2) continue; for (const e of [L2.pts[0], L2.pts[L2.pts.length - 1]]) if (Math.hypot(e[0] - E0[0], e[1] - E0[1]) > 3 && old.some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)) return RW('other'); }   // (one ending at the junction itself stays on the street it meets)
+  for (let j = 0; j < curve.length; j++){ const q = curve[j], toT = Math.hypot(q[0] - T[0], q[1] - T[1]); if (!inLand(q[0], q[1]) || inZone(q[0], q[1]) || inRail(q[0], q[1])) return RW('land');
+    if (toT > 9 && nearB(q[0], q[1], toT > 14 ? 7 : 4, l.id, [par.id], null, false, null)) return RW('near');
+    if (toT > 6 && arcOf(par.pts, q)[1] < 3) return RW('par'); }   // (the street it meets: only at T)
+  const NP = P.slice(0, kP + 1).concat(curve); l.pts = side === 0 ? NP : NP.reverse(); l.retailed = (l.retailed || 0) + 1; return true; }
+// put the point T into the street par (where a street now ends on it), unless par already has a point within 0.5 m
+function insertOn(par, T){ const P = par.pts; let k0 = 1, best = 1e9; for (let k = 1; k < P.length; k++){ const a = P[k - 1], b = P[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1e-9, t = clamp(((T[0] - a[0]) * (b[0] - a[0]) + (T[1] - a[1]) * (b[1] - a[1])) / (L * L), 0, 1), d = Math.hypot(a[0] + (b[0] - a[0]) * t - T[0], a[1] + (b[1] - a[1]) * t - T[1]); if (d < best){ best = d; k0 = k; } }
+  if (P.some(q => Math.hypot(q[0] - T[0], q[1] - T[1]) < 0.5)) return; P.splice(k0, 0, T.slice()); }
+// the angle (degrees, 0-90) a street's end makes with the street it ends on
+function endAngle(l, side, par, J){ const P = side === 0 ? l.pts : l.pts.slice().reverse(), e = P[P.length - 1]; let q = null; for (let k = P.length - 2; k >= 0; k--) if (Math.hypot(P[k][0] - e[0], P[k][1] - e[1]) >= 10){ q = P[k]; break; } if (!q) return 90;
+  const tg = atArc(par.pts, arcOf(par.pts, J)[0]).d, u = [e[0] - q[0], e[1] - q[1]], L = Math.hypot(u[0], u[1]) || 1; return Math.acos(Math.min(1, Math.abs(u[0] * tg[0] + u[1] * tg[1]) / L)) * 180 / PI; }
+function secEnds(){ const out = []; for (const l of LINES){ if (l.dead || l.level !== 2 || l.pts.length < 3) continue;
+    for (const side of [0, 1]){ const e = side === 0 ? l.pts[l.pts.length - 1] : l.pts[0], c = nearB(e[0], e[1], 2.5, l.id, [], null, false, null); if (!c) continue; const par = LINES[c[3]]; if (par.circus || par.hole) continue;
+      if ([par.pts[0], par.pts[par.pts.length - 1]].some(q => Math.hypot(q[0] - e[0], q[1] - e[1]) < 3)) continue;   // (two streets meeting end to end: not a T)
+      out.push({ l, side, e, par }); } }
+  return out; }
+// two second streets meeting a main street from its two sides within 25 m: one crossroads
+function crossJoin(){ let n = 0; rehashAll(); const byPar = new Map();
+  for (const q of secEnds()){ if (q.par.level !== 1) continue; const P = q.l.pts, side = q.side, prev = side === 0 ? P[Math.max(0, P.length - 4)] : P[Math.min(P.length - 1, 3)];
+    const [s] = arcOf(q.par.pts, q.e), tg = atArc(q.par.pts, s).d, sg = Math.sign((prev[0] - q.e[0]) * -tg[1] + (prev[1] - q.e[1]) * tg[0]); q.s = s; q.sg = sg;
+    if (!byPar.has(q.par.id)) byPar.set(q.par.id, []); byPar.get(q.par.id).push(q); }
+  for (const [, list] of byPar){ const pairs = [];
+    for (const a of list) for (const b of list) if (a.sg > 0 && b.sg < 0 && a.l !== b.l){ const g = Math.abs(a.s - b.s); if (g > 1.5 && g <= 25) pairs.push([g, a, b]); }
+    pairs.sort((x, y) => x[0] - y[0]); const used = new Set();
+    for (const [, a, b] of pairs){ if (used.has(a) || used.has(b) || a.l.dead || b.l.dead) continue; const par = a.par, T = atArc(par.pts, (a.s + b.s) / 2).p;
+      const sa = a.l.pts.slice(), sb = b.l.pts.slice();
+      if (!retail(a.l, a.side, T, par)){ a.l.pts = sa; continue; } rehashAll();
+      if (!retail(b.l, b.side, T, par)){ a.l.pts = sa; b.l.pts = sb; rehashAll(); continue; }
+      insertOn(par, T); rehashAll(); used.add(a); used.add(b); XNODES.push(T.slice()); EVENTS.push({ x: T[0], y: T[1], k: 'cross' }); n++; } }
+  netDirty = widthDirty = true; return n; }
+// a second street meeting a street at under 70 degrees: its last stretch bent to meet it square (moving the junction along
+// the street, not within 12 m of another junction on it)
+function squareEnds(){ let n = 0; rehashAll();
+  for (const q of secEnds()){ if (q.l.dead) continue; const ang = endAngle(q.l, q.side, q.par, q.e); if (ang >= 70) continue; const W_ = globalThis.__SQW, R = r => { if (W_) W_.push([r, q.l.id, q.l.born, q.l.ends[q.side], q.par.level, Math.round(ang), q.e.map(Math.round)]); };
+    const P = q.side === 0 ? q.l.pts : q.l.pts.slice().reverse(); let ok = false;
+    for (const back of [25, 15, 40]){   // (a shorter stretch where a street branches off the last 25 m; a longer one where it runs close beside)
+      let acc = 0, A = P[0]; for (let k = P.length - 1; k > 0; k--){ acc += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]); if (acc >= back){ A = P[k - 1]; break; } }
+      const [sA] = arcOf(q.par.pts, A), T = atArc(q.par.pts, sA).p, [sE] = arcOf(q.par.pts, q.e);
+      if (Math.abs(sA - sE) > 30){ R('far'); continue; }
+      let busy = false; for (const L2 of LINES){ if (L2.dead || L2 === q.l || L2 === q.par || L2.pts.length < 2) continue; for (const e of [L2.pts[0], L2.pts[L2.pts.length - 1]]) if (Math.hypot(e[0] - T[0], e[1] - T[1]) < 12 && Math.hypot(e[0] - q.e[0], e[1] - q.e[1]) > 2) busy = true; if (busy) break; }
+      if (busy){ R('busy'); continue; } const keep = q.l.pts.slice();
+      if (!retail(q.l, q.side, T, q.par, back)){ R('retail'); q.l.pts = keep; continue; }
+      if (endAngle(q.l, q.side, q.par, T) < 70){ R('still'); q.l.pts = keep; continue; }
+      insertOn(q.par, T); rehashAll(); n++; ok = true; break; } }
+  rehashAll(); netDirty = widthDirty = true; return n; }
 // (v7) the cells joined across the road between them: a street of this level that ends on that road (from one cell) starts
 // again straight across it, on the other cell's side, going the same way, unless a street already ends on the road within
 // 25 m there; then the new streets grow by the same rules
@@ -920,26 +1054,29 @@ function alignShared(){ rehashAll(); const ends = [];
 function splitBlocks(maxHa){ maxHa = maxHa || 1.5; let made = 0;
   for (let round = 0; round < 6; round++){ readCells(); rehashAll(); const { lab, W, H, c, areas } = CELLS; const sx = new Float64Array(areas.length), sy = new Float64Array(areas.length), sxx = new Float64Array(areas.length), syy = new Float64Array(areas.length), sxy = new Float64Array(areas.length), cnt = new Float64Array(areas.length);
     for (let i = 0; i < W * H; i++){ const L_ = lab[i]; if (L_ < 0) continue; const x = (i % W + 0.5) * c, y = D.h - (((i / W) | 0) + 0.5) * c; sx[L_] += x; sy[L_] += y; sxx[L_] += x * x; syy[L_] += y * y; sxy[L_] += x * y; cnt[L_]++; }
-    const order = areas.map((a, i) => [a, i]).filter(q => q[0] > maxHa).sort((a, b) => b[0] - a[0]); let n = 0;
+    const BH = buildHa(), order = areas.map((a, i) => [BH[i], i]).filter(q => q[0] > maxHa).sort((a, b) => b[0] - a[0]); let n = 0;   // (v8.23) by the area that can be built on
     for (const [area, L_] of order){ const mx = sx[L_] / cnt[L_], my = sy[L_] / cnt[L_], vxx = sxx[L_] / cnt[L_] - mx * mx, vyy = syy[L_] / cnt[L_] - my * my, vxy = sxy[L_] / cnt[L_] - mx * my;
-      const long = 0.5 * Math.atan2(2 * vxy, vxx - vyy), cross = [Math.cos(long + PI / 2), Math.sin(long + PI / 2)];
-      // the start: the block's pixel nearest its centre (the centre may fall outside an odd-shaped block)
-      let best = null; for (let i = 0; i < W * H; i++){ if (lab[i] !== L_) continue; const x = (i % W + 0.5) * c, y = D.h - (((i / W) | 0) + 0.5) * c, d = (x - mx) ** 2 + (y - my) ** 2; if (!best || d < best[0]) best = [d, x, y]; }
-      if (!best) continue; const x0 = best[1], y0 = best[2], t = fieldAtT(x0, y0), u = t === null ? cross : nearestAxis(t, cross[0], cross[1]);
-      const half = sg => { const pts = []; let x = x0, y = y0, hx = u[0] * sg, hy = u[1] * sg;
-        for (let k = 0; k < 120; k++){ const tt = fieldAtT(x, y); if (tt !== null){ const ax = nearestAxis(tt, hx, hy); hx = hx * 0.85 + ax[0] * 0.15; hy = hy * 0.85 + ax[1] * 0.15; const nn = Math.hypot(hx, hy); hx /= nn; hy /= nn; }
-          const nx2 = x + hx * 5, ny2 = y + hy * 5; if (!inLand(nx2, ny2)) return null;
-          const hit = nearB(nx2, ny2, 6, -1, [], null, false, null); if (hit){ if (LINES[hit[3]].hole) return null; pts.push([hit[1], hit[2]]); return pts; }
-          if (inRail(nx2, ny2) || (inZone(nx2, ny2) && !culvertOK(nx2, ny2, [hx, hy]))) return null;
-          pts.push([nx2, ny2]); x = nx2; y = ny2; } return null; };
-      const a = half(1), b = half(-1); if (!a || !b) continue;
-      const pts = b.slice().reverse().concat([[x0, y0]], a); if (plen(pts) < 40) continue;
-      // no street alongside the cut (parallel, within 22 m) away from its two ends
-      { let acc = 0, bad = false; const tot = plen(pts);
-        for (let k = 1; k < pts.length && !bad; k++){ const q = pts[k], pq = pts[k - 1], sl = Math.hypot(q[0] - pq[0], q[1] - pq[1]); acc += sl; if (acc < 25 || tot - acc < 25 || sl < 0.5) continue;
-          if (nearB(q[0], q[1], 22, -1, [], [(q[0] - pq[0]) / sl, (q[1] - pq[1]) / sl], true, new Set([1, 2]))) bad = true; }
-        if (bad) continue; }
-      const l = newLine(2, pts, u[0], u[1], 'split'); l.ends = ['T', 'T']; EVENTS.push({ x: x0, y: y0, k: 'split' }); n++; }
+      const long = 0.5 * Math.atan2(2 * vxy, vxx - vyy), cross = [Math.cos(long + PI / 2), Math.sin(long + PI / 2)], lv = [Math.cos(long), Math.sin(long)];
+      const ext = Math.sqrt(Math.max(1, vxx * lv[0] * lv[0] + 2 * vxy * lv[0] * lv[1] + vyy * lv[1] * lv[1]));
+      // (v8.23) tried from several points (the centre, then a third of the way out each side along the block's length) and in
+      // the field's direction nearest across the block, then the other: a pond in the way no longer stops the cut
+      const near = (px, py) => { let best = null; for (let i = 0; i < W * H; i++){ if (lab[i] !== L_) continue; const x = (i % W + 0.5) * c, y = D.h - (((i / W) | 0) + 0.5) * c; if (inZone(x, y)) continue; const d = (x - px) ** 2 + (y - py) ** 2; if (!best || d < best[0]) best = [d, x, y]; } return best; };
+      const starts = [[mx, my], [mx + lv[0] * ext * 0.7, my + lv[1] * ext * 0.7], [mx - lv[0] * ext * 0.7, my - lv[1] * ext * 0.7]].map(p => near(p[0], p[1])).filter(Boolean);
+      // (then a lattice of points over the block, 40 m apart, nearest the centre first: a way between the ponds)
+      { const lat = []; for (let i = 0; i < W * H; i++){ if (lab[i] !== L_) continue; const x = (i % W + 0.5) * c, y = D.h - (((i / W) | 0) + 0.5) * c; if (Math.abs(x % 40) >= c || Math.abs(y % 40) >= c || inZone(x, y)) continue; if (nearB(x, y, 25, -1, [], null, false, null)) continue; lat.push([(x - mx) ** 2 + (y - my) ** 2, x, y]); }
+        lat.sort((p, q) => p[0] - q[0]); starts.push(...lat.slice(0, 16)); }
+      let done = false;
+      for (const along of [false, true]) for (const st of starts){ if (done) break; const x0 = st[1], y0 = st[2], t = fieldAtT(x0, y0);
+        let u = t === null ? cross : nearestAxis(t, cross[0], cross[1]); if (along) u = [-u[1], u[0]];
+        const half = sg => { const pts = []; let x = x0, y = y0, hx = u[0] * sg, hy = u[1] * sg;
+          for (let k = 0; k < 120; k++){ const tt = fieldAtT(x, y); if (tt !== null){ const ax = nearestAxis(tt, hx, hy); hx = hx * 0.85 + ax[0] * 0.15; hy = hy * 0.85 + ax[1] * 0.15; const nn = Math.hypot(hx, hy); hx /= nn; hy /= nn; }
+            const nx2 = x + hx * 5, ny2 = y + hy * 5; const W_ = globalThis.__SPW, R = r => { if (W_ && area > 8) W_.push([r, Math.round(area), Math.round(x0), Math.round(y0), along, sg, Math.round(nx2), Math.round(ny2)]); return null; }; if (!inLand(nx2, ny2)) return R('land');
+            const hit = nearB(nx2, ny2, 6, -1, [], null, false, null); if (hit){ if (LINES[hit[3]].hole) return R('hole'); pts.push([hit[1], hit[2]]); return pts; }
+            if (inRail(nx2, ny2) || (inZone(nx2, ny2) && !culvertOK(nx2, ny2, [hx, hy]))) return R('zone');
+            pts.push([nx2, ny2]); x = nx2; y = ny2; } return null; };
+        const a = half(1), b = half(-1); if (!a || !b) continue;
+        const pts = b.slice().reverse().concat([[x0, y0]], a); if (plen(pts) < 40 || !cutClear(pts)){ if (globalThis.__SPW && area > 8) globalThis.__SPW.push(['clear', Math.round(x0), Math.round(y0), along, Math.round(plen(pts))]); continue; }
+        const l = newLine(2, pts, u[0], u[1], 'split'); l.ends = ['T', 'T']; EVENTS.push({ x: x0, y: y0, k: 'split' }); n++; done = true; rehashAll(); } }
     made += n; if (!n) break; }
   rehashAll(); netDirty = widthDirty = true; return made; }
 // v6's closing pass, as it was: an end that meets nothing carries on along the field to the next street (or curves into
@@ -1096,7 +1233,7 @@ function* stitchMains(o){
       // the side-street buds along it (for step 7), as a grown main street lays them
       { const d2 = v('d2'); let acc = 0, side = l.id % 2 ? 1 : -1;
         for (let k = 1; k < pts.length; k++){ const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, dx = (b[0] - a[0]) / L, dy = (b[1] - a[1]) / L; acc += L;
-          const tM = fieldAtT(b[0], b[1]), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071, gap = d2 * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, b[0], b[1]) : 0.75);
+          const tM = fieldAtT(b[0], b[1]), along = tM === null || Math.abs(Math.cos(tM) * dx + Math.sin(tM) * dy) >= 0.7071, gap = d2 * secK(b[0], b[1]) * o.gapK * (along ? 0.7 + 0.9 * gridAt(CLAR, b[0], b[1]) : 0.75);
           if (acc < gap || k < 6 || pts.length - k < 6) continue;
           const px = -dy * side, py = dx * side; let u = tM === null ? [px, py] : nearestAxis(tM, px, py); if (Math.abs(u[0] * dx + u[1] * dy) > 0.6) u = [px, py];
           BUDS.push({ x: b[0], y: b[1], u, parent: l }); side = -side; acc = 0; } } }
@@ -1181,7 +1318,7 @@ function* stitchMains(o){
     if (yield* lay(A, B, pathTo(end), end, true)) loops++; }
   rehashAll(); netDirty = widthDirty = true; }
 function* growBranching(){
-  resetNet(); const o = { memK: 1.5 - v('bMem') / 100, gapK: v('bGap'), forkT: v('bFork'), phase: 1, mainsT: $('bMains').checked, sec6: $('bSec6').checked };
+  SECK = null; resetNet(); const o = { memK: 1.5 - v('bMem') / 100, gapK: v('bGap'), forkT: v('bFork'), phase: 1, mainsT: $('bMains').checked, sec6: true };   // (v8.23) v6's second streets, always (the v6.2 switch is gone)
   // (v8.15) the main streets: stitched (a planned network linking the entries and the nodes) or grown from the anchors
   if (($('mMethod') || {}).value === 'stitch') yield* stitchMains(o); else {
   PHASE = 'main streets grow from your anchors';
@@ -1245,7 +1382,7 @@ function* growBranching(){
     PHASE = "side streets off the land's edge, where there is room";
     for (const l of LINES.slice()){ if (!l.ring || l.hole) continue; const Pp = l.pts; let acc = 0;
       for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]);
-        if (acc < v('d2') * o.gapK * (0.75 + 0.6 * gridAt(CLAR, b[0], b[1]))) continue;
+        if (acc < d2At(b[0], b[1]) * o.gapK * (0.75 + 0.6 * gridAt(CLAR, b[0], b[1]))) continue;
         const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1; let px = -dy / n, py = dx / n;
         if (!inLand(b[0] + px * 15, b[1] + py * 15)){ px = -px; py = -py; } if (!inLand(b[0] + px * 15, b[1] + py * 15)) continue;
         const t = fieldAtT(b[0] + px * 10, b[1] + py * 10), u = t === null ? [px, py] : nearestAxis(t, px, py); if (u[0] * px + u[1] * py < 0.5) continue;
@@ -1253,7 +1390,7 @@ function* growBranching(){
     yield* runTips(o);
     if ($('bInfill').checked){ PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
       for (let round = 0; round < 3; round++){ let made = 0;
-        for (let x = sp / 2; x < D.w; x += sp) for (let y = sp / 2; y < D.h; y += sp){ if (!inLand(x, y) || inZone(x, y) || inRail(x, y) || nearB(x, y, d2 * 0.6, -1, [], null, false, null)) continue;
+        for (let x = sp / 2; x < D.w; x += sp) for (let y = sp / 2; y < D.h; y += sp){ if (!inLand(x, y) || inZone(x, y) || inRail(x, y) || nearB(x, y, d2At(x, y) * 0.6, -1, [], null, false, null)) continue;
           const c = nearB(x, y, d2 * 2.5, -1, [], null, false, null); if (!c) continue; const par = LINES[c[3]];
           let ux = x - c[1], uy = y - c[2]; const m = Math.hypot(ux, uy) || 1; ux /= m; uy /= m; const t = fieldAtT(c[1], c[2]), u = t === null ? [ux, uy] : nearestAxis(t, ux, uy);
           if (!canBranch6(c[1], c[2], u, par.id) || !spawn(par, c[1], c[2], u, 'infill', null)) continue; made++; yield* runTips(o); }
@@ -1265,45 +1402,13 @@ function* growBranching(){
     for (const l of LINES) if (!l.dead && l.level === 2 && plen(l.pts) < 1) l.dead = true;   // (a side street that never grew: a point on its parent)
     // (v7) a main street left under 150 m long (a stub where the rest was cut or turned second) is a second street
     for (const l of LINES) if (!l.dead && l.level === 1 && !l.circus && l.born !== 'spoke' && plen(l.pts) < 150) l.level = 2;   // (a circus's spoke stays a main street, however short)
-    holeTrim(); dropSide(); holeTrim(); alignShared(); splitBlocks(1.5); holeTrim(); roundKinks(); smoothBends(); tidyNet();
+    holeTrim(); dropSide(); holeTrim(); alignShared();
+    shoreStreets(1.5); splitBlocks(1.5); holeTrim();   // (v8.23) the waterside streets, then the big blocks cut
+    crossJoin(); squareEnds();   // (v8.23) crossroads across the main streets, and square junctions
+    roundKinks(); smoothBends(); tidyNet();
     rehashAll();
     PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); return; }
-  PHASE = 'second streets branch off them'; o.phase = 2;
-  for (const b of BUDS){ if (b.parent.dead) continue; if (canBranch(b.x, b.y, b.u, b.parent.id)) spawn(b.parent, b.x, b.y, b.u, 'branch', null); }
-  yield* runTips(o);
-  PHASE = 'side streets off the land\'s edge, where there is room';
-  for (const l of LINES.slice()){ if (!l.ring || l.hole) continue; const Pp = l.pts; let acc = 0;
-    for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]);
-      if (acc < v('d2') * o.gapK * (0.75 + 0.6 * gridAt(CLAR, b[0], b[1]))) continue;
-      const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1; let px = -dy / n, py = dx / n;
-      if (!inLand(b[0] + px * 15, b[1] + py * 15)){ px = -px; py = -py; } if (!inLand(b[0] + px * 15, b[1] + py * 15)) continue;
-      const t = fieldAtT(b[0] + px * 10, b[1] + py * 10), u = t === null ? [px, py] : nearestAxis(t, px, py); if (u[0] * px + u[1] * py < 0.8) continue;   // the field runs along the edge here
-      if (canBranch(b[0], b[1], u, l.id) && spawn(l, b[0], b[1], u, 'edge-branch', null)) acc = 0; } }
-  yield* runTips(o);
-  // streets stopped for running alongside another go back to their last junction; the ground left empty is reached from the
-  // nearest street, and tidied again (twice)
-  tidyNear();
-  for (let r = 0; r < 2; r++){ if ($('bInfill').checked) yield* infillGen(o); tidyNear(); }
-  TIPS = []; TIPMAP = new Map(); BUDS = [];
-  yield* closeGen(); rehashAll();
-  yield* mainsEnd();
-  // no two streets side by side: cut, join the main streets up again, until none is left; then the ground opened up is
-  // reached again from the nearest street, and the last pass leaves no second street side by side and no open end
-  for (let it = 0; it < 4; it++){ PHASE = 'no two streets side by side'; const n = cutSide(false); yield 1; if (!n) break; yield* mainsEnd(); yield* sweepOpen(); }
-  if ($('bInfill').checked){ yield* infillGen(o); tidyNear(); TIPS = []; TIPMAP = new Map(); yield* closeGen(); rehashAll(); yield* sweepOpen(); }
-  for (let it = 0; it < 5; it++){ PHASE = 'no two streets side by side'; const n = cutSide(true); yield* sweepOpen(); if (!n) break; }
-  dropStubs(); yield* sweepOpen();
-  // the last word on the main streets: one still ending on a second street ends at its last main junction instead
-  // (repeated until nothing changes: a main street split here can leave another ending on a second street); then the
-  // side-by-side pass again, twice at most, with this after it
-  for (let round = 0; round < 8; round++){
-    mainsFinal(); rehashAll(); if (dropStubs()) yield* sweepOpen(); rehashAll();
-    const n = cutSide(true); if (!n) break; yield* sweepOpen(); }
-  // the last word: cut what is left side by side, and close any open end by cutting it back only (which can make neither
-  // a new pair nor a new open end); then the main streets end on main streets
-  for (let k = 0; k < 4; k++){ rehashAll(); const n = cutSide(true), st = dropStubs(); if (!n && !st) break; yield* sweepOpen(true); }
-  mainsFinal(); despike(); smoothBends(); tidyNet(); rehashAll();
-  PHASE = 'done'; FINISHED = true; readCells(); measures(); finishRun(); }
+}
 function* infillGen(o){ { PHASE = 'empty ground reached from the nearest street'; const d2 = v('d2'), sp = d2 * 0.5;
     for (let round = 0; round < 3; round++){ let made = 0;
       for (let x = sp / 2; x < D.w; x += sp) for (let y = sp / 2; y < D.h; y += sp){ if (!inLand(x, y) || inZone(x, y) || inRail(x, y) || nearB(x, y, d2 * 0.6, -1, [], null, false, null)) continue;
@@ -1333,7 +1438,7 @@ function* mainsEnd(){
   yield 1; }
 
 /* ------------------------------------------------------------------ the two modes kept, and compared */
-function settingsKey(){ return (KPULL ? 'k' + KPULL.main + ':' + KPULL.sec + ':' + KPULL.edge + ',' : '') + FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + $('bSec6').checked + ',' + MONTH + ',' + (floodOn() ? 'f' + $('fAvoid').value + ':' + v('fW') : 'f0') + ',' + (corrOn() ? 'g' + v('gW') + ':' + $('gQ').value : 'g0') + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
+function settingsKey(){ return (KPULL ? 'k' + KPULL.main + ':' + KPULL.sec + ':' + KPULL.edge + ',' : '') + FIELD_IDS.concat(NET_IDS, B_IDS).map(id => $(id).value).join(',') + ',' + $('windOn').checked + ',' + $('merge').checked + ',' + $('bInfill').checked + ',' + $('bMains').checked + ',' + MONTH + ',' + (floodOn() ? 'f' + $('fAvoid').value + ':' + v('fW') : 'f0') + ',' + (corrOn() ? 'g' + v('gW') + ':' + $('gQ').value : 'g0') + ',' + AMODE + ',' + ATTR.map(a => Math.round(a.x) + ':' + Math.round(a.y)).join(';'); }
 function finishRun(){
   if (MODE === 'A'){ EVENTS = []; for (const l of LINES){ if (l.dead || l.level === 0 || l.circus) continue; const Pp = l.pts;
       l.ends.forEach((e, sd) => { const p = sd === 0 ? Pp[Pp.length - 1] : Pp[0]; if (e === 'T') EVENTS.push({ x: p[0], y: p[1], k: 'join' }); if (e === 'Y') EVENTS.push({ x: p[0], y: p[1], k: 'merge' }); }); } }
@@ -1871,9 +1976,9 @@ cv.addEventListener('contextmenu', e => { const r = cv.getBoundingClientRect(), 
   toHand(); ATTR.splice(i, 1); attrChanged(); });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, wx = (mx - VW / 2) / view.s + view.x, wy = (VH / 2 - my) / view.s + view.y, k = Math.exp(-e.deltaY * 0.0015);
   view.s = clamp(view.s * k, 0.05, 8); view.x = wx - (mx - VW / 2) / view.s; view.y = wy - (VH / 2 - my) / view.s; }, { passive: false });
-let tmr = null; const FIELD_IDS = ['wC', 'wWind', 'month', 'smooth', 'nMain', 'nSec', 'nEdge', 'pull', 'wSum', 'wWin', 'wG'], NET_IDS = ['d1', 'd2', 'thru', 'stag'];
+let tmr = null; const FIELD_IDS = ['wC', 'wWind', 'month', 'smooth', 'nMain', 'nSec', 'nEdge', 'pull', 'wSum', 'wWin', 'wG'], NET_IDS = ['d1', 'd2', 'thru', 'stag', 'wDens'];
 for (const el of document.querySelectorAll('input[type=range]')){ const o = el.nextElementSibling;
-  const up = () => { if (!o) return; if (el.id === 'month'){ o.textContent = YEAR[+el.value].name; return; } if (el.id === 'bFork'){ o.textContent = +el.value >= 0.55 ? 'off' : (+el.value).toFixed(2); return; } if (el.id === 'bGap'){ o.textContent = '× ' + (+el.value).toFixed(2); return; } if (el.id === 'bMem'){ o.textContent = el.value + ' %'; return; } o.textContent = (+el.value).toLocaleString('en-GB') + (['wC', 'wWind', 'thru', 'stag'].includes(el.id) ? ' %' : (el.id === 'speed' ? ' ms' : '')); };
+  const up = () => { if (!o) return; if (el.id === 'month'){ o.textContent = YEAR[+el.value].name; return; } if (el.id === 'bFork'){ o.textContent = +el.value >= 0.55 ? 'off' : (+el.value).toFixed(2); return; } if (el.id === 'bGap'){ o.textContent = '× ' + (+el.value).toFixed(2); return; } if (el.id === 'bMem'){ o.textContent = el.value + ' %'; return; } o.textContent = (+el.value).toLocaleString('en-GB') + (['wC', 'wWind', 'thru', 'stag', 'wDens'].includes(el.id) ? ' %' : (el.id === 'speed' ? ' ms' : '')); };
   up(); el.addEventListener('input', up); }
 $('month').addEventListener('input', () => { MONTH = +$('month').value; recycleWind(); });
 $('windOn').addEventListener('change', () => { buildTarget(); if ($('auto').checked){ GHOST = LINES.filter(l => !l.dead && l.level > 0).map(l => ({ level: l.level, pts: l.pts })); GHOSTT = 0; start(true); } });
@@ -1902,7 +2007,6 @@ $('bBoth').onclick = compareBoth;
 for (const id of B_IDS) $(id).addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(() => { if (MODE === 'B' && $('auto').checked) start(true); drawCmp(); }, 160); });
 $('bInfill').addEventListener('change', () => { if (MODE === 'B' && $('auto').checked) start(true); drawCmp(); });
 $('bMains').addEventListener('change', () => { if (MODE === 'B' && $('auto').checked) start(true); drawCmp(); });
-$('bSec6').addEventListener('change', () => { if (MODE === 'B' && $('auto').checked) start(true); drawCmp(); });
 $('aMode').addEventListener('change', () => { AMODE = $('aMode').value; placeAttractors(); buildTarget(); syncTools(); if ($('auto').checked) start(true); drawCmp(); });
 for (const id of FIELD_IDS.concat(NET_IDS)) $(id).addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(() => { if (['nMain', 'nSec', 'nEdge'].includes(id)) placeAttractors(); if (FIELD_IDS.includes(id)) buildTarget(); if ($('auto').checked) start(true); drawCmp(); }, 160); });
 $('merge').addEventListener('change', () => { if ($('auto').checked) start(true); });
@@ -1984,13 +2088,13 @@ document.getElementById('applyPreset').onclick=()=>{
    set('wC',o.wC??70,' %');set('wWind',o.wWind??40,' %');set('d1',300);set('d2',o.d2??95);
    set('nMain',o.hand?o.hand.length:(o.nMain||0));set('nSec',0);set('nEdge',o.nEdge||0);set('month',12);
    document.getElementById('month').nextElementSibling.textContent=YEAR[12].name;
-   for(const id of ['merge','bMains','bInfill','bSec6'])document.getElementById(id).checked=true;
+   for(const id of ['merge','bMains','bInfill'])document.getElementById(id).checked=true;
    document.getElementById('windOn').checked=o.wind!==false&&(o.wWind??40)>0;
    AMODE=o.hand?'hand':(o.where||'centre');document.getElementById('aMode').value=AMODE;
    if(o.hand)HAND=o.hand.map(p=>({x:p[0]-D.origin[0],y:p[1]-D.origin[1],kind:'main'}));
    placeAttractors();buildTarget();settleField();if(!window.__TS_PROCESS_ON)start(false);syncTools();drawKey();
    for(const e of document.querySelectorAll('#panel input[type="range"]')){
-    if(e.id==='month')continue;const out=e.nextElementSibling;if(out?.tagName==='OUTPUT')out.textContent=e.value+(['wC','wWind','thru','stag','bMem'].includes(e.id)?' %':'');
+    if(e.id==='month')continue;const out=e.nextElementSibling;if(out?.tagName==='OUTPUT')out.textContent=e.value+(['wC','wWind','thru','stag','bMem','wDens'].includes(e.id)?' %':'');
    }
    status.textContent='Applied preset '+code;
   }catch(error){status.textContent='Generation failed: '+error.message;console.error(error);}
