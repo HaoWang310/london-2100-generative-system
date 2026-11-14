@@ -17,6 +17,7 @@ const PHZH = {
   'main streets: a second way where the network detours': '在绕远处补一条环路',
   'main streets: every entry joined': '每个入口都接入主路网',
   'main streets: the local centres joined': '次节点从两侧接入主路网',
+  'main streets: through routes across the land': '贯通路横穿场地',
   'main streets along the contour, edge to edge': '主路沿等高线贯通到边界',
   'each circus tied into the main streets': '环形广场接入主路',
   'ring streets round the circuses': '环路围绕广场',
