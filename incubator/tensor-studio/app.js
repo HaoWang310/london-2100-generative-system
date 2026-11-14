@@ -2119,7 +2119,9 @@ function render(now){
       for (const l of sn.lines){ if (l.level === 0) continue; ctx.lineWidth = l.level === 1 ? 2.0 : 1.0; ctx.beginPath(); l.pts.forEach((p, k) => k ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke(); }
       ctx.restore(); } }
   ctx.drawImage(L_net, 0, 0);
-  if ($('lWind').checked) ctx.drawImage(L_wind, 0, 0);
+  if ($('lWind').checked){   // (v8.36) on a map site the wind shows only inside the site: the particles still cross the whole grid, the layer is clipped
+    if (D.site){ ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.beginPath(); pathRings(ctx, D.pieces.map(p => p.outer)); ctx.clip(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(L_wind, 0, 0); ctx.restore(); }
+    else ctx.drawImage(L_wind, 0, 0); }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   // the street growing now
   if (GROW && !SCRUB && $('lStreets').checked){ const [col, w] = GROW.level === 1 ? [P.grow, 3] : [P.grow, 1.6]; ctx.strokeStyle = col; ctx.lineWidth = w;
