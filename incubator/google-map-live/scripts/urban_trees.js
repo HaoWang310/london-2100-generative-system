@@ -6,6 +6,10 @@
  * a hash of its coordinates, so the same place always grows the same trees and
  * tile edges never double them. Points inside water are dropped.
  *
+ * Street trees line both sides of ordinary streets (not motorways, service
+ * roads, bridges or tunnels). No tree grows inside buildings, water,
+ * airports or railway land, or on another road.
+ *
  * Trees are low-poly extrusions: a trunk and stacked octagonal crowns
  * (rounded broadleaf or tiered conifer), varied in height, size and green.
  * They are a visual impression only, not a tree inventory.
@@ -23,9 +27,16 @@ export const GREEN_CLASSES=Object.freeze({
   park:{spacing:15,chance:0.42,conifer:0.12,height:[7,16]},
   garden:{spacing:12,chance:0.4,conifer:0.15,height:[5,11]},
   cemetery:{spacing:14,chance:0.45,conifer:0.35,height:[6,14]},
-  grass:{spacing:24,chance:0.22,conifer:0.1,height:[6,13]},
   sport:{spacing:38,chance:0.18,conifer:0.1,height:[7,14]}
 });
+
+/* Street trees: spacing along the kerb (m), chance per slot, height range. */
+export const STREET_TREES=Object.freeze({spacing:11,chance:0.78,height:[8,14],kerb:2.2});
+/* Carriageway half-widths (m) for roads that get street trees. */
+export const STREET_HALF_WIDTH=Object.freeze({trunk:9,primary:8,secondary:7,tertiary:6,minor:4.5});
+/* Half-widths of every road a tree must keep clear of. */
+const ROAD_CLEARANCE={motorway:12,trunk:9,primary:8,secondary:7,tertiary:6,minor:4.5,service:3,
+  track:2,path:1.2,rail:3,transit:3,raceway:5,busway:4,bus_guideway:4};
 
 /* Map an OpenMapTiles feature (landcover / park / landuse layer) to a class. */
 export function greenClassOf(layer,props){
@@ -34,14 +45,14 @@ export function greenClassOf(layer,props){
     if(c==='wood')return 'wood';
     if(s==='park'||s==='village_green'||s==='nature_reserve')return 'park';
     if(s==='garden'||s==='allotments')return 'garden';
-    if(s==='recreation_ground'||s==='golf_course'||s==='pitch')return 'sport';
-    if(c==='grass')return 'grass';
+    // Golf courses keep scattered trees; pitches, playing fields and plain
+    // grass (verges, airfields, lawns) stay open.
+    if(s==='golf_course')return 'sport';
     return null;
   }
   if(layer==='park')return 'park';
   if(layer==='landuse'){
     if(c==='cemetery')return 'cemetery';
-    if(c==='pitch'||c==='stadium')return 'sport';
     return null;
   }
   return null;
@@ -78,14 +89,128 @@ export function makeProjector(lng0,lat0){
   };
 }
 
+/* Bounding-box grid over polygons ([{rings}]) for fast point tests. */
+export function polygonIndex(polys,cell=60){
+  const grid=new Map();
+  const items=[];
+  for(const poly of polys){
+    const outer=poly.rings&&poly.rings[0];
+    if(!outer||outer.length<3)continue;
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const [x,y] of outer){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+    const id=items.push({rings:poly.rings,box:[x0,y0,x1,y1]})-1;
+    const i0=Math.floor(x0/cell),i1=Math.floor(x1/cell),j0=Math.floor(y0/cell),j1=Math.floor(y1/cell);
+    if((i1-i0+1)*(j1-j0+1)>4000){(grid.get('big')||grid.set('big',[]).get('big')).push(id);continue;}
+    for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){
+      const k=i+','+j;
+      (grid.get(k)||grid.set(k,[]).get(k)).push(id);
+    }
+  }
+  return {
+    contains(x,y){
+      const ids=[...(grid.get(Math.floor(x/cell)+','+Math.floor(y/cell))||[]),...(grid.get('big')||[])];
+      for(const id of ids){
+        const {rings,box}=items[id];
+        if(x<box[0]||x>box[2]||y<box[1]||y>box[3])continue;
+        if(pointInPolygon(x,y,rings))return true;
+      }
+      return false;
+    }
+  };
+}
+
+function segDist(x,y,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;
+  const t=l2?Math.max(0,Math.min(1,((x-ax)*dx+(y-ay)*dy)/l2)):0;
+  return Math.hypot(x-(ax+t*dx),y-(ay+t*dy));
+}
+
+/* Grid over road segments: is (x,y) on a road (within its half-width + margin)? */
+export function roadIndex(roads,cell=40){
+  const grid=new Map();
+  const segs=[];
+  for(const road of roads){
+    const half=road.half??ROAD_CLEARANCE[road.cls]??4;
+    const c=road.coords;
+    for(let k=1;k<c.length;k++){
+      const [ax,ay]=c[k-1],[bx,by]=c[k];
+      const id=segs.push([ax,ay,bx,by,half])-1;
+      const pad=half+2;
+      const i0=Math.floor((Math.min(ax,bx)-pad)/cell),i1=Math.floor((Math.max(ax,bx)+pad)/cell);
+      const j0=Math.floor((Math.min(ay,by)-pad)/cell),j1=Math.floor((Math.max(ay,by)+pad)/cell);
+      if((i1-i0+1)*(j1-j0+1)>400)continue;
+      for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){
+        const key=i+','+j;
+        (grid.get(key)||grid.set(key,[]).get(key)).push(id);
+      }
+    }
+  }
+  return {
+    blocked(x,y,margin=1){
+      for(const id of grid.get(Math.floor(x/cell)+','+Math.floor(y/cell))||[]){
+        const s=segs[id];
+        if(segDist(x,y,s[0],s[1],s[2],s[3])<s[4]+margin)return true;
+      }
+      return false;
+    }
+  };
+}
+
+/* Candidate street-tree positions on both kerbs of the given roads
+   ([{cls, coords:[[x,y],...]}], local metres). Slots sit where the line crosses
+   a world grid along its main axis, so the same street always gets the same
+   trees, however the road is split into tiles. */
+export function streetTreeSlots(roads,{gridOffset=[0,0],bounds=null}={}){
+  const {spacing,chance,height,kerb}=STREET_TREES;
+  const out=[];
+  for(const road of roads){
+    const half=STREET_HALF_WIDTH[road.cls];
+    if(half==null)continue;
+    const off=half+kerb;
+    const c=road.coords;
+    for(let k=1;k<c.length;k++){
+      const [ax,ay]=c[k-1],[bx,by]=c[k];
+      const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);
+      if(len<1)continue;
+      if(bounds&&(Math.max(ax,bx)<bounds[0]-off||Math.min(ax,bx)>bounds[2]+off||
+        Math.max(ay,by)<bounds[1]-off||Math.min(ay,by)>bounds[3]+off))continue;
+      const ux=dx/len,uy=dy/len;
+      const alongX=Math.abs(ux)>=Math.abs(uy);
+      const a0=alongX?ax+gridOffset[0]:ay+gridOffset[1];
+      const a1=alongX?bx+gridOffset[0]:by+gridOffset[1];
+      const step=spacing*Math.abs(alongX?ux:uy);
+      const lo=Math.min(a0,a1),hi=Math.max(a0,a1);
+      for(let n=Math.ceil(lo/step);n*step<hi;n++){
+        const t=(n*step-a0)/(a1-a0);
+        const px=ax+dx*t,py=ay+dy*t;
+        const lane=Math.round((alongX?py+gridOffset[1]:px+gridOffset[0])/6);
+        for(const side of [1,-1]){
+          const salt=side>0?41:43;
+          if(hash01(n,lane,salt)>chance)continue;
+          const u=hash01(n,lane,salt+1),v=hash01(n,lane,salt+2);
+          const columnar=v>0.9;
+          const h=height[0]+(height[1]-height[0])*u;
+          const width=0.85+0.3*hash01(n,lane,salt+3);
+          out.push({x:px-uy*off*side,y:py+ux*off*side,cls:'street',h,
+            r:h*width*(columnar?0.13:0.34),conifer:false,
+            variant:columnar?'columnar':'broadleaf',width,tone:hash01(n,lane,salt+4)});
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * Scatter trees.
  * areas: [{cls, rings:[[[x,y],...],...]}] in local metres (absolute grid:
  *   pass gridOrigin so cells are anchored to the world, not the view).
  * water: [{rings}] in the same metres.
+ * roads: [{cls, coords}] for street trees and road clearance.
+ * exclude: [{rings}] where no tree may stand (buildings, airports, rail land).
  * Returns [{x,y,cls,h,r,conifer,tone}]
  */
-export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=null}={}){
+export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=null,roads=[],exclude=[]}={}){
   const cells=new Map();
   const [gx,gy]=gridOffset;
   for(const area of areas){
@@ -121,10 +246,16 @@ export function scatterTrees(areas,water,{gridOffset=[0,0],maxTrees=3000,bounds=
       }
     }
   }
-  let trees=[...cells.values()];
-  if(water.length){
-    trees=trees.filter(t=>!water.some(w=>pointInPolygon(t.x,t.y,w.rings)));
+  // Street trees fill slots not already taken by a green-space tree.
+  for(const t of streetTreeSlots(roads,{gridOffset,bounds})){
+    if(bounds&&(t.x<bounds[0]||t.x>bounds[2]||t.y<bounds[1]||t.y>bounds[3]))continue;
+    const key=Math.round((t.x+gx)/3)+','+Math.round((t.y+gy)/3);
+    if(!cells.has(key))cells.set(key,t);
   }
+  let trees=[...cells.values()];
+  const blocked=polygonIndex([...water,...exclude]);
+  const onRoad=roadIndex(roads);
+  trees=trees.filter(t=>!blocked.contains(t.x,t.y)&&!onRoad.blocked(t.x,t.y,t.cls==='street'?0.8:1.5));
   if(trees.length>maxTrees){
     // Keep a stable, evenly spread subset.
     trees.sort((a,b)=>hash01(Math.round(a.x),Math.round(a.y),7)-hash01(Math.round(b.x),Math.round(b.y),7));
@@ -223,7 +354,26 @@ export function createUrbanTrees(map,{
       });
     }
     take('water',(f,rings)=>water.push({rings}));
-    return {areas,water};
+    const exclude=[];
+    take('aeroway',(f,rings)=>exclude.push({rings}));
+    take('building',(f,rings)=>exclude.push({rings}));
+    take('landuse',(f,rings)=>{
+      const c=f.properties?.class;
+      if(c==='railway'||c==='industrial'||c==='quarry'||c==='landfill')exclude.push({rings});
+    });
+    const roads=[];
+    let lines=[];
+    try{lines=map.querySourceFeatures(sourceId,{sourceLayer:'transportation'});}catch(error){}
+    for(const f of lines){
+      const p=f.properties||{},g=f.geometry;
+      if(p.brunnel==='tunnel')continue;
+      const parts=g?.type==='LineString'?[g.coordinates]:g?.type==='MultiLineString'?g.coordinates:[];
+      // Bridges and ramps keep their clearance but grow no street trees.
+      const cls=(p.brunnel==='bridge'||p.ramp===1||p.ramp==='1')&&STREET_HALF_WIDTH[p.class]!=null
+        ?'bridge_'+p.class:p.class;
+      for(const line of parts)roads.push({cls,half:ROAD_CLEARANCE[p.class],coords:line.map(projector.toLocal)});
+    }
+    return {areas,water,exclude,roads};
   }
 
   function viewBounds(){
@@ -247,8 +397,8 @@ export function createUrbanTrees(map,{
       if(trees.length){trees=[];renderer.setTrees([],REF);onChange();}
       return;
     }
-    const {areas,water}=readAreas();
-    trees=scatterTrees(areas,water,{maxTrees,bounds:viewBounds()});
+    const {areas,water,exclude,roads}=readAreas();
+    trees=scatterTrees(areas,water,{maxTrees,bounds:viewBounds(),roads,exclude});
     renderer.setTrees(trees.map(t=>{
       const [lng,lat]=projector.toLngLat([t.x,t.y]);
       return {lng,lat,h:t.h,yaw:t.tone*Math.PI*2,variant:t.variant,tint:treeTint(t),width:t.width};
