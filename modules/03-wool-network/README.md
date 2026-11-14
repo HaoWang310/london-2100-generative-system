@@ -1,4 +1,4 @@
-# 02 · Wool network 羊毛算法区域路网
+# 03 · Wool network 羊毛算法区域路网
 
 - **输入**：一个区域（`childInput`），`context.parentRoads` = 区域连接道路
 - **输出**：level `wool`；`roads` = `primary` / `branch`，`children` = 可进入 Tensor 的局部区域

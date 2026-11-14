@@ -1,4 +1,4 @@
-// 03 · Tensor roads — local streets inside one Wool local area.
+// 04 · Tensor roads — local streets inside one Wool local area.
 //
 // P0 PLACEHOLDER: a uniform (grid) or radial field whose streamlines are
 // straight lines / rings, aligned to the parent Wool roads and snapped onto
@@ -12,7 +12,7 @@ import {
 } from '../../shared/geo-core/index.js';
 
 const mod = {
-  id: '03-tensor-roads',
+  id: '04-tensor-roads',
   level: 'tensor',
   version: '0.1.0',
   placeholder: true,

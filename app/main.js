@@ -1,5 +1,5 @@
 // London 2100 unified app shell.
-// London → Region → Wool → Tensor, with 04 integration / 05 export tools.
+// London → Region → Wool → Tensor, with 05 integration / 06 export tools.
 //
 // Rules this shell guarantees:
 //  - Zooming/panning the map never touches the workspace (no clearing, no regeneration).

@@ -1,11 +1,11 @@
 // The app is the only place that imports several modules. Modules never
 // import each other (enforced by tools/check-isolation.mjs).
 import london from '../modules/00-london-map/module.js';
-import region from '../modules/01-region-planning/module.js';
-import wool from '../modules/02-wool-network/module.js';
-import tensor from '../modules/03-tensor-roads/module.js';
-import integration from '../modules/04-road-integration/module.js';
-import exporter, { toGeoJSON, toBNGGeoJSON } from '../modules/05-catalogue-export/module.js';
+import region from '../modules/02-region-planning/module.js';
+import wool from '../modules/03-wool-network/module.js';
+import tensor from '../modules/04-tensor-roads/module.js';
+import integration from '../modules/05-road-integration/module.js';
+import exporter, { toGeoJSON, toBNGGeoJSON } from '../modules/06-catalogue-export/module.js';
 
 // Scale levels, in order. Each level's module consumes the previous level's result.
 export const SCALES = [
