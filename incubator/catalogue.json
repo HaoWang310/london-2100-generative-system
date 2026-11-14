@@ -36,25 +36,25 @@
       "cover": "assets/catalogue/london-map.webp",
       "status": "incubating",
       "title": {
-        "zh": "伦敦地图 · 水文实验室",
-        "en": "London map · Hydro Lab"
+        "zh": "伦敦地图 · 真实数据",
+        "en": "London map · real data"
       },
       "desc": {
-        "zh": "EA LiDAR 地形、洪涝风险、汇水面积与排水网络，局部洪水模拟、水文张量场与地块路网。",
-        "en": "EA LiDAR terrain, flood risk, contributing area and drainage network; local flood simulation, hydro tensor field and parcel roads."
+        "zh": "伦敦 70 km 范围的真实地理数据：OSM 底图与 3D 建筑，EA LiDAR 地形、EA 洪水风险、由 OS Terrain 50 推导的排水网络；可切换颜色主题、光照、天气，搜索地点。",
+        "en": "Real geographic data for London within 70 km: the OSM basemap and 3D buildings, EA LiDAR terrain, EA flood risk and a drainage network derived from OS Terrain 50; colour themes, lighting, weather and place search."
       },
       "tags": [
+        {
+          "zh": "真实数据",
+          "en": "Real data"
+        },
         {
           "zh": "地形",
           "en": "Terrain"
         },
         {
-          "zh": "洪涝",
-          "en": "Flood"
-        },
-        {
-          "zh": "张量场",
-          "en": "Tensor field"
+          "zh": "洪水风险",
+          "en": "Flood risk"
         }
       ],
       "owner": "HaoWang310",
