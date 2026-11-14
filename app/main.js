@@ -192,7 +192,7 @@ function openGrowth() {
   if (first) {
     growthTool = GROWTH.create(viewer, { onState: what => {
       if (what === 'loaded') { if (activeTool === 'growth') { viewer.fit(growthTool.ring()); setProgress(growthTool.state.year / GROWTH.module.years); } render(); }
-      if (what === 'ran' && activeTool === 'growth' && growthTool.state.variation) play(0);   // as the incubator: a new variation plays from 2025
+      if (what === 'ran' && activeTool === 'growth' && growthTool.state.variation && !growthTool.stepping) play(0);   // as the incubator: a new variation plays from 2025 (the steps play their own)
       if (what === 'mode' || what === 'error') renderChrome();
       // the panel's 生成流程 moves the year itself: keep the timeline with it
       if (what === 'year' && activeTool === 'growth' && Math.round(progress * GROWTH.module.years) !== growthTool.state.year) setProgress(growthTool.state.year / GROWTH.module.years);
