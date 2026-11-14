@@ -90,18 +90,20 @@ const siteTxt = document.createElement('div'); siteTxt.className = 'pmOut'; STEP
 const areaTxt = document.createElement('p'); areaTxt.className = 'pmOut'; STEPS[2].extra.after(areaTxt);
 // (v8.11) step 5: placement by hand only, with three kinds of node to choose from
 const KINDS = [
-  { k: 'main', zh: '主节点 · 环形广场', en: 'Main node · circus', dzh: '影响约 230 米，周围道路绕成环形广场，并向外放射', den: 'Reaches about 230 m: the streets ring it as a circus and run out from it' },
-  { k: 'sec', zh: '次节点 · 街区中心', en: 'Local node · neighbourhood centre', dzh: '影响约 140 米、力度较弱，只让附近道路微微弯向它，不形成广场', den: 'Reaches about 140 m, gently: nearby streets bend towards it, no circus' },
-  { k: 'edge', zh: '边界节点 · 入口广场', en: 'Edge node · gateway', dzh: '吸附在场地边界上，形成半圆形入口广场，影响约 340 米', den: 'Snaps to the site\'s edge: a half-circle gateway plaza, reaching about 340 m' } ];
+  { k: 'main', zh: '主节点 · 环形广场', en: 'Main node · circus', dzh: '圆形。影响约 230 米，周围道路绕成环形广场并向外放射（强度 7 以上才形成广场）', den: 'Circle. Reaches about 230 m: the streets ring it as a circus and run out from it (a circus from strength 7)' },
+  { k: 'sec', zh: '次节点 · 街区中心', en: 'Local node · neighbourhood centre', dzh: '正方形。影响约 140 米，附近道路弯向它，不形成广场', den: 'Square. Reaches about 140 m: nearby streets bend towards it, no circus' },
+  { k: 'edge', zh: '边界节点 · 入口广场', en: 'Edge node · gateway', dzh: '三角形。吸附在场地边界上，形成半圆形入口广场，影响约 340 米（强度 7 以上）', den: 'Triangle. Snaps to the site\'s edge: a half-circle gateway plaza, reaching about 340 m (from strength 7)' } ];
 PM.kind = 'main';
 const kindBox = document.createElement('div'); kindBox.className = 'pmKinds'; kindBox.setAttribute('role', 'radiogroup');
 for (const K of KINDS){ const b = document.createElement('button'); b.type = 'button'; b.dataset.kind = K.k; b.setAttribute('role', 'radio');
   b.innerHTML = '<i class="pmDot ' + K.k + '" aria-hidden="true"></i><span class="pmKT"></span><span class="pmKD"></span>';
   b.onclick = () => { PM.kind = K.k; bindPull(); ui(); }; kindBox.append(b); }
 // (v8.12) the strength slider sets the chosen kind's pull (KPULL in the engine); each kind keeps its own
-function bindPull(){ if (!KPULL) return; const r = el('pull'); r.value = KPULL[PM.kind]; const o = r.nextElementSibling; if (o) o.textContent = (+r.value).toFixed(1);
+// (v8.13) in the process mode the slider reads 1–10; the engine's pull is the level × 0.3 (1 → 0.3, 10 → 3.0)
+const PULL_STEP = 0.3, toLevel = pl => clamp(Math.round(pl / PULL_STEP), 1, 10);
+function bindPull(){ if (!KPULL) return; const r = el('pull'); r.min = 1; r.max = 10; r.step = 1; r.value = toLevel(KPULL[PM.kind]); const o = r.nextElementSibling; if (o) o.textContent = r.value;
   const lab = r.closest('.row')?.querySelector('label'); if (lab){ const K = KINDS.find(x => x.k === PM.kind); lab.innerHTML = ''; const sp = document.createElement('span'); sp.setAttribute('data-no-translate', ''); sp.textContent = L('吸引强度 · ', 'Pull · ') + L(K.zh.split(' · ')[0], K.en.split(' · ')[0]); lab.append(sp); } }
-el('pull').addEventListener('input', () => { if (PM.active && KPULL) KPULL[PM.kind] = +el('pull').value; });
+el('pull').addEventListener('input', () => { if (!(PM.active && KPULL)) return; const r = el('pull'); KPULL[PM.kind] = +(+r.value * PULL_STEP).toFixed(2); const o = r.nextElementSibling; if (o) setTimeout(() => { o.textContent = r.value; }, 0); });
 const kindCount = document.createElement('div'); kindCount.className = 'pmKCount';
 const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.className = 'pmLink';
 clearBtn.onclick = () => { stopAuto(); HAND = []; ATTR = []; AMODE = 'hand'; el('aMode').value = 'hand'; buildTarget(); onChange(5); };
@@ -322,9 +324,10 @@ function setMode(on, first){
   window.__TS_PROCESS_ON = on; document.body.classList.toggle('pm-on', on); bar.hidden = !on; box.hidden = !on;
   for (const x of freeOnly) x.style.display = on ? 'none' : '';
   if (on){ PM.active = true; moveRows(); el('auto').checked = false; MODE = 'B'; T6.setModeQuiet('B'); applySpeed();
-    if (!KPULL){ const pl = +el('pull').value; KPULL = { main: pl, sec: +(pl / 2.4).toFixed(1), edge: pl }; } bindPull();
+    if (!KPULL) KPULL = { main: 8 * PULL_STEP, sec: 3 * PULL_STEP, edge: 8 * PULL_STEP };   // levels 8, 3, 8 (as the engine's 2.4 and 1.0)
+    bindPull();
     PM.valid = 0; PM.reached = 0; PM.frames = []; PM.marks = []; PM.b6 = -1; PM.atB = false; PM.target = 0; go(1); }
-  else { stopAuto(); stopPlay(); setScrub(null); window.ENVANIM && ENVANIM.stop(); if (KPULL){ el('pull').value = KPULL.main; KPULL = null; const lab = el('pull').closest('.row')?.querySelector('label'); if (lab) lab.textContent = TS_LANG === 'zh' ? '吸引强度' : 'pull'; } PM.active = false; PM.cur = 0; giveBack(); el('auto').checked = true; el('speed').value = 6;
+  else { stopAuto(); stopPlay(); setScrub(null); window.ENVANIM && ENVANIM.stop(); if (KPULL){ const r = el('pull'); r.min = 0; r.max = 3; r.step = 0.1; r.value = KPULL.main; const o = r.nextElementSibling; if (o) o.textContent = (+r.value).toFixed(1); KPULL = null; const lab = el('pull').closest('.row')?.querySelector('label'); if (lab) lab.textContent = TS_LANG === 'zh' ? '吸引强度' : 'pull'; } PM.active = false; PM.cur = 0; giveBack(); el('auto').checked = true; el('speed').value = 6;
     if (!first){ if (GEN){ GEN = null; GROWING = false; } if (AMODE === 'hand' && !HAND && PM.saved) HAND = PM.saved; placeAttractors(); buildTarget(); settleField(); let sf = true; try { sf = localStorage.getItem('tensorStudio.showFlood') !== '0'; } catch (e) {} T6.setFlood(sf);
       el('lEvents').checked = true; setField('off'); setUnder('zones');
       if (!restoreFinal()) start(true); }

@@ -1494,9 +1494,10 @@ function render(now){
     ctx.globalAlpha = 0.22; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.arc(x, y, a.reach * view.s, 0, 2 * PI); ctx.stroke(); ctx.setLineDash([]);
     for (let k = 0; k < 2; k++){ const ph = ((tt * 0.6 + k * 0.5) % 1), r = sz + 3 + ph * (a.reach * view.s * 0.55 * pf); ctx.strokeStyle = col; ctx.globalAlpha = (1 - ph) * 0.6 * Math.min(1, 0.35 + pf); ctx.lineWidth = a.kind === 'sec' ? 1.1 : 1.8; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * PI); ctx.stroke(); }
     const rr = sz + 2.2 * pf; ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.strokeStyle = THEME === 'dark' ? '#000' : '#fff'; ctx.lineWidth = 1.5;
-    if (a.kind === 'edge'){ ctx.beginPath(); ctx.rect(x - rr, y - rr, 2 * rr, 2 * rr); ctx.fill(); ctx.stroke(); }
+    // (v8.13) the shape tells the kind: main a circle, local a square, edge a triangle
+    if (a.kind === 'edge'){ const h = rr * 1.25; ctx.beginPath(); ctx.moveTo(x, y - h * 1.05); ctx.lineTo(x + h, y + h * 0.75); ctx.lineTo(x - h, y + h * 0.75); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (a.kind === 'main'){ ctx.beginPath(); ctx.arc(x, y, rr + 2.5, 0, 2 * PI); ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, rr, 0, 2 * PI); ctx.fill(); }
-    else { ctx.beginPath(); ctx.arc(x, y, rr, 0, 2 * PI); ctx.fill(); ctx.stroke(); } }
+    else { const h = rr * 0.9; ctx.beginPath(); ctx.rect(x - h, y - h, 2 * h, 2 * h); ctx.fill(); ctx.stroke(); } }
   drawScale(); drawRose(); hud(); }
 function drawScale(){ const want = VW * 0.16 / view.s; let m = 50; for (const s of [50, 100, 200, 250, 500, 1000, 2000]) if (s <= want) m = s;
   const x1 = VW - 24 - (window.__TS_INSETS ? window.__TS_INSETS().rb : 0), x0 = x1 - m * view.s, y = VH - 26; for (let k = 0; k < 4; k++){ ctx.fillStyle = k % 2 ? P.bg : P.main; ctx.fillRect(x0 + m * view.s * k / 4, y, m * view.s / 4, 5); }
