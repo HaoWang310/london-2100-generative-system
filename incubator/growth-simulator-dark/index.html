@@ -117,9 +117,11 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
 .step { border:1px solid var(--bd); border-radius:14px; margin:8px 0; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
 .step.open { border-color:#55555b; background:rgba(255,255,255,.04); }
 .step .sh { display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; background:none; border:0; color:inherit; padding:12px 14px; cursor:pointer; font:inherit; }
-.step .ck { flex:0 0 22px; height:22px; border-radius:50%; background:#f2f2f2; position:relative; margin-top:1px; box-sizing:border-box; }
-.step .ck::after { content:""; position:absolute; left:8px; top:4px; width:5px; height:10px; border:solid #111; border-width:0 2px 2px 0; transform:rotate(45deg); }
-.step.pending .ck { background:transparent; border:1.5px solid #6e6e73; } .step.pending .ck::after { display:none; }
+.step .ck { flex:0 0 24px; height:24px; border-radius:50%; background:#f2f2f2; color:#111; position:relative; margin-top:0; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12.5px; line-height:1; font-variant-numeric:tabular-nums; }
+.step .ck::after { content:""; position:absolute; right:-3px; bottom:-3px; width:12px; height:12px; border-radius:50%; background:#0b0b0c no-repeat center / 8px 8px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23f2f2f2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.step.pending .ck { background:transparent; color:#8e8e93; border:1.5px solid #6e6e73; } .step.pending .ck::after { display:none; }
 .step .st { flex:1; min-width:0; } .step .st b { display:block; font-size:14.5px; font-weight:600; }
 .step .ss { display:block; color:var(--grey); font-size:12px; margin-top:3px; line-height:1.45; }
 .step .chev { color:var(--dim); transition:transform .2s; margin-top:2px; } .step.open .chev { transform:rotate(90deg); }
@@ -341,9 +343,9 @@ body.resizing.ew, body.resizing.ew * { cursor:ew-resize !important; } body.resiz
   var STEPS = GVC.STEPS, openStep = null, LAY0 = null, flowing = false, flowT = 0, flowI = 0;
   function buildSimple() {
     var host = $("steps"); host.innerHTML = ""; SC = {};
-    STEPS.forEach(function (st) {
+    STEPS.forEach(function (st, n) {
       var card = document.createElement("div"); card.className = "step" + (openStep === st.id ? " open" : ""); card.dataset.id = st.id;
-      card.innerHTML = '<button class="sh"><span class="ck"></span><span class="st"><b>' + T(st.t) + '</b><span class="ss"></span></span><span class="chev">›</span></button>' +
+      card.innerHTML = '<button class="sh"><span class="ck">' + (n + 1) + '</span><span class="st"><b>' + T(st.t) + '</b><span class="ss"></span></span><span class="chev">›</span></button>' +
         '<div class="sb"><div class="note">' + T(st.note) + '</div><div class="stale">' + T("Run the variation to update this step.") + "</div></div>";
       var body = card.querySelector(".sb");
       if (st.graph) body.appendChild(GRAPHWRAP);

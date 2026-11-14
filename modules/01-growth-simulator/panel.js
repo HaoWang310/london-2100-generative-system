@@ -210,7 +210,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   }
   function buildSteps() {
     graph = h('canvas', { class: 'g01-graph' }); ratio = h('p', { class: 'muted small' });
-    el.steps = h('div', { class: 'g01-steps' }, STEPS().map(st => {
+    el.steps = h('div', { class: 'g01-steps' }, STEPS().map((st, n) => {
       const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Run the variation to update this step.')));
       if (st.graph) body.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
       // what the step lays on the map
@@ -226,7 +226,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
       }
       const card = h('div', { class: 'g01-step' },
         h('button', { type: 'button', class: 'sh', onclick: () => { stopFlow(); openStepAt(openStep === st.id ? null : st.id); } },
-          h('span', { class: 'ck' }), h('span', { class: 'st' }, h('b', {}, T(st.t)), h('span', { class: 'ss' })), h('span', { class: 'chev' }, '›')),
+          h('span', { class: 'ck' }, String(n + 1)), h('span', { class: 'st' }, h('b', {}, T(st.t)), h('span', { class: 'ss' })), h('span', { class: 'chev' }, '›')),
         body);
       card.dataset.id = st.id;
       return card;
@@ -346,9 +346,11 @@ export const PANEL_CSS = `
 .g01-step { border: 1px solid var(--hairline); border-radius: 12px; margin: 6px 0; background: rgba(255,255,255,.015); transition: border-color .15s, background .15s; }
 .g01-step.open { border-color: var(--hairline-strong); background: rgba(255,255,255,.04); }
 .g01-step .sh { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 10px 12px; cursor: pointer; font: inherit; }
-.g01-step .ck { flex: 0 0 20px; height: 20px; border-radius: 50%; background: #f2f2f2; position: relative; margin-top: 1px; box-sizing: border-box; }
-.g01-step .ck::after { content: ""; position: absolute; left: 7px; top: 3px; width: 5px; height: 10px; border: solid #111; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.g01-step.pending .ck { background: transparent; border: 1.5px solid var(--text-3); } .g01-step.pending .ck::after { display: none; }
+.g01-step .ck { flex: 0 0 22px; height: 22px; border-radius: 50%; background: #f2f2f2; color: #111; position: relative; margin-top: 0; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font); font-variant-numeric: tabular-nums; }
+.g01-step .ck::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; background: #111 no-repeat center / 7px 7px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23f2f2f2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.g01-step.pending .ck { background: transparent; color: var(--text-3); border: 1.5px solid var(--text-3); } .g01-step.pending .ck::after { display: none; }
 .g01-step .st { flex: 1; min-width: 0; } .g01-step .st b { display: block; font-size: 13.5px; font-weight: 600; }
 .g01-step .ss { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .g01-step .chev { color: var(--text-3); transition: transform .2s; margin-top: 1px; } .g01-step.open .chev { transform: rotate(90deg); }
