@@ -45,4 +45,5 @@ City growth along the whole 412 km loop, 2025–2100, on 50 m parcels, drawn on 
 | `cells.js` | 事件流 → 每个地块一条记录 |
 | `georef.js` | 网格在地图上的位置 |
 | `overlay.js` | 地图图层（WebGL / 备用画布）、铁路与车站 |
-| `panel.js` | 右侧面板：与孵化区相同的控制、数据、对比、显示开关 |
+| `panel.js` | 右侧面板：与孵化区相同的「生成流程」九个步骤（控制分在各步中）、数据、对比、显示开关 |
+| `step-images.js` | 步骤展开时铺在地块下的图：地面图层、磁力场、第一遍城市的边缘 |
