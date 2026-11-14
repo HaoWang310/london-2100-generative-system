@@ -48,10 +48,10 @@ const STEPS = [
     note: () => L('每个因素给出一个方向，按权重叠成张量场：顺等高线；通风处顺夏季风；冷风强处横切冬季冷风；走廊旁沿走廊（滨水路）；洪水区顺流排水。流线就是道路将要遵循的方向，拖动滑块会实时转向。', 'Each factor gives a direction, weighted into one field: along the contour; along the summer wind where it blows; across the winter cold where it bites; along the corridors beside them (waterside streets); with the flow in the flood zones. The flow lines are the directions the streets will follow; they turn as you move a slider.') },
   { k: 5, zh: '放吸引点', en: 'Attractors', rows: ['pull'],
     note: () => L('点选一种节点，再在地图上单击放置；拖动可移动，右键删除。下面的滑块调节所选种类的吸引强度，每种各自保存。', 'Pick a kind of node, then click on the map to place it; drag to move, right-click to remove. The slider below sets the pull of the kind picked; each kind keeps its own.') },
-  { k: 6, zh: '长主路', en: 'Main streets', rows: ['d1', 'bMains', 'bMem', 'bFork'],
-    note: () => L('主路从锚点出发，沿场的方向每步 5 米生长，遇到别的道路形成 T 或 Y 路口。', 'Main streets start at the anchors and grow 5 m a step along the field, making a T or a Y where they meet another street.') },
-  { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'bGap', 'bInfill', 'bSec6'],
-    note: () => L('次路从主路两侧分出，再清理并行和断头的道路。', 'Second streets branch off the main ones, then streets side by side and open ends are tidied.') },
+  { k: 6, zh: '长主路', en: 'Main streets', rows: ['d1', 'bMains', 'bMem'],
+    note: () => L('主路从锚点出发，沿场的方向每步 5 米生长，遇到别的主路形成十字或 T 路口，不与其他主路并行。打开“优先完成主路”时，还会按主路间距补上贯通的等高线主路，并把环形广场接进路网。', 'Main streets start at the anchors and grow 5 m a step along the field, crossing or making a T where they meet another main street, never running alongside one. With “main streets first”, contour avenues are added at the main spacing and each circus is tied into the network.') },
+  { k: 7, zh: '长次路', en: 'Second streets', rows: ['d2', 'bGap', 'bFork', 'bInfill', 'bSec6'],
+    note: () => L('次路从主路两侧分出，再清理并行和断头的道路。分叉冲突阈值越低，在场方向冲突的地方越容易分出 Y 形岔路；拉到最右为关闭。', 'Second streets branch off the main ones, then streets side by side and open ends are tidied. The lower the fork threshold, the more Y forks where the field pulls two ways; fully right turns it off.') },
   { k: 8, zh: '评价出图', en: 'Review and export', rows: ['fNum', 'bGeo'],
     note: () => L('路网指标与上一个方案对比；道路按宽度显示。', 'The network measured against the previous run; streets drawn at width.') } ];
 
@@ -69,7 +69,7 @@ for (const s of STEPS){ const li = document.createElement('li'); li.className = 
     '<div class="pmBody"><p class="pmNote"></p><div class="pmExtra"></div><div class="card pmCard"></div><div class="pmActs"></div></div>';
   list.append(li); s.li = li; s.extra = li.querySelector('.pmExtra'); s.card = li.querySelector('.pmCard'); s.acts = li.querySelector('.pmActs');
   li.querySelector('.pmHead').onclick = () => { if (s.k <= PM.valid + 1 && s.k !== PM.cur){ stopAuto(); go(s.k); } };
-  let tm = null; const changed = () => { clearTimeout(tm); tm = setTimeout(() => onChange(s.k), 230); };
+  let tm = null; const changed = e => { const id = e && e.target && e.target.id; clearTimeout(tm); tm = setTimeout(() => onChange(s.k, id), 230); };
   s.card.addEventListener('input', changed); s.card.addEventListener('change', changed); }
 // the actions of each step
 const btn = (txt, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; if (cls) b.className = cls; b.onclick = fn; b._t = txt; return b; };
@@ -173,8 +173,10 @@ function go(k, auto){
   if (k === 2 && !auto) envTour(++PM.envTok);
   ui(); const li = STEPS[k - 1].li; requestAnimationFrame(() => li.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
 // a setting in step k changed: the steps after it are no longer current
-function onChange(k){
+function onChange(k, id){
   if (!PM.active) return; stopAuto();
+  // (v8.14) without 'main streets first' the fork threshold forks the main streets too: a change to it re-runs step 6
+  if (k === 7 && id === 'bFork' && !el('bMains').checked) k = 6;
   if (k <= 6){ PM.frames = []; PM.marks = []; PM.b6 = -1; }
   else if (k === 7 && PM.b6 >= 0){ PM.frames.length = PM.b6 + 1; PM.marks = PM.marks.filter(m => m.i <= PM.b6); }
   if (GEN){ GEN = null; GROWING = false; } PM.atB = false; PM.target = 0;
