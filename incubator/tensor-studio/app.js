@@ -63,17 +63,25 @@ const TINTS = [
 const BASEPAL = JSON.parse(JSON.stringify(PAL));
 let TINT = 'violet'; try { const t = localStorage.getItem('tensorStudio.tint'); if (TINTS.some(x => x[0] === t)) TINT = t; } catch (e) {}
 const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+// (v8.37) the wind's second colour: the complement of the palette's main colour, at the lightness of the wind's first colour
+const rgb2hsl = ([r, g, b]) => { r /= 255; g /= 255; b /= 255; const M = Math.max(r, g, b), m = Math.min(r, g, b), l = (M + m) / 2; if (M === m) return [0, 0, l];
+  const d = M - m, s = l > 0.5 ? d / (2 - M - m) : d / (M + m); let h = M === r ? (g - b) / d + (g < b ? 6 : 0) : M === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h / 6, s, l]; };
+const hsl2rgb = ([h, s, l]) => { if (s === 0) return [l, l, l].map(v => v * 255); const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map(v => v * 255); };
+const complementH = (main, ref) => { const m = rgb2hsl(hex3(main)), r = rgb2hsl(hex3(ref)); return hexOf(hsl2rgb([(m[0] + 0.5) % 1, Math.max(0.55, Math.min(0.9, m[1])), r[2] > 0.5 ? r[2] - 0.14 : r[2] + 0.14])); };   // a step towards the middle so it has presence beside the first
 const mixH = (a, b, t) => { const p = hex3(a), q = hex3(b); return hexOf(p.map((v, i) => v + (q[i] - v) * t)); }, rgbaH = (h, a) => { const c = hex3(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; };
 function tintColours(id){ const T = TINTS.find(x => x[0] === id) || TINTS[0], [c0, c1, c2, c3, c4] = T[3];
   const dk = JSON.parse(JSON.stringify(BASEPAL.dark)), lt = JSON.parse(JSON.stringify(BASEPAL.light));
   Object.assign(dk, { bg: '#000000', land: mixH(c0, c1, 0.42), edge: c4, contour: rgbaH(c4, 0.06), contourIdx: rgbaH(c4, 0.15), label: mixH(c3, c1, 0.4), room: rgbaH(c2, 0.08), bld: mixH(c0, c1, 0.8), lane: mixH(c0, c1, 0.6),
     rib: { M: mixH(c0, c1, 0.95), A: mixH(c0, c1, 0.85), B: mixH(c0, c1, 0.75), C: mixH(c0, c1, 0.6) }, main: c4, second: mixH(c3, c1, 0.45), grow: c3, glow: rgbaH(c2, 0.55), anchor: c4, bridge: c4, culvert: c3, width: c4,
-    flow: [hex3(c2), hex3(c3), hex3(c4)], flowAlpha: 0.48, fieldLine: rgbaH(c3, 0.6), fieldLine2: rgbaH(c4, 0.2), wLo: hex3(c1), wHi: hex3(c4), windAlong: c3, ghost: rgbaH(c4, 0.2),
+    flow: [hex3(c2), hex3(mixH(c2, c3, 0.5)), hex3(c3)], flowAlpha: 0.42, flowBlend: 'lighter', fieldLine: rgbaH(c3, 0.6), fieldLine2: rgbaH(c4, 0.2), wLo: hex3(c1), wHi: hex3(c4),
+    windAlong: c4, windAcross: complementH(c2, c4), ghost: rgbaH(c4, 0.2),   // (v8.37) the field's flow in the palette's solid core, luminous; the wind in its highlight and the highlight's complement
     cells: [c0, mixH(c0, c1, 0.3), mixH(c0, c1, 0.55), mixH(c0, c1, 0.8), c1], cross: rgbaH(c4, 0.28), evBranch: c3, evCross: c4, uTeal: hex3(c3) });
   if (D.site) dk.prim = mixH(c1, c3, 0.25);
   const ink = mixH(c0, '#1d1d1f', 0.4);
   Object.assign(lt, { bg: '#ffffff', room: rgbaH(c2, 0.05), main: ink, prim: D.site ? lt.prim : ink, anchor: ink, bridge: ink, width: ink, edge: ink, second: mixH(c1, '#9a9aa0', 0.55), grow: c2, glow: rgbaH(c2, 0.28), culvert: c2,
-    flow: [hex3(c2), hex3(mixH(c1, '#6e6e73', 0.3)), hex3(mixH(c2, c3, 0.5))], fieldLine: rgbaH(c2, 0.5), fieldLine2: rgbaH(c1, 0.2), windAlong: c2, evBranch: c2, uTeal: hex3(c2),
+    flow: [hex3(c1), hex3(mixH(c1, c2, 0.5)), hex3(c2)], flowAlpha: 0.5, flowBlend: 'multiply', fieldLine: rgbaH(c2, 0.5), fieldLine2: rgbaH(c1, 0.2),
+    windAlong: c1, windAcross: complementH(c2, c1), evBranch: c2, uTeal: hex3(c2),   // (v8.37) light: the flow in the palette's deep inks, the wind in the deep colour and its complement
     cells: ['#fafafa', mixH('#fafafa', c4, 0.4), mixH('#ececf0', c3, 0.25), mixH('#d8d8de', c3, 0.35), mixH('#c2c2c8', c2, 0.3)] });
   return { T, c: [c0, c1, c2, c3, c4], dark: dk, light: lt,
     anim: { dark: { Z: c4, Q: c3, V: c3, Cw: mixH(c2, c4, 0.35), C: c4, ink: c4 }, light: { Z: c2, Q: c2, V: mixH(c2, c1, 0.25), Cw: c1, C: mixH(c2, c3, 0.3), ink: ink } },
@@ -2030,7 +2038,8 @@ function clearTrails(){ for (const c of [L_flow, L_wind]){ const g = c.getContex
 function spawnFlow(p){ for (let k = 0; k < 40; k++){ const x = rnd2() * D.w, y = rnd2() * D.h; if (inLandNoCircus(x, y)){ p.x = x; p.y = y; p.age = 0; p.max = 90 + rnd2() * 160; p.dx = 0; p.dy = 0; p.sg = rnd2() < 0.5 ? 1 : -1; return; } } p.x = -1; }
 function inLandNoCircus(x, y){ const c = Math.floor(x / MC), r = Math.floor((D.h - y) / MC); return MASK && c >= 0 && r >= 0 && c < MW && r < MH && MASK[r * MW + c] === 1; }
 function stepFlow(){ const g = L_flow.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,' + P.fade + ')'; g.fillRect(0, 0, VW, VH); g.globalCompositeOperation = P.flowBlend;
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,' + P.fade + ')'; g.fillRect(0, 0, VW, VH);
+  g.globalCompositeOperation = (BASEMAPS[BASEMAP] && BASEMAPS[BASEMAP].live) ? 'source-over' : P.flowBlend;   // (v8.37) luminous / ink blends only on our own ground; over the live map (any theme) plain
   const buckets = [[], [], [], [], [], []]; const base = 1.6 / view.s, spd = 2.8 / view.s;
   if (FLOW.length < NFLOW){ for (let k = FLOW.length; k < NFLOW; k++){ const p = {}; spawnFlow(p); FLOW.push(p); } }
   for (const p of FLOW){ if (p.x < 0){ spawnFlow(p); continue; } const f = flowAt(p.x, p.y); if (!f){ spawnFlow(p); continue; }
@@ -2039,7 +2048,7 @@ function stepFlow(){ const g = L_flow.getContext('2d'); g.setTransform(DPR, 0, 0
     if (!inLandNoCircus(nx_, ny_) || ++p.age > p.max){ spawnFlow(p); continue; }
     buckets[Math.min(5, Math.floor(m * 6))].push(X(p.x), Y(p.y), X(nx_), Y(ny_)); p.x = nx_; p.y = ny_; p.dx = dx; p.dy = dy; }
   for (let b = 0; b < 6; b++){ const s = buckets[b]; if (!s.length) continue; const t = b / 5, c = t < 0.5 ? mix(P.flow[0], P.flow[1], t * 2) : mix(P.flow[1], P.flow[2], (t - 0.5) * 2);
-    g.strokeStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (P.flowAlpha * (0.45 + 0.55 * t)) + ')'; g.lineWidth = 0.75 + 0.6 * t; g.beginPath();
+    g.strokeStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (P.flowAlpha * (0.45 + 0.55 * t)) + ')'; g.lineWidth = 0.9 + 0.7 * t; g.beginPath();
     for (let i = 0; i < s.length; i += 4){ g.moveTo(s[i], s[i + 1]); g.lineTo(s[i + 2], s[i + 3]); } g.stroke(); }
   g.globalCompositeOperation = 'source-over'; }
 function mix(a, b, t){ return [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t)); }
@@ -2056,7 +2065,7 @@ function stepWind(){ const g = L_wind.getContext('2d'); g.setTransform(DPR, 0, 0
     const a = base + p.j, sp = sp0 * (0.45 + 0.55 * rel), nx_ = p.x + Math.cos(a) * sp, ny_ = p.y + Math.sin(a) * sp;
     if (nx_ < 0 || ny_ < 0 || nx_ > D.w || ny_ > D.h || ++p.age > p.max){ spawnWind(p); continue; }
     segs.push(X(p.x), Y(p.y), X(nx_), Y(ny_)); p.x = nx_; p.y = ny_; }
-  g.strokeStyle = kd.job === 'along' ? P.windAlong : P.windAcross; g.globalAlpha = THEME === 'dark' ? 0.55 : 0.45; g.lineWidth = 0.95; g.beginPath();
+  g.strokeStyle = kd.job === 'along' ? P.windAlong : P.windAcross; g.globalAlpha = THEME === 'dark' ? 0.5 : 0.42; g.lineWidth = 0.8; g.lineCap = 'round'; g.beginPath();
   for (let i = 0; i < segs.length; i += 4){ g.moveTo(segs[i], segs[i + 1]); g.lineTo(segs[i + 2], segs[i + 3]); } g.stroke();
   g.globalAlpha = 1; }
 function drawRose(){ if (!$('lRose').checked || !($('windOn').checked || $('lWind').checked || SIM)) return;
