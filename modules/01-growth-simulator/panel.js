@@ -11,7 +11,9 @@ import { GROUND } from './step-images.js';
 // Words this panel adds to the incubator's own (controls.js I18N), for the map display.
 const EXTRA_ZH = {
   'Display': '显示', 'Growth': '生长', 'Rail and stations': '铁路与车站', 'Parcel outlines when zoomed in': '放大时显示地块边线', 'Finer grains when zoomed in (illustrative)': '放大时细分颗粒（细部为示意）', 'Fill the 70 km circle beyond the model (illustrative)': '补全 70 km 圆内的缺口（示意）',
-  'Opacity': '不透明度', 'Where the first pass ends': '第一遍城市的边缘', 'Keep as background on the other levels': '在其他层级保留为背景',
+  'Opacity': '不透明度', 'Next': '下一步', 'Start': '开始', 'Start again': '重新开始', 'Show the result': '生成结果',
+  'Settings changed: the next step grows the loop with them.': '参数已修改：点「下一步」时按新参数重新生成。',
+  'Walk through the steps with Next. Change the settings in a step, or leave them and go on with the defaults.': '用「下一步」逐步完成。每一步可以修改参数，也可以不改，直接下一步使用默认参数。', 'Where the first pass ends': '第一遍城市的边缘', 'Keep as background on the other levels': '在其他层级保留为背景',
   'Could not load the data files.': '无法载入数据文件。', 'Loading the final outcome…': '正在载入最终结果…'
 };
 
@@ -51,7 +53,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     });
   }
   function syncAll() { for (const k of Object.keys(SL)) { SL[k].inp.value = s.P[k]; showVal(k); } syncSimple(); markPresets(); drawGraph(); }
-  const changed = () => { syncAll(); growth.setParams({}); stepsSync(); };
+  const changed = () => { settingsChanged(); syncAll(); growth.setParams({}); stepsSync(); };
   const presetRow = list => h('div', { class: 'g01-pre' }, list.map(b => {
     const bt = h('button', { type: 'button', class: 'btn', onclick: () => { Object.assign(s.P, b[1]); changed(); } }, T(b[0]));
     bt.dataset.set = JSON.stringify(b[1]);
@@ -151,18 +153,33 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   // -------------------------------------------------------------- 生成流程: the steps
   const STEPS = () => s.GVC.STEPS || [];       // an older controls.js has none: then no flow, nothing breaks
   const ctlById = id => { for (const g of s.GVC.SIMPLE) for (const c of g.c) if (c.id === id) return c; return null; };
-  // a step marked live shows the outcome; once the settings differ from what it shows, it waits for a run
+  // A step marked live shows the outcome; once the settings differ from what is shown, it is out of date.
   const outdated = () => (s.mode === 'variation' && s.variation ? growth.stale() : !growth.isDefault());
+  // The steps are walked in order with 下一步: reached = the furthest step opened, done = the steps
+  // passed (a green tick). The outcome is grown when a step that shows it is reached with new settings.
+  let reached = -1, busy = false, flowTok = 0, growTok = 0, growing = false;
+  const done = new Set();
+  const stepIx = id => STEPS().findIndex(q => q.id === id);
+  const wait = ms => new Promise(r => { flowT = setTimeout(r, ms); });
   function stepsSync() {
     if (!el.steps) return;
     const R = s.mode === 'variation' && s.variation ? s.variation : s.final, x = { D: s.D, P: s.P, stats: R.stats[75], fmt, T }, old = outdated();
-    for (const card of el.steps.children) {
-      const st = STEPS().find(q => q.id === card.dataset.id);
+    [...el.steps.children].forEach((card, i) => {
+      const st = STEPS()[i];
       let txt = ''; try { txt = st.sum(x); } catch { txt = ''; }
       card.querySelector('.ss').textContent = txt;
-      card.classList.toggle('pending', Boolean(st.live) && old);
+      card.classList.toggle('done', done.has(st.id));
+      card.classList.toggle('locked', i > reached);
+      card.classList.toggle('pending', st.id === openStep && Boolean(st.live) && old);
       card.classList.toggle('open', st.id === openStep);
-    }
+      const nb = card.querySelector('.g01-next');
+      if (nb) {
+        const last = i === STEPS().length - 1;
+        nb.disabled = busy;
+        nb.textContent = busy ? T('Growing the loop…') : last ? (done.has(st.id) ? T('Start again') : T('Show the result')) : `${T('Next')} · ${T(STEPS()[i + 1].t)}`;
+      }
+    });
+    if (el.start) el.start.hidden = reached >= 0;
   }
   function openStepAt(id) {
     openStep = id;
@@ -171,29 +188,76 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     onStep(st);
     if (st?.graph) requestAnimationFrame(drawGraph);
   }
+  function grow() {                           // 2025 to 2100 in about six seconds; resolves false if cut short
+    const tok = ++growTok;
+    growing = true;
+    return new Promise(res => {
+      let y = 0; growth.setYear(0);
+      const it = setInterval(() => {
+        if (tok !== growTok) { clearInterval(it); if (tok === growTok - 1) growing = false; res(false); return; }
+        y += 1; growth.setYear(Math.min(75, y));
+        if (y >= 75) { clearInterval(it); growing = false; res(true); }
+      }, 80);
+    });
+  }
+  async function goTo(i) {
+    const st = STEPS()[i]; if (!st) return;
+    reached = Math.max(reached, i);
+    if (st.live && outdated()) {
+      if (growth.isDefault()) growth.setMode('final');          // the release is the default run
+      else {
+        busy = true; openStepAt(st.id);
+        try { await growth.run(); } catch (e) { el.status.textContent = e.message; }
+        busy = false;
+      }
+    }
+    openStepAt(st.id);
+    el.steps.children[i]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (st.id === 'pass1' || st.id === 'pass2') await grow();
+    else if (st.id === 'farm' || st.id === 'result') growth.setYear(75);
+    if (i === STEPS().length - 1) done.add(st.id);
+    stepsSync();
+  }
+  function restart() { stopFlow(); done.clear(); reached = -1; openStepAt(null); }
+  function nextStep() {
+    if (busy) return;
+    const wasGrowing = growing;
+    stopFlow();                                  // also cuts a growth short ...
+    if (wasGrowing) { growing = false; growth.setYear(75); }   // ... which then stands at 2100
+    const i = openStep ? stepIx(openStep) : reached, last = STEPS().length - 1;
+    if (i >= last) { if (done.has(STEPS()[last].id)) restart(); else goTo(last); return; }
+    if (i >= 0) done.add(STEPS()[i].id);
+    goTo(i + 1);
+  }
+  // A setting changed in step k: the steps after it are walked again.
+  function settingsChanged() {
+    const k = openStep ? stepIx(openStep) : -1;
+    if (k < 0 || flowing) return;
+    STEPS().forEach((q, j) => { if (j >= k) done.delete(q.id); });
+    reached = k;
+  }
   function stopFlow() {
+    growTok++;
     if (!flowing) return;
-    flowing = false; clearTimeout(flowT); clearInterval(flowI);
+    flowing = false; flowTok++; clearTimeout(flowT);
     if (el.flow) el.flow.textContent = T('Play the whole process');
   }
-  function playFlow() {
+  async function playFlow() {
     if (flowing) { stopFlow(); return; }
+    if (busy) return;
+    const n = STEPS().length;
+    if (done.has(STEPS()[n - 1].id)) restart();
     flowing = true; el.flow.textContent = T('Stop');
-    let i = 0;
-    const grow = then => {                    // 2025 to 2100 in about six seconds
-      let y = 0; growth.setYear(0);
-      flowI = setInterval(() => { if (!flowing) return; y += 1; growth.setYear(Math.min(75, y)); if (y >= 75) { clearInterval(flowI); flowT = setTimeout(then, 1600); } }, 80);
-    };
-    const next = () => {
-      if (!flowing) return;
-      if (i >= STEPS().length) { stopFlow(); return; }
-      const st = STEPS()[i++];
-      openStepAt(st.id);
-      el.steps.querySelector(`[data-id="${st.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      if (st.id === 'pass1' || st.id === 'pass2') grow(next);
-      else { if (st.id === 'farm' || st.id === 'result') growth.setYear(75); flowT = setTimeout(next, st.id === 'result' ? 4000 : 3400); }
-    };
-    next();
+    const tok = ++flowTok;
+    for (let i = Math.max(0, openStep ? stepIx(openStep) : reached); i < n; i++) {
+      await goTo(i);
+      if (tok !== flowTok) return;
+      const st = STEPS()[i];
+      await wait(st.id === 'pass1' || st.id === 'pass2' ? 1000 : i === n - 1 ? 0 : 2600);
+      if (tok !== flowTok) return;
+      done.add(st.id); stepsSync();
+    }
+    stopFlow();
   }
   function control(c) {
     const def = c.get(s.DEFAULTS), [inp, tr] = track(c.min, c.max, c.step, def), val = h('span', { class: 'param-value' });
@@ -211,7 +275,7 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
   function buildSteps() {
     graph = h('canvas', { class: 'g01-graph' }); ratio = h('p', { class: 'muted small' });
     el.steps = h('div', { class: 'g01-steps' }, STEPS().map((st, n) => {
-      const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Run the variation to update this step.')));
+      const body = h('div', { class: 'sb' }, h('p', { class: 'note' }, T(st.note)), h('p', { class: 'stale' }, T('Settings changed: the next step grows the loop with them.')));
       if (st.graph) body.append(h('div', { class: 'g01-glab muted small' }, T('How each pull fades with distance')), graph, ratio);
       // what the step lays on the map
       const key = [];
@@ -224,16 +288,19 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
         const parts = id === 'seed' ? seedRow() : ctlById(id) ? control(ctlById(id)) : [];
         for (const p of parts) if (p) body.append(p);
       }
+      body.append(h('button', { type: 'button', class: 'btn primary g01-next', onclick: nextStep }));
       const card = h('div', { class: 'g01-step' },
-        h('button', { type: 'button', class: 'sh', onclick: () => { stopFlow(); openStepAt(openStep === st.id ? null : st.id); } },
+        h('button', { type: 'button', class: 'sh', onclick: () => { if (n > reached || busy) return; stopFlow(); openStepAt(openStep === st.id ? null : st.id); } },
           h('span', { class: 'ck' }, String(n + 1)), h('span', { class: 'st' }, h('b', {}, T(st.t)), h('span', { class: 'ss' })), h('span', { class: 'chev' }, '›')),
         body);
       card.dataset.id = st.id;
       return card;
     }));
     el.flow = h('button', { type: 'button', class: 'btn g01-flowbtn', onclick: playFlow }, T(flowing ? 'Stop' : 'Play the whole process'));
+    el.start = h('button', { type: 'button', class: 'btn primary g01-next g01-start', onclick: nextStep }, `${T('Start')} · ${T(STEPS()[0]?.t || '')}`);
     if (!STEPS().length) return h('div');
-    return h('div', { class: 'g01-sec' }, h('div', { class: 'g01-flowhead' }, h('div', { class: 'eyebrow' }, T('How the city is made')), el.flow), el.steps);
+    return h('div', { class: 'g01-sec' }, h('div', { class: 'g01-flowhead' }, h('div', { class: 'eyebrow' }, T('How the city is made')), el.flow),
+      h('p', { class: 'muted small' }, T('Walk through the steps with Next. Change the settings in a step, or leave them and go on with the defaults.')), el.start, el.steps);
   }
 
   // -------------------------------------------------------------- build
@@ -315,7 +382,9 @@ export function createPanel(container, growth, { onDisplay = () => {}, onStep = 
     },
     resize: drawGraph,
     /** Close the open step (the map back to the outcome) and stop the flow. */
-    closeSteps() { stopFlow(); if (openStep) openStepAt(null); }
+    closeSteps() { stopFlow(); if (openStep) openStepAt(null); },
+    /** True while the flow grows the loop itself (the app then leaves the timeline alone). */
+    stepping: () => busy || flowing
   };
 }
 
@@ -348,9 +417,15 @@ export const PANEL_CSS = `
 .g01-step .sh { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 10px 12px; cursor: pointer; font: inherit; }
 .g01-step .ck { flex: 0 0 22px; height: 22px; border-radius: 50%; background: #f2f2f2; color: #111; position: relative; margin-top: 0; box-sizing: border-box;
   display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font); font-variant-numeric: tabular-nums; }
-.g01-step .ck::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; background: #111 no-repeat center / 7px 7px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23f2f2f2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-.g01-step.pending .ck { background: transparent; color: var(--text-3); border: 1.5px solid var(--text-3); } .g01-step.pending .ck::after { display: none; }
+.g01-step .ck::after { display: none; content: ""; position: absolute; right: -4px; bottom: -4px; width: 13px; height: 13px; border-radius: 50%; background: #30D158 no-repeat center / 8px 8px; box-shadow: 0 0 0 2px var(--surface-1, #161618);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23ffffff' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.g01-step.done .ck::after { display: block; }
+.g01-step.locked .ck { background: transparent; color: var(--text-3); border: 1.5px solid var(--hairline-strong); }
+.g01-step.locked .sh { cursor: default; } .g01-step.locked .st b { color: var(--text-2); } .g01-step.locked .chev { visibility: hidden; }
+.g01-step.open .ck { box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
+.g01-next { width: 100%; height: 34px; margin-top: 10px; }
+.g01-next:disabled { opacity: .6; cursor: progress; }
+.g01-start { margin: 2px 0 8px; }
 .g01-step .st { flex: 1; min-width: 0; } .g01-step .st b { display: block; font-size: 13.5px; font-weight: 600; }
 .g01-step .ss { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 3px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .g01-step .chev { color: var(--text-3); transition: transform .2s; margin-top: 1px; } .g01-step.open .chev { transform: rotate(90deg); }
