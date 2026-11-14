@@ -4,7 +4,7 @@
 // Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
-import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.13';
+import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.15';
 
 const Z = 14, R = 6378137, WORLD = 2 * Math.PI * R, TILE = WORLD / 2 ** Z;
 
@@ -30,6 +30,8 @@ export function osmStream(lat, lon, opt = {}){
         if (d <= r) out.push({ key: x + '/' + y, d: Math.hypot((x0 + x1) / 2 - px, (y0 + y1) / 2 - py) }); }
       return out.sort((a, b) => a.d - b.d).map(o => o.key);
     },
+    /** the same tile drawn again in the app's (new) look */
+    repaint(key, alive){ if (!opt.painter) return Promise.resolve(null); const [x, y] = key.split('/').map(Number); return opt.painter.render(x, y, alive); },
     /** one tile → { canvas, quad: [x0, y0, x1, y1] plan metres, mesh: { v, i } model space, count } */
     async load(key, alive = () => true){
       const [x, y] = key.split('/').map(Number);
@@ -49,7 +51,7 @@ export function osmStream(lat, lon, opt = {}){
       const [x0, y1] = planOf(x, y), plan = ext => q => [x0 + q[0] / ext * sizeM, y1 - q[1] / ext * sizeM], list = [];
       for (const { f } of bld){ const P = plan(f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0;
         for (const part of f.parts){ if (part.length < 4) continue; list.push({ ring: part.map(P), h, h0, outer: true }); } }
-      const B = buildingMesh(list.filter(o => area(o.ring) < 0), 0, 0, sizeM, sizeM, x0, y1 - sizeM, opt.painter?.building || null);
+      const B = buildingMesh(list.filter(o => area(o.ring) < 0), 0, 0, sizeM, sizeM, x0, y1 - sizeM, [1, 1, 1]);   // white; xr_view tints them with the app's building colour
       // with the map app at hand: the same tile in the app's own look follows when it is drawn
       const upgrade = opt.painter ? opt.painter.render(x, y, alive) : null;
       return { canvas: cv, quad: [x0, y1 - sizeM, x0 + sizeM, y1], mesh: B.mesh, count: B.count, upgrade };

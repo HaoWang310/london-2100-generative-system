@@ -6,7 +6,7 @@
 // Extrusions are hidden there (VR extrudes the buildings itself), and the app's building colour is reported so the
 // VR prisms match. The app map itself is only read (getStyle), never changed.
 
-import { mapLib } from './map_bridge.js?v=0.13';
+import { mapLib } from './map_bridge.js?v=0.15';
 
 const PX = 1024, Z = 15;
 
@@ -22,13 +22,13 @@ function rgb(c){
 export async function mapPainter(map, frame){
   const win = frame.contentWindow, lib = await mapLib(frame), style = map.getStyle();
   // the app's building colour (first extrusion layer with a plain colour)
-  let building = null;
-  for (const L of style.layers || []) if (L.type === 'fill-extrusion'){ building = rgb(L.paint?.['fill-extrusion-color']); if (building) break; }
+  const buildingOf = st => { for (const L of st.layers || []) if (L.type === 'fill-extrusion'){ const c = rgb(L.paint?.['fill-extrusion-color']); if (c) return c; } return null; };
   // a copy of the style without extrusions (VR extrudes itself), custom layers, terrain, and sources nothing uses any more
-  const layers = (style.layers || []).filter(L => L.type !== 'custom' && L.type !== 'fill-extrusion');
-  const used = new Set(layers.map(L => L.source).filter(Boolean)), sources = {};
-  for (const [id, src] of Object.entries(style.sources || {})) if (used.has(id)) sources[id] = src;
-  const copy = { ...style, layers, sources }; delete copy.terrain; delete copy.projection;
+  const copyOf = st => { const layers = (st.layers || []).filter(L => L.type !== 'custom' && L.type !== 'fill-extrusion');
+    const used = new Set(layers.map(L => L.source).filter(Boolean)), sources = {};
+    for (const [id, src] of Object.entries(st.sources || {})) if (used.has(id)) sources[id] = src;
+    const c = { ...st, layers, sources }; delete c.terrain; delete c.projection; return c; };
+  const copy = copyOf(style);
   const div = win.document.createElement('div');
   div.style.cssText = `position:fixed;left:-${PX + 64}px;top:0;width:${PX}px;height:${PX}px;pointer-events:none;visibility:visible`;
   win.document.body.append(div);
@@ -57,6 +57,10 @@ export async function mapPainter(map, frame){
     chain = job.catch(() => null);
     return job;
   }
-  return { render, building, errors: errs,
+  const P = { render, building: buildingOf(style), errors: errs,
+    /** the app's look changed (theme, lighting, layers…): take its style again; tiles rendered after this use it */
+    restyle(){ const job = chain.then(async () => { if (gone) return; const st = map.getStyle(); P.building = buildingOf(st); m.setStyle(copyOf(st)); await idle(12000); });
+      chain = job.catch(() => null); return job; },
     dispose(){ gone = true; try { m.stop(); } catch (e){} setTimeout(() => { try { m.remove(); } catch (e){} div.remove(); }, 0); } };
+  return P;
 }

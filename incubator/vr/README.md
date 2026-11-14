@@ -18,6 +18,15 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - **从 `map.html` 打开时，地面和 app 地图一模一样**（v0.12）：`src/map_painter.js` 在地图页面里用 app 当前的样式（主题、标注、开着的图层）另开一个隐藏地图，按瓦片渲染成贴图替换上去；建筑颜色也取 app 的设置。每块先显示简化样式，app 样式画好后替换，左下角会写「几块已用 app 样式」。换了主题或图层，退出 VR 再进一次即可
 - 直接从 `index.html?scene=osm:…` 打开（没有地图）时，地面仍是简化的 OSM 样式
 
+### VR 里的 app 控制面板（v0.15）
+
+`map.html` 的 VR 里有和 app 一样的控制面板（`src/app_panel.js`）：
+- 内容**每次都从 app 页面读取**：视图、光照、天气、颜色主题、显示开关，以及分析图层的开关，连同哪个选中、哪个不可用。app 以后加了按钮，VR 里会自动出现
+- 在 VR 里按一个按钮，等于**点 app 里的同一个按钮**，用的是 app 自己的代码，app 一行不改。按完约 0.7 秒后，VR 的地面按新的样式重画，建筑颜色也跟着 app 变
+- 电脑上：面板在三维视图右侧，用鼠标点
+- 头显里：面板在**左手上方**，转向你；用**右手射线指着按钮、按扳机**点击（手势：捏合）。射线指到面板时会停在面板上。**左摇杆按下**可以收起或打开面板
+- 目前 VR 里不显示：建筑阴影、绿化树木、街道小车（app 用特殊的 WebGL 图层画的），以及三维城市视图（VR 自己拉伸建筑）。搜索框需要 VR 键盘，之后再做
+
 ## 从伦敦地图进入 VR（v0.4 起）
 
 打开 **`map.html`**：https://haowang310.github.io/london-2100-generative-system/incubator/vr/map.html
@@ -80,6 +89,7 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 | `src/osm.js` | OpenFreeMap 矢量瓦片解码、地面贴图、建筑体块 |
 | `src/stream.js` | 移动加载：按瓦片读取、绘制、拉伸建筑 |
 | `src/map_painter.js` | 用 app 地图自己的样式渲染 VR 地面瓦片 |
+| `src/app_panel.js` | 从 app 页面读取控制面板，画成 VR 面板，按钮转发给 app |
 | `data/*.scene.json` | 场景；`data/scenes.json` 是顶栏菜单的列表 |
 | `tools/build-scene-hydro-lab.py` | 从 `../google-map-live/assets` 生成 Hydro Lab 场景（需要 numpy 和 Pillow；参数是网格倍数，默认 6 = 300 m） |
 | `tools/export-from-tensor-studio.mjs` | 无界面运行 Tensor Studio，导出场景（在本文件夹里运行） |
