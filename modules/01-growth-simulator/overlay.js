@@ -42,6 +42,7 @@ uniform float u_grain; uniform float u_level;
 uniform vec3 u_c1; uniform vec3 u_c2; uniform vec3 u_c3; uniform vec3 u_c4; uniform vec3 u_c5;
 uniform float u_show; varying vec2 v_uv;
 const float PB = 0.15, AMP = 0.5;
+const float FADE = 50.0;           // 50 parcels = 2.5 km
 float classOf(vec2 cell) {
   if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= u_grid.x || cell.y >= u_grid.y) return 0.0;
   vec4 c = floor(texture2D(u_cells, (cell + 0.5) / u_grid) * 255.0 + 0.5);
@@ -113,7 +114,9 @@ void main() {
   float a1 = alphaOf(k1), a2 = alphaOf(k2), al = mix(a1, a2, f);
   if (al < 0.004) discard;
   vec3 col = (colourOf(k1) * a1 * (1.0 - f) + colourOf(k2) * a2 * f) / max(al, 1e-4);
-  float a = u_opacity * al * u_show;
+  // the model's grid ends here: fade out over the last FADE parcels instead of a hard cut
+  vec2 e = min(p, u_grid - p);
+  float a = u_opacity * al * u_show * smoothstep(0.0, FADE, min(e.x, e.y));
   if (u_edge > 0.0) {
     vec2 fr = fract(p);
     float d = min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y));
@@ -234,6 +237,22 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     ...rails.high_speed.map(l => ({ type: 'Feature', properties: { k: 'high' }, geometry: { type: 'LineString', coordinates: lineToLL(l) } })),
     ...rails.radials.map(l => ({ type: 'Feature', properties: { k: 'radial' }, geometry: { type: 'LineString', coordinates: lineToLL(l) } }))
   ]);
+  // The model's extent: a faint frame round the grid, and a label along its north and
+  // south edges where they cross the 70 km study circle (outside them the model has no data).
+  const E0 = meta.XMIN, E1 = meta.XMIN + meta.NX * meta.C, N1 = meta.YMAX, N0 = meta.YMAX - meta.NY * meta.C;
+  const dense = (a, b) => { const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 1000)); return Array.from({ length: n + 1 }, (_, i) => [a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); };
+  const extentFC = () => {
+    const ring = [[E0, N1], [E1, N1], [E1, N0], [E0, N0], [E0, N1]];
+    const frame = ring.slice(1).flatMap((p, i) => dense(ring[i], p).slice(i ? 1 : 0)).map(toWGS84);
+    const [lx, ly] = meta.LON, R = 70000, labels = [];
+    for (const n of [N1, N0]) {                  // where the edge runs inside the circle
+      const dy = n - ly; if (Math.abs(dy) >= R) continue;
+      const dx = Math.sqrt(R * R - dy * dy) - 3000;
+      labels.push({ type: 'Feature', properties: { k: 'label', side: n === N1 ? 'n' : 's' },
+        geometry: { type: 'LineString', coordinates: dense([Math.max(E0, lx - dx), n], [Math.min(E1, lx + dx), n]).map(toWGS84) } });
+    }
+    return fc([{ type: 'Feature', properties: { k: 'frame' }, geometry: { type: 'LineString', coordinates: frame } }, ...labels]);
+  };
   const stationsFC = () => fc(stations.map(s => ({ type: 'Feature', properties: { kind: s[1], name: s[0] }, geometry: { type: 'Point', coordinates: toWGS84([s[2], s[3]]) } })));
 
   // `ground`: where the parcels go (under the basemap's water and roads, so the real
@@ -243,6 +262,14 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     map.addLayer(layer, ground && map.getLayer(ground) ? ground : beforeId);
     map.addSource('g01-rails', { type: 'geojson', data: railsFC() });
     map.addSource('g01-stations', { type: 'geojson', data: stationsFC() });
+    map.addSource('g01-extent', { type: 'geojson', data: extentFC() });
+    map.addLayer({ id: 'g01-extent-line', type: 'line', source: 'g01-extent', filter: ['==', ['get', 'k'], 'frame'],
+      paint: { 'line-color': '#ffffff', 'line-opacity': 0.35, 'line-width': 1, 'line-dasharray': [3, 3] } }, beforeId);
+    map.addLayer({ id: 'g01-extent-label', type: 'symbol', source: 'g01-extent', filter: ['==', ['get', 'k'], 'label'],
+      layout: { 'symbol-placement': 'line', 'symbol-spacing': 420, 'text-field': opts.label || 'Growth model extent',
+        'text-size': 11, 'text-letter-spacing': 0.08, 'text-keep-upright': true,
+        'text-offset': ['match', ['get', 'side'], 'n', ['literal', [0, 0.85]], ['literal', [0, -0.85]]] },   // just inside the edge
+      paint: { 'text-color': '#d9dde2', 'text-opacity': 0.75, 'text-halo-color': 'rgba(0,0,0,0.75)', 'text-halo-width': 1.2 } }, beforeId);
     map.addLayer({ id: 'g01-rails-line', type: 'line', source: 'g01-rails', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#f2f2f2', 'line-opacity': 0.9,
         'line-width': ['interpolate', ['linear'], ['zoom'], 8, ['match', ['get', 'k'], 'orbital', 2.2, 1.2], 14, ['match', ['get', 'k'], 'orbital', 5, 3]],
@@ -257,13 +284,15 @@ export function createGrowthOverlay({ meta, rails, stations, get, opacity = 0.9 
     if (!map) return;
     const g = get(), vis = g.show && opts.rails ? 'visible' : 'none';
     for (const id of ['g01-rails-line', 'g01-stations']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+    for (const id of ['g01-extent-line', 'g01-extent-label']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', g.show ? 'visible' : 'none');
+    if (opts.label && map.getLayer('g01-extent-label')) map.setLayoutProperty('g01-extent-label', 'text-field', opts.label);
     map.triggerRepaint();
   }
 
   function detachMapLibre() {
     if (!map) return;
-    for (const id of ['g01-stations', 'g01-rails-line', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
-    for (const id of ['g01-stations', 'g01-rails']) if (map.getSource(id)) map.removeSource(id);
+    for (const id of ['g01-extent-label', 'g01-extent-line', 'g01-stations', 'g01-rails-line', 'g01-growth']) if (map.getLayer(id)) map.removeLayer(id);
+    for (const id of ['g01-extent', 'g01-stations', 'g01-rails']) if (map.getSource(id)) map.removeSource(id);
     map = null;
   }
 
