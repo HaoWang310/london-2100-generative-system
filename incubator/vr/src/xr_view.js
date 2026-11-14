@@ -184,8 +184,8 @@ export function open(api, lang = 'zh', opt = {}){
 
   // state
   const tiles = new Map(); let loadingN = 0, lastUpd = -1e9, clip = [0, 0, -1];
-  let failN = 0, lastErr = '', curZ = 14;
-  const streamInfo = () => { let n = 0, c = 0, st2 = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; if (T.styled) st2++; } return { tiles: n, count: c, styled: st2, loading: loadingN, failed: failN, err: lastErr }; };
+  let failN = 0, lastErr = '', curZ = 14, zSet = false, stylingN = 0;
+  const streamInfo = () => { let n = 0, c = 0, st2 = 0; for (const T of tiles.values()) if (T.ready){ n++; c += T.count; if (T.styled) st2++; } return { tiles: n, count: c, styled: st2, loading: loadingN + stylingN, failed: failN, err: lastErr }; };
   const xMesh = api.extra ? mesh(gl, prog, api.extra) : null, gTex = api.ground ? groundTexture(api.ground) : null, gQuad = api.ground ? groundQuad() : null;
   const tMesh = mesh(gl, prog, terrain), rMesh = mesh(gl, prog, buildRibbons(snap.S, snap.lines, terrain)), fMesh = mesh(gl, prog, buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain));
   const streamLine = () => { const i = streamInfo(); return lang === 'zh'
@@ -225,26 +225,39 @@ export function open(api, lang = 'zh', opt = {}){
   function tileQuad(q){ const [x0, y0, x1, y1] = q, vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([x0, 0, -y0, 0, 0, x1, 0, -y0, 1, 0, x0, 0, -y1, 0, 1, x1, 0, -y1, 1, 1]), gl.STATIC_DRAW);
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return { vao, b }; }
-  function freeTile(T){ if (!T.ready) return; gl.deleteTexture(T.tex); gl.deleteVertexArray(T.quad.vao); gl.deleteBuffer(T.quad.b);
-    if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); } }
+  function freeTile(T){   // also for a tile dropped half-built (waiting for its picture)
+    if (T.tex){ gl.deleteTexture(T.tex); T.tex = null; } if (T.quad){ gl.deleteVertexArray(T.quad.vao); gl.deleteBuffer(T.quad.b); T.quad = null; }
+    if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); T.mesh = null; } T.ready = false; }
   /** fx, fy: focus in plan metres; r: radius in metres */
   function updateTiles(t, fx, fy, r){
     clip = [fx, -fy, r];
     if (!api.stream || t - lastUpd < 250) return; lastUpd = t;
     // the zoom level follows how far you see; the previous level stays underneath until the new one is in
-    const z = api.stream.zoomFor ? api.stream.zoomFor(r) : 14; curZ = z;
+    // hysteresis: change level only well past the half-way mark, so resting near it does not flip back and forth
+    let z = curZ;
+    if (api.stream.zoomExact){ const zf = api.stream.zoomExact(r); if (!zSet || Math.abs(zf - curZ) > 0.75) z = Math.max(0, Math.min(14, Math.round(zf))); }
+    else z = api.stream.zoomFor ? api.stream.zoomFor(r) : 14;
+    curZ = z; zSet = true;
     const want = api.stream.near(fx, fy, r, z), keep = new Set(api.stream.near(fx, fy, r * 1.35 + 200, z));
     const allIn = want.every(k => tiles.get(k)?.ready);
     let freed = 0;
     for (const [k, T] of tiles){ const same = T.z === z;
-      if ((same && !keep.has(k)) || (!same && (allIn || !T.ready || t - (T.left ||= t) > 8000))){ freeTile(T); tiles.delete(k); freed++; } else if (same) T.left = 0; }
+      if ((same && !keep.has(k)) || (!same && (allIn || !T.ready || t - (T.left ||= t) > 25000))){ freeTile(T); tiles.delete(k); freed++; } else if (same) T.left = 0; }
     if (freed) status();
     let mine = 0; for (const T of tiles.values()) if (T.z === z) mine++;
     for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || mine >= 40) break;
       const T = { ready: false, count: 0, z: api.stream.zOf ? api.stream.zOf(k) : 14 }; tiles.set(k, T); loadingN++; mine++; status();
       api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
-        T.tex = groundTexture(d.canvas); T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count; T.ready = true; status();
-        if (d.upgrade) d.upgrade.then(cv => { if (!cv || tiles.get(k) !== T) return; gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); }).catch(e => console.warn('map style tile', e)); })
+        T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count;
+        // with the app's look coming, show the tile only once it is in that look (no plain-then-styled flash);
+        // the plain paint is the fallback if the app's picture fails or takes over 10 s
+        if (!d.upgrade){ T.tex = groundTexture(d.canvas); T.ready = true; status(); return; }
+        let settled = false; stylingN++; status();
+        const settle = cv => { if (settled) return; settled = true; stylingN--; if (tiles.get(k) !== T){ freeTile(T); status(); return; }
+          T.tex = groundTexture(cv || d.canvas); T.styled = !!cv; T.ready = true; status(); };
+        const late = setTimeout(() => settle(null), 10000);
+        d.upgrade.then(cv => { clearTimeout(late); if (settled){ if (cv && tiles.get(k) === T){ gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); } return; } settle(cv); })
+          .catch(e => { clearTimeout(late); console.warn('map style tile', e); settle(null); }); })
         .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
           setTimeout(() => { if (tiles.get(k) === T) tiles.delete(k); }, 4000); }); }
   }
