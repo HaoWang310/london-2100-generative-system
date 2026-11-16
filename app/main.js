@@ -578,7 +578,8 @@ async function boot() {
   // The workspace stays mounted underneath, so its map loads while the
   // opening screen and catalogue are shown.
   const intro = createIntro($('intro'), { onEnter: () => { location.hash = 'catalogue'; } });
-  const appview = createAppView($('appview'));
+  // The catalogue list lets the viewer recognise an app opened inside another (Tensor Studio inside the map).
+  const appview = createAppView($('appview'), { items: () => catalogue.items() });
   let pendingOrigin = null;
   const catalogue = createCatalogue($('catalogue'), {
     onOpenWorkspace: () => { location.hash = 'workspace'; },
