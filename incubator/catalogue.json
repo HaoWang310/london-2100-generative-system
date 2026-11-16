@@ -76,8 +76,8 @@
         "en": "Tensor Studio"
       },
       "desc": {
-        "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路（分叉、T / Y 路口、环形广场）。",
-        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors (branching, T / Y junctions, circuses)."
+        "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路；按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图，可在伦敦地图上任选场地，并导出正式路网。",
+        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
       },
       "tags": [
         {
@@ -85,12 +85,12 @@
           "en": "Tensor field"
         },
         {
-          "zh": "风场",
-          "en": "Wind"
-        },
-        {
           "zh": "道路生长",
           "en": "Street growth"
+        },
+        {
+          "zh": "三级路网",
+          "en": "Three-grade network"
         }
       ],
       "owner": "HaoWang310",
