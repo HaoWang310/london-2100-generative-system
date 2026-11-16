@@ -20,10 +20,10 @@ import { createHall } from './hall.js?v=0.22';
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['握持键 / 捏合：抓取模型', '双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前'] },
+    hud: ['握持键 / 捏合：抓取模型 · 双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Grip / pinch: grab the model', 'Both hands: scale and turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back'] }
+    hud: ['Grip / pinch: grab · both hands: scale, turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back', 'Left stick click / “Panel”: the controls'] }
 };
 
 // ---------------------------------------------------------------- geometry (pure, testable in node)
@@ -198,9 +198,11 @@ export function open(api, lang = 'zh', opt = {}){
 <span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${opt.closeLabel || L.close + ' ✕'}</button>`}</div><div class="note"></div>`;
   document.body.append(root);
   // the app's control panel (opt.panel, src/app_panel.js): beside the view on a screen, on the left hand in the headset
-  const panel = opt.panel || null; let panelOn = !!panel;
+  const panel = opt.panel || null; let panelOn = false;
   // where the panel is in the headset (kept between sessions): on the left hand, placed in the room (c, facing you), or hidden; w = width in metres
-  const pm = { mode: panel ? 'hand' : 'off', c: null, w: 0.36, grab: null };
+  const pm = { mode: 'off', prev: 'hand', c: null, w: 0.36, grab: null };   // v0.23: hidden until you call it up
+  const showPanel = () => { if (!panel) return; pm.mode = pm.prev === 'world' && pm.c ? 'world' : 'hand'; if (pm.mode === 'hand') pm.w = 0.36; panelOn = true; };
+  const hidePanel = () => { if (pm.mode !== 'off') pm.prev = pm.mode; pm.mode = 'off'; pm.grab = null; panelOn = false; };
   window.__vrPanel = pm;   // for checking from the console / tests
   if (panel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(panel.canvas); root.append(box);
     // the on-screen copy of the panel (for the mouse): a bar button folds it; in VR / MR it is always hidden (the headset has its own)
@@ -436,6 +438,14 @@ export function open(api, lang = 'zh', opt = {}){
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return vao; }
   const ray = mesh(gl, prog, { v: new Float32Array([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, -0.6, 0, 0, 0, 1, 0, 1, 1, 1, 0]), i: new Uint32Array([0, 1]) });
 
+  /** a small pointable button: idle (dark) and hot (blue) */
+  function chipTexture(text){ const make = hot => { const c = document.createElement('canvas'); c.width = 400; c.height = 100; const g = c.getContext('2d');
+      g.fillStyle = hot ? '#0a84ff' : 'rgba(28,28,30,0.9)'; g.beginPath(); g.roundRect ? g.roundRect(2, 2, 396, 96, 48) : g.rect(2, 2, 396, 96); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#fff'; g.font = '600 46px -apple-system,"PingFang SC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 200, 52);
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+    return { idle: make(false), hot: make(true) }; }
   function pillTexture(){ const make = a => { const c = document.createElement('canvas'); c.width = 256; c.height = 48; const g = c.getContext('2d');
       g.fillStyle = `rgba(245,245,247,${a})`; g.beginPath(); g.roundRect ? g.roundRect(4, 8, 248, 32, 16) : g.rect(4, 8, 248, 32); g.fill();
       const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -462,6 +472,7 @@ export function open(api, lang = 'zh', opt = {}){
     const tableScale = (H ? (api.stream ? 2 * TR : TR * Math.SQRT2) : 0.9) / terrain.size;   // 90 cm across on the table (1.4 m disc in the hall)
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
+    const chipTex = { show: chipTexture(lang === 'zh' ? '☰  面板' : '☰  Panel'), hide: chipTexture(lang === 'zh' ? '收起' : 'Hide') };
     let head = [0, 1.6, 0], headF = [0, 0, -1], hold = 0, Hs = null, Hg = null;
     const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
       M.s = tableScale;
@@ -482,9 +493,12 @@ export function open(api, lang = 'zh', opt = {}){
       else { const a = P[0].p, b = P[1].p; base = { one: false, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], d: Math.hypot(a[0] - b[0], a[2] - b[2], a[1] - b[1]) || 1e-3, ang: yawOf(b[0] - a[0], b[2] - a[2]), pos: M.pos.slice(), yaw: M.yaw, s: M.s }; } };
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
     const rayHit = new Map(), rayLen = new Map(), barHit = new Map();   // input source → panel item under its ray · distance to the panel · point on the drag bar
+    const chipHit = new Map(); let chips = [];   // the little 「面板」 / 「收起」 buttons: input source → the one under its ray
+    hidePanel();   // each session starts with the panel put away
     // the panel: on the left hand, or placed anywhere in the room (drag its bar); pm.w = width in metres
     pm.grab = null;
     const add = (e, select) => { const src = e.inputSource;
+      if (select && chipHit.has(src)){ chipHit.get(src).act(); return; }
       // drag the panel by its bar (trigger, grip or pinch), or by its face with the grip
       const g = barHit.get(src) || (!select && rayLen.has(src) && rayHit.has(src) ? src.__panelLocal : null);
       if (pm.mode !== 'off' && g){ pm.grab = { src, t0: g.t, lu: g.lx, lv: g.ly }; return; }
@@ -517,8 +531,8 @@ export function open(api, lang = 'zh', opt = {}){
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
             if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? TR / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
-        // left stick click: a placed panel comes back to the hand; on the hand it hides / shows
-        if (key === 'left' && panel && hit(3)){ pm.mode = pm.mode === 'world' ? 'hand' : pm.mode === 'hand' ? 'off' : 'hand'; panelOn = pm.mode !== 'off'; if (pm.mode === 'hand') pm.w = 0.36; }
+        // left stick click: show / hide the panel (it comes back where it was: on the hand, or where you placed it)
+        if (key === 'left' && panel && hit(3)){ if (pm.mode === 'off') showPanel(); else hidePanel(); }
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
@@ -576,6 +590,16 @@ export function open(api, lang = 'zh', opt = {}){
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             const an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT))); }
           if (!barTex) barTex = pillTexture(); } }
+      // the chips: 「面板」 under the help card while the panel is away, 「收起」 beside the panel's drag bar
+      chips = []; chipHit.clear();
+      if (panel && !pm.grab){
+        if (pm.mode === 'off' && lpp){ const c = [lpp.p[0], lpp.p[1] + 0.058, lpp.p[2]]; chips.push({ c, ...facing(c), w: 0.11, h: 0.0275, tex: chipTex.show, onHand: true, act: showPanel }); }
+        else if (panelPose){ const { c, x, y, barY } = panelPose, k = 0.13 / 2 + 0.05, cc = [0, 1, 2].map(j => c[j] + y[j] * barY + x[j] * k); chips.push({ c: cc, ...facing(cc), w: 0.07, h: 0.0175, tex: chipTex.hide, onHand: pm.mode === 'hand', act: hidePanel }); }
+        for (const ch of chips) for (const s of session.inputSources){ if ((ch.onHand && s === leftS) || !s.targetRaySpace) continue; const r = rayOf(s); if (!r) continue;
+          const { c, x, y, z } = ch, den = r.d[0] * z[0] + r.d[1] * z[1] + r.d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
+          const tt = ((c[0] - r.o[0]) * z[0] + (c[1] - r.o[1]) * z[1] + (c[2] - r.o[2]) * z[2]) / den; if (tt <= 0 || tt > 6) continue;
+          const q = [0, 1, 2].map(j => r.o[j] + r.d[j] * tt - c[j]), lx = q[0] * x[0] + q[1] * x[1] + q[2] * x[2], ly = q[0] * y[0] + q[1] * y[1] + q[2] * y[2];
+          if (Math.abs(lx) <= ch.w / 2 && Math.abs(ly) <= ch.h / 2 * 1.4){ chipHit.set(s, ch); ch.hot = true; rayLen.set(s, tt); rayHit.delete(s); barHit.delete(s); } } }
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
@@ -602,6 +626,10 @@ export function open(api, lang = 'zh', opt = {}){
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
           gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
+        if (chips.length){ gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V);
+          gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(hq);
+          for (const ch of chips){ const sc = ch.hot ? 1.08 : 1; gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(ch.x, ch.y, ch.z, ch.c, [ch.w * sc, ch.h * sc])); gl.bindTexture(gl.TEXTURE_2D, ch.hot ? ch.tex.hot : ch.tex.idle); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+          gl.disable(gl.BLEND); }
         gl.bindVertexArray(null); } };
     session.requestAnimationFrame(onFrame);
   }
