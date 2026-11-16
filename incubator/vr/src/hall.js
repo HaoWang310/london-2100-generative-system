@@ -224,7 +224,12 @@ export function createHall(gl, opt = {}){
   // the table: body, a dark cap under the disc, a light ring on the rim and on the floor
   add(lathe(pts, 96, WHITE), {});
   // the cap under the map: dark, or opt.capImage (an image or canvas, north up, the disc's full width) — e.g. a still of the place
-  if (opt.capImage){ const cap = disc(mapR + 0.02, tableH - 0.002, 96, [1, 1, 1]), r = mapR + 0.02;
+  // opt.capRelief(x, z) → metres: the cap becomes a relief (a still for a cover; the app's own map lies on top of the cap)
+  if (opt.capImage && opt.capRelief){ const r = mapR + 0.02;
+    const cap = surface((u, j) => { const t = u * Math.PI * 2, x = r * j * Math.cos(t), z = r * j * Math.sin(t); return [x, tableH - 0.002 + opt.capRelief(x, z) * (1 - ss(0.86, 1, j)), z]; }, 192, 72, [1, 1, 1]);
+    for (let o = 0; o < cap.v.length; o += F){ cap.v[o + 6] = 0.5 + cap.v[o] / (2 * r); cap.v[o + 7] = 0.5 - cap.v[o + 2] / (2 * r); }
+    add(cap, { map: tex(opt.capImage) }); }
+  else if (opt.capImage){ const cap = disc(mapR + 0.02, tableH - 0.002, 96, [1, 1, 1]), r = mapR + 0.02;
     for (let o = 0; o < cap.v.length; o += F){ cap.v[o + 6] = 0.5 + cap.v[o] / (2 * r); cap.v[o + 7] = 0.5 - cap.v[o + 2] / (2 * r); }   // north (−z) at the top
     add(cap, { map: tex(opt.capImage) }); }
   else add(disc(mapR + 0.02, tableH - 0.002, 64, [0.16, 0.17, 0.19]), {});
