@@ -1,4 +1,4 @@
-// London 2100 · VR — the exhibition hall around the map table (v0.21). WebGL2, no libraries.
+// London 2100 · VR — the exhibition hall around the map table (v0.22). WebGL2, no libraries.
 //
 // In VR the London disc sits on a table in a fluid, Zaha-Hadid-style gallery:
 //   · one continuous white shell: the wall rises, leans in and twists into the ceiling, around a round skylight
@@ -6,6 +6,7 @@
 //   · a suspended "vortex" canopy over the table, glowing from inside, like water drawn towards the map
 //   · floor lines that flow around the table, curved free-standing screens with the project boards
 //   · four "Bench by Zaha Hadid" (assets/zaha-bench.glb, a 3D Warehouse model) placed around it
+//   · v0.22: a lowered soffit with a cove-light line all round, four columns framing the table, standing info totems, model plinths
 // Three moods: day (white), night (cyan light lines), violet (the gallery lit in purple).
 // All glow is painted in textures (no real lights), so it costs almost nothing on a Quest.
 //
@@ -41,6 +42,25 @@ export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.
 /** benches: [angle°, radius m, extra yaw°] around the table */
 export const BENCH_SLOTS = [[205, 2.95, 8], [245, 3.35, -10], [295, 3.0, 12], [335, 3.35, -6]];
 export const SCREEN = { R: 4.5, w: 2.4, h: 1.35, y: 1.6, at: [130, 166, 202, 238, 274, 310, 346] };
+// v0.22 · the gallery around the table (after the Winton Gallery: a lowered soffit with cove light, columns framing the view,
+// standing info totems and model plinths spread over the floor)
+export const SOFFIT = { y: 3.0, depth: 0.95, fascia: 0.18 };
+export const soffitY = t => SOFFIT.y + 0.3 * Math.sin(2 * t + 1.1) + 0.12 * Math.sin(5 * t);
+/** radius of the shell's inside at plan angle t and height y */
+export function wallR(t, y){ const s = Math.asin(Math.min(1, Math.pow(Math.max(0, y) / SHELL.H, 1 / 0.85))) * 2 / Math.PI; return shellR(t - SHELL.twist * s) * prof(s); }
+export const COLUMNS = { r: 2.35, at: [62, 118, 242, 298] };
+/** totems [angle°, radius m, title, sub] and model plinths [angle°, radius m] */
+export const TOTEMS = { zh: [[158, 2.3, '水', '河流 · 洪水 · 排水'], [178, 2.75, '食物', '城市农业 · 垂直农场'], [22, 2.3, '街道', '张量场 · 生成规则'], [2, 2.75, '2100', '海平面 · 降雨 · 人口']],
+  en: [[158, 2.3, 'Water', 'rivers · floods · drainage'], [178, 2.75, 'Food', 'urban farming · towers'], [22, 2.3, 'Streets', 'tensor fields · rules'], [2, 2.75, '2100', 'sea level · rain · people']] };
+export const PLINTHS = [[146, 3.85], [34, 3.85]];
+function quad(g, a, b, c, d, uv = [[0, 0], [1, 0], [1, 1], [0, 1]], col){ const k = [a, b, c, d].map((p, j) => vert(g, p, uv[j], col)); g.i.push(k[0], k[1], k[2], k[0], k[2], k[3]); }
+/** a box turned by yaw about its own centre; front (+z local) face gets frontUV if given */
+function box(cx, cy, cz, w, h, d, yaw, col, frontUV){ const g = geo(), c = Math.cos(yaw), s = Math.sin(yaw);
+  const P = (x, y, z) => [cx + x * c + z * s, cy + y, cz - x * s + z * c], W = w / 2, D = d / 2;
+  const v = [P(-W, 0, D), P(W, 0, D), P(W, h, D), P(-W, h, D), P(-W, 0, -D), P(W, 0, -D), P(W, h, -D), P(-W, h, -D)];
+  quad(g, v[0], v[1], v[2], v[3], frontUV, col); quad(g, v[5], v[4], v[7], v[6], undefined, col); quad(g, v[1], v[5], v[6], v[2], undefined, col);
+  quad(g, v[4], v[0], v[3], v[7], undefined, col); quad(g, v[3], v[2], v[6], v[7], undefined, col); quad(g, v[4], v[5], v[1], v[0], undefined, col);
+  for (let o = 0; o < g.v.length; o += F){ g.v[o + 3] = g.v[o + 4] = g.v[o + 5] = 0; } return normals(g); }
 
 // geometry: v = [x y z  nx ny nz  u v  r g b] (11 floats), i = indices
 const F = 11;
@@ -112,6 +132,17 @@ const canopyMapC = () => canvas(2048, 256, (g, w, h) => { g.fillStyle = '#f7f7f5
 const canopyEmiC = () => canvas(2048, 256, (g, w, h) => { const grd = g.createLinearGradient(0, h, 0, 0);   // canvas bottom = inner ring
   grd.addColorStop(0, '#fff'); grd.addColorStop(0.45, 'rgba(255,255,255,.55)'); grd.addColorStop(1, 'rgba(255,255,255,.12)'); g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.fillStyle = grd; g.fillRect(0, 0, w, h);
   g.strokeStyle = '#fff'; g.lineWidth = 2; for (let k = 0; k < 96; k += 4){ const x = k / 96 * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } });
+const soffitEmiC = () => canvas(16, 256, (g, w, h) => { const grd = g.createLinearGradient(0, h, 0, 0);   // canvas bottom = inner edge
+  grd.addColorStop(0, '#fff'); grd.addColorStop(0.18, 'rgba(255,255,255,.55)'); grd.addColorStop(1, 'rgba(255,255,255,.05)'); g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.fillStyle = grd; g.fillRect(0, 0, w, h); });
+/** all totem faces in one texture: a column per totem */
+const totemsC = list => canvas(400 * list.length, 1400, (g, W, h) => { list.forEach(([, , title, sub], k) => { const x0 = k * 400;
+  const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#16206b'); bg.addColorStop(1, '#2a1f7a'); g.fillStyle = bg; g.fillRect(x0, 0, 400, h);
+  g.fillStyle = '#64d2ff'; g.fillRect(x0 + 40, 70, 60, 6);
+  g.fillStyle = '#ffffff'; g.font = '600 96px -apple-system,"PingFang SC","Helvetica Neue",sans-serif'; g.fillText(title, x0 + 40, 200);
+  g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '400 30px -apple-system,"PingFang SC","Helvetica Neue",sans-serif'; g.fillText(sub, x0 + 40, 256);
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
+  for (let i = 0; i < 16; i++){ g.beginPath(); for (let y = 0; y <= 700; y += 10){ const xx = x0 + 60 + i * 18 + Math.sin(y / 70 + i * 0.4 + k) * 22; y ? g.lineTo(xx, 380 + y) : g.moveTo(xx, 380 + y); } g.stroke(); }
+  g.fillStyle = 'rgba(255,255,255,.6)'; g.font = '500 24px -apple-system,"Helvetica Neue",sans-serif'; g.fillText('LONDON 2100', x0 + 40, h - 60); }); });
 export const BOARDS = {
   zh: [['01', '水文基底', 'Hydrology · EA LiDAR / 洪水风险', 'contour'], ['02', '生产性景观', 'Productive Landscape', 'dots'], ['03', '张量场街道', 'Tensor-field Streets', 'tensor'],
     ['04', '垂直农业塔', 'Vertical Farming', 'bars'], ['05', '2100 洪水情景', 'Flood Scenario 2100', 'waves'], ['06', 'OSM 城市数据', 'OpenStreetMap · 移动加载', 'network'], ['07', '多尺度生成系统', 'London → Region → Wool → Tensor', 'rings']],
@@ -193,7 +224,11 @@ export function createHall(gl, opt = {}){
   // the shell, the floor, the skylight
   add(surface(shellPoint, 160, 40, [1, 1, 1]), { map: tex(shellMapC(), true), emi: tex(shellEmiC(), true), glow: { day: 0.35, night: 1.5, violet: 1.2 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.85, 0.65, 1.0] } });
   const { pts, R2, foot } = tableProfile(mapR, tableH);
-  const shadows = [[0, 0, foot + 0.5, foot + 0.5, 0, 0.32]].concat(BENCH_SLOTS.map(([d, r, y]) => { const th = d * Math.PI / 180; return [Math.cos(th) * r, Math.sin(th) * r, 1.15, 0.38, th + Math.PI / 2 - y * Math.PI / 180, 0.26]; }));
+  const pol = (deg, r) => { const t = deg * Math.PI / 180; return [Math.cos(t) * r, Math.sin(t) * r]; };
+  const shadows = [[0, 0, foot + 0.5, foot + 0.5, 0, 0.32]]
+    .concat(COLUMNS.at.map(d => [...pol(d, COLUMNS.r), 0.45, 0.45, 0, 0.22]))
+    .concat(TOTEMS.zh.map(([d, r]) => [...pol(d, r), 0.45, 0.2, d * Math.PI / 180, 0.2]))
+    .concat(PLINTHS.map(([d, r]) => [...pol(d, r), 0.7, 0.7, 0, 0.2])).concat(BENCH_SLOTS.map(([d, r, y]) => { const th = d * Math.PI / 180; return [Math.cos(th) * r, Math.sin(th) * r, 1.15, 0.38, th + Math.PI / 2 - y * Math.PI / 180, 0.26]; }));
   const floor = surface((u, j) => { const t = u * Math.PI * 2, r = shellR(t) * j; return [r * Math.cos(t), 0, r * Math.sin(t)]; }, 128, 24, [1, 1, 1]);
   for (let o = 0; o < floor.v.length; o += F){ floor.v[o + 6] = (floor.v[o] / FLOOR_E + 1) / 2; floor.v[o + 7] = 1 - (floor.v[o + 2] / FLOOR_E + 1) / 2; floor.v[o + 3] = 0; floor.v[o + 4] = 1; floor.v[o + 5] = 0; }
   add(floor, { map: tex(floorMapC(shadows)), emi: tex(floorEmiC(foot + 0.1)), glow: { day: 0.07, night: 0.85, violet: 0.75 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.88, 0.72, 1.0] } });
@@ -223,6 +258,32 @@ export function createHall(gl, opt = {}){
     const pad = 0.1 / R, fl = 0.2 / R;
     frames.push(band(R + 0.03, y - h / 2 - 0.08, y + h / 2 + 0.08, th0 - pad, len + 2 * pad, 24, WHITE), band(R + 0.03, 0, y - h / 2 - 0.08, Math.PI / 2 - a - fl / 2, fl, 8, WHITE)); });
   add(merge(...frames), {});
+
+  // the lowered soffit: a band that follows the wall all the way round, its height in waves, a light line along its edge
+  { const N = 220, under = surface((u, v) => { const t = u * Math.PI * 2, y = soffitY(t), rw = wallR(t, y) + 0.05, r = rw - SOFFIT.depth * (1 - v); return [r * Math.cos(t), y, r * Math.sin(t)]; }, N, 6, [0.97, 0.97, 0.96]);
+    add(under, { emi: tex(soffitEmiC()), glow: { day: 0.3, night: 1.1, violet: 1.2 }, tint: { day: GLOW.day, night: GLOW.night, violet: [0.8, 0.6, 1.0] } });
+    add(surface((u, v) => { const t = u * Math.PI * 2, y = soffitY(t), r = wallR(t, y) + 0.05 - SOFFIT.depth; return [r * Math.cos(t), y + SOFFIT.fascia * v, r * Math.sin(t)]; }, N, 1, WHITE), {});
+    const edge = []; for (let k = 0; k < N; k++){ const t = k / N * Math.PI * 2, y = soffitY(t) - 0.01, r = wallR(t, y) + 0.05 - SOFFIT.depth + 0.03; edge.push([r * Math.cos(t), y, r * Math.sin(t)]); }
+    glowLines.push(tube(edge, 0.02, 6, true)); }
+
+  // four slender columns framing the table, flaring where they meet the ceiling
+  { const cols = COLUMNS.at.map(d => { const t = d * Math.PI / 180, x = Math.cos(t) * COLUMNS.r, z = Math.sin(t) * COLUMNS.r, top = shellYAt(x, z) + 0.05;
+      const prof = [[0.17, 0], [0.13, 0.12], [0.12, top * 0.5], [0.14, top * 0.82], [0.32, top]];
+      const g = lathe(prof.map(([r, y], k, a) => [r, y]), 32, WHITE); for (let o = 0; o < g.v.length; o += F){ g.v[o] += x; g.v[o + 2] += z; } return g; });
+    add(merge(...cols), {}); }
+
+  // standing info totems (one texture for all) and model plinths with little white massing models
+  { const list = TOTEMS[lang], n = list.length, bodies = [], faces = [];
+    list.forEach(([d, r], k) => { const t = d * Math.PI / 180, x = Math.cos(t) * r, z = Math.sin(t) * r, yaw = Math.atan2(-x, -z) + (k % 2 ? 0.25 : -0.25);   // face the table, turned a little
+      bodies.push(box(x, 0, z, 0.66, 0.06, 0.36, yaw, [0.9, 0.9, 0.89]), box(x, 0.06, z, 0.6, 1.9, 0.05, yaw, WHITE));
+      const c = Math.cos(yaw), s = Math.sin(yaw), P = (lx, y, lz) => [x + lx * c + lz * s, y, z - lx * s + lz * c], u0 = k / n, u1 = (k + 1) / n, UV = [[u0, 0], [u1, 0], [u1, 1], [u0, 1]];
+      for (const side of [1, -1]){ const lz = 0.027 * side, L = -0.27 * side, R = 0.27 * side;   // the same face on both sides, each reading left to right
+        const f = geo(); quad(f, P(L, 0.14, lz), P(R, 0.14, lz), P(R, 1.9, lz), P(L, 1.9, lz), UV); faces.push(normals(f)); } });
+    PLINTHS.forEach(([d, r], k) => { const t = d * Math.PI / 180, x = Math.cos(t) * r, z = Math.sin(t) * r;
+      bodies.push(box(x, 0, z, 0.9, 0.95, 0.9, t, [0.93, 0.93, 0.92]));
+      for (let i = 0; i < 22; i++){ const h = 0.03 + rnd() ** 2 * (k ? 0.32 : 0.18); bodies.push(box(x + (rnd() - 0.5) * 0.66, 0.95, z + (rnd() - 0.5) * 0.66, 0.05 + rnd() * 0.07, h, 0.05 + rnd() * 0.07, t, WHITE)); } });
+    add(merge(...bodies), {});
+    add(merge(...faces), { map: tex(totemsC(list)), emiSelf: true, glow: { day: 0.12, night: 0.55, violet: 0.5 }, tint: 'white' }); }
   add(merge(...glowLines), { unlit: true, glow: { day: 1, night: 1, violet: 1 }, tint: 'glow' });
 
   // the benches, once the model is in
