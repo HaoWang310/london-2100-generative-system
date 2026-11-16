@@ -214,15 +214,15 @@
     {
       "id": "vr",
       "href": "incubator/vr/",
-      "cover": "assets/catalogue/vr.webp",
+      "cover": "incubator/vr/assets/cover.webp",
       "status": "incubating",
       "title": {
         "zh": "VR / MR · Quest 3S",
         "en": "VR / MR · Quest 3S"
       },
       "desc": {
-        "zh": "地形、洪水风险、汇水网络和生成的道路变成三维沙盘：电脑上预览，Meta Quest 3S 上进入 MR 放在桌上，或 1:1 走进去。另有 map.html：伦敦地图原样嵌入，按 VR 把当前地图带进头显。",
-        "en": "Terrain, flood risk, drainage and generated streets as a 3D model: preview on the desktop, put it on your table in MR on a Meta Quest 3S, or walk it at 1:1. map.html embeds the London map untouched and takes the current view into the headset."
+        "zh": "伦敦地图、地形、洪水风险和汇水网络变成三维沙盘，放在一座 Zaha 风格的流线展厅里：电脑上直接预览展厅，在 Meta Quest 3S 上一键进入 VR 展厅，或进入 MR 把地图放在你的桌上，也可以 1:1 走进去。",
+        "en": "The London map, terrain, flood risk and drainage as a 3D model on a table in a fluid, Zaha-style gallery: preview the gallery on the desktop, step into it in VR on a Meta Quest 3S in one click, or put the map on your own table in MR, or walk it at 1:1."
       },
       "tags": [
         {
