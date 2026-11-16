@@ -223,7 +223,11 @@ export function createHall(gl, opt = {}){
 
   // the table: body, a dark cap under the disc, a light ring on the rim and on the floor
   add(lathe(pts, 96, WHITE), {});
-  add(disc(mapR + 0.02, tableH - 0.002, 64, [0.16, 0.17, 0.19]), {});
+  // the cap under the map: dark, or opt.capImage (an image or canvas, north up, the disc's full width) — e.g. a still of the place
+  if (opt.capImage){ const cap = disc(mapR + 0.02, tableH - 0.002, 96, [1, 1, 1]), r = mapR + 0.02;
+    for (let o = 0; o < cap.v.length; o += F){ cap.v[o + 6] = 0.5 + cap.v[o] / (2 * r); cap.v[o + 7] = 0.5 - cap.v[o + 2] / (2 * r); }   // north (−z) at the top
+    add(cap, { map: tex(opt.capImage) }); }
+  else add(disc(mapR + 0.02, tableH - 0.002, 64, [0.16, 0.17, 0.19]), {});
   const ring = (r, y, n) => { const p = []; for (let k = 0; k < n; k++){ const a = k / n * Math.PI * 2; p.push([r * Math.cos(a), y, r * Math.sin(a)]); } return p; };
   glowLines.push(tube(ring(R2 - 0.004, tableH + 0.026, 160), 0.005, 6, true), tube(ring(foot + 0.02, 0.004, 160), 0.012, 4, true));
 
