@@ -91,6 +91,8 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
   return {
     /** Resolves with the items once catalogue.json is loaded (loads it if needed). */
     async item(id) { if (!loaded) load(); return (await ready).find(x => x.id === id) || null; },
+    /** Resolves with all items once catalogue.json is loaded. */
+    async items() { if (!loaded) load(); return ready; },
     coverOf(id) {
       const i = items.findIndex(x => x.id === id);
       return i >= 0 ? grid.querySelectorAll('.cat-card')[i]?.querySelector('.cat-cover') || null : null;
