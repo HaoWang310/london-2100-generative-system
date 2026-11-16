@@ -2025,27 +2025,20 @@ function strokeVar(g, sw, pad, colour){ // each segment at its own width; round 
     while (k < Pp.length){ const w = st.w[k]; g.beginPath(); g.moveTo(X(Pp[k - 1][0]), Y(Pp[k - 1][1]));
       while (k < Pp.length && st.w[k] === w){ g.lineTo(X(Pp[k][0]), Y(Pp[k][1])); k++; }
       g.lineWidth = (w + pad) * view.s; if (colour) g.strokeStyle = rampCol(w); g.stroke(); } } }
-/* (v8.41) the road surface as a real city's: every street at its exact width, kerb fillets of one radius R at every junction,
- * coloured by grade (or by width, for the other drivers), no centre lines. The surface is every street drawn at its width + 2R,
- * eroded by R through a distance transform: the widths come out exact and centred, and every inside corner is rounded at R
- * (v8.35's blur and threshold wiped out the narrowest streets, left grey wedges at their junctions and shifted the bands).
- * While the view moves the last exact drawing is moved and scaled; the exact one is redrawn once the view rests. */
-let WCACHE = null, VIEWT = 0;
+/* (v8.42) the road surface as a real city's: every street at its exact width, coloured by grade (or by width for the other
+ * drivers), no centre lines; and at every junction a kerb fillet in each corner, worked out for that corner alone:
+ * - the junctions are found from the streets themselves: an end on another street's side (a T), two streets crossing (an
+ *   X), ends meeting ends (one road going on, a Y of ends); each junction holds its arms (direction, width, grade);
+ * - between two neighbouring arms the kerb is the arc tangent to their two edges, its radius by the lower grade of the two
+ *   (local x local 6 m, local x through 8, local x main 10, through x through 10, through or main x main 12; in proportion
+ *   to the narrowest width, 10 m on the station example); in an acute corner the tangent run is held to 1.2 R, so the radius
+ *   shrinks instead of drawing a long tail; under 25 degrees no fillet (a kerb island); a straight run (over 170) none;
+ * - the fillet takes the minor street's colour: the minor street opens out as a bell mouth, the major one's edge runs on.
+ * (v8.41's closing of the whole network by one radius filled acute corners into long wedges, coloured the fillets as the
+ * major street and rounded the inside of every bend.) Ends: on another street's side, cut flush; a dead end, rounded; an
+ * end meeting other ends, rounded at its width or the widest of the others, whichever is narrower. */
+const GRANK = { local: 0, through: 1, main: 2 };
 function gradeCol(g){ return 'rgb(' + mix(P.wLo, P.wHi, g === 'main' ? 1 : g === 'through' ? 0.62 : 0.28).join(',') + ')'; }
-function edt1(f, n, d, v_, z){   // the 1-D squared distance transform (Felzenszwalb and Huttenlocher)
-  let k = 0; v_[0] = 0; z[0] = -1e20; z[1] = 1e20;
-  for (let q = 1; q < n; q++){ let s_ = ((f[q] + q * q) - (f[v_[k]] + v_[k] * v_[k])) / (2 * q - 2 * v_[k]);
-    while (s_ <= z[k]){ k--; s_ = ((f[q] + q * q) - (f[v_[k]] + v_[k] * v_[k])) / (2 * q - 2 * v_[k]); }
-    k++; v_[k] = q; z[k] = s_; z[k + 1] = 1e20; }
-  k = 0; for (let q = 0; q < n; q++){ while (z[k + 1] < q) k++; d[q] = (q - v_[k]) * (q - v_[k]) + f[v_[k]]; } }
-function distInside(rgba, W, H){   // each pixel inside (alpha over half): its distance in pixels to the nearest pixel outside
-  const g = new Float32Array(W * H), n = Math.max(W, H), f = new Float64Array(n), d = new Float64Array(n), v_ = new Int32Array(n), z = new Float64Array(n + 1);
-  for (let i = 0; i < W * H; i++) g[i] = rgba[i * 4 + 3] > 127 ? 1e20 : 0;
-  for (let x = 0; x < W; x++){ for (let y = 0; y < H; y++) f[y] = g[y * W + x]; edt1(f, H, d, v_, z); for (let y = 0; y < H; y++) g[y * W + x] = d[y]; }
-  for (let y = 0; y < H; y++){ const o = y * W; for (let x = 0; x < W; x++) f[x] = g[o + x]; edt1(f, W, d, v_, z); for (let x = 0; x < W; x++) g[o + x] = Math.sqrt(d[x]); }
-  return g; }
-// the street ends to round: an end on another street's side (a T, or the land's edge) is cut flush there, so a wider street
-// ending on a narrower one does not bulge out past it; a dead end, or an end meeting another street's end (one road going on), is rounded
 // a hook at a street's end (from the growth: it runs past its junction and comes back to it) is left off its surface: the
 // street goes straight from the last point within 4 m of its end to the end (looked for over its last 30 m)
 function trimHooks(st){ const P_ = st.pts, n = P_.length; if (n < 4) return st;
@@ -2060,55 +2053,165 @@ function trimHooks(st){ const P_ = st.pts, n = P_.length; if (n < 4) return st;
   if (cs > 0){ const start = cs; idx = idx.filter(k => k >= start || k === 0); }
   if (idx.length === n) return st;
   return Object.assign({}, st, { pts: idx.map(k => P_[k]), w: idx.map(k => st.w[k]), src: st.pts }); }
-function deadEndsAt(sw){ const C = 25, grid = new Map(), key = (x, y) => Math.floor(x / C) + ',' + Math.floor(y / C), out = [], WOF = new Map(sw.map(st => [st.pts, st.w]));
-  LINES.forEach(l => { if (l.dead) return; const Pp = l.pts; for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k];
-    const x0 = Math.floor(Math.min(a[0], b[0]) / C), x1 = Math.floor(Math.max(a[0], b[0]) / C), y0 = Math.floor(Math.min(a[1], b[1]) / C), y1 = Math.floor(Math.max(a[1], b[1]) / C);
-    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++){ const kk = x + ',' + y; let c = grid.get(kk); if (!c) grid.set(kk, c = []); c.push([a, b, Pp]); } } });
-  // null: on another street's side (flush); else the width to round it at: its own, or the narrowest street whose end it meets
-  const roundAt = (p, own, w) => { let r = w; for (const [a, b, pts] of grid.get(key(p[0], p[1])) || []){ if (pts === own) continue;
-      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2, 0, 1) : 0;
-      const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dy * t - p[1]), ow = WOF.get(pts);
-      const e0 = Math.hypot(pts[0][0] - p[0], pts[0][1] - p[1]) <= 2, e1 = Math.hypot(pts[pts.length - 1][0] - p[0], pts[pts.length - 1][1] - p[1]) <= 2;
-      if (d < 1.5 && (e0 || e1)){ if (ow && ow.length) r = Math.min(r, e0 ? ow[0] : ow[ow.length - 1]); continue; }   // another street's end: one road going on
-      if (d < Math.max(1.5, (ow && ow.length ? Math.min(...ow) : 0) / 2 - 0.5)) return null; }   // on (or within the surface of) another street's side
-    return r; };
-  for (const st of sw){ const Pp = st.pts; if (Pp.length < 2) continue;
-    for (const [p, w] of [[Pp[0], st.w[0]], [Pp[Pp.length - 1], st.w[st.w.length - 1]]]){ const r = roundAt(p, st.src || Pp, w); if (r !== null) out.push({ p, w: r, grade: st.grade }); } }
-  return out; }
-function drawWidth(){ const W = L_width.width, H = L_width.height, out = L_width.getContext('2d');
-  if (WCACHE && performance.now() - VIEWT < 180 && WCACHE.W === W && WCACHE.H === H){ const c = WCACHE, a = view.s / c.s;   // the view is moving
-    out.setTransform(1, 0, 0, 1, 0, 0); out.clearRect(0, 0, W, H);
-    out.setTransform(a, 0, 0, a, DPR * (VW / 2 * (1 - a) + (c.x - view.x) * view.s), DPR * (VH / 2 * (1 - a) - (c.y - view.y) * view.s));
-    out.drawImage(c.img, 0, 0); out.setTransform(1, 0, 0, 1, 0, 0); return; }   // widthDirty stays: the exact drawing follows when it rests
-  const swAll = streetWidths(), sw = swAll.map(trimHooks), grade = $('wBy').value === 'tier', R = Math.max(3, 0.8 * v('wMin')), hiW = Math.max(v('wMax'), v('wMin'));
+function roadGeometry(sw, grade){
+  const n = sw.length, cum = sw.map(st => { const c = [0]; for (let k = 1; k < st.pts.length; k++) c.push(c[k - 1] + Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1])); return c; });
+  const len = i => cum[i][cum[i].length - 1], wAt = (i, s) => { const c = cum[i], w = sw[i].w; let k = 1; while (k < c.length - 1 && c[k] < s) k++; return w[k] || w[0]; };
+  const pointAt = (i, s) => { const P_ = sw[i].pts, c = cum[i]; s = clamp(s, 0, len(i)); let k = 1; while (k < c.length - 1 && c[k] < s) k++;
+    const L = c[k] - c[k - 1] || 1, t = (s - c[k - 1]) / L; return [P_[k - 1][0] + (P_[k][0] - P_[k - 1][0]) * t, P_[k - 1][1] + (P_[k][1] - P_[k - 1][1]) * t]; };
+  // segments on a 25 m grid
+  const CS = 25, grid = new Map(), cellOf = (x, y) => Math.floor(x / CS) + ',' + Math.floor(y / CS);
+  for (let i = 0; i < n; i++){ const P_ = sw[i].pts; for (let k = 1; k < P_.length; k++){ const a = P_[k - 1], b = P_[k];
+    for (let x = Math.floor(Math.min(a[0], b[0]) / CS); x <= Math.floor(Math.max(a[0], b[0]) / CS); x++) for (let y = Math.floor(Math.min(a[1], b[1]) / CS); y <= Math.floor(Math.max(a[1], b[1]) / CS); y++){
+      const kk = x + ',' + y; let c = grid.get(kk); if (!c) grid.set(kk, c = []); c.push([i, k]); } } }
+  // the junctions, merged within 3 m
+  const nodes = [], ngrid = new Map();
+  const nodeAt = (x, y) => { const cx = Math.floor(x / 6), cy = Math.floor(y / 6);
+    for (let a = cx - 1; a <= cx + 1; a++) for (let b = cy - 1; b <= cy + 1; b++) for (const nd of ngrid.get(a + ',' + b) || []) if (Math.hypot(nd.x - x, nd.y - y) < 3) return nd;
+    const nd = { x, y, arms: [], has: new Set() }; nodes.push(nd); const kk = cx + ',' + cy; let c = ngrid.get(kk); if (!c) ngrid.set(kk, c = []); c.push(nd); return nd; };
+  const addEnd = (nd, i, s, dir) => { if (nd.has.has(i)) nd.arms = nd.arms.filter(a => a.i !== i || a.end); nd.arms.push({ i, s, dir, end: true }); nd.has.add(i); };   // (a street that ends where it also passes: its end only)
+  // the land's edge and the water's edge (level 0 lines): a street ending on one ends flush along it
+  const EDGES = LINES.filter(l => !l.dead && l.level === 0 && l.pts.length > 1), egrid = new Map();
+  EDGES.forEach(l => { for (let k = 1; k < l.pts.length; k++){ const a = l.pts[k - 1], b = l.pts[k], wet = !!l.flood;
+    for (let x = Math.floor(Math.min(a[0], b[0]) / CS); x <= Math.floor(Math.max(a[0], b[0]) / CS); x++) for (let y = Math.floor(Math.min(a[1], b[1]) / CS); y <= Math.floor(Math.max(a[1], b[1]) / CS); y++){
+      const kk = x + ',' + y; let c = egrid.get(kk); if (!c) egrid.set(kk, c = []); c.push([a, b, wet]); } } });
+  // the land's edge within a street's width of the end (preferred), else a water's edge within 3 m
+  const onEdge = (p, w) => { let land = null, water = null; const cx = Math.floor(p[0] / CS), cy = Math.floor(p[1] / CS);
+    for (let x = cx - 1; x <= cx + 1; x++) for (let y = cy - 1; y <= cy + 1; y++) for (const [a, b, wet] of egrid.get(x + ',' + y) || []){
+      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2, 0, 1) : 0, d = Math.hypot(a[0] + dx * t - p[0], a[1] + dy * t - p[1]);
+      if (!wet && d < Math.max(3, w) && (!land || d < land.d)) land = { d, a, b }; if (wet && d < 3 && (!water || d < water.d)) water = { d, a, b }; }
+    return land || water; };
+  const edgeEnds = [];
+  const cutTo = new Map();   // a street that runs a few metres past the street it ends on: drawn only up to that street
+  const crossNear = (i, atStart) => {   // the crossing of another street within the last 12 m of this end, nearest the end
+    const P_ = sw[i].pts, c = cum[i], L = len(i); let best = null;
+    for (let k = 1; k < P_.length; k++){ if (atStart ? c[k - 1] > 12 : c[k] < L - 12) continue; const a = P_[k - 1], b = P_[k], r1 = [b[0] - a[0], b[1] - a[1]];
+      const seen = new Set(); for (let x = Math.floor(Math.min(a[0], b[0]) / CS); x <= Math.floor(Math.max(a[0], b[0]) / CS); x++) for (let y = Math.floor(Math.min(a[1], b[1]) / CS); y <= Math.floor(Math.max(a[1], b[1]) / CS); y++)
+        for (const [j, m] of grid.get(x + ',' + y) || []){ if (j === i || seen.has(j + ':' + m)) continue; seen.add(j + ':' + m); const cc = sw[j].pts[m - 1], d = sw[j].pts[m], r2 = [d[0] - cc[0], d[1] - cc[1]], den = r1[0] * r2[1] - r1[1] * r2[0];
+          if (Math.abs(den) < 1e-9) continue; const t = ((cc[0] - a[0]) * r2[1] - (cc[1] - a[1]) * r2[0]) / den, w = ((cc[0] - a[0]) * r1[1] - (cc[1] - a[1]) * r1[0]) / den;
+          if (t < 0 || t > 1 || w < 0 || w > 1) continue; const si = c[k - 1] + t * Math.hypot(r1[0], r1[1]), sj = cum[j][m - 1] + w * Math.hypot(r2[0], r2[1]);
+          const stub = atStart ? si : L - si; if (stub < 2 || stub > 12 || sj < 12 || sj > len(j) - 12) continue;   // (the other street's end too: they meet as ends)
+          if (!best || stub < best.stub) best = { j, si, sj, stub, x: a[0] + r1[0] * t, y: a[1] + r1[1] * t }; } }
+    return best; };
+  const addThrough = (nd, i, s) => { if (nd.has.has(i)) return; nd.has.add(i); nd.arms.push({ i, s, dir: 1 }, { i, s, dir: -1 }); };
+  const foot = (p, i, k) => { const a = sw[i].pts[k - 1], b = sw[i].pts[k], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2, 0, 1) : 0;
+    return { x: a[0] + dx * t, y: a[1] + dy * t, s: cum[i][k - 1] + t * Math.sqrt(L2), d: Math.hypot(a[0] + dx * t - p[0], a[1] + dy * t - p[1]) }; };
+  // 1 ends: on another street's side (a T, the node on that street's centre line), or a node of their own
+  for (let i = 0; i < n; i++){ const P_ = sw[i].pts; if (P_.length < 2) continue;
+    for (const [p, s, dir] of [[P_[0], 0, 1], [P_[P_.length - 1], len(i), -1]]){ let best = null;
+      const cx_ = crossNear(i, dir > 0); if (cx_){ const nd = nodeAt(cx_.x, cx_.y); addEnd(nd, i, cx_.si, dir); addThrough(nd, cx_.j, cx_.sj);
+        let ct = cutTo.get(i); if (!ct) cutTo.set(i, ct = [0, len(i)]); if (dir > 0) ct[0] = cx_.si; else ct[1] = cx_.si; continue; }
+      for (const [j, k] of grid.get(cellOf(p[0], p[1])) || []){ if (j === i) continue; const f = foot(p, j, k);
+        const wj = wAt(j, f.s); if (f.s < Math.max(6, wj) || f.s > len(j) - Math.max(6, wj)) continue;   // (near the other street's end: they meet as ends, not a T)
+        if (f.d < Math.max(1.5, wj / 2 - 0.5) && (!best || f.d < best.d)) best = Object.assign(f, { j }); }
+      if (best){ const nd = nodeAt(best.x, best.y); addEnd(nd, i, s, dir); addThrough(nd, best.j, best.s); continue; }
+      const eg = onEdge(p, sw[i].w[0]); if (eg){ edgeEnds.push({ i, p, dir, eg }); continue; }   // on the land's edge: flush, cut along the edge
+      addEnd(nodeAt(p[0], p[1]), i, s, dir); } }
+  // 2 crossings (an X: both streets pass through)
+  for (const cell of grid.values()) for (let u = 0; u < cell.length; u++) for (let q = u + 1; q < cell.length; q++){ const [i, k] = cell[u], [j, m] = cell[q]; if (i === j) continue;
+    const a = sw[i].pts[k - 1], b = sw[i].pts[k], c = sw[j].pts[m - 1], d = sw[j].pts[m], r1 = [b[0] - a[0], b[1] - a[1]], r2 = [d[0] - c[0], d[1] - c[1]], den = r1[0] * r2[1] - r1[1] * r2[0];
+    if (Math.abs(den) < 1e-9) continue; const t = ((c[0] - a[0]) * r2[1] - (c[1] - a[1]) * r2[0]) / den, w = ((c[0] - a[0]) * r1[1] - (c[1] - a[1]) * r1[0]) / den;
+    if (t < 0 || t > 1 || w < 0 || w > 1) continue;
+    const si = cum[i][k - 1] + t * Math.hypot(r1[0], r1[1]), sj = cum[j][m - 1] + w * Math.hypot(r2[0], r2[1]);
+    if (si < 2 || si > len(i) - 2 || sj < 2 || sj > len(j) - 2) continue;   // (an end: already a node)
+    if ((si < 12 || si > len(i) - 12) && (sj < 12 || sj > len(j) - 12)) continue;   // (two ends crossing: they meet as ends)
+    const ci = cutTo.get(i), cj = cutTo.get(j); if ((ci && (si < ci[0] + 1 || si > ci[1] - 1)) || (cj && (sj < cj[0] + 1 || sj > cj[1] - 1))) continue;   // (on a stub that is cut off)
+    const nd = nodeAt(a[0] + r1[0] * t, a[1] + r1[1] * t); addThrough(nd, i, si); addThrough(nd, j, sj); }
+  // 3 each arm: its own point on its centre line, its direction (towards its point a few metres along, measured again where
+  // the kerb meets it), width, grade, and the run it has before its street ends
+  const patches = [], discs = [], tapers = [], clips = [];
+  const dirAt = (a, dist) => { const q = pointAt(a.i, a.s + a.dir * Math.max(3, Math.min(dist, a.run))), dx = q[0] - a.o[0], dy = q[1] - a.o[1], L = Math.hypot(dx, dy) || 1; return [dx / L, dy / L]; };
+  for (const nd of nodes){ if (!nd.arms.length) continue;
+    for (const a of nd.arms){ a.o = pointAt(a.i, a.s); a.run = a.dir > 0 ? len(a.i) - a.s : a.s;
+      a.d = dirAt(a, 8); a.ang = Math.atan2(a.d[1], a.d[0]); a.w = wAt(a.i, a.s); a.g = sw[a.i].grade; a.rank = grade ? GRANK[a.g] : a.w; }
+    const ends = nd.arms.filter(a => a.end), majors = nd.arms.filter(a => !a.end);
+    if (!majors.length) for (const a of ends){   // ends among ends: rounded; a wider one narrows to the widest of the others first
+      const others = ends.filter(b => b !== a), wt = others.length ? Math.min(a.w, Math.max(...others.map(b => b.w))) : a.w;
+      discs.push({ p: a.o, w: wt, g: a.g, rank: a.rank });
+      if (wt < a.w - 0.5) tapers.push({ i: a.i, atStart: a.dir > 0, w: a.w, wt, L: Math.min(a.run * 0.5, Math.max(8, 3 * (a.w - wt))), g: a.g }); }
+    else for (const a of ends){   // a T: whatever of the minor end lies past the major street's far edge (followed as it bends) is cut off
+      const M = majors[0], back = pointAt(a.i, a.s + a.dir * 8), Lm = a.w * 1.5 + 4, Dp = a.w + 4, near = [], far = [];
+      const nAt = s_ => { const p0 = pointAt(M.i, s_ - 1), p1 = pointAt(M.i, s_ + 1), dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1; return [-dy / L, dx / L]; };
+      const n0 = nAt(M.s), side = Math.sign((back[0] - M.o[0]) * n0[0] + (back[1] - M.o[1]) * n0[1]) || 1;   // the minor street's side of the major
+      const up = a.rank > M.rank;   // a higher grade ending on a lower one stops at its near edge: the street it meets runs on unbroken
+      for (let q = 0; q <= 12; q++){ const s_ = M.s - Lm + 2 * Lm * q / 12, c = pointAt(M.i, s_), nn = nAt(s_), h = wAt(M.i, s_) / 2, e = up ? -h : h;
+        near.push([c[0] - side * nn[0] * e, c[1] - side * nn[1] * e]); far.push([c[0] - side * nn[0] * (h + Dp), c[1] - side * nn[1] * (h + Dp)]); }
+      clips.push({ i: a.i, rect: near.concat(far.reverse()) }); }
+    if (nd.arms.length < 2) continue;
+    const arms = nd.arms.slice().sort((p_, q_) => p_.ang - q_.ang);
+    for (let m = 0; m < arms.length; m++){ const A = arms[m], B = arms[(m + 1) % arms.length];
+      let th = B.ang - A.ang; if (m === arms.length - 1) th += 2 * PI;
+      const deg = th * 180 / PI; if (deg < 25 || deg > 170) continue;   // a kerb island; a straight run
+      const lo = Math.min(A.rank, B.rank), hi = Math.max(A.rank, B.rank);
+      const r0 = grade ? (lo === 0 ? [6, 8, 10][hi] : lo === 1 ? (hi === 1 ? 10 : 12) : 12) * v('wMin') / 10 : 0.8 * Math.min(A.w, B.w);
+      const hA = A.w / 2, hB = B.w / 2;
+      const corner = (dA, dB) => { const nA = [-dA[1], dA[0]], nB = [dB[1], -dB[0]];
+        const pA = [A.o[0] + nA[0] * hA, A.o[1] + nA[1] * hA], pB = [B.o[0] + nB[0] * hB, B.o[1] + nB[1] * hB], rx = pB[0] - pA[0], ry = pB[1] - pA[1], det = -dA[0] * dB[1] + dB[0] * dA[1];
+        if (Math.abs(det) < 1e-6) return null;
+        const sA = (-rx * dB[1] + dB[0] * ry) / det, sB = (dA[0] * ry - dA[1] * rx) / det;
+        if (sA < -0.5 || sB < -0.5 || sA > A.w + B.w + 6 || sB > A.w + B.w + 6) return null;   // the edges meet behind the junction, or far off it
+        const cth = clamp(dA[0] * dB[0] + dA[1] * dB[1], -1, 1), half = Math.acos(cth) / 2, tanH = Math.tan(half);
+        if (half * 360 / PI < 25 || tanH <= 0) return null;
+        let r = Math.min(r0, 1.2 * r0 * tanH), t = r / tanH;   // the acute corner: the tangent run held to 1.2 R
+        const room = Math.min(A.run - sA, B.run - sB) * 0.8; if (room <= 0.5) return null; if (t > room){ t = room; r = t * tanH; }
+        return { nA, nB, sA, sB, t, r, half, C: [pA[0] + dA[0] * sA, pA[1] + dA[1] * sA] }; };
+      let dA = A.d, dB = B.d, k0 = corner(dA, dB); if (!k0) continue;
+      dA = dirAt(A, k0.sA + k0.t); dB = dirAt(B, k0.sB + k0.t); let k = corner(dA, dB); if (!k){ k = k0; dA = A.d; dB = B.d; }   // measured again where the kerb meets each street
+      const { nA, nB, t, r, half, C } = k;
+      const T1 = [C[0] + dA[0] * t, C[1] + dA[1] * t], T2 = [C[0] + dB[0] * t, C[1] + dB[1] * t];
+      const bx = dA[0] + dB[0], by_ = dA[1] + dB[1], bl = Math.hypot(bx, by_) || 1, oc = r / Math.sin(half), O = [C[0] + bx / bl * oc, C[1] + by_ / bl * oc];
+      let f1 = Math.atan2(T1[1] - O[1], T1[0] - O[0]), f2 = Math.atan2(T2[1] - O[1], T2[0] - O[0]), df = f2 - f1; while (df > PI) df -= 2 * PI; while (df < -PI) df += 2 * PI;
+      const poly = [A.o, [T1[0] - nA[0] * hA, T1[1] - nA[1] * hA], T1];
+      for (let q = 1; q < 12; q++){ const f = f1 + df * q / 12; poly.push([O[0] + r * Math.cos(f), O[1] + r * Math.sin(f)]); }
+      poly.push(T2, [T2[0] - nB[0] * hB, T2[1] - nB[1] * hB], B.o, [nd.x, nd.y]);
+      const minor = A.rank <= B.rank ? A : B; patches.push({ poly, g: minor.g, w: minor.w, rank: minor.rank }); } }
+  const atEdge = new Map(); for (const ee of edgeEnds){ let l = atEdge.get(ee.i); if (!l) atEdge.set(ee.i, l = []); l.push({ p: ee.p, r: sw[ee.i].w[0] * 1.5 + ee.eg.d * 2 + 4 }); }
+  patches.sort((p_, q_) => p_.rank - q_.rank);
+  // the drawn stretch of each street: its ends that taper are drawn as tapers
+  const range = sw.map((st, i) => (cutTo.get(i) || [0, len(i)]).slice()); for (const tp of tapers){ if (tp.atStart) range[tp.i][0] = Math.max(range[tp.i][0], tp.L); else range[tp.i][1] = Math.min(range[tp.i][1], len(tp.i) - tp.L); }
+  const ext = new Map(); for (const ee of edgeEnds){ let e = ext.get(ee.i); if (!e) ext.set(ee.i, e = [0, 0]); e[ee.dir > 0 ? 0 : 1] = sw[ee.i].w[0] + ee.eg.d * 2; }
+  const sub = i => { const [a, b] = range[i]; if (b - a < 0.5) return null; const c = cum[i], P_ = sw[i].pts;
+    let out = (a <= 0 && b >= len(i)) ? P_.slice() : [pointAt(i, a)].concat(P_.filter((_, k) => c[k] > a && c[k] < b), [pointAt(i, b)]);
+    const e = ext.get(i); if (e){ const go = (p0, p1, L) => { const dx = p1[0] - p0[0], dy = p1[1] - p0[1], d = Math.hypot(dx, dy) || 1; return [p1[0] + dx / d * L, p1[1] + dy / d * L]; };
+      if (e[0] && a <= 0 && out.length > 1) out.unshift(go(out[1], out[0], e[0])); if (e[1] && b >= len(i) && out.length > 1) out.push(go(out[out.length - 2], out[out.length - 1], e[1])); }
+    return out; };
+  const taperPolys = tapers.map(tp => { const sA = tp.atStart ? tp.L + 1 : len(tp.i) - tp.L - 1, sE = tp.atStart ? 0 : len(tp.i), pts = [];   // (1 m into the street: no hairline at the seam)
+    for (let q = 0; q <= 8; q++){ const s_ = sA + (sE - sA) * q / 8, p0 = pointAt(tp.i, s_ - 0.5), p1 = pointAt(tp.i, s_ + 0.5), dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1;
+      const u = Math.max(0, (q / 8 * (tp.L + 1) - 1) / tp.L), w = (tp.w + (tp.wt - tp.w) * u * u * (3 - 2 * u)) / 2, c = pointAt(tp.i, s_); pts.push([[c[0] - dy / L * w, c[1] + dx / L * w], [c[0] + dy / L * w, c[1] - dx / L * w]]); }
+    return { poly: pts.map(q => q[0]).concat(pts.map(q => q[1]).reverse()), g: tp.g, w: tp.w }; });
+  const clipOf = new Map(); for (const c of clips){ let l = clipOf.get(c.i); if (!l) clipOf.set(c.i, l = []); l.push(c.rect); }
+  return { patches, discs, tapers: taperPolys, sub, clipOf, atEdge, nodes: nodes.length, nodeList: nodes }; }
+let RGEO = null;
+function drawWidth(){ const W = L_width.width, H = L_width.height, g = L_width.getContext('2d');
+  const swAll = streetWidths(), sw = swAll.map(trimHooks), grade = $('wBy').value === 'tier', hiW = Math.max(v('wMax'), v('wMin'));
+  // the junctions depend on the streets and their widths only: worked out again when those change, not when the view moves
+  let key = $('wBy').value + '|' + v('wMin') + '|' + v('wMax') + '|' + sw.length; for (const st of sw){ const a = st.pts[0], b = st.pts[st.pts.length - 1]; key += '|' + st.pts.length + ',' + (a[0] + b[1]).toFixed(1) + ',' + st.w[0]; }
+  if (!RGEO || RGEO.key !== key) RGEO = Object.assign(roadGeometry(sw, grade), { key });
+  const colOf = o => grade ? gradeCol(o.g) : rampCol(o.w);
   const fixed = D.fixed.streets.concat([D.fixed.link]).filter(s_ => s_ && s_.length > 1);
-  const pen = () => { const c = mk(); c.width = W; c.height = H; const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round'; return [c, g]; };
-  // 1 the surface: width + 2R, then eroded by R
-  const loose = grade ? deadEndsAt(sw) : [], disc = (g, e, pad) => { g.beginPath(); g.arc(X(e.p[0]), Y(e.p[1]), (e.w + pad) * view.s / 2, 0, 2 * PI); g.fill(); };
-  const [, ga] = pen(); ga.strokeStyle = ga.fillStyle = '#000'; if (grade) ga.lineCap = 'butt';   // (the three grades: one width a street, ends flush)
-  strokeVar(ga, sw, 2 * R, false); for (const e of loose) disc(ga, e, 2 * R); ga.lineCap = 'round';
-  ga.lineWidth = (hiW + 2 * R) * view.s; for (const s_ of fixed){ pathLine(ga, s_); ga.stroke(); }
-  const dist = distInside(ga.getImageData(0, 0, W, H).data, W, H), Rp = R * view.s * DPR;
-  // 2 the colours: once wide (the fillets take the higher grade, as a kerb follows the major road), then each street at its own
-  // width (a minor street keeps its colour up to the major one's edge); low to high, so the higher grade lies on top
-  const [, gc] = pen();
-  const paint = pad => {
-    if (grade){ for (const gr of ['local', 'through', 'main']){ gc.strokeStyle = gradeCol(gr);   // (round caps: the surface alone decides the shape)
-        for (const st of sw) if (st.grade === gr){ gc.lineWidth = (st.w[0] + pad) * view.s; pathLine(gc, st.pts); gc.stroke(); }
-        if (gr === 'main'){ gc.lineWidth = (hiW + pad) * view.s; for (const s_ of fixed){ pathLine(gc, s_); gc.stroke(); } } } return; }
-    gc.strokeStyle = rampCol(hiW); gc.lineWidth = (hiW + pad) * view.s; for (const s_ of fixed){ pathLine(gc, s_); gc.stroke(); }
-    const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
-    segs.sort((p, q) => p[0] - q[0]);
-    for (const [ww, p0, p1] of segs){ gc.strokeStyle = rampCol(ww); gc.lineWidth = (ww + pad) * view.s; gc.beginPath(); gc.moveTo(X(p0[0]), Y(p0[1])); gc.lineTo(X(p1[0]), Y(p1[1])); gc.stroke(); } };
-  paint(2 * R); paint(0);
-  const im = gc.getImageData(0, 0, W, H), d = im.data, fb = mix(P.wLo, P.wHi, 1);
-  for (let i = 0, n = W * H; i < n; i++){ const a = dist[i] - Rp + 0.5;   // anti-aliased edge
-    if (a <= 0){ d[i * 4 + 3] = 0; continue; }
-    if (!d[i * 4 + 3]){ d[i * 4] = fb[0]; d[i * 4 + 1] = fb[1]; d[i * 4 + 2] = fb[2]; }
-    d[i * 4 + 3] = a >= 1 ? 255 : Math.round(255 * a); }
-  const [res, gr_] = pen(); gr_.setTransform(1, 0, 0, 1, 0, 0); gr_.putImageData(im, 0, 0);
-  out.setTransform(1, 0, 0, 1, 0, 0); out.clearRect(0, 0, W, H); out.drawImage(res, 0, 0);
-  WCACHE = { img: res, x: view.x, y: view.y, s: view.s, W, H };
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineJoin = 'round';
+  // 1 the kerb fillets, in the minor street's colour (under the streets: the edges of the streets lie on top)
+  g.save(); if (D.pieces && D.pieces.length){ g.beginPath(); pathRings(g, D.pieces.map(p_ => p_.outer)); g.clip(); }   // (on the land only: never out over the water or the edge)
+  for (const pa of RGEO.patches){ g.fillStyle = colOf(pa); g.beginPath(); pa.poly.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.closePath(); g.fill(); }
+  g.restore();
+  // 2 the streets, the lower grade (or narrower) first; with the grades every street is one width, its ends flush
+  g.lineCap = 'round'; g.strokeStyle = colOf({ g: 'main', w: hiW }); g.lineWidth = hiW * view.s; for (const s_ of fixed){ pathLine(g, s_); g.stroke(); }
+  const fillPoly = poly => { g.beginPath(); poly.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.closePath(); g.fill(); };
+  if (grade){ for (const gr of ['local', 'through', 'main']){ g.strokeStyle = g.fillStyle = gradeCol(gr); g.lineCap = 'butt';
+      const byW = new Map();   // the streets without a cut, one path a width: where two meet end to end there is no seam
+      sw.forEach((st, i) => { if (st.grade !== gr) return; const pts = RGEO.sub(i); if (!pts) return; const cl = RGEO.clipOf.get(i), ed = RGEO.atEdge.get(i);
+        if (!cl && !ed){ let l = byW.get(st.w[0]); if (!l) byW.set(st.w[0], l = []); l.push(pts); return; }
+        const cutT = () => { if (!cl) return; g.beginPath(); g.rect(-VW, -VH, 3 * VW, 3 * VH); for (const r_ of cl){ r_.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.closePath(); } g.clip('evenodd'); };
+        const ring = e => { g.moveTo(X(e.p[0]) + e.r * view.s, Y(e.p[1])); g.arc(X(e.p[0]), Y(e.p[1]), e.r * view.s, 0, 2 * PI); };
+        g.lineWidth = st.w[0] * view.s;
+        g.save(); cutT(); if (ed){ g.beginPath(); g.rect(-VW, -VH, 3 * VW, 3 * VH); for (const e of ed) ring(e); g.clip('evenodd'); } pathLine(g, pts); g.stroke(); g.restore();
+        if (ed && D.pieces && D.pieces.length) for (const e of ed){ g.save(); cutT(); g.beginPath(); ring({ p: e.p, r: e.r + 1.5 }); g.clip(); /* (overlapping the part outside by 1.5 m: no seam) */ g.beginPath(); pathRings(g, D.pieces.map(p_ => p_.outer)); g.clip(); pathLine(g, pts); g.stroke(); g.restore(); } });
+      for (const [ww, list] of byW){ g.lineWidth = ww * view.s; g.beginPath(); for (const pts of list) pts.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.stroke(); }
+      for (const tp of RGEO.tapers) if (tp.g === gr) fillPoly(tp.poly);
+      for (const dsc of RGEO.discs) if (dsc.g === gr){ g.beginPath(); g.arc(X(dsc.p[0]), Y(dsc.p[1]), (dsc.w / 2 + 0.3) * view.s, 0, 2 * PI); g.fill(); } }
+    g.lineCap = 'round'; }
+  else { const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
+    segs.sort((p_, q_) => p_[0] - q_[0]);
+    for (const [ww, p0, p1] of segs){ g.strokeStyle = rampCol(ww); g.lineWidth = ww * view.s; g.beginPath(); g.moveTo(X(p0[0]), Y(p0[1])); g.lineTo(X(p1[0]), Y(p1[1])); g.stroke(); } }
   widthDirty = false; widthNumbers(swAll); }
 function widthNumbers(sw){ const by = {}; let area = 0;
   for (const st of sw) for (let k = 1; k < st.pts.length; k++){ const L = Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1]), ww = st.w[k]; area += L * ww; const key = $('wSnap').checked ? ww : Math.round(ww); by[key] = (by[key] || 0) + L; }
@@ -2196,7 +2299,7 @@ function drawFieldLines(g){ const fl = fieldLines(40); g.lineCap = 'round'; g.li
 let T0 = performance.now(), lastView = '';
 function render(now){
   const vk = view.x.toFixed(2) + ',' + view.y.toFixed(2) + ',' + view.s.toFixed(5) + ',' + VW + ',' + VH;
-  if (vk !== lastView){ if (lastView) VIEWT = now; lastView = vk; baseDirty = netDirty = widthDirty = true; clearTrails(); }
+  if (vk !== lastView){ lastView = vk; baseDirty = netDirty = widthDirty = true; clearTrails(); }
   pushHostView();
   if (baseDirty) drawBase();
   if (netDirty) drawNet(true); else if (netDrawn < LINES.length) drawNet(false);
