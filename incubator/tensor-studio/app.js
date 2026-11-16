@@ -11,7 +11,7 @@ const SITE_HA = (window.__TS && window.__TS.meta && window.__TS.meta.areaHa) || 
 const AREA_K = SIZE_K * SIZE_K, SLIVER_HA = 0.15 * AREA_K, BIG_HA = 2.5 * AREA_K, PARK_HA = 4 * AREA_K, JOIN_HA = 2 * AREA_K;
 function scaleToSite(){ if (SIZE_K >= 1) return; const set = (id, val, lo) => { const e = $(id); if (!e) return; const mn = +e.min, st = +e.step || 1, want = Math.max(lo != null ? lo : mn, Math.round(val / st) * st); if (want < mn) e.min = want; e.value = want; };
   set('d1', 300 * SIZE_K, 90); set('d2', 115 * SIZE_K, 40); set('gW', 30 * Math.max(0.4, SIZE_K), 10); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K));
-  set('wMax', 18 * SIZE_K, 6); set('wMin', 6 * SIZE_K, 3); }   // (v8.35) the street widths too: 18 / 6 m on the station example, in proportion on a small site
+  set('wMax', 24 * SIZE_K, 12); set('wMin', 10 * SIZE_K, 6); }   // (v8.35) the street widths too, in proportion on a small site; (v8.41) 24 / 10 m on the station example, never under 12 / 6 m (a real street)
 const clamp = (a, b, c) => Math.max(b, Math.min(c, a));
 
 /* ------------------------------------------------------------------ Parcel 62 only: its land, its anchors, its attractors, its river street */
@@ -1983,7 +1983,8 @@ function drawNet(full){ const g = g2d(L_net); if (full){ g.clearRect(0, 0, VW, V
   if (SCRUB){ for (let i = 0; i < SCRUB.n.length; i++){ const l = SCRUB.o[i], n = SCRUB.n[i]; if (!l || n < 2) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
       if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; const Pp = SCRUB.p[i]; pathLine(g, Pp.length === n ? Pp : Pp.slice(0, n)); g.stroke(); }
     g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; return; }
-  for (let i = netDrawn; i < LINES.length; i++){ const l = LINES[i]; if (l.dead) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
+  const atWidth = $('lWidth').checked && FINISHED;   // (v8.41) at width the road surface alone tells the grades apart: no centre lines (the edges stay)
+  for (let i = netDrawn; i < LINES.length; i++){ const l = LINES[i]; if (l.dead || (atWidth && l.level > 0)) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
     if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; pathLine(g, l.pts); g.stroke(); }
   g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; }
 // (v8.7) a frame of the growth: each line's points so far (the arrays only grow while a street grows, so a frame keeps a reference and a length)
@@ -1995,7 +1996,14 @@ function plen(Pp){ let L = 0; for (let k = 1; k < Pp.length; k++) L += Math.hypo
 function cellAt(x, y){ return clamp(Math.round(y / cell), 0, ny - 1) * nx + clamp(Math.round(x / cell), 0, nx - 1); }
 function exposureAt(x, y){ const M = YEAR[MONTH], i = cellAt(x, y); let e = 0; for (let d = 0; d < 8; d++) e += M.share[d] * M.v[d] * M.v[d] / YSUM * DIRS[d].S[i]; return e; }
 function widthOf(t){ const lo = v('wMin'), hi = Math.max(v('wMax'), lo); let w = lo + (hi - lo) * clamp(t, 0, 1); if ($('wSnap').checked) w = Math.round(w / 3) * 3; return Math.max(3, w); }
+// (v8.41) three grades, as a real city's: main (the main streets and the circus, the widest), through (the longest 30 % of the
+// second streets: continuous routes, not fragments) and local (the rest, the narrowest); the through width lies between
+function tierWidths(){ const lo = v('wMin'), hi = Math.max(v('wMax'), lo); return { main: hi, through: Math.round(lo + (hi - lo) * 0.36), local: lo }; }
 function streetWidths(){ const by = $('wBy').value, ls = LINES.filter(l => !l.dead && l.level > 0 && !l.circus), out = [];
+  if (by === 'tier'){ const TW = tierWidths(), lens = ls.filter(l => l.level !== 1).map(l => plen(l.pts)).sort((a, b) => b - a), cut = lens.length ? lens[Math.floor((lens.length - 1) * 0.3)] : Infinity;
+    for (const l of ls){ const g = l.level === 1 ? 'main' : plen(l.pts) >= cut ? 'through' : 'local'; out.push({ pts: l.pts, w: l.pts.map(() => TW[g]), level: l.level, grade: g }); }
+    for (const l of LINES) if (!l.dead && l.circus) out.push({ pts: l.pts, w: l.pts.map(() => TW.main), level: 1, grade: 'main' });
+    return out; }
   const maxHits = Math.max(1, ...ls.map(l => l.hits || 0)), maxLen = Math.max(1, ...ls.map(l => plen(l.pts))), att = attractorsOn();
   for (const l of ls){ let t = null;
     if (by === 'level') t = l.level === 1 ? 1 : 0;
@@ -2017,24 +2025,91 @@ function strokeVar(g, sw, pad, colour){ // each segment at its own width; round 
     while (k < Pp.length){ const w = st.w[k]; g.beginPath(); g.moveTo(X(Pp[k - 1][0]), Y(Pp[k - 1][1]));
       while (k < Pp.length && st.w[k] === w){ g.lineTo(X(Pp[k][0]), Y(Pp[k][1])); k++; }
       g.lineWidth = (w + pad) * view.s; if (colour) g.strokeStyle = rampCol(w); g.stroke(); } } }
-function drawWidth(){ const w = L_width.width, h = L_width.height, sw = streetWidths(), WK = Math.max(0.35, SIZE_K);   // (v8.35) fillets and the colour band in proportion to the site
-  // 1 the road surface: every street at its width, the land's edge road at the widest, the link; closed by a blur (the fillets)
-  const a = mk(); a.width = w; a.height = h; const ga = a.getContext('2d'); ga.setTransform(DPR, 0, 0, DPR, 0, 0); ga.strokeStyle = '#000'; ga.lineCap = 'round'; ga.lineJoin = 'round';
-  strokeVar(ga, sw, 0, false);
-  ga.lineWidth = Math.max(v('wMax'), v('wMin')) * view.s;   // (v8.29) the land's edge is not drawn as a road: the streets are the ones grown within the site
-  for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(ga, s_); ga.stroke(); }
-  const m = mk(); m.width = w; m.height = h; const gm = m.getContext('2d'); gm.filter = 'blur(' + Math.max(1, Math.round(6 * WK * view.s * DPR)) + 'px)'; gm.drawImage(a, 0, 0); gm.filter = 'none';
-  const im = gm.getImageData(0, 0, w, h), d = im.data; for (let i = 0; i < d.length; i += 4){ d[i + 3] = d[i + 3] >= 105 ? 255 : 0; } gm.putImageData(im, 0, 0);
-  // 2 the colour by width: narrow to wide, the wider drawn last, a little wider than the road so it fills the fillets
-  const g = L_width.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round';
-  const hiCol = rampCol(Math.max(v('wMax'), v('wMin')));
-  g.strokeStyle = hiCol; g.lineWidth = (Math.max(v('wMax'), v('wMin')) + 8 * WK) * view.s;
-  for (const s_ of D.fixed.streets.concat([D.fixed.link])){ pathLine(g, s_); g.stroke(); }
-  const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
-  segs.sort((p, q) => p[0] - q[0]);
-  for (const [ww, p0, p1] of segs){ g.strokeStyle = rampCol(ww); g.lineWidth = (ww + 8 * WK) * view.s; g.beginPath(); g.moveTo(X(p0[0]), Y(p0[1])); g.lineTo(X(p1[0]), Y(p1[1])); g.stroke(); }
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0); g.globalCompositeOperation = 'source-over';
-  widthDirty = false; widthNumbers(sw); }
+/* (v8.41) the road surface as a real city's: every street at its exact width, kerb fillets of one radius R at every junction,
+ * coloured by grade (or by width, for the other drivers), no centre lines. The surface is every street drawn at its width + 2R,
+ * eroded by R through a distance transform: the widths come out exact and centred, and every inside corner is rounded at R
+ * (v8.35's blur and threshold wiped out the narrowest streets, left grey wedges at their junctions and shifted the bands).
+ * While the view moves the last exact drawing is moved and scaled; the exact one is redrawn once the view rests. */
+let WCACHE = null, VIEWT = 0;
+function gradeCol(g){ return 'rgb(' + mix(P.wLo, P.wHi, g === 'main' ? 1 : g === 'through' ? 0.62 : 0.28).join(',') + ')'; }
+function edt1(f, n, d, v_, z){   // the 1-D squared distance transform (Felzenszwalb and Huttenlocher)
+  let k = 0; v_[0] = 0; z[0] = -1e20; z[1] = 1e20;
+  for (let q = 1; q < n; q++){ let s_ = ((f[q] + q * q) - (f[v_[k]] + v_[k] * v_[k])) / (2 * q - 2 * v_[k]);
+    while (s_ <= z[k]){ k--; s_ = ((f[q] + q * q) - (f[v_[k]] + v_[k] * v_[k])) / (2 * q - 2 * v_[k]); }
+    k++; v_[k] = q; z[k] = s_; z[k + 1] = 1e20; }
+  k = 0; for (let q = 0; q < n; q++){ while (z[k + 1] < q) k++; d[q] = (q - v_[k]) * (q - v_[k]) + f[v_[k]]; } }
+function distInside(rgba, W, H){   // each pixel inside (alpha over half): its distance in pixels to the nearest pixel outside
+  const g = new Float32Array(W * H), n = Math.max(W, H), f = new Float64Array(n), d = new Float64Array(n), v_ = new Int32Array(n), z = new Float64Array(n + 1);
+  for (let i = 0; i < W * H; i++) g[i] = rgba[i * 4 + 3] > 127 ? 1e20 : 0;
+  for (let x = 0; x < W; x++){ for (let y = 0; y < H; y++) f[y] = g[y * W + x]; edt1(f, H, d, v_, z); for (let y = 0; y < H; y++) g[y * W + x] = d[y]; }
+  for (let y = 0; y < H; y++){ const o = y * W; for (let x = 0; x < W; x++) f[x] = g[o + x]; edt1(f, W, d, v_, z); for (let x = 0; x < W; x++) g[o + x] = Math.sqrt(d[x]); }
+  return g; }
+// the street ends to round: an end on another street's side (a T, or the land's edge) is cut flush there, so a wider street
+// ending on a narrower one does not bulge out past it; a dead end, or an end meeting another street's end (one road going on), is rounded
+// a hook at a street's end (from the growth: it runs past its junction and comes back to it) is left off its surface: the
+// street goes straight from the last point within 4 m of its end to the end (looked for over its last 30 m)
+function trimHooks(st){ const P_ = st.pts, n = P_.length; if (n < 4) return st;
+  const cut = (idx, end) => { let L = 0, best = -1;
+    for (let m = 1; m < idx.length; m++){ L += Math.hypot(P_[idx[m]][0] - P_[idx[m - 1]][0], P_[idx[m]][1] - P_[idx[m - 1]][1]); if (L > 30) break;
+      const d = Math.hypot(P_[idx[m]][0] - end[0], P_[idx[m]][1] - end[1]); if (d < 4 && L > d * 2 + 3) best = m; }
+    return best; };
+  const fromEnd = [], fromStart = []; for (let k = n - 1; k >= 0; k--) fromEnd.push(k); for (let k = 0; k < n; k++) fromStart.push(k);
+  let a = 0, b = n - 1; const ce = cut(fromEnd, P_[n - 1]), cs = cut(fromStart, P_[0]);
+  const keep = []; for (let k = 0; k < n; k++) keep.push(k);
+  let idx = keep; if (ce > 0){ const stop = n - 1 - ce; idx = idx.filter(k => k <= stop || k === n - 1); }
+  if (cs > 0){ const start = cs; idx = idx.filter(k => k >= start || k === 0); }
+  if (idx.length === n) return st;
+  return Object.assign({}, st, { pts: idx.map(k => P_[k]), w: idx.map(k => st.w[k]), src: st.pts }); }
+function deadEndsAt(sw){ const C = 25, grid = new Map(), key = (x, y) => Math.floor(x / C) + ',' + Math.floor(y / C), out = [], WOF = new Map(sw.map(st => [st.pts, st.w]));
+  LINES.forEach(l => { if (l.dead) return; const Pp = l.pts; for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k];
+    const x0 = Math.floor(Math.min(a[0], b[0]) / C), x1 = Math.floor(Math.max(a[0], b[0]) / C), y0 = Math.floor(Math.min(a[1], b[1]) / C), y1 = Math.floor(Math.max(a[1], b[1]) / C);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++){ const kk = x + ',' + y; let c = grid.get(kk); if (!c) grid.set(kk, c = []); c.push([a, b, Pp]); } } });
+  // null: on another street's side (flush); else the width to round it at: its own, or the narrowest street whose end it meets
+  const roundAt = (p, own, w) => { let r = w; for (const [a, b, pts] of grid.get(key(p[0], p[1])) || []){ if (pts === own) continue;
+      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2, 0, 1) : 0;
+      const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dy * t - p[1]), ow = WOF.get(pts);
+      const e0 = Math.hypot(pts[0][0] - p[0], pts[0][1] - p[1]) <= 2, e1 = Math.hypot(pts[pts.length - 1][0] - p[0], pts[pts.length - 1][1] - p[1]) <= 2;
+      if (d < 1.5 && (e0 || e1)){ if (ow && ow.length) r = Math.min(r, e0 ? ow[0] : ow[ow.length - 1]); continue; }   // another street's end: one road going on
+      if (d < Math.max(1.5, (ow && ow.length ? Math.min(...ow) : 0) / 2 - 0.5)) return null; }   // on (or within the surface of) another street's side
+    return r; };
+  for (const st of sw){ const Pp = st.pts; if (Pp.length < 2) continue;
+    for (const [p, w] of [[Pp[0], st.w[0]], [Pp[Pp.length - 1], st.w[st.w.length - 1]]]){ const r = roundAt(p, st.src || Pp, w); if (r !== null) out.push({ p, w: r, grade: st.grade }); } }
+  return out; }
+function drawWidth(){ const W = L_width.width, H = L_width.height, out = L_width.getContext('2d');
+  if (WCACHE && performance.now() - VIEWT < 180 && WCACHE.W === W && WCACHE.H === H){ const c = WCACHE, a = view.s / c.s;   // the view is moving
+    out.setTransform(1, 0, 0, 1, 0, 0); out.clearRect(0, 0, W, H);
+    out.setTransform(a, 0, 0, a, DPR * (VW / 2 * (1 - a) + (c.x - view.x) * view.s), DPR * (VH / 2 * (1 - a) - (c.y - view.y) * view.s));
+    out.drawImage(c.img, 0, 0); out.setTransform(1, 0, 0, 1, 0, 0); return; }   // widthDirty stays: the exact drawing follows when it rests
+  const swAll = streetWidths(), sw = swAll.map(trimHooks), grade = $('wBy').value === 'tier', R = Math.max(3, 0.8 * v('wMin')), hiW = Math.max(v('wMax'), v('wMin'));
+  const fixed = D.fixed.streets.concat([D.fixed.link]).filter(s_ => s_ && s_.length > 1);
+  const pen = () => { const c = mk(); c.width = W; c.height = H; const g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round'; return [c, g]; };
+  // 1 the surface: width + 2R, then eroded by R
+  const loose = grade ? deadEndsAt(sw) : [], disc = (g, e, pad) => { g.beginPath(); g.arc(X(e.p[0]), Y(e.p[1]), (e.w + pad) * view.s / 2, 0, 2 * PI); g.fill(); };
+  const [, ga] = pen(); ga.strokeStyle = ga.fillStyle = '#000'; if (grade) ga.lineCap = 'butt';   // (the three grades: one width a street, ends flush)
+  strokeVar(ga, sw, 2 * R, false); for (const e of loose) disc(ga, e, 2 * R); ga.lineCap = 'round';
+  ga.lineWidth = (hiW + 2 * R) * view.s; for (const s_ of fixed){ pathLine(ga, s_); ga.stroke(); }
+  const dist = distInside(ga.getImageData(0, 0, W, H).data, W, H), Rp = R * view.s * DPR;
+  // 2 the colours: once wide (the fillets take the higher grade, as a kerb follows the major road), then each street at its own
+  // width (a minor street keeps its colour up to the major one's edge); low to high, so the higher grade lies on top
+  const [, gc] = pen();
+  const paint = pad => {
+    if (grade){ for (const gr of ['local', 'through', 'main']){ gc.strokeStyle = gradeCol(gr);   // (round caps: the surface alone decides the shape)
+        for (const st of sw) if (st.grade === gr){ gc.lineWidth = (st.w[0] + pad) * view.s; pathLine(gc, st.pts); gc.stroke(); }
+        if (gr === 'main'){ gc.lineWidth = (hiW + pad) * view.s; for (const s_ of fixed){ pathLine(gc, s_); gc.stroke(); } } } return; }
+    gc.strokeStyle = rampCol(hiW); gc.lineWidth = (hiW + pad) * view.s; for (const s_ of fixed){ pathLine(gc, s_); gc.stroke(); }
+    const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
+    segs.sort((p, q) => p[0] - q[0]);
+    for (const [ww, p0, p1] of segs){ gc.strokeStyle = rampCol(ww); gc.lineWidth = (ww + pad) * view.s; gc.beginPath(); gc.moveTo(X(p0[0]), Y(p0[1])); gc.lineTo(X(p1[0]), Y(p1[1])); gc.stroke(); } };
+  paint(2 * R); paint(0);
+  const im = gc.getImageData(0, 0, W, H), d = im.data, fb = mix(P.wLo, P.wHi, 1);
+  for (let i = 0, n = W * H; i < n; i++){ const a = dist[i] - Rp + 0.5;   // anti-aliased edge
+    if (a <= 0){ d[i * 4 + 3] = 0; continue; }
+    if (!d[i * 4 + 3]){ d[i * 4] = fb[0]; d[i * 4 + 1] = fb[1]; d[i * 4 + 2] = fb[2]; }
+    d[i * 4 + 3] = a >= 1 ? 255 : Math.round(255 * a); }
+  const [res, gr_] = pen(); gr_.setTransform(1, 0, 0, 1, 0, 0); gr_.putImageData(im, 0, 0);
+  out.setTransform(1, 0, 0, 1, 0, 0); out.clearRect(0, 0, W, H); out.drawImage(res, 0, 0);
+  WCACHE = { img: res, x: view.x, y: view.y, s: view.s, W, H };
+  widthDirty = false; widthNumbers(swAll); }
 function widthNumbers(sw){ const by = {}; let area = 0;
   for (const st of sw) for (let k = 1; k < st.pts.length; k++){ const L = Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1]), ww = st.w[k]; area += L * ww; const key = $('wSnap').checked ? ww : Math.round(ww); by[key] = (by[key] || 0) + L; }
   const land = D.pieces.reduce((s_, p) => s_ + Math.abs(polyArea(p.outer)), 0), tot = Object.values(by).reduce((a, b) => a + b, 0) || 1;
@@ -2121,7 +2196,7 @@ function drawFieldLines(g){ const fl = fieldLines(40); g.lineCap = 'round'; g.li
 let T0 = performance.now(), lastView = '';
 function render(now){
   const vk = view.x.toFixed(2) + ',' + view.y.toFixed(2) + ',' + view.s.toFixed(5) + ',' + VW + ',' + VH;
-  if (vk !== lastView){ lastView = vk; baseDirty = netDirty = widthDirty = true; clearTrails(); }
+  if (vk !== lastView){ if (lastView) VIEWT = now; lastView = vk; baseDirty = netDirty = widthDirty = true; clearTrails(); }
   pushHostView();
   if (baseDirty) drawBase();
   if (netDirty) drawNet(true); else if (netDrawn < LINES.length) drawNet(false);
@@ -2202,7 +2277,7 @@ function showResult(){ SIM = null; if (GEN) runAll(); GHOST = null; setField('of
 function setField(m){ FIELDMODE = m; $('lFlow').checked = (m === 'move'); FLINES = null; baseDirty = true; clearTrails(); syncTools(); }
 function syncTools(){ for (const b of document.querySelectorAll('#tgField button')) b.classList.toggle('on', b.dataset.v === FIELDMODE);
   $('tWind').classList.toggle('on', $('lWind').checked);   // (v8.3) switches in the display panel: no text swap
-  $('tStreets').classList.toggle('on', $('lStreets').checked); $('tWidth').classList.toggle('on', $('lWidth').checked);
+  $('tStreets').classList.toggle('on', $('lStreets').checked && !$('lWidth').checked); $('tWidth').classList.toggle('on', $('lWidth').checked);   // (v8.41) one choice: lines, or at width
   for (const b of document.querySelectorAll('#tgMode button, .modes button')) b.classList.toggle('on', b.dataset.m === MODE);
   for (const b of document.querySelectorAll('#tgUnder button')) b.classList.toggle('on', b.dataset.u === UNDER);
   $('tEvents').classList.toggle('on', $('lEvents').checked); $('tFlood')?.classList.toggle('on', SHOWFLOOD && !!FR); $('tGreen')?.classList.toggle('on', SHOWGREEN && !!GZ);
@@ -2272,8 +2347,8 @@ $('bSim').onclick = () => setStep(3); $('bSimStop').onclick = simStop; $('bSimPa
 for (const b of document.querySelectorAll('.steps button')) b.onclick = () => setStep(+b.dataset.s);
 for (const b of document.querySelectorAll('#tgField button')) b.onclick = () => setField(b.dataset.v);
 $('tWind').onclick = () => { $('lWind').checked = !$('lWind').checked; clearTrails(); syncTools(); };
-$('tStreets').onclick = () => { $('lStreets').checked = !$('lStreets').checked; netDirty = true; syncTools(); };
-$('tWidth').onclick = () => { $('lWidth').checked = !$('lWidth').checked; widthDirty = true; syncTools(); };
+$('tStreets').onclick = () => { if ($('lStreets').checked && !$('lWidth').checked) $('lStreets').checked = false; else { $('lStreets').checked = true; $('lWidth').checked = false; } netDirty = widthDirty = true; syncTools(); };
+$('tWidth').onclick = () => { $('lWidth').checked = !$('lWidth').checked; if ($('lWidth').checked) $('lStreets').checked = true; netDirty = widthDirty = true; syncTools(); };
 for (const id of ['wMin', 'wMax', 'wBy', 'wSnap']) $(id).addEventListener(id === 'wBy' || id === 'wSnap' ? 'change' : 'input', () => { if (+$('wMax').value < +$('wMin').value) $('wMax').value = $('wMin').value;
   widthDirty = true; drawRamp(); if (!$('lWidth').checked){ $('lWidth').checked = true; syncTools(); } });
 $('tFreeze').onclick = () => { FROZEN = !FROZEN; syncTools(); };
@@ -2303,9 +2378,9 @@ $('bInstant').onclick = () => { if (!GEN) start(false); else runAll(); netDirty 
 for (const b of document.querySelectorAll('#theme button')) b.onclick = () => setTheme(b.dataset.t);
 function save(name, text, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 const bng = p => [+(p[0] + OX).toFixed(2), +(p[1] + OY).toFixed(2)];
-$('bGeo').onclick = () => { const SW = new Map(streetWidths().map(st => [st.pts, st.w]));
+$('bGeo').onclick = () => { const SWL = streetWidths(), SW = new Map(SWL.map(st => [st.pts, st.w])), SG = new Map(SWL.map(st => [st.pts, st.grade || null]));
   const F = LINES.filter(l => !l.dead && l.level > 0).map(l => { const ws = SW.get(l.pts) || [], mn = ws.length ? Math.min(...ws) : null, mx = ws.length ? Math.max(...ws) : null;
-    return { type: 'Feature', properties: { layer: l.circus ? 'circus' : 'level ' + l.level, width_m: ws.length ? Math.round(10 * ws.reduce((a, b) => a + b, 0) / ws.length) / 10 : null, width_min_m: mn, width_max_m: mx }, geometry: { type: 'LineString', coordinates: l.pts.map(bng) } }; })
+    return { type: 'Feature', properties: { layer: l.circus ? 'circus' : 'level ' + l.level, grade: SG.get(l.pts) || null, width_m: ws.length ? Math.round(10 * ws.reduce((a, b) => a + b, 0) / ws.length) / 10 : null, width_min_m: mn, width_max_m: mx }, geometry: { type: 'LineString', coordinates: l.pts.map(bng) } }; })
     .concat(CULVERTS.map((c, k) => ({ type: 'Feature', properties: { layer: 'culvert', n: k + 1 }, geometry: { type: 'Point', coordinates: bng([c.x, c.y]) } })))
     .concat(PARKS ? [{ type: 'Feature', properties: { layer: 'park', ha: +PARKS.list.reduce((s, q) => s + q.ha, 0).toFixed(2), n: PARKS.list.length }, geometry: { type: 'MultiPolygon', coordinates: parkPolys().map(p => p.map(r => r.map(bng))) } }] : [])
     .concat(D.fixed.bridges.map((b, k) => ({ type: 'Feature', properties: { layer: 'bridge', n: k + 1 }, geometry: { type: 'LineString', coordinates: b.map(bng) } })));
