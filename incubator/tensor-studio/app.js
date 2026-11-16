@@ -1735,7 +1735,8 @@ function metrics(){ const M = MEAS; let Ls = 0, Cs = 0, al = 0, alL = 0;
     for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k], sl = Math.hypot(b[0] - a[0], b[1] - a[1]); if (sl < 0.5) continue; const t = fieldAtT((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); if (t === null) continue;
       let dd = Math.abs(Math.atan2(b[1] - a[1], b[0] - a[0]) - t) % (PI / 2); dd = Math.min(dd, PI / 2 - dd); al += dd * sl; alL += sl; } }
   let area = 0; for (const st of streetWidths()) for (let k = 1; k < st.pts.length; k++) area += Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1]) * st.w[k];
-  return { km1: M.km1, km2: M.km2, dens: M.dens, T: M.T, Y: M.Y, X: M.X, loose: M.loose, sin: Cs ? Ls / Cs : 1, align: alL ? al / alL * 180 / PI : 0, cells: M.cellsN, med: M.med, parks: M.parkHa || 0, sides: cellSides(), road: 100 * area / landArea() }; }
+  const RN = FINISHED ? roadNet() : null, S = RN ? netStats(RN) : Object.assign({}, M, { road: 100 * area / landArea() });   // (v8.45) the network as built
+  return { km1: S.km1, km2: S.km2, dens: S.dens, T: S.T, Y: S.Y, X: S.X, loose: S.loose, sin: Cs ? Ls / Cs : 1, align: alL ? al / alL * 180 / PI : 0, cells: M.cellsN, med: M.med, parks: M.parkHa || 0, sides: cellSides(), road: S.road }; }
 const CMP_ROWS = [['-', 'the streets'], ['km1', 'main, km', 1], ['km2', 'second, km', 1], ['dens', 'km per km²', 1], ['road', 'land in streets, %', 0], ['sin', 'sinuosity (length ÷ chord)', 2], ['align', 'off the field, ° (mean)', 1],
   ['-', 'the junctions'], ['T', 'T, %', 0], ['Y', 'Y, %', 0], ['X', 'X, %', 0], ['loose', 'dead ends', 0],
   ['-', 'the cells'], ['cells', 'cells', 0], ['med', 'median, ha', 2], ['s3', '3 junctions round (or fewer), %', 0], ['s4', '4, %', 0], ['s5', '5, %', 0], ['s6', '6, %', 0], ['s7', '7 or more, %', 0]];
@@ -1786,9 +1787,10 @@ function measures(){ floodNum();
   const ok = CELLS ? CELLS.areas.filter(a => a > 0.05).sort((a, b) => a - b) : [], med = ok.length ? ok[Math.floor(ok.length / 2)] : 0;
   const parkHa = PARKS ? PARKS.list.reduce((s, q) => s + q.ha, 0) : 0;
   MEAS = { parkHa, parkN: PARKS ? PARKS.list.length : 0, km1: km[1], km2: km[2], dens: (km[1] + km[2]) / area, T: 100 * T / J, Y: 100 * Y / J, X: 100 * X / J, loose, xpts, cellsN: ok.length, med };
-  $('num').innerHTML = '<b>' + km[1].toFixed(1) + '</b> km main · <b>' + km[2].toFixed(1) + '</b> km second · <b>' + ((km[1] + km[2]) / area).toFixed(1) + '</b> km/km² (towns 12–16)' + NL +
-    'junctions: T <b>' + Math.round(100 * T / J) + '</b> % · Y <b>' + Math.round(100 * Y / J) + '</b> % · X <b>' + Math.round(100 * X / J) + '</b> %' + NL +
-    'loose ends <b>' + loose + '</b> · culverts ' + CULVERTS.length + (parkHa ? ' · parks <b>' + parkHa.toFixed(1) + '</b> ha' : '') + (ok.length ? ' · <b>' + ok.length + '</b> cells, median <b>' + med.toFixed(2) + '</b> ha' : ''); }
+  const RN = FINISHED ? roadNet() : null, S = RN ? netStats(RN) : MEAS;   // (v8.45) shown: the network as built, once finished; the growth's own (MEAS) stays for the score
+  $('num').innerHTML = '<b>' + S.km1.toFixed(1) + '</b> km main · <b>' + S.km2.toFixed(1) + '</b> km second · <b>' + S.dens.toFixed(1) + '</b> km/km² (towns 12–16)' + NL +
+    'junctions: T <b>' + Math.round(S.T) + '</b> % · Y <b>' + Math.round(S.Y) + '</b> % · X <b>' + Math.round(S.X) + '</b> %' + NL +
+    'loose ends <b>' + S.loose + '</b> · culverts ' + CULVERTS.length + (parkHa ? ' · parks <b>' + parkHa.toFixed(1) + '</b> ha' : '') + (ok.length ? ' · <b>' + ok.length + '</b> cells, median <b>' + med.toFixed(2) + '</b> ha' : ''); }
 function polyArea(r){ let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); return a / 2; }
 function readCells(){ const c = 5, W = Math.ceil(D.w / c), H = Math.ceil(D.h / c), occ = new Uint8Array(W * H), ins = new Uint8Array(W * H);
   const mark = (x, y) => { const X_ = Math.floor(x / c), Y_ = Math.floor((D.h - y) / c); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++){ const xx = X_ + i, yy = Y_ + j; if (xx >= 0 && yy >= 0 && xx < W && yy < H) occ[yy * W + xx] = 1; } };
@@ -1959,7 +1961,8 @@ function floodNum(){ const el = document.getElementById('fNum'); if (!el) return
   if (!FR){ el.textContent = zh ? '此场地不在 EA 洪水风险数据范围内。' : 'No EA flood risk data for this site.'; return; }
   if (!FLAND){ FLAND = [0, 0, 0, 0, 0]; for (let r = 0; r < ny; r++) for (let c = 0; c < nx; c++) if (inLandNoHoles(c * cell, r * cell)) FLAND[FR[r * nx + c]] += cell * cell / 1e4; }
   let tot = 0, med = 0, high = 0;
-  for (const l of LINES){ if (l.dead || l.level < 1) continue; const Pp = l.pts; for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]); tot += L;
+  const RN = FINISHED ? roadNet() : null, NETL = RN ? RN.sw : LINES.filter(l => !l.dead && l.level >= 1);   // (v8.45) along the network as built, once finished
+  for (const l of NETL){ const Pp = l.pts; for (let k = 1; k < Pp.length; k++){ const a = Pp[k - 1], b = Pp[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]); tot += L;
       const k2 = FR[clamp(Math.round((a[1] + b[1]) / 2 / cell), 0, ny - 1) * nx + clamp(Math.round((a[0] + b[0]) / 2 / cell), 0, nx - 1)]; if (k2 >= 4) high += L; else if (k2 === 3) med += L; } }
   const km = x => (x / 1000).toFixed(2), pc = (100 * (med + high) / (tot || 1)).toFixed(1), ha = x => x.toFixed(1);
   const key = '<br><span class="fk"><span><i style="background:#f7d359"></i>' + (zh ? '低' : 'low') + '</span><span><i style="background:#f29d38"></i>' + (zh ? '中' : 'medium') + '</span><span><i style="background:#d73731"></i>' + (zh ? '高' : 'high') + '</span></span>';
@@ -2222,9 +2225,9 @@ function roadGeometry(sw, grade, kr){
   // the drawn stretch of each street: its ends that taper are drawn as tapers
   const range = sw.map((st, i) => (cutTo.get(i) || [0, len(i)]).slice()); for (const tp of tapers){ if (tp.atStart) range[tp.i][0] = Math.max(range[tp.i][0], tp.L); else range[tp.i][1] = Math.min(range[tp.i][1], len(tp.i) - tp.L); }
   const ext = new Map(); for (const ee of edgeEnds){ let e = ext.get(ee.i); if (!e) ext.set(ee.i, e = [0, 0]); e[ee.dir > 0 ? 0 : 1] = sw[ee.i].w[0] + ee.eg.d * 2; }
-  const sub = i => { const [a, b] = range[i]; if (b - a < 0.5) return null; const c = cum[i], P_ = sw[i].pts;
+  const sub = (i, noExt) => { const [a, b] = range[i]; if (b - a < 0.5) return null; const c = cum[i], P_ = sw[i].pts;
     let out = (a <= 0 && b >= len(i)) ? P_.slice() : [pointAt(i, a)].concat(P_.filter((_, k) => c[k] > a && c[k] < b), [pointAt(i, b)]);
-    const e = ext.get(i); if (e){ const go = (p0, p1, L) => { const dx = p1[0] - p0[0], dy = p1[1] - p0[1], d = Math.hypot(dx, dy) || 1; return [p1[0] + dx / d * L, p1[1] + dy / d * L]; };
+    const e = noExt ? null : ext.get(i); if (e){ const go = (p0, p1, L) => { const dx = p1[0] - p0[0], dy = p1[1] - p0[1], d = Math.hypot(dx, dy) || 1; return [p1[0] + dx / d * L, p1[1] + dy / d * L]; };
       if (e[0] && a <= 0 && out.length > 1) out.unshift(go(out[1], out[0], e[0])); if (e[1] && b >= len(i) && out.length > 1) out.push(go(out[out.length - 2], out[out.length - 1], e[1])); }
     return out; };
   const taperPolys = tapers.map(tp => { const sA = tp.atStart ? tp.L + 1 : len(tp.i) - tp.L - 1, sE = tp.atStart ? 0 : len(tp.i), pts = [];   // (1 m into the street: no hairline at the seam)
@@ -2293,18 +2296,62 @@ function adjustStreets(sw, geo){ const N = geo.nodeList, out = sw.slice(), used 
     const pts = PA.concat(link, PB); return Object.assign({}, sa, { pts, w: pts.map(() => sa.w[0]), src: null, joined: true }); });
   if (!links.length && out.every((st, i) => st === sw[i])) return null;
   return out.filter((st, i) => !used.has(i)).concat(joined); }
+/* (v8.45) THE road network: worked out once from the streets as grown (when they or their widths change), at the real widths:
+ * the end hooks and loops taken out, tight bends eased, dead ends nearly meeting joined, staggered crossings joined, oblique
+ * approaches squared, and its junctions found and typed. Everything that shows or hands on the finished network uses this one:
+ * the drawing, the numbers (lengths, junctions, dead ends, land in streets, flood), the A/B table, the GeoJSON, and other
+ * parts of the system (window.__ts6.roadNet()). The score is left on the streets as grown: it judges the growth (an oblique
+ * join counts against it), and the comparison of runs ranks the growth by it. */
+let ROADNET = null;
+function roadNet(){ if (!FINISHED) return null; const grade = $('wBy').value === 'tier', swAll = streetWidths(), TW = tierWidths();
+  let key = $('wBy').value + '|' + v('wMin') + '|' + v('wMax') + '|' + swAll.length; for (const st of swAll){ const a = st.pts[0], b = st.pts[st.pts.length - 1]; key += '|' + st.pts.length + ',' + (a[0] + b[1]).toFixed(2) + ',' + st.w[0].toFixed(2) + st.grade + st.level; }
+  if (ROADNET && ROADNET.key === key) return ROADNET;
+  const kr = TW.local / 6.5; let shaped = swAll.map(trimHooks).map(untangle), geo = roadGeometry(shaped, grade, kr);
+  const adj = adjustStreets(shaped, geo); if (adj){ shaped = adj; geo = roadGeometry(shaped, grade, kr); }
+  ROADNET = { key, sw: shaped, geo, grade, junctions: junctionsOf(geo) }; return ROADNET; }
+// a junction's type, from its arms: T (one street ends on another's side), X (streets cross), Y (three ends or more meet),
+// a joint (two ends meet: one road going on, not a junction) or a dead end
+function junctionsOf(geo){ const out = [];
+  for (const nd of geo.nodeList){ if (!nd.arms.length) continue; const ends = nd.arms.filter(a => a.end), runs = new Set(nd.arms.filter(a => !a.end).map(a => a.i));
+    const type = runs.size >= 2 || (runs.size === 1 && ends.length >= 2) ? 'X' : runs.size === 1 ? 'T' : ends.length >= 3 ? 'Y' : ends.length === 2 ? 'joint' : 'dead end';
+    out.push({ x: nd.x, y: nd.y, type, streets: [...new Set(nd.arms.map(a => a.i))] }); }
+  return out; }
+// the network's own numbers: km by level, junctions by type (T / Y / X, in %), dead ends, land in streets (%)
+function netStats(RN){ const km = { 1: 0, 2: 0 }; let area = 0;
+  for (const st of RN.sw){ const L = plen(st.pts); km[st.level === 1 ? 1 : 2] += L / 1000; for (let k = 1; k < st.pts.length; k++) area += Math.hypot(st.pts[k][0] - st.pts[k - 1][0], st.pts[k][1] - st.pts[k - 1][1]) * st.w[k]; }
+  const n = { T: 0, Y: 0, X: 0, 'dead end': 0 }; for (const j of RN.junctions) if (j.type in n) n[j.type]++;
+  const J = n.T + n.Y + n.X || 1, landKm2 = D.pieces.reduce((s_, p) => s_ + Math.abs(polyArea(p.outer)), 0) / 1e6;
+  return { km1: km[1], km2: km[2], dens: (km[1] + km[2]) / landKm2, T: 100 * n.T / J, Y: 100 * n.Y / J, X: 100 * n.X / J, loose: n['dead end'], road: 100 * area / landArea() }; }
+// a street's surface: its centre line offset to each side by half its width (mitred at its bends), its ends square
+function ribbon(P_, w){ const h = w / 2, Lf = [], Rt = [];
+  for (let k = 0; k < P_.length; k++){ const a = P_[Math.max(0, k - 1)], b = P_[Math.min(P_.length - 1, k + 1)]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; let m = 1;
+    if (k > 0 && k < P_.length - 1){ const ux = P_[k][0] - P_[k - 1][0], uy = P_[k][1] - P_[k - 1][1], vx = P_[k + 1][0] - P_[k][0], vy = P_[k + 1][1] - P_[k][1], c = (ux * vx + uy * vy) / ((Math.hypot(ux, uy) * Math.hypot(vx, vy)) || 1); m = Math.min(2, 1 / Math.max(0.5, Math.sqrt((1 + c) / 2))); }
+    Lf.push([P_[k][0] - dy * h * m, P_[k][1] + dx * h * m]); Rt.push([P_[k][0] + dy * h * m, P_[k][1] - dx * h * m]); }
+  return Rt.concat(Lf.reverse()); }
+const ringOf = (pts, f) => { const r = pts.map(f); r.push(r[0]); return r; };
+const discPts = (c, r, n = 24) => Array.from({ length: n }, (_, k) => [c[0] + r * Math.cos(2 * PI * k / n), c[1] + r * Math.sin(2 * PI * k / n)]);
+// the network as built, as GeoJSON features (f: the coordinates, e.g. to the British National Grid): each street (its centre
+// line, grade, real width), the pieces of its surface (the street, the kerb fillets, the rounded ends, the tapers: union them
+// for the whole surface) and each junction with its type
+function netFeatures(f){ const RN = roadNet(); if (!RN) return []; const G = RN.geo, out = [], gOf = st => st.grade || null;
+  RN.sw.forEach((st, i) => { const pts = G.sub(i, true) || st.pts; const w = Math.round(10 * st.w.reduce((a, b) => a + b, 0) / st.w.length) / 10;
+    out.push({ type: 'Feature', properties: { layer: 'road', source: 'built', id: i + 1, grade: gOf(st), level: st.level, width_m: w, joined: !!st.joined }, geometry: { type: 'LineString', coordinates: pts.map(f) } });
+    out.push({ type: 'Feature', properties: { layer: 'road surface', source: 'built', id: i + 1, grade: gOf(st), width_m: w }, geometry: { type: 'Polygon', coordinates: [ringOf(ribbon(pts, w), f)] } }); });
+  for (const pa of G.patches) out.push({ type: 'Feature', properties: { layer: 'kerb fillet', source: 'built', grade: pa.g || null }, geometry: { type: 'Polygon', coordinates: [ringOf(pa.poly, f)] } });
+  for (const d of G.discs) out.push({ type: 'Feature', properties: { layer: 'road end', source: 'built', grade: d.g || null }, geometry: { type: 'Polygon', coordinates: [ringOf(discPts(d.p, d.w / 2), f)] } });
+  for (const tp of G.tapers) out.push({ type: 'Feature', properties: { layer: 'road taper', source: 'built', grade: tp.g || null }, geometry: { type: 'Polygon', coordinates: [ringOf(tp.poly, f)] } });
+  for (const j of RN.junctions) out.push({ type: 'Feature', properties: { layer: 'junction', source: 'built', type: j.type, streets: j.streets.map(i => i + 1) }, geometry: { type: 'Point', coordinates: f([j.x, j.y]) } });
+  return out; }
 let RGEO = null;
 function drawWidth(){ const W = L_width.width, H = L_width.height, g = L_width.getContext('2d');
-  const swAll = streetWidths(), grade = $('wBy').value === 'tier', MW = mapRoadWidths(), TW = tierWidths();
+  const RN = roadNet(); if (!RN) return; const grade = RN.grade, MW = mapRoadWidths(), TW = tierWidths();
   // (v8.43) the widths drawn: over the London map, the map's own road widths at this zoom; else the real ones
   const kW = MW ? MW.local / TW.local : 1, shown = w => w * kW, hiW = MW && grade ? MW.main : shown(Math.max(v('wMax'), v('wMin')));
-  const swShown = swAll.map(st => Object.assign({}, st, { w: grade && MW ? st.w.map(() => MW[st.grade]) : st.w.map(shown) }));
-  // the junctions depend on the streets and their widths only: worked out again when those change (or the zoom, over the map), not as the view pans
-  let key = $('wBy').value + '|' + v('wMin') + '|' + v('wMax') + '|' + (MW ? MW.z.toFixed(2) : '-') + '|' + swShown.length; for (const st of swShown){ const a = st.pts[0], b = st.pts[st.pts.length - 1]; key += '|' + st.pts.length + ',' + (a[0] + b[1]).toFixed(1) + ',' + st.w[0].toFixed(2) + st.grade; }
-  if (!RGEO || RGEO.key !== key){ const kr = (MW ? MW.local : TW.local) / 6.5; let shaped = swShown.map(trimHooks).map(untangle), geo = roadGeometry(shaped, grade, kr);
-    const adj = adjustStreets(shaped, geo); if (adj){ shaped = adj; geo = roadGeometry(shaped, grade, kr); }   // (v8.44) staggered crossings joined, oblique approaches squared
-    RGEO = Object.assign(geo, { key, sw: shaped }); }
-  const sw = RGEO.sw;
+  // (v8.45) the network as built, drawn as it is; over the map, at the map's widths (its kerbs worked out again for them)
+  const dkey = RN.key + '|' + (MW ? MW.z.toFixed(2) : '-');
+  if (!RGEO || RGEO.key !== dkey){ if (!MW) RGEO = Object.assign({}, RN.geo, { key: dkey, sw: RN.sw });
+    else { const swShown = RN.sw.map(st => Object.assign({}, st, { w: grade ? st.w.map(() => MW[st.grade]) : st.w.map(shown) })); RGEO = Object.assign(roadGeometry(swShown, grade, MW.local / 6.5), { key: dkey, sw: swShown }); } }
+  const sw = RGEO.sw, swAll = RN.sw;
   const colOf = o => grade ? gradeCol(o.g) : rampCol(o.w / kW);   // (the colour by the real width)
   const fixed = D.fixed.streets.concat([D.fixed.link]).filter(s_ => s_ && s_.length > 1);
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.lineJoin = 'round';
@@ -2606,10 +2653,11 @@ function save(name, text, type){ const a = document.createElement('a'); a.href =
 const bng = p => [+(p[0] + OX).toFixed(2), +(p[1] + OY).toFixed(2)];
 $('bGeo').onclick = () => { const SWL = streetWidths(), SW = new Map(SWL.map(st => [st.pts, st.w])), SG = new Map(SWL.map(st => [st.pts, st.grade || null]));
   const F = LINES.filter(l => !l.dead && l.level > 0).map(l => { const ws = SW.get(l.pts) || [], mn = ws.length ? Math.min(...ws) : null, mx = ws.length ? Math.max(...ws) : null;
-    return { type: 'Feature', properties: { layer: l.circus ? 'circus' : 'level ' + l.level, grade: SG.get(l.pts) || null, width_m: ws.length ? Math.round(10 * ws.reduce((a, b) => a + b, 0) / ws.length) / 10 : null, width_min_m: mn, width_max_m: mx }, geometry: { type: 'LineString', coordinates: l.pts.map(bng) } }; })
+    return { type: 'Feature', properties: { layer: l.circus ? 'circus' : 'level ' + l.level, source: 'raw', grade: SG.get(l.pts) || null, width_m: ws.length ? Math.round(10 * ws.reduce((a, b) => a + b, 0) / ws.length) / 10 : null, width_min_m: mn, width_max_m: mx }, geometry: { type: 'LineString', coordinates: l.pts.map(bng) } }; })
     .concat(CULVERTS.map((c, k) => ({ type: 'Feature', properties: { layer: 'culvert', n: k + 1 }, geometry: { type: 'Point', coordinates: bng([c.x, c.y]) } })))
     .concat(PARKS ? [{ type: 'Feature', properties: { layer: 'park', ha: +PARKS.list.reduce((s, q) => s + q.ha, 0).toFixed(2), n: PARKS.list.length }, geometry: { type: 'MultiPolygon', coordinates: parkPolys().map(p => p.map(r => r.map(bng))) } }] : [])
-    .concat(D.fixed.bridges.map((b, k) => ({ type: 'Feature', properties: { layer: 'bridge', n: k + 1 }, geometry: { type: 'LineString', coordinates: b.map(bng) } })));
+    .concat(D.fixed.bridges.map((b, k) => ({ type: 'Feature', properties: { layer: 'bridge', n: k + 1 }, geometry: { type: 'LineString', coordinates: b.map(bng) } })))
+    .concat(netFeatures(bng));   // (v8.45) the network as built: its streets, their surface, its junctions
   const set = {}; for (const id of FIELD_IDS.concat(NET_IDS)) set[id] = +$(id).value; set.width_min = v('wMin'); set.width_max = v('wMax'); set.width_by = $('wBy').value; set.width_snap = $('wSnap').checked; set.merge = $('merge').checked; set.windOn = $('windOn').checked; set.wind_of = YEAR[MONTH].name;
   set.flood = floodOn() ? { source: 'EA max(RoFSW, RoFRS)', keep_clear_from_class: +$('fAvoid').value, along_the_flow: v('fW') } : null; set.mode = MODE; set.metrics = METR; set.attractors = { where: AMODE, points: ATTR.map(a => ({ kind: a.kind, at: bng([a.x, a.y]) })) }; save((D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, settings: set, features: F }), 'application/geo+json'); };
 $('bPng').onclick = () => cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (D.site ? 'tensor studio - london site - mode ' : 'tensor studio v8 - station window - mode ') + MODE + '.png'; a.click(); });
@@ -2626,7 +2674,8 @@ window.addEventListener('resize', resize);
   placeAttractors(); buildTarget(); settleField(); FIELDMODE = 'off'; $('lFlow').checked = false;
   // (v8.7) in the process mode the app opens on step 1, nothing grown yet; the free mode opens on the result as before
   if (window.__TS_PROCESS_ON){ MODE = 'B'; resetNet(); } else { MODE = 'A'; start(false); MODE = 'B'; start(true); } syncTools(); drawKey(); requestAnimationFrame(frame);
-  window.__ts6 = { get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
+  window.__ts6 = { roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
+    get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
     get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
     // (v8.7) for the process mode
     setProc: p => { PROC = p; PH0 = ''; }, scoreRun, quietRun, thumbOf, SCORE_W0, snapB: () => SNAP.B, setSnapB: sn => { SNAP.B = sn; }, restoreSnap: sn => restore(sn), syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,
