@@ -2089,8 +2089,10 @@ function untangle(st){ const P_ = st.pts, n = P_.length; if (n < 5) return st;
   const Q = idx.map(k => P_[k].slice()), Wq = idx.map(k => st.w[k]); let moved = idx.length !== n;
   const radius = (a, b, d) => { const A_ = Math.hypot(b[0] - a[0], b[1] - a[1]), B_ = Math.hypot(d[0] - b[0], d[1] - b[1]), C_ = Math.hypot(d[0] - a[0], d[1] - a[1]), x2 = Math.abs((b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]));
     return x2 < 1e-9 ? Infinity : A_ * B_ * C_ / (2 * x2); };
+  const cq = [0]; for (let k = 1; k < Q.length; k++) cq.push(cq[k - 1] + Math.hypot(Q[k][0] - Q[k - 1][0], Q[k][1] - Q[k - 1][1]));
+  const hold = Math.max(10, 1.5 * w), Lq = cq[cq.length - 1];   // the last metres at each end are left as they are: the street still meets its junction as before
   for (let pass = 0; pass < 12; pass++){ let any = false;
-    for (let k = 1; k < Q.length - 1; k++) if (radius(Q[k - 1], Q[k], Q[k + 1]) < w){ Q[k] = [0.5 * Q[k][0] + 0.25 * (Q[k - 1][0] + Q[k + 1][0]), 0.5 * Q[k][1] + 0.25 * (Q[k - 1][1] + Q[k + 1][1])]; any = true; }
+    for (let k = 1; k < Q.length - 1; k++) if (cq[k] > hold && cq[k] < Lq - hold && radius(Q[k - 1], Q[k], Q[k + 1]) < w){ Q[k] = [0.5 * Q[k][0] + 0.25 * (Q[k - 1][0] + Q[k + 1][0]), 0.5 * Q[k][1] + 0.25 * (Q[k - 1][1] + Q[k + 1][1])]; any = true; }
     if (!any) break; moved = true; }
   return moved ? Object.assign({}, st, { pts: Q, w: Wq, src: st.src || st.pts }) : st; }
 function roadGeometry(sw, grade, kr){
