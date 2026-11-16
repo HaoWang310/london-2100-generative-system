@@ -2166,7 +2166,11 @@ function roadGeometry(sw, grade, kr){
     for (const a of nd.arms){ a.o = pointAt(a.i, a.s); a.run = a.dir > 0 ? len(a.i) - a.s : a.s;
       a.d = dirAt(a, 8); a.ang = Math.atan2(a.d[1], a.d[0]); a.w = wAt(a.i, a.s); a.g = sw[a.i].grade; a.rank = grade ? GRANK[a.g] : a.w; }
     const ends = nd.arms.filter(a => a.end), majors = nd.arms.filter(a => !a.end);
-    if (!majors.length) for (const a of ends){   // ends among ends: rounded; a wider one narrows to the widest of the others first
+    const sharpJoint = !majors.length && ends.length === 2 && 180 - Math.acos(clamp(ends[0].d[0] * ends[1].d[0] + ends[0].d[1] * ends[1].d[1], -1, 1)) * 180 / PI > 60;
+    if (sharpJoint) for (const a of ends){ const b = ends[0] === a ? ends[1] : ends[0];   // the wider one's round end kept within the other street's outer edge: no knob past it
+      let nb = [-b.d[1], b.d[0]]; if (nb[0] * a.d[0] + nb[1] * a.d[1] < 0) nb = [-nb[0], -nb[1]];
+      discs.push({ p: a.o, w: a.w, g: a.g, rank: a.rank, keep: a.w > b.w + 0.5 ? { n: nb, off: -b.w / 2 } : null }); }   // (v8.44) a sharp turn (over 60): as a T, each street rounded at its own width and colour, the higher on top; no taper round a bend
+    else if (!majors.length) for (const a of ends){   // ends among ends: rounded; a wider one narrows to the widest of the others first
       const others = ends.filter(b => b !== a), wide = others.length ? others.reduce((p_, q_) => q_.w > p_.w ? q_ : p_) : null, wt = wide ? Math.min(a.w, wide.w) : a.w;
       const low = wide && wide.rank < a.rank ? wide : a;   // (v8.43) the joint in the lower grade's colour: no knob of the higher one on the lower street
       discs.push({ p: a.o, w: wt, g: low.g, rank: low.rank });
@@ -2214,7 +2218,10 @@ function roadGeometry(sw, grade, kr){
       const poly = [A.o, [T1[0] - nA[0] * hA, T1[1] - nA[1] * hA], T1];
       for (let q = 1; q < 12; q++){ const f = f1 + df * q / 12; poly.push([O[0] + r * Math.cos(f), O[1] + r * Math.sin(f)]); }
       poly.push(T2, [T2[0] - nB[0] * hB, T2[1] - nB[1] * hB], B.o, [nd.x, nd.y]);
-      const minor = A.rank <= B.rank ? A : B; patches.push({ poly, g: minor.g, w: minor.w, rank: minor.rank }); } }
+      // (v8.44) on a T the kerb belongs to the street that ends there, whatever its grade: it opens out to the edge of the
+      // street that runs on, whose edges stay straight; on a crossing or where ends meet, the lower grade's
+      const approach = majors.length ? (A.end && !B.end ? A : B.end && !A.end ? B : null) : null, owner = approach || (A.rank <= B.rank ? A : B);
+      patches.push({ poly, g: owner.g, w: owner.w, rank: owner.rank }); } }
   const atEdge = new Map(); for (const ee of edgeEnds){ let l = atEdge.get(ee.i); if (!l) atEdge.set(ee.i, l = []); l.push({ p: ee.p, r: sw[ee.i].w[0] * 1.5 + ee.eg.d * 2 + 4 }); }
   patches.sort((p_, q_) => p_.rank - q_.rank);
   // the drawn stretch of each street: its ends that taper are drawn as tapers
@@ -2231,6 +2238,66 @@ function roadGeometry(sw, grade, kr){
     return { poly: pts.map(q => q[0]).concat(pts.map(q => q[1]).reverse()), g: tp.g, w: tp.w }; });
   const clipOf = new Map(); for (const c of clips){ let l = clipOf.get(c.i); if (!l) clipOf.set(c.i, l = []); l.push(c.rect); }
   return { patches, discs, tapers: taperPolys, sub, clipOf, atEdge, nodes: nodes.length, nodeList: nodes }; }
+/* (v8.44) two corrections made between two passes over the junctions (drawing only):
+ * - a staggered crossing: two streets of one grade ending on a lower street from its two sides, under 25 m apart and nearly in
+ *   line (their directions within 45 degrees of straight on), are one route crossing it: they are joined across it by a
+ *   smooth link, so the route runs on and the lower street is the one crossed;
+ * - two dead ends nearly meeting (the gap the growth leaves) are carried on to the point between them, to meet end to end;
+ * - an oblique approach: a street ending on another's side at under 70 degrees is turned (one merging along it, from where the two part), over its last 2.5 widths (12 to 25 m),
+ *   to meet it square, as a road is realigned at a junction: the kerbs on its two sides come out alike, with no sharp beak. */
+function adjustStreets(sw, geo){ const N = geo.nodeList, out = sw.slice(), used = new Set(), links = [];
+  const len_ = P_ => { let L = 0; for (let k = 1; k < P_.length; k++) L += Math.hypot(P_[k][0] - P_[k - 1][0], P_[k][1] - P_[k - 1][1]); return L; };
+  const Ts = []; for (const nd of N){ const thr = nd.arms.filter(a => !a.end); if (!thr.length) continue; for (const a of nd.arms) if (a.end) Ts.push({ nd, a, M: thr[0] }); }
+  // staggered crossings
+  for (let x = 0; x < Ts.length; x++) for (let y = x + 1; y < Ts.length; y++){ const A = Ts[x], B = Ts[y];
+    if (A.M.i !== B.M.i || A.a.i === B.a.i || used.has(A.a.i) || used.has(B.a.i)) continue;
+    if (A.a.rank !== B.a.rank || A.a.rank <= A.M.rank) continue;   // one grade, above the street they end on
+    if (Math.hypot(A.a.o[0] - B.a.o[0], A.a.o[1] - B.a.o[1]) > 25) continue;
+    if (A.a.d[0] * B.a.d[0] + A.a.d[1] * B.a.d[1] > -0.7) continue;   // nearly in line
+    const m = A.M.dir > 0 ? A.M.d : [-A.M.d[0], -A.M.d[1]], n = [-m[1], m[0]];
+    if (Math.sign(A.a.d[0] * n[0] + A.a.d[1] * n[1]) === Math.sign(B.a.d[0] * n[0] + B.a.d[1] * n[1])) continue;   // on its two sides
+    used.add(A.a.i); used.add(B.a.i); links.push([A.a, B.a]); }
+  // oblique approaches
+  for (const T of Ts){ const a = T.a; if (used.has(a.i)) continue; const m = T.M.d, c = Math.abs(a.d[0] * m[0] + a.d[1] * m[1]);
+    const ang = Math.acos(Math.min(1, c)) * 180 / PI; if (ang >= 70) continue;
+    const st = out[a.i], cut = (pts, s_) => { const o = [pts[0]]; let acc = 0; for (let k = 1; k < pts.length; k++){ const d = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);   // the street up to its junction (a few metres run past it dropped)
+        if (acc + d >= s_){ const t = d ? (s_ - acc) / d : 0; o.push([pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * t, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * t]); return o; } acc += d; o.push(pts[k]); } return o; };
+    const L0 = len_(st.pts), P_ = a.dir > 0 ? cut(st.pts.slice().reverse(), L0 - a.s) : cut(st.pts.slice(), a.s), Ltot = len_(P_);
+    let L = Math.min(25, Math.max(12, 2.5 * a.w), 0.45 * Ltot), J = P_[P_.length - 1];
+    let n = [-m[1], m[0]]; if (a.d[0] * n[0] + a.d[1] * n[1] < 0) n = [-n[0], -n[1]];   // square to the street it meets, on its own side
+    if (ang < 25){   // a street merging along the other (running beside it, its surface on the other's): turned square from where the two part
+      const MP = out[T.M.i].pts, sep = (T.M.w + a.w) / 2 + a.w * 0.5, foot = pt => { let best = null; for (let k = 1; k < MP.length; k++){ const p0 = MP[k - 1], p1 = MP[k], dx = p1[0] - p0[0], dy = p1[1] - p0[1], L2 = dx * dx + dy * dy, t = L2 ? clamp(((pt[0] - p0[0]) * dx + (pt[1] - p0[1]) * dy) / L2, 0, 1) : 0, q_ = [p0[0] + dx * t, p0[1] + dy * t], d = Math.hypot(q_[0] - pt[0], q_[1] - pt[1]); if (!best || d < best.d) best = { q: q_, d }; } return best; };
+      let acc = 0, kk = P_.length - 1; while (kk > 0 && foot(P_[kk]).d < sep && acc < 80){ acc += Math.hypot(P_[kk][0] - P_[kk - 1][0], P_[kk][1] - P_[kk - 1][1]); kk--; }
+      if (acc >= 80 || kk <= 0 || Ltot - acc < 12) continue;
+      const F = foot(P_[kk]); J = F.q; const nn = [P_[kk][0] - J[0], P_[kk][1] - J[1]], nl = Math.hypot(nn[0], nn[1]) || 1; n = [nn[0] / nl, nn[1] / nl];
+      L = Math.min(Ltot - acc - 6, Math.max(F.d * 1.5, 2 * a.w)); P_.length = kk + 1; P_.push(J); }
+    if (L < 6) continue;
+    let acc = 0, k = P_.length - 1; while (k > 0 && acc + Math.hypot(P_[k][0] - P_[k - 1][0], P_[k][1] - P_[k - 1][1]) < L){ acc += Math.hypot(P_[k][0] - P_[k - 1][0], P_[k][1] - P_[k - 1][1]); k--; }
+    const B0 = P_[k], tx = P_[Math.min(k + 1, P_.length - 1)][0] - P_[Math.max(k - 1, 0)][0], ty = P_[Math.min(k + 1, P_.length - 1)][1] - P_[Math.max(k - 1, 0)][1], tl = Math.hypot(tx, ty) || 1, q = acc / 3;
+    const B1 = [B0[0] + tx / tl * q, B0[1] + ty / tl * q], B2 = [J[0] + n[0] * q, J[1] + n[1] * q], curve = [];
+    for (let u = 1; u <= 10; u++){ const t = u / 10, i_ = 1 - t; curve.push([i_ * i_ * i_ * B0[0] + 3 * i_ * i_ * t * B1[0] + 3 * i_ * t * t * B2[0] + t * t * t * J[0], i_ * i_ * i_ * B0[1] + 3 * i_ * i_ * t * B1[1] + 3 * i_ * t * t * B2[1] + t * t * t * J[1]]); }
+    let Q = P_.slice(0, k + 1).concat(curve); if (a.dir > 0) Q = Q.reverse();
+    out[a.i] = Object.assign({}, st, { pts: Q, w: Q.map(() => st.w[0]), src: st.src || st.pts }); }
+  // two dead ends nearly meeting (under 0.8 of the wider street's width apart, the gap the growth leaves): each carried on to the
+  // point between them, so they meet end to end instead of as two rounded stubs side by side
+  const EN = N.filter(nd => nd.arms.length && nd.arms.every(a => a.end)), moved = new Set();   // junctions of ends only (a dead end is one)
+  for (const D_ of EN.filter(nd => nd.arms.length === 1)) for (const nd of N){ if (nd === D_ || moved.has(D_) || !nd.arms.some(a => !a.end)) continue;   // a dead end just short of a junction on another street: carried on to it
+    const E = D_.arms[0], d = Math.hypot(nd.x - D_.x, nd.y - D_.y); if (d < 0.5 || d > 0.8 * Math.max(E.w, ...nd.arms.map(a => a.w)) || nd.arms.some(a => a.i === E.i) || used.has(E.i)) continue;
+    moved.add(D_); const st = out[E.i], pts = st.pts.slice(); if (E.dir > 0) pts.unshift([nd.x, nd.y]); else pts.push([nd.x, nd.y]); out[E.i] = Object.assign({}, st, { pts, w: pts.map(() => st.w[0]), src: st.src || st.pts }); }
+  for (let x = 0; x < EN.length; x++) for (let y = x + 1; y < EN.length; y++){ const P1 = EN[x], P2 = EN[y]; if (moved.has(P1) || moved.has(P2)) continue;
+    const wMax = Math.max(...P1.arms.map(a => a.w), ...P2.arms.map(a => a.w)), d = Math.hypot(P1.x - P2.x, P1.y - P2.y); if (d < 0.5 || d > 0.8 * wMax) continue;
+    if (P1.arms.some(a => P2.arms.some(b => b.i === a.i))) continue;
+    const [to, from] = P1.arms.length >= P2.arms.length ? [P1, P2] : [P2, P1], tgt = to.arms.length > 1 ? [to.x, to.y] : [(P1.x + P2.x) / 2, (P1.y + P2.y) / 2]; moved.add(from);
+    for (const E of to.arms.length > 1 ? from.arms : [...P1.arms, ...P2.arms]){ if (used.has(E.i)) continue; const st = out[E.i], pts = st.pts.slice(); if (E.dir > 0) pts.unshift(tgt); else pts.push(tgt); out[E.i] = Object.assign({}, st, { pts, w: pts.map(() => st.w[0]), src: st.src || st.pts }); } }
+  // the joined routes
+  const joined = links.map(([A, B]) => { const sa = out[A.i], sb = out[B.i];
+    const PA = A.dir > 0 ? sa.pts.slice().reverse() : sa.pts.slice(), PB = B.dir > 0 ? sb.pts.slice() : sb.pts.slice().reverse();   // A runs into the crossing, B out of it
+    const a0 = PA[PA.length - 1], b0 = PB[0], gap = Math.hypot(b0[0] - a0[0], b0[1] - a0[1]), q = Math.max(gap / 2, A.w);
+    const B1 = [a0[0] - A.d[0] * q, a0[1] - A.d[1] * q], B2 = [b0[0] - B.d[0] * q, b0[1] - B.d[1] * q], link = [];
+    for (let u = 1; u < 10; u++){ const t = u / 10, i_ = 1 - t; link.push([i_ * i_ * i_ * a0[0] + 3 * i_ * i_ * t * B1[0] + 3 * i_ * t * t * B2[0] + t * t * t * b0[0], i_ * i_ * i_ * a0[1] + 3 * i_ * i_ * t * B1[1] + 3 * i_ * t * t * B2[1] + t * t * t * b0[1]]); }
+    const pts = PA.concat(link, PB); return Object.assign({}, sa, { pts, w: pts.map(() => sa.w[0]), src: null, joined: true }); });
+  if (!links.length && out.every((st, i) => st === sw[i])) return null;
+  return out.filter((st, i) => !used.has(i)).concat(joined); }
 let RGEO = null;
 function drawWidth(){ const W = L_width.width, H = L_width.height, g = L_width.getContext('2d');
   const swAll = streetWidths(), grade = $('wBy').value === 'tier', MW = mapRoadWidths(), TW = tierWidths();
@@ -2239,7 +2306,9 @@ function drawWidth(){ const W = L_width.width, H = L_width.height, g = L_width.g
   const swShown = swAll.map(st => Object.assign({}, st, { w: grade && MW ? st.w.map(() => MW[st.grade]) : st.w.map(shown) }));
   // the junctions depend on the streets and their widths only: worked out again when those change (or the zoom, over the map), not as the view pans
   let key = $('wBy').value + '|' + v('wMin') + '|' + v('wMax') + '|' + (MW ? MW.z.toFixed(2) : '-') + '|' + swShown.length; for (const st of swShown){ const a = st.pts[0], b = st.pts[st.pts.length - 1]; key += '|' + st.pts.length + ',' + (a[0] + b[1]).toFixed(1) + ',' + st.w[0].toFixed(2) + st.grade; }
-  if (!RGEO || RGEO.key !== key){ const shaped = swShown.map(trimHooks).map(untangle); RGEO = Object.assign(roadGeometry(shaped, grade, (MW ? MW.local : TW.local) / 6.5), { key, sw: shaped }); }
+  if (!RGEO || RGEO.key !== key){ const kr = (MW ? MW.local : TW.local) / 6.5; let shaped = swShown.map(trimHooks).map(untangle), geo = roadGeometry(shaped, grade, kr);
+    const adj = adjustStreets(shaped, geo); if (adj){ shaped = adj; geo = roadGeometry(shaped, grade, kr); }   // (v8.44) staggered crossings joined, oblique approaches squared
+    RGEO = Object.assign(geo, { key, sw: shaped }); }
   const sw = RGEO.sw;
   const colOf = o => grade ? gradeCol(o.g) : rampCol(o.w / kW);   // (the colour by the real width)
   const fixed = D.fixed.streets.concat([D.fixed.link]).filter(s_ => s_ && s_.length > 1);
@@ -2262,7 +2331,11 @@ function drawWidth(){ const W = L_width.width, H = L_width.height, g = L_width.g
         if (ed && D.pieces && D.pieces.length) for (const e of ed){ g.save(); cutT(); g.beginPath(); ring({ p: e.p, r: e.r + 1.5 }); g.clip(); /* (overlapping the part outside by 1.5 m: no seam) */ g.beginPath(); pathRings(g, D.pieces.map(p_ => p_.outer)); g.clip(); pathLine(g, pts); g.stroke(); g.restore(); } });
       for (const [ww, list] of byW){ g.lineWidth = ww * view.s; g.beginPath(); for (const pts of list) pts.forEach((q, k) => k ? g.lineTo(X(q[0]), Y(q[1])) : g.moveTo(X(q[0]), Y(q[1]))); g.stroke(); }
       for (const tp of RGEO.tapers) if (tp.g === gr) fillPoly(tp.poly);
-      for (const dsc of RGEO.discs) if (dsc.g === gr){ g.beginPath(); g.arc(X(dsc.p[0]), Y(dsc.p[1]), (dsc.w / 2 + 0.3) * view.s, 0, 2 * PI); g.fill(); } }
+      for (const dsc of RGEO.discs) if (dsc.g === gr){ const kp = dsc.keep;
+        if (kp){ g.save(); const c0 = [dsc.p[0] + kp.n[0] * kp.off, dsc.p[1] + kp.n[1] * kp.off], t = [-kp.n[1], kp.n[0]], F = 4 * dsc.w; g.beginPath();   // (the half on the street's own side of that edge)
+          for (const q of [[c0[0] - t[0] * F, c0[1] - t[1] * F], [c0[0] + t[0] * F, c0[1] + t[1] * F], [c0[0] + t[0] * F + kp.n[0] * F, c0[1] + t[1] * F + kp.n[1] * F], [c0[0] - t[0] * F + kp.n[0] * F, c0[1] - t[1] * F + kp.n[1] * F]]) g.lineTo(X(q[0]), Y(q[1]));
+          g.closePath(); g.clip(); }
+        g.beginPath(); g.arc(X(dsc.p[0]), Y(dsc.p[1]), (dsc.w / 2 + 0.05) * view.s, 0, 2 * PI); g.fill(); if (kp) g.restore(); } }
     g.lineCap = 'round'; }
   else { const segs = []; for (const st of sw) for (let k = 1; k < st.pts.length; k++) segs.push([st.w[k], st.pts[k - 1], st.pts[k]]);
     segs.sort((p_, q_) => p_[0] - q_[0]);
