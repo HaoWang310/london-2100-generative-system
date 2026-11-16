@@ -99,7 +99,8 @@
         "langButton": "#panel .language-switch button[data-language=\"{lang}\"]",
         "hide": [
           "#panel .language-switch"
-        ]
+        ],
+        "hostLang": "__TENSOR_SITE_INPUT__.lang"
       }
     },
     {
