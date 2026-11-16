@@ -576,19 +576,22 @@ export function open(api, lang = 'zh', opt = {}){
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
-    // walking in the hall (v0.28): the left stick moves YOU, by shifting the reference space; the hall and the map stay where they are
-    const baseRef = ref, off = [0, 0], keys = new Set();
-    const onKey = e => { const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
-    addEventListener('keydown', onKey); addEventListener('keyup', onKey); session.addEventListener('end', () => { removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); });
+    // walking in the hall (v0.30): the left stick moves the hall, the map and anything placed in the room the other way, so you
+    // walk through it (moving the world, not the reference space, works the same in every browser and emulator)
+    const keys = new Set();
+    const onKey = e => { if (!xrSession) return; const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
+    addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); session.addEventListener('end', () => { keys.clear(); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); });
     const keyAxes = () => [(keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0), (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0)];
     const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
       const sp = 1.8 * dt, d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
       // stay between the table and the screens (hall space: undo the hall's turn about its centre)
       const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), wx = head[0] + d[0] - c[0], wz = head[2] + d[1] - c[2];
       const lx = wx * cs - wz * sn, lz = wx * sn + wz * cs, r = Math.hypot(lx, lz) || 1e-6, [r0, r1] = H.walkR, rc = Math.max(r0, Math.min(r1, r)), k = rc / r;
-      const tx = c[0] + (lx * k) * cs + (lz * k) * sn, tz = c[2] - (lx * k) * sn + (lz * k) * cs;
-      off[0] -= tx - head[0]; off[1] -= tz - head[2];
-      ref = baseRef.getOffsetReferenceSpace(new XRRigidTransform({ x: off[0], y: 0, z: off[1] })); };
+      const tx = c[0] + (lx * k) * cs + (lz * k) * sn, tz = c[2] - (lx * k) * sn + (lz * k) * cs, mx = head[0] - tx, mz = head[2] - tz;
+      const shift = p => { if (p){ p[0] += mx; p[2] += mz; } };
+      shift(hallPose.c); hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); shift(M.pos); shift(M.anchor);
+      if (pm.mode === 'world') shift(pm.c); if (detail?.pose) shift(detail.pose.c); };
+    window.__vrWalk = () => ({ hall: hallPose && hallPose.c.slice(), map: M.pos.slice() });   // for checking from the console / tests
     const tableScale = (H ? (api.stream ? 2 * TR : TR * Math.SQRT2) : 0.9) / terrain.size;   // 90 cm across on the table (1.4 m disc in the hall)
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
