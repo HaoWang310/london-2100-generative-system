@@ -12,7 +12,7 @@
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
 <script type="module">
-import { open } from './src/xr_view.js?v=0.20';
+import { open } from './src/xr_view.js?v=0.21';
 import { apiFromScene } from './src/scene.js';
 import { streamApi } from './src/stream.js?v=0.20';
 import { envFromList } from './src/app_state.js?v=0.20';
@@ -26,7 +26,7 @@ function show(scene, name){
 function showApi(api, t){
   // ?fx=trees,cars,rain,night… : lighting, weather, trees and vehicles without the map app
   const fx = q.get('fx'), env = fx ? (e => () => e)(envFromList(fx)) : undefined;
-  try { view?.close(); view = open(api, lang, { standalone: true, title: 'London 2100 · ' + t, env }); msg.hidden = true; addPicker(); }
+  try { view?.close(); view = open(api, lang, { standalone: true, title: 'London 2100 · ' + t, env, hall: q.get('hall') || 'auto' }); msg.hidden = true; addPicker(); }
   catch (e){ msg.hidden = false; msg.textContent = (lang === 'zh' ? '无法打开场景：' : 'Could not open the scene: ') + e.message; console.error(e); }
 }
 // scene list (data/scenes.json) as a menu in the viewer's bar

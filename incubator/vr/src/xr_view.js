@@ -11,9 +11,11 @@
 //   right stick: turn / scale · left stick: raise / lower (in walk mode: move, right stick = snap turn)
 //   A = flood risk on / off · B = table ↔ walk 1 : 1 · X = existing streets · Y = put it back in front of me
 // Hands: pinch = grab, two pinches = scale.
+// VR (not MR): the map stands on a table in an exhibition hall (src/hall.js, v0.21); opt.hall = 'auto' | 'day' | 'night' | 'violet', '0' = no hall.
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
+import { createHall } from './hall.js?v=0.21';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -168,6 +170,9 @@ export function open(api, lang = 'zh', opt = {}){
   if (OPEN) return OPEN;
   const L = T[lang] || T.zh;
   const VW = api.view || {};
+  // the hall: in VR the disc is bigger (radius TR) and stands on the hall's table; in MR / without the hall it stays 0.45 m
+  const hallOn = !!opt.hall && !['0', 'off', 'false'].includes(String(opt.hall)); let TR = 0.45;
+  let hall = null, hallPose = null;
   const st = { bld: true, flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
   const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
   let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
@@ -442,6 +447,11 @@ export function open(api, lang = 'zh', opt = {}){
     try { session = await navigator.xr.requestSession(mode, { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] }); }
     catch (e){ try { session = await navigator.xr.requestSession(mode, { optionalFeatures: ['local-floor', 'hand-tracking'] }); } catch (e2){ note.textContent = String(e2.message || e2); return; } }
     xrSession = session; await gl.makeXRCompatible();
+    hallPose = null;   // a new session has a new floor origin
+    if (hallOn && !AR && !hall){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
+    const H = hallOn && !AR ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall (none in MR)
+    const hallShown = () => H && !st.walk && hallPose;
+    const hallMood = () => ['day', 'night', 'violet'].includes(opt.hall) ? opt.hall : env.night > 0.5 ? 'night' : 'day';
     // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
     root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'go'; exitB.textContent = lang === 'zh' ? '退出 VR' : 'Exit VR';
     exitB.onclick = () => session.end().catch(() => {}); xrBox.append(exitB); xrBox.querySelectorAll('button:not(:last-child)').forEach(b => b.hidden = true);
@@ -449,12 +459,17 @@ export function open(api, lang = 'zh', opt = {}){
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
-    const tableScale = 0.9 / terrain.size;   // 90 cm across on the table
+    const tableScale = (H ? (api.stream ? 2 * TR : TR * Math.SQRT2) : 0.9) / terrain.size;   // 90 cm across on the table (1.4 m disc in the hall)
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
     let head = [0, 1.6, 0], headF = [0, 0, -1], hold = 0, Hs = null, Hg = null;
     const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
-      M.s = tableScale; M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; M.anchor = M.pos.slice();
+      M.s = tableScale;
+      if (H){   // the hall is set once per session, its table just in front of you; the map goes back onto that table
+        if (!hallPose){ const d = H.standAt + 0.2; hallPose = { c: [head[0] + f[0] * d, 0, head[2] + f[2] * d], yaw: yawOf(f[0], f[2]) }; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); }
+        M.yaw = hallPose.yaw; M.pos = [hallPose.c[0], H.tableTop + 0.004, hallPose.c[2]]; }
+      else { M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; }
+      M.anchor = M.pos.slice();
       if (api.stream && keep){ const r = rotY([keep[0] * M.s, 0, keep[1] * M.s], M.yaw); M.pos = [M.anchor[0] - r[0], M.pos[1], M.anchor[2] - r[2]]; }   // keep looking at the same place
       if (st.walk) farFor(false); st.walk = false; };
     const focusModel = at => { const d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw); return [d[0] / M.s, d[2] / M.s]; };
@@ -500,7 +515,7 @@ export function open(api, lang = 'zh', opt = {}){
           else {   // turn and scale about the table centre (the anchor), so the place under it stays put
             const c = M.anchor || M.pos;
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
-            if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? 0.45 / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
+            if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? TR / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
         // left stick click: a placed panel comes back to the hand; on the hand it hides / shows
         if (key === 'left' && panel && hit(3)){ pm.mode = pm.mode === 'world' ? 'hand' : pm.mode === 'hand' ? 'off' : 'hand'; panelOn = pm.mode !== 'off'; if (pm.mode === 'hand') pm.w = 0.36; }
@@ -520,10 +535,10 @@ export function open(api, lang = 'zh', opt = {}){
       // draw
       const layer = session.renderState.baseLayer; gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
       env = envFn(); const sky = skyColour();
-      if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk || api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
+      if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (hallShown()){ const c = H.clearColour(hallMood()); gl.clearColor(c[0], c[1], c[2], 1); } else if (st.walk || api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
       if (api.stream){ const at = st.walk ? head : M.anchor, d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw);
-        updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(R_WORLD, 0.45 / M.s))); }
+        updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(R_WORLD, TR / M.s))); }
       const Mm = M4.trs(M.pos, M.yaw, M.s), real = 1 / M.s;   // model metres per real metre
       const o = st.walk ? { exag: 1, width: 1, lift: 0.08 } : { exag: st.exag, width: Math.max(1, 1.6 * Math.min(1, tableScale / M.s * 2)), lift: Math.max(0.0015 * real, 0.05) };
       // haze: on the table it thickens towards the rim; walking, the far edge of what is loaded fades into the sky
@@ -564,8 +579,9 @@ export function open(api, lang = 'zh', opt = {}){
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
+        if (hallShown()) H.draw(P, V, hallPose.m, hallMood());
         drawScene(P, V, Mm, o);
-        if (api.stream){ if (st.walk) drawWeather(P, V, [head[0], 0, head[2]], 14, 16, vp.height); else if (M.anchor) drawWeather(P, V, [M.anchor[0], M.pos[1], M.anchor[2]], 0.45, 0.42, vp.height); }
+        if (api.stream){ if (st.walk) drawWeather(P, V, [head[0], 0, head[2]], 14, 16, vp.height); else if (M.anchor) drawWeather(P, V, [M.anchor[0], M.pos[1], M.anchor[2]], TR, TR * 0.93, vp.height); }
         // controller rays
         noFog(prog); noFog(tex); gl.useProgram(prog.p); gl.uniform3fv(prog.u.uClip, [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]); gl.uniform1f(prog.u.uExag, 1); gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
         for (const s of session.inputSources){ if (!s.targetRaySpace) continue; const rp = frame.getPose(s.targetRaySpace, ref); if (!rp) continue;
@@ -590,7 +606,7 @@ export function open(api, lang = 'zh', opt = {}){
     session.requestAnimationFrame(onFrame);
   }
 
-  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); root.remove(); OPEN = null; for (const T of tiles.values()) freeTile(T); tiles.clear(); opt.onClose?.({ focus: api.stream && clip[2] > 0 ? [clip[0], -clip[1]] : null }); };
+  const close = () => { cancelAnimationFrame(raf); if (xrSession) xrSession.end().catch(() => {}); hall?.dispose(); hall = null; root.remove(); OPEN = null; for (const T of tiles.values()) freeTile(T); tiles.clear(); opt.onClose?.({ focus: api.stream && clip[2] > 0 ? [clip[0], -clip[1]] : null }); };
   if (btn('close')) btn('close').onclick = close; addEventListener('keydown', function esc(e){ if (e.key === 'Escape' && OPEN){ close(); removeEventListener('keydown', esc); } });
   OPEN = { close, state: st, refresh, repaintTiles };
   return OPEN;
