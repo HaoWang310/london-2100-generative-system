@@ -15,7 +15,7 @@
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
-import { createHall } from './hall.js?v=0.28';
+import { createHall } from './hall.js?v=0.29';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -577,9 +577,12 @@ export function open(api, lang = 'zh', opt = {}){
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
     // walking in the hall (v0.28): the left stick moves YOU, by shifting the reference space; the hall and the map stay where they are
-    const baseRef = ref, off = [0, 0];
+    const baseRef = ref, off = [0, 0], keys = new Set();
+    const onKey = e => { const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
+    addEventListener('keydown', onKey); addEventListener('keyup', onKey); session.addEventListener('end', () => { removeEventListener('keydown', onKey); removeEventListener('keyup', onKey); });
+    const keyAxes = () => [(keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0), (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0)];
     const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
-      const sp = 1.4 * dt, d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
+      const sp = 1.8 * dt, d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
       // stay between the table and the screens (hall space: undo the hall's turn about its centre)
       const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), wx = head[0] + d[0] - c[0], wz = head[2] + d[1] - c[2];
       const lx = wx * cs - wz * sn, lz = wx * sn + wz * cs, r = Math.hypot(lx, lz) || 1e-6, [r0, r1] = H.walkR, rc = Math.max(r0, Math.min(r1, r)), k = rc / r;
@@ -594,7 +597,7 @@ export function open(api, lang = 'zh', opt = {}){
     const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
       M.s = tableScale;
       if (H){   // the hall is set once per session, its table just in front of you; the map goes back onto that table
-        if (!hallPose){ const d = H.standAt + 0.2; hallPose = { c: [head[0] + f[0] * d, 0, head[2] + f[2] * d], yaw: yawOf(f[0], f[2]) }; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); }
+        if (!hallPose){ const d = Math.max(H.standAt + 0.2, 2.2); /* start a couple of steps back: room to walk up to the table */ hallPose = { c: [head[0] + f[0] * d, 0, head[2] + f[2] * d], yaw: yawOf(f[0], f[2]) }; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); }
         M.yaw = hallPose.yaw; M.pos = [hallPose.c[0], H.tableTop + 0.004, hallPose.c[2]]; }
       else { M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; }
       M.anchor = M.pos.slice();
@@ -639,7 +642,7 @@ export function open(api, lang = 'zh', opt = {}){
       if (!M.placed){ placeTable(); M.placed = true; }
       // buttons and sticks
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
-        const hit = k => now[k] && !was[k], ax = gp.axes[2] || 0, ay = gp.axes[3] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
+        const hit = k => now[k] && !was[k], ax = gp.axes[2] || gp.axes[0] || 0, ay = gp.axes[3] || gp.axes[1] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
         if (pm.grab && s === pm.grab.src){   // while dragging the panel: stick up / down = further / nearer, left / right = smaller / bigger
           if (dz(ay)) pm.grab.t0 = Math.max(0.25, Math.min(4, pm.grab.t0 * Math.exp(-dz(ay) * dt * 1.6)));
           if (dz(ax)){ const w1 = Math.max(0.18, Math.min(1.4, pm.w * Math.exp(dz(ax) * dt * 1.2))); pm.grab.lu *= w1 / pm.w; pm.grab.lv *= w1 / pm.w; pm.w = w1; }
@@ -658,6 +661,7 @@ export function open(api, lang = 'zh', opt = {}){
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
           else if (!hallShown() && dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
+      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); }
       // walk: keep the ground under your feet
       if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
         if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
