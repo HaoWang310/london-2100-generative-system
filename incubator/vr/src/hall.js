@@ -238,8 +238,12 @@ export function createHall(gl, opt = {}){
 
   // the curved screens (one texture each) and their white frames and feet (one mesh)
   const frames = [], boards = BOARDS[lang];
+  const boardTex = [], screens = [];
   SCREEN.at.forEach((deg, k) => { const a = deg * Math.PI / 180, len = SCREEN.w / SCREEN.R, th0 = Math.PI / 2 - a - len / 2, { R, h, y } = SCREEN;
-    add(flipU(band(R, y - h / 2, y + h / 2, th0, len, 24, [1, 1, 1])), { map: tex(boardC(boards[k])), emiSelf: true, glow: { day: 0.35, night: 0.9, violet: 0.8 }, tint: 'white' });
+    boardTex[k] = tex(boardC(boards[k]));
+    // for pointing at it: the chord's centre, the way it faces (to the table), its width and height (hall space)
+    screens.push({ k, c: [R * Math.cos(a), y, R * Math.sin(a)], n: [-Math.cos(a), 0, -Math.sin(a)], u: [-Math.sin(a), 0, Math.cos(a)], w: SCREEN.w, h, title: boards[k][1] });
+    add(flipU(band(R, y - h / 2, y + h / 2, th0, len, 24, [1, 1, 1])), { map: boardTex[k], emiSelf: true, glow: { day: 0.35, night: 0.9, violet: 0.8 }, tint: 'white', screen: k });
     const pad = 0.1 / R, fl = 0.2 / R;
     frames.push(band(R + 0.03, y - h / 2 - 0.08, y + h / 2 + 0.08, th0 - pad, len + 2 * pad, 24, WHITE), band(R + 0.03, 0, y - h / 2 - 0.08, Math.PI / 2 - a - fl / 2, fl, 8, WHITE)); });
   add(merge(...frames), {});
@@ -265,6 +269,7 @@ export function createHall(gl, opt = {}){
     .then(buf => { add(placeCopies(parseGLB(buf), BENCH_SLOTS, WHITE), {}); })
     .catch(e => console.warn('hall: bench model', e));
 
+  let hot = -1;   // the screen being pointed at glows brighter
   const tintOf = (p, mood) => p.tint === 'glow' ? GLOW[mood] : p.tint === 'sky' ? MOOD[mood].sky : p.tint === 'white' ? [1, 1, 1] : p.tint ? p.tint[mood] : [0, 0, 0];
   function draw(P, V, M, mood = 'day'){
     const md = MOOD[mood] || MOOD.day; mood = MOOD[mood] ? mood : 'day';
@@ -277,10 +282,11 @@ export function createHall(gl, opt = {}){
     for (const p of parts){
       const map = p.map || null, emi = p.emiSelf ? p.map : p.emi || null;
       gl.uniform1f(u.uHasMap, map ? 1 : 0); gl.uniform1f(u.uHasEmi, emi ? 1 : 0); gl.uniform1f(u.uUnlit, p.unlit ? 1 : 0);
-      gl.uniform1f(u.uEmiI, p.glow ? p.glow[mood] : 0); gl.uniform3fv(u.uEmiCol, tintOf(p, mood));
+      gl.uniform1f(u.uEmiI, (p.glow ? p.glow[mood] : 0) + (p.screen != null && p.screen === hot ? 0.55 : 0)); gl.uniform3fv(u.uEmiCol, tintOf(p, mood));
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, map); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, emi);
       gl.bindVertexArray(p.vao); gl.drawElements(gl.TRIANGLES, p.n, gl.UNSIGNED_INT, 0); }
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindVertexArray(null); }
   function dispose(){ for (const t of textures) gl.deleteTexture(t); for (const b of buffers) gl.deleteBuffer(b); for (const p of parts) gl.deleteVertexArray(p.vao); gl.deleteProgram(prog.p); parts.length = 0; }
-  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, clearColour: mood => (MOOD[mood] || MOOD.day).clear, triangles: () => parts.reduce((s, p) => s + p.n / 3, 0) };
+  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, screens, boardTexture: k => boardTex[k], setHot(k){ hot = k == null ? -1 : k; },
+    /** where you may walk: outside the table, inside the screens */ walkR: [R2 + 0.3, SCREEN.R - 0.45], clearColour: mood => (MOOD[mood] || MOOD.day).clear, triangles: () => parts.reduce((s, p) => s + p.n / 3, 0) };
 }
