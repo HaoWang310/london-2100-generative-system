@@ -18,10 +18,22 @@ import { writeCars } from './features.js?v=0.20';
 import { createHall } from './hall.js?v=0.22';
 
 const T = {
-  zh: { title: '三维 · VR / MR', enterAR: '进入 MR（透视，放在桌上）', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
+  zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
+    sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。',
+    vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '看见真实房间，地图放在你面前的桌子上，圆盘 0.9 m。',
+    quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
+    mood: '展厅氛围', moods: [['auto', '跟随光照'], ['day', '白昼'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
+    keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
+    views: [['hall', '展厅视角'], ['map', '只看地图']], exit: '退出 VR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
     hud: ['握持键 / 捏合：抓取模型 · 双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前', '左摇杆按下 / 点「面板」：打开控制面板'] },
-  en: { title: '3D · VR / MR', enterAR: 'Enter MR (passthrough, on your table)', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
+  en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
+    sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.',
+    vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'See your real room; the map sits on the table in front of you, a 0.9 m disc.',
+    quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
+    mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['day', 'Day'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
+    keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
+    views: [['hall', 'Gallery view'], ['map', 'Map only']], exit: 'Exit VR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
     hud: ['Grip / pinch: grab · both hands: scale, turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back', 'Left stick click / “Panel”: the controls'] }
 };
@@ -177,43 +189,102 @@ export function open(api, lang = 'zh', opt = {}){
   const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
   let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
   const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : (api.extra || api.stream) ? L.buildings : fixedLabel;
-  const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#111113;color:#f5f5f7;font:13px/1.4 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif}
-#tsXR canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-#tsXR .bar{position:absolute;left:16px;top:16px;right:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
-#tsXR .bar>*{pointer-events:auto}
-#tsXR h3{margin:0 8px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em}
-#tsXR button{font:inherit;border:1px solid rgba(255,255,255,.16);background:rgba(44,44,46,.82);color:#f5f5f7;border-radius:999px;padding:7px 14px;cursor:pointer;backdrop-filter:blur(18px)}
-#tsXR button:hover{background:rgba(72,72,74,.9)}#tsXR button.on{background:#f5f5f7;color:#121214;border-color:#f5f5f7}
-#tsXR button.go{background:#0a84ff;border-color:#0a84ff;font-weight:600}#tsXR button.go:hover{background:#409cff}
-#tsXR .sp{flex:1}#tsXR .note{position:absolute;left:16px;bottom:14px;max-width:calc(100% - 32px);color:rgba(235,235,245,.85);font-size:12px;pointer-events:none;background:rgba(28,28,30,.82);padding:6px 12px;border-radius:999px;backdrop-filter:blur(12px)}
-#tsXR label{display:flex;gap:6px;align-items:center;background:rgba(44,44,46,.82);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 12px}
-#tsXR input[type=range]{width:90px;accent-color:#f5f5f7}#tsXR [hidden]{display:none!important}
-#tsXR .appPanel{position:absolute;right:16px;top:64px;width:min(620px,48vw);max-height:calc(100% - 120px);overflow:auto;border-radius:18px;pointer-events:auto;box-shadow:0 18px 50px #0007}
-#tsXR .appPanel canvas{position:static;display:block;width:100%;height:auto}
-#tsXR.immersive .appPanel,#tsXR .appPanel.closed{display:none}
-#tsXR.immersive{background:transparent;pointer-events:none}#tsXR.immersive .bar>*,#tsXR.immersive .note{pointer-events:auto}`;
+  // v0.24 · the page looks like the rest of London 2100 (shared/ui/theme.css): black / graphite, one warm sand accent,
+  // top bar · "into the headset" on the left · the live view · the map settings on the right · a status bar
+  const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#000;color:#f5f5f7;font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;
+  display:grid;grid-template-columns:340px minmax(0,1fr) 340px;grid-template-rows:56px minmax(0,1fr) 44px;grid-template-areas:"top top top" "side stage insp" "foot foot foot"}
+#tsXR *{box-sizing:border-box}#tsXR [hidden]{display:none!important}
+#tsXR button{font:inherit;color:inherit;cursor:pointer}
+#tsXR .top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px 0 20px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.85);min-width:0}
+#tsXR .brand{display:flex;align-items:baseline;gap:8px;white-space:nowrap}#tsXR .mark{width:10px;height:10px;border-radius:3px;background:#f5f5f7;align-self:center}
+#tsXR .brand b{font-weight:600;letter-spacing:-.01em}#tsXR .brand span{color:#8e8e93;font-size:12px}
+#tsXR .crumbs{display:flex;align-items:center;gap:6px;min-width:0;color:#a1a1a6;white-space:nowrap;overflow:hidden}#tsXR .crumbs .sep{color:#6e6e73}#tsXR .crumbs b{color:#f5f5f7;font-weight:600}
+#tsXR .loc{font:11px ui-monospace,'SF Mono',Menlo,monospace;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#tsXR .sp{flex:1}
+#tsXR .btn{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#1c1c1e;white-space:nowrap}
+#tsXR .btn:hover{background:#2c2c2e}#tsXR .btn.exit{background:#d9c4a3;border-color:#d9c4a3;color:#1c1c1e;font-weight:600}
+#tsXR .side{grid-area:side;background:#111113;border-right:1px solid rgba(255,255,255,.08);padding:20px 16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+#tsXR .eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8e8e93}
+#tsXR h1{margin:6px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-.02em}#tsXR .lead{margin:6px 0 0;color:#a1a1a6}
+#tsXR .modes{display:flex;flex-direction:column;gap:10px}
+#tsXR .mode{text-align:left;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:#161618;display:flex;flex-direction:column;gap:8px;transition:background .15s,border-color .15s}
+#tsXR .mode:hover{background:#1c1c1e;border-color:rgba(255,255,255,.2)}#tsXR .mode.primary{border-color:#d9c4a3;background:#1c1c1e}
+#tsXR .mode .mh{display:flex;align-items:center;gap:10px}#tsXR .mode b{font-size:15px;font-weight:600;flex:1}#tsXR .mode .md{color:#a1a1a6}
+#tsXR .mode .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#d9c4a3;color:#1c1c1e;font-weight:600}
+#tsXR .mode .go{display:flex;align-items:center;gap:6px;color:#d9c4a3;font-weight:600;font-size:12px}
+#tsXR .card{padding:12px;border-radius:12px;background:#1c1c1e;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px}
+#tsXR .url{font:11px ui-monospace,'SF Mono',Menlo,monospace;color:#d9c4a3;word-break:break-all}
+#tsXR .chips{display:flex;gap:6px;flex-wrap:wrap}#tsXR .chips button{height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#a1a1a6;font-size:12px}
+#tsXR .chips button.on{background:#2c2c2e;border-color:#2c2c2e;color:#f5f5f7}
+#tsXR .rows{display:flex;flex-direction:column}
+#tsXR .tog{display:flex;align-items:center;justify-content:space-between;height:36px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:none;padding:0;text-align:left}
+#tsXR .tog::after{content:"";width:36px;height:22px;border-radius:11px;background:#2c2c2e;flex:none;box-shadow:inset 0 0 0 9px #2c2c2e;transition:background .15s}
+#tsXR .tog{position:relative}#tsXR .tog::before{content:"";position:absolute;right:16px;top:9px;width:18px;height:18px;border-radius:50%;background:#fff;transition:right .15s;z-index:1}
+#tsXR .tog.on::after{background:#8fb59a;box-shadow:none}#tsXR .tog.on::before{right:2px}
+#tsXR .exagRow{display:flex;align-items:center;gap:10px;height:40px}#tsXR .exagRow span{flex:1}#tsXR .exagRow input{width:110px;accent-color:#d9c4a3}#tsXR .exagRow b{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;min-width:24px;text-align:right}
+#tsXR .keys{display:grid;grid-template-columns:34px 1fr;row-gap:6px;column-gap:8px;align-items:center;color:#a1a1a6;font-size:12px}
+#tsXR .keys i{font-style:normal;height:22px;border-radius:6px;background:#2c2c2e;color:#f5f5f7;font:11px ui-monospace,'SF Mono',Menlo,monospace;display:flex;align-items:center;justify-content:center}
+#tsXR .stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:#0a0a0b}
+#tsXR canvas.view{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#tsXR .viewSeg{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(28,28,30,.78);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(16px)}
+#tsXR .viewSeg button{height:32px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:#a1a1a6;font-size:12px}#tsXR .viewSeg button.on{background:#f5f5f7;color:#000;font-weight:600}
+#tsXR .showSet{position:absolute;right:16px;top:16px}
+#tsXR .insp{grid-area:insp;background:#111113;border-left:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0}
+#tsXR .insp header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px}#tsXR .insp header b{font-size:15px;font-weight:600}
+#tsXR .insp .icon{width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:#a1a1a6;display:flex;align-items:center;justify-content:center}#tsXR .insp .icon:hover{background:#1c1c1e;color:#f5f5f7}
+#tsXR .appPanel{overflow:auto;padding:0 2px 12px}#tsXR .appPanel canvas{display:block;width:100%;height:auto}
+#tsXR.noInsp{grid-template-columns:340px minmax(0,1fr) 0}#tsXR.noInsp .insp{display:none}
+#tsXR .foot{grid-area:foot;display:flex;align-items:center;gap:10px;padding:0 20px;border-top:1px solid rgba(255,255,255,.08);background:#0a0a0b;min-width:0}
+#tsXR .dot{width:8px;height:8px;border-radius:50%;background:#8fb59a;flex:none}#tsXR .note{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tsXR.immersive{background:transparent;pointer-events:none;grid-template-columns:0 1fr 0}#tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .viewSeg,#tsXR.immersive .showSet{display:none}
+#tsXR.immersive .stage{background:transparent}#tsXR.immersive .top,#tsXR.immersive .foot{pointer-events:auto}
+@media (max-width:900px){#tsXR{display:flex;flex-direction:column;overflow:auto}#tsXR .stage{min-height:56vh;flex:none}#tsXR .top{flex:none;height:56px}#tsXR .foot{flex:none;height:44px}#tsXR .insp{min-height:auto}}`;
+  const ic = { vr: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a9 4 0 0 0 18 0"/><path d="M3 9a9 4 0 0 1 18 0"/><path d="M9 13l-1 8h8l-1-8"/></svg>',
+    ar: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="8.5" cy="12" r="2"/><circle cx="15.5" cy="12" r="2"/></svg>',
+    back: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+    go: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>',
+    fold: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>' };
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const root = document.createElement('div'); root.id = 'tsXR';
-  root.innerHTML = `<style>${css}</style><canvas></canvas><div class="bar"><h3>${opt.title || L.title}</h3><span class="xrBtns"></span>
-<button data-k="flood">${L.flood}</button><button data-k="drain">${L.drain}</button><button data-k="bld" class="on">${L.buildings}</button><button data-k="fixed" class="on">${fixedLabel}</button><label>${L.exag} <input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label>
-<span class="sp"></span>${opt.standalone ? '' : `<button data-k="close">${opt.closeLabel || L.close + ' ✕'}</button>`}</div><div class="note"></div>`;
+  root.innerHTML = `<style>${css}</style>
+<header class="top"><div class="brand"><span class="mark" aria-hidden="true"></span><b>London 2100</b><span>${L.sub}</span></div>
+  <nav class="crumbs" aria-label="${lang === 'zh' ? '位置' : 'Location'}"><span>${esc(opt.crumb || (opt.standalone ? 'London 2100' : L.crumb))}</span><span class="sep" aria-hidden="true">›</span><b>${L.here}</b></nav>
+  <span class="loc">${esc(opt.title || L.title)}</span><span class="sp"></span><span class="exitSlot"></span>
+  ${opt.standalone ? '' : `<button class="btn" data-k="close">${ic.back}${esc(opt.closeLabel && opt.closeLabel !== (lang === 'zh' ? '地图' : 'Map') ? opt.closeLabel : L.back)}</button>`}</header>
+<aside class="side" aria-label="${L.eyebrow}">
+  <div><div class="eyebrow">${L.eyebrow}</div><h1>${L.h1}</h1><p class="lead">${L.lead}</p></div>
+  <div class="modes xrBtns"></div>
+  <div class="card noxr" hidden><b>${L.quest}</b><span class="lead" style="margin:0">${L.questD}</span><span class="url"></span><button class="btn copy" type="button">${L.copy}</button></div>
+  <div class="hallGrp" hidden><div class="eyebrow" style="margin-bottom:8px">${L.mood}</div><div class="chips mood" role="group" aria-label="${L.mood}">${L.moods.map(([k, t]) => `<button type="button" data-mood="${k}">${t}</button>`).join('')}</div></div>
+  <div><div class="eyebrow" style="margin-bottom:4px">${L.model}</div><div class="rows">
+    <button class="tog" type="button" data-k="flood">${L.flood}</button><button class="tog" type="button" data-k="drain">${L.drain}</button>
+    <button class="tog on" type="button" data-k="bld">${L.buildings}</button><button class="tog on" type="button" data-k="fixed">${fixedLabel}</button>
+    <label class="exagRow"><span>${L.exag}</span><input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label></div></div>
+  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
+</aside>
+<main class="stage"><canvas class="view"></canvas>
+  <div class="viewSeg" role="group" hidden>${L.views.map(([k, t]) => `<button type="button" data-view="${k}">${t}</button>`).join('')}</div>
+  <button class="btn showSet" type="button" hidden>${L.showSet}</button></main>
+<aside class="insp" aria-label="${L.settings}"><header><b>${L.settings}</b><button class="icon hideSet" type="button" aria-label="${L.hideSet}">${ic.fold}</button></header></aside>
+<footer class="foot"><span class="dot" aria-hidden="true"></span><span class="note"></span></footer>`;
   document.body.append(root);
-  // the app's control panel (opt.panel, src/app_panel.js): beside the view on a screen, on the left hand in the headset
-  const panel = opt.panel || null; let panelOn = false;
+  // the app's control panel (opt.panel, src/app_panel.js): on the left hand in the headset; the page shows opt.deskPanel (one column) in its side bar
+  const panel = opt.panel || null, deskPanel = opt.deskPanel || panel; let panelOn = false;
   // where the panel is in the headset (kept between sessions): on the left hand, placed in the room (c, facing you), or hidden; w = width in metres
   const pm = { mode: 'off', prev: 'hand', c: null, w: 0.36, grab: null };   // v0.23: hidden until you call it up
   const showPanel = () => { if (!panel) return; pm.mode = pm.prev === 'world' && pm.c ? 'world' : 'hand'; if (pm.mode === 'hand') pm.w = 0.36; panelOn = true; };
   const hidePanel = () => { if (pm.mode !== 'off') pm.prev = pm.mode; pm.mode = 'off'; pm.grab = null; panelOn = false; };
   window.__vrPanel = pm;   // for checking from the console / tests
-  if (panel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(panel.canvas); root.append(box);
-    // the on-screen copy of the panel (for the mouse): a bar button folds it; in VR / MR it is always hidden (the headset has its own)
-    const pb = document.createElement('button'); pb.className = 'on'; pb.textContent = lang === 'zh' ? '面板' : 'Panel';
-    pb.onclick = () => { box.classList.toggle('closed'); pb.classList.toggle('on', !box.classList.contains('closed')); };
-    root.querySelector('.bar .sp').before(pb);
-    const uv = e => { const r = panel.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-    panel.canvas.addEventListener('pointermove', e => { panel.setHover(panel.hitAt(...uv(e))); panel.canvas.style.cursor = panel.hitAt(...uv(e)) != null ? 'pointer' : 'default'; });
-    panel.canvas.addEventListener('pointerleave', () => panel.setHover(null));
-    panel.canvas.addEventListener('click', e => { const i = panel.hitAt(...uv(e)); if (i != null) panel.press(i); }); }
-  const cv = root.querySelector('canvas'), note = root.querySelector('.note');
+  const insp = root.querySelector('.insp'), showSet = root.querySelector('.showSet');
+  if (deskPanel){ const box = document.createElement('div'); box.className = 'appPanel'; box.append(deskPanel.canvas); insp.append(box);
+    const uv = e => { const r = deskPanel.canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+    deskPanel.canvas.addEventListener('pointermove', e => { deskPanel.setHover(deskPanel.hitAt(...uv(e))); deskPanel.canvas.style.cursor = deskPanel.hitAt(...uv(e)) != null ? 'pointer' : 'default'; });
+    deskPanel.canvas.addEventListener('pointerleave', () => deskPanel.setHover(null));
+    deskPanel.canvas.addEventListener('click', e => { const i = deskPanel.hitAt(...uv(e)); if (i != null) deskPanel.press(i); }); }
+  else root.classList.add('noInsp');
+  const setInsp = on => { root.classList.toggle('noInsp', !on || !deskPanel); showSet.hidden = on || !deskPanel; };
+  root.querySelector('.hideSet').onclick = () => setInsp(false); showSet.onclick = () => setInsp(true);
+  const cv = root.querySelector('canvas.view'), note = root.querySelector('.note');
   const gl = cv.getContext('webgl2', { antialias: true, alpha: true, stencil: true, xrCompatible: true });
   if (!gl){ note.textContent = 'WebGL2 is not available.'; return null; }
   const prog = program(gl, VS, FS), tex = program(gl, VT, FT), shProg = program(gl, VSH, FSH), ptProg = program(gl, VPT, FPT);
@@ -240,7 +311,7 @@ export function open(api, lang = 'zh', opt = {}){
   const sigOf = () => { let dead = 0, pts = 0; for (const l of api.lines()){ if (l.dead) dead++; else pts += l.pts.length; } return api.lines().length + ':' + dead + ':' + pts + ':' + api.finished(); };
   st.sig = sigOf(); status();
   if (panel && api.stream) panel.setFooter(() => streamLine());
-  let panelT = 0; const panelTick = t => { if (panel && t - panelT > 400){ panelT = t; panel.draw(); } };
+  let panelT = 0; const panelTick = t => { if (t - panelT > 400){ panelT = t; panel?.draw(); if (deskPanel && deskPanel !== panel) deskPanel.draw(); } };
   const refresh = (all) => { snap = snapshot(api); if (all){ terrain = buildTerrain(snap.S, tOpt()); tMesh.set(terrain); fMesh.set(buildRibbons(snap.S, snap.fixed.concat(snap.bridges), terrain)); } rMesh.set(buildRibbons(snap.S, snap.lines, terrain)); status(); };
   let lastCheck = 0; const follow = t => { if (t - lastCheck < 600) return; lastCheck = t; const s = sigOf(); if (s !== st.sig){ st.sig = s; refresh(false); } };
 
@@ -391,17 +462,29 @@ export function open(api, lang = 'zh', opt = {}){
     if (rMesh.n){ gl.bindVertexArray(rMesh.vao); gl.drawElements(gl.TRIANGLES, rMesh.n, gl.UNSIGNED_INT, 0); }
     gl.bindVertexArray(null); }
 
-  // ---- page preview: orbit camera
+  // ---- page preview: orbit camera; with the hall, a second camera stands in the gallery (metres, the table at the centre)
   const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 1.25 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
-  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam } }; cv.setPointerCapture(e.pointerId); });
+  if (hallOn){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
+  let hallSel = ['day', 'night', 'violet'].includes(opt.hall) ? opt.hall : 'auto';
+  const hallMood = () => hallSel !== 'auto' ? hallSel : env.night > 0.5 ? 'night' : 'day';
+  const hcam = { yaw: 0, pitch: 0.34, dist: 3.0 }, deskR = 0.7, deskS = () => (api.stream ? 2 * deskR : deskR * Math.SQRT2) / terrain.size;
+  let pv = hall ? 'hall' : 'map';
+  const viewSeg = root.querySelector('.viewSeg'), syncView = () => viewSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.view === pv));
+  if (hall){ viewSeg.hidden = false; root.querySelector('.hallGrp').hidden = false; syncView();
+    viewSeg.onclick = e => { const b = e.target.closest('button'); if (b){ pv = b.dataset.view; syncView(); } };
+    const moods = root.querySelector('.mood'), syncMood = () => moods.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mood === hallSel)); syncMood();
+    moods.onclick = e => { const b = e.target.closest('button'); if (b){ hallSel = b.dataset.mood; syncMood(); } }; }
+  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam }, h: { ...hcam } }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener('pointermove', e => { if (!drag) return; const dx = (e.clientX - drag.x) / cv.clientWidth, dy = (e.clientY - drag.y) / cv.clientHeight;
+    if (pv === 'hall'){ hcam.yaw = drag.h.yaw - dx * 4; hcam.pitch = Math.max(0.04, Math.min(0.55, drag.h.pitch + dy * 2)); return; }
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
     else { cam.yaw = drag.c.yaw - dx * 4; cam.pitch = Math.max(0.08, Math.min(1.52, drag.c.pitch + dy * 3)); } });
   cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('contextmenu', e => e.preventDefault());
-  cv.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); if (pv === 'hall'){ hcam.dist = Math.max(1.3, Math.min(4.2, hcam.dist * Math.exp(e.deltaY * 0.001))); return; } cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
   function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     env = envFn(); const sky = skyColour();
+    if (pv === 'hall' && hall){ previewHall(t, w, h); return; }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); if (api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.067, 0.067, 0.075, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
@@ -412,18 +495,39 @@ export function open(api, lang = 'zh', opt = {}){
     const Pm = M4.persp(0.7, w / h, Math.max(0.002, cam.dist * 0.01), cam.dist * 20 + 50), Vm = M4.look(eye, [cam.tx, 0, cam.tz]);
     drawScene(Pm, Vm, M4.trs([0, 0, 0], 0, unit), { exag: st.exag, width: 1.6, lift: 0.0025 / unit });
     if (api.stream){ const rw = clip[2] * unit; drawWeather(Pm, Vm, [cam.tx, 0, cam.tz], rw, rw * 0.8, h); } }
+  // the gallery on the page: the hall, and the map on its table as it will be in VR
+  function previewHall(t, w, h){
+    const mood = hallMood(), c = hall.clearColour(mood), y0 = hall.tableTop, ms = deskS();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.clearColor(c[0], c[1], c[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+    const eye = [hcam.dist * Math.cos(hcam.pitch) * Math.sin(hcam.yaw), y0 + 0.25 + hcam.dist * Math.sin(hcam.pitch), hcam.dist * Math.cos(hcam.pitch) * Math.cos(hcam.yaw)];
+    const Pm = M4.persp(0.95, w / h, 0.03, 60), Vm = M4.look(eye, [0, y0 + 0.05, 0]);
+    if (api.stream) updateTiles(t, 0, 0, Math.max(300, Math.min(R_WORLD, deskR / ms)));
+    fogSet = api.stream ? { e: [clip[0], 0, clip[1]], r0: clip[2] * 0.3, r1: clip[2] * 1.05, a: env.haze, c: env.fog } : { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: env.fog };
+    carScale = Math.max(1, clip[2] / 600);
+    hall.draw(Pm, Vm, M4.id(), mood);
+    drawScene(Pm, Vm, M4.trs([0, y0 + 0.004, 0], 0, ms), { exag: st.exag, width: 1.6, lift: Math.max(0.0015 / ms, 0.05) });
+    if (api.stream) drawWeather(Pm, Vm, [0, y0, 0], deskR, deskR * 0.93, h); }
   // the sky behind the model: the app's sky colour, greyed by the weather
   function skyColour(){ const a = Math.min(1, env.haze * 1.3); return [0, 1, 2].map(k => (env.sky[k] * (1 - a) + env.fog[k] * a) * (env.weather === 'rain' ? 0.7 : 1)); }
   raf = requestAnimationFrame(frame);
 
   // ---- headset
   const xrBox = root.querySelector('.xrBtns');
+  // one card per way in: a click starts the session at once (the browser needs that click on this page)
+  const noxr = root.querySelector('.noxr');
+  const showNoXR = () => { noxr.hidden = false; noxr.querySelector('.url').textContent = location.href;
+    const cp = noxr.querySelector('.copy'); cp.onclick = () => navigator.clipboard?.writeText(location.href).then(() => { cp.textContent = L.copied; setTimeout(() => cp.textContent = L.copy, 1600); }).catch(() => {}); };
   (async () => {
     if (!window.isSecureContext){ note.textContent = L.https; }
-    if (!navigator.xr) { if (/OculusBrowser|Quest/i.test(navigator.userAgent)) note.textContent = L.noXR; return; }
-    for (const [mode, label] of [['immersive-ar', L.enterAR], ['immersive-vr', L.enterVR]]){
+    if (!navigator.xr){ showNoXR(); return; }
+    let n = 0;
+    for (const mode of ['immersive-vr', 'immersive-ar']){
       let ok = false; try { ok = await navigator.xr.isSessionSupported(mode); } catch (e){ ok = false; }
-      if (!ok) continue; const b = document.createElement('button'); b.className = 'go'; b.textContent = label; b.onclick = () => startXR(mode); xrBox.append(b); }
+      if (!ok) continue; n++;
+      const vr = mode === 'immersive-vr', b = document.createElement('button'); b.type = 'button'; b.className = 'mode' + (vr ? ' primary' : '');
+      b.innerHTML = `<span class="mh">${vr ? ic.vr : ic.ar}<b>${vr ? L.vrT : L.arT}</b>${vr ? `<span class="tag">${L.rec}</span>` : ''}</span><span class="md">${vr ? (hallOn ? L.vrD : L.vrDplain) : L.arD}</span><span class="go">${vr ? L.enterVR : L.enterAR}${ic.go}</span>`;
+      b.onclick = () => startXR(mode); xrBox.append(b); }
+    if (!n) showNoXR();
   })();
 
   function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 470; const g = c.getContext('2d');
@@ -461,10 +565,9 @@ export function open(api, lang = 'zh', opt = {}){
     if (hallOn && !AR && !hall){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
     const H = hallOn && !AR ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall (none in MR)
     const hallShown = () => H && !st.walk && hallPose;
-    const hallMood = () => ['day', 'night', 'violet'].includes(opt.hall) ? opt.hall : env.night > 0.5 ? 'night' : 'day';
     // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
-    root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'go'; exitB.textContent = lang === 'zh' ? '退出 VR' : 'Exit VR';
-    exitB.onclick = () => session.end().catch(() => {}); xrBox.append(exitB); xrBox.querySelectorAll('button:not(:last-child)').forEach(b => b.hidden = true);
+    root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'btn exit'; exitB.textContent = L.exit;
+    exitB.onclick = () => session.end().catch(() => {}); root.querySelector('.exitSlot').append(exitB);
     const xr = { frames: 0, views: 0, err: '', mode };
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
@@ -507,7 +610,7 @@ export function open(api, lang = 'zh', opt = {}){
       rem = e => { if (pm.grab && pm.grab.src === e.inputSource){ pm.grab = null; return; } if (grabs.delete(e.inputSource)) base = 'pending'; };
     let panelPose = null, panelTex = null, panelVer = -1, barTex = null;
     session.addEventListener('selectstart', e => add(e, true)); session.addEventListener('squeezestart', e => add(e, false)); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
-    session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); xrBox.querySelectorAll('button').forEach(b => b.hidden = false); status(); });
+    session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); status(); });
     const xrNote = () => { note.textContent = (lang === 'zh' ? `${mode === 'immersive-ar' ? 'MR' : 'VR'} 运行中 · 第 ${xr.frames} 帧 · ${xr.views} 个视图` : `${mode} · frame ${xr.frames} · ${xr.views} views`)
       + (api.stream ? ' · ' + streamLine() : '') + (xr.err ? (lang === 'zh' ? ' · 出错：' : ' · error: ') + xr.err : ''); };
     let tPrev = 0;
