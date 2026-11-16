@@ -24,7 +24,7 @@ const T = {
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['day', '白昼'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
-    views: [['hall', '展厅视角'], ['map', '只看地图']], exit: '退出 VR',
+    views: [['hall', '展厅视角'], ['map', '只看地图']], exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
     hud: ['握持键 / 捏合：抓取模型 · 双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
@@ -33,7 +33,7 @@ const T = {
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['day', 'Day'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
-    views: [['hall', 'Gallery view'], ['map', 'Map only']], exit: 'Exit VR',
+    views: [['hall', 'Gallery view'], ['map', 'Map only']], exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
     hud: ['Grip / pinch: grab · both hands: scale, turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back', 'Left stick click / “Panel”: the controls'] }
 };
@@ -236,8 +236,12 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR.noInsp{grid-template-columns:340px minmax(0,1fr) 0}#tsXR.noInsp .insp{display:none}
 #tsXR .foot{grid-area:foot;display:flex;align-items:center;gap:10px;padding:0 20px;border-top:1px solid rgba(255,255,255,.08);background:#0a0a0b;min-width:0}
 #tsXR .dot{width:8px;height:8px;border-radius:50%;background:#8fb59a;flex:none}#tsXR .note{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tsXR.immersive{background:transparent;pointer-events:none;grid-template-columns:0 1fr 0}#tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .viewSeg,#tsXR.immersive .showSet{display:none}
-#tsXR.immersive .stage{background:transparent}#tsXR.immersive .top,#tsXR.immersive .foot{pointer-events:auto}
+#tsXR.immersive{display:block;background:transparent;pointer-events:none}
+#tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .viewSeg,#tsXR.immersive .showSet,#tsXR.immersive .brand,#tsXR.immersive .crumbs,#tsXR.immersive .loc{display:none}
+#tsXR.immersive .stage{position:fixed;inset:0;background:transparent}
+#tsXR.immersive .top{position:fixed;top:0;left:0;right:0;z-index:2;height:auto;padding:16px;background:transparent;border:0;pointer-events:none}
+#tsXR.immersive .top .btn{pointer-events:auto;border-radius:999px;backdrop-filter:blur(18px);background:rgba(44,44,46,.82)}#tsXR.immersive .top .btn.exit{background:#d9c4a3}
+#tsXR.immersive .foot{position:fixed;left:16px;bottom:14px;z-index:2;height:auto;max-width:calc(100% - 32px);padding:6px 12px;border:0;border-radius:999px;background:rgba(28,28,30,.82);backdrop-filter:blur(12px)}
 @media (max-width:900px){#tsXR{display:flex;flex-direction:column;overflow:auto}#tsXR .stage{min-height:56vh;flex:none}#tsXR .top{flex:none;height:56px}#tsXR .foot{flex:none;height:44px}#tsXR .insp{min-height:auto}}`;
   const ic = { vr: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a9 4 0 0 0 18 0"/><path d="M3 9a9 4 0 0 1 18 0"/><path d="M9 13l-1 8h8l-1-8"/></svg>',
     ar: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="6"/><circle cx="8.5" cy="12" r="2"/><circle cx="15.5" cy="12" r="2"/></svg>',
@@ -566,7 +570,7 @@ export function open(api, lang = 'zh', opt = {}){
     const H = hallOn && !AR ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall (none in MR)
     const hallShown = () => H && !st.walk && hallPose;
     // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
-    root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'btn exit'; exitB.textContent = L.exit;
+    root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'btn exit'; exitB.textContent = AR ? L.exitAR : L.exit;
     exitB.onclick = () => session.end().catch(() => {}); root.querySelector('.exitSlot').append(exitB);
     const xr = { frames: 0, views: 0, err: '', mode };
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
