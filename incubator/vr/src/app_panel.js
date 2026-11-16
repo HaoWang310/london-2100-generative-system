@@ -9,11 +9,13 @@
 //   analysis:     the app's layer switches (label > strong + checkbox) in #panel
 // Drawn on a canvas in the app's dark, rounded style; xr_view shows it on the left hand (headset) or beside the view.
 
-const W = 1440, PAD = 28, GAP = 12, TILE_H = 64, ROW_H = 58, TITLE_H = 44, FONT = '-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif';
+const PAD = 28, GAP = 12, TILE_H = 64, ROW_H = 58, TITLE_H = 44, FONT = '-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif';
 
 const textOf = el => (el?.innerText || el?.textContent || '').replace(/\s+/g, ' ').trim();
 
+/** opt.cols = 1: one column (720 px wide, for the page's side bar); opt.bare: no background or title (the page draws its own) */
 export function appPanel(frame, opt = {}){
+  const ONE = opt.cols === 1, W = ONE ? 720 : 1440, TOP = opt.bare ? PAD - 8 : PAD + 52;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = 400;
   let hits = [], hover = null, version = 0, lastSig = '', footer = opt.footer || null;
   const doc = () => frame.contentDocument;
@@ -54,7 +56,7 @@ export function appPanel(frame, opt = {}){
     const sig = JSON.stringify(secs.map(s => [s.title, s.items.map(i => [i.label, i.on, i.off])])) + '|' + hover + '|' + foot;
     if (sig === lastSig) return false; lastSig = sig;
     // layout: each section is a block; blocks go to the shorter of two columns
-    const CW = (W - 3 * PAD) / 2, blocks = [];
+    const CW = ONE ? W - 2 * PAD : (W - 3 * PAD) / 2, blocks = [];
     for (const s of secs){
       let y = 0; const items = [];
       items.push({ t: 'title', y, text: s.title }); y += TITLE_H;
@@ -68,14 +70,14 @@ export function appPanel(frame, opt = {}){
       for (const it of sw){ items.push({ t: 'switch', it, x: 0, y, w: CW, h: ROW_H }); y += ROW_H; }
       blocks.push({ items, h: y + GAP + 10 });
     }
-    const colY = [PAD + 52, PAD + 52], plan = [];
+    const colY = ONE ? [TOP, Infinity] : [TOP, TOP], plan = [];
     for (const b of blocks){ const c = colY[0] <= colY[1] ? 0 : 1, ox = PAD + c * (CW + PAD), oy = colY[c];
       for (const p of b.items) plan.push({ ...p, x: (p.x || 0) + ox, y: p.y + oy }); colY[c] += b.h; }
-    const H = Math.ceil(Math.max(colY[0], colY[1]) + (foot ? 46 : 0) + PAD - 10);
+    const H = Math.ceil((ONE ? colY[0] : Math.max(colY[0], colY[1])) + (foot ? 46 : 0) + PAD - 10);
     if (cv.height !== H) cv.height = H;
     const g = cv.getContext('2d'); g.clearRect(0, 0, W, H);
-    g.fillStyle = 'rgba(14,14,16,0.96)'; rr(g, 0, 0, W, H, 36); g.fill();
-    g.fillStyle = '#f5f5f7'; g.font = `700 34px ${FONT}`; g.fillText(opt.title || (opt.lang === 'en' ? 'London map' : '伦敦地图'), PAD, PAD + 30);
+    if (!opt.bare){ g.fillStyle = 'rgba(14,14,16,0.96)'; rr(g, 0, 0, W, H, 36); g.fill();
+      g.fillStyle = '#f5f5f7'; g.font = `700 34px ${FONT}`; g.fillText(opt.title || (opt.lang === 'en' ? 'London map' : '伦敦地图'), PAD, PAD + 30); }
     hits = [];
     for (const p of plan){
       if (p.t === 'title'){ g.fillStyle = 'rgba(235,235,245,0.55)'; g.font = `600 22px ${FONT}`; g.fillText(p.text, p.x, p.y + 30); continue; }
