@@ -52,8 +52,8 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
         h('span', { class: `cat-status s-${status}` }, t(`cat.status.${status}`)),
         h('span', { class: 'cat-go', 'aria-hidden': 'true' }, '→')),
       h('div', { class: 'cat-body' },
-        h('div', { class: 'cat-meta' }, h('span', { class: 'mono' }, String(i + 1).padStart(2, '0')),
-          item.owner ? h('span', {}, item.owner) : null),
+        // the card's number only: who looks after an app stays in catalogue.json ("owner") but is not shown
+        h('div', { class: 'cat-meta' }, h('span', { class: 'mono' }, String(i + 1).padStart(2, '0'))),
         h('h3', {}, pick(item.title)),
         h('p', {}, pick(item.desc)),
         h('div', { class: 'cat-tags' }, (item.tags || []).map(tag => h('span', {}, pick(tag))))));
