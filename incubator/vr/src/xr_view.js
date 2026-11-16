@@ -15,7 +15,7 @@
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
-import { createHall } from './hall.js?v=0.25';
+import { createHall } from './hall.js?v=0.28';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -26,7 +26,7 @@ const T = {
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     views: [['hall', '展厅视角'], ['map', '只看地图']], exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['握持键 / 捏合：抓取模型 · 双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前', '左摇杆按下 / 点「面板」：打开控制面板'] },
+    hud: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 1.4 m disc.',
@@ -35,7 +35,7 @@ const T = {
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     views: [['hall', 'Gallery view'], ['map', 'Map only']], exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Grip / pinch: grab · both hands: scale, turn', 'Right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y bring it back', 'Left stick click / “Panel”: the controls'] }
+    hud: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
 };
 
 // ---------------------------------------------------------------- geometry (pure, testable in node)
@@ -576,6 +576,16 @@ export function open(api, lang = 'zh', opt = {}){
     session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: AR, antialias: true, stencil: true }), depthNear: 0.02, depthFar: 100 });
     const farFor = walk => session.updateRenderState({ depthNear: walk ? 0.1 : 0.02, depthFar: walk ? Math.min(150000, terrain.size * 1.5) : 100 });
     let ref; try { ref = await session.requestReferenceSpace('local-floor'); } catch (e){ ref = await session.requestReferenceSpace('local'); }
+    // walking in the hall (v0.28): the left stick moves YOU, by shifting the reference space; the hall and the map stay where they are
+    const baseRef = ref, off = [0, 0];
+    const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
+      const sp = 1.4 * dt, d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
+      // stay between the table and the screens (hall space: undo the hall's turn about its centre)
+      const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), wx = head[0] + d[0] - c[0], wz = head[2] + d[1] - c[2];
+      const lx = wx * cs - wz * sn, lz = wx * sn + wz * cs, r = Math.hypot(lx, lz) || 1e-6, [r0, r1] = H.walkR, rc = Math.max(r0, Math.min(r1, r)), k = rc / r;
+      const tx = c[0] + (lx * k) * cs + (lz * k) * sn, tz = c[2] - (lx * k) * sn + (lz * k) * cs;
+      off[0] -= tx - head[0]; off[1] -= tz - head[2];
+      ref = baseRef.getOffsetReferenceSpace(new XRRigidTransform({ x: off[0], y: 0, z: off[1] })); };
     const tableScale = (H ? (api.stream ? 2 * TR : TR * Math.SQRT2) : 0.9) / terrain.size;   // 90 cm across on the table (1.4 m disc in the hall)
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
@@ -600,12 +610,15 @@ export function open(api, lang = 'zh', opt = {}){
       else { const a = P[0].p, b = P[1].p; base = { one: false, mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], d: Math.hypot(a[0] - b[0], a[2] - b[2], a[1] - b[1]) || 1e-3, ang: yawOf(b[0] - a[0], b[2] - a[2]), pos: M.pos.slice(), yaw: M.yaw, s: M.s }; } };
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
     const rayHit = new Map(), rayLen = new Map(), barHit = new Map();   // input source → panel item under its ray · distance to the panel · point on the drag bar
-    const chipHit = new Map(); let chips = [];   // the little 「面板」 / 「收起」 buttons: input source → the one under its ray
+    const chipHit = new Map(); let chips = [];
+    const screenHit = new Map(); let detail = null;   // the screen under each ray · the screen opened large in front of you   // the little 「面板」 / 「收起」 buttons: input source → the one under its ray
     hidePanel();   // each session starts with the panel put away
     // the panel: on the left hand, or placed anywhere in the room (drag its bar); pm.w = width in metres
     pm.grab = null;
     const add = (e, select) => { const src = e.inputSource;
       if (select && chipHit.has(src)){ chipHit.get(src).act(); return; }
+      if (select && screenHit.has(src)){ const k = screenHit.get(src).k; detail = detail && detail.k === k ? null : { k, pose: null }; return; }
+      if (select && detail && !rayLen.has(src)){ detail = null; return; }
       // drag the panel by its bar (trigger, grip or pinch), or by its face with the grip
       const g = barHit.get(src) || (!select && rayLen.has(src) && rayHit.has(src) ? src.__panelLocal : null);
       if (pm.mode !== 'off' && g){ pm.grab = { src, t0: g.t, lu: g.lx, lv: g.ly }; return; }
@@ -643,7 +656,8 @@ export function open(api, lang = 'zh', opt = {}){
         if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
-          else if (dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
+          else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
+          else if (!hallShown() && dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
       // walk: keep the ground under your feet
       if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
         if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
@@ -652,7 +666,9 @@ export function open(api, lang = 'zh', opt = {}){
       if (base && base !== 'pending'){ const P = sources().map(s => poseOf(frame, s)).filter(Boolean);
         if (base.one && P.length === 1){ const d = P[0].yaw - base.hy, r = rotY([base.pos[0] - base.h[0], base.pos[1] - base.h[1], base.pos[2] - base.h[2]], d); M.pos = [P[0].p[0] + r[0], P[0].p[1] + r[1], P[0].p[2] + r[2]]; M.yaw = base.yaw + d; }
         else if (!base.one && P.length === 2){ const a = P[0].p, b = P[1].p, mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], k = Math.max(0.05, Math.min(40, (Math.hypot(a[0] - b[0], a[2] - b[2], a[1] - b[1]) || 1e-3) / base.d)), d = yawOf(b[0] - a[0], b[2] - a[2]) - base.ang;
-          const r = rotY([base.pos[0] - base.mid[0], base.pos[1] - base.mid[1], base.pos[2] - base.mid[2]], d); M.s = base.s * k; M.pos = [mid[0] + r[0] * k, mid[1] + r[1] * k, mid[2] + r[2] * k]; M.yaw = base.yaw + d; } }
+          const r = rotY([base.pos[0] - base.mid[0], base.pos[1] - base.mid[1], base.pos[2] - base.mid[2]], d); M.s = base.s * k; M.pos = [mid[0] + r[0] * k, mid[1] + r[1] * k, mid[2] + r[2] * k]; M.yaw = base.yaw + d; }
+        // in the hall the map never leaves its table: a grab slides and turns the London map under the disc (a still model just turns)
+        if (hallShown()){ M.pos[1] = H.tableTop + 0.004; if (!api.stream){ M.pos[0] = M.anchor[0]; M.pos[2] = M.anchor[2]; } } }
       // draw
       const layer = session.renderState.baseLayer; gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
       env = envFn(); const sky = skyColour();
@@ -707,6 +723,20 @@ export function open(api, lang = 'zh', opt = {}){
           const tt = ((c[0] - r.o[0]) * z[0] + (c[1] - r.o[1]) * z[1] + (c[2] - r.o[2]) * z[2]) / den; if (tt <= 0 || tt > 6) continue;
           const q = [0, 1, 2].map(j => r.o[j] + r.d[j] * tt - c[j]), lx = q[0] * x[0] + q[1] * x[1] + q[2] * x[2], ly = q[0] * y[0] + q[1] * y[1] + q[2] * y[2];
           if (Math.abs(lx) <= ch.w / 2 && Math.abs(ly) <= ch.h / 2 * 1.4){ chipHit.set(s, ch); ch.hot = true; rayLen.set(s, tt); rayHit.delete(s); barHit.delete(s); } } }
+      // the hall's screens: rays that meet nothing else may point at one (hall space: undo the hall's turn)
+      screenHit.clear(); let hotK = null;
+      if (hallShown()){ const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), toL = v => [v[0] * cs - v[2] * sn, v[1], v[0] * sn + v[2] * cs];
+        for (const s of session.inputSources){ if (rayLen.has(s) || !s.targetRaySpace || (pm.mode === 'hand' && s === leftS)) continue; const r = rayOf(s); if (!r) continue;
+          const o = toL([r.o[0] - c[0], r.o[1] - c[1], r.o[2] - c[2]]), dl = toL(r.d); let best = null;
+          for (const sc of H.screens){ const den = dl[0] * sc.n[0] + dl[2] * sc.n[2]; if (den > -1e-4) continue;
+            const tt = ((sc.c[0] - o[0]) * sc.n[0] + (sc.c[2] - o[2]) * sc.n[2]) / den; if (tt <= 0 || tt > 12 || (best && tt > best.t)) continue;
+            const q = [o[0] + dl[0] * tt - sc.c[0], o[1] + dl[1] * tt - sc.c[1], o[2] + dl[2] * tt - sc.c[2]];
+            if (Math.abs(q[0] * sc.u[0] + q[2] * sc.u[2]) <= sc.w / 2 && Math.abs(q[1]) <= sc.h / 2) best = { t: tt, k: sc.k }; }
+          if (best){ screenHit.set(s, best); rayLen.set(s, best.t); hotK = best.k; } }
+        // the opened screen: 1.2 m in front of you, at eye height, turned to you
+        if (detail && !detail.pose){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, pc = [head[0] + f[0] / l * 1.2, head[1] - 0.08, head[2] + f[2] / l * 1.2]; detail.pose = { c: pc, ...facing(pc) }; } }
+      else detail = null;
+      H?.setHot(hotK);
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
@@ -733,6 +763,9 @@ export function open(api, lang = 'zh', opt = {}){
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
           gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.disable(gl.BLEND); }
+        if (detail && detail.pose){ const { c, x, y, z } = detail.pose;
+          gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, c, [1.4, 0.8]));
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, H.boardTexture(detail.k)); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(hq); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
         if (chips.length){ gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V);
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(hq);
           for (const ch of chips){ const sc = ch.hot ? 1.08 : 1; gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(ch.x, ch.y, ch.z, ch.c, [ch.w * sc, ch.h * sc])); gl.bindTexture(gl.TEXTURE_2D, ch.hot ? ch.tex.hot : ch.tex.idle); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
