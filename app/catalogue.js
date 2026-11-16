@@ -48,7 +48,7 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
       onclick: open, 'aria-label': pick(item.title)
     },
       h('div', { class: 'cat-cover' },
-        item.cover ? h('img', { src: item.cover, alt: '', loading: i < 3 ? 'eager' : 'lazy', decoding: 'async' }) : h('div', { class: 'cat-cover-empty' }),
+        item.cover ? h('img', { src: pick(item.cover), alt: '', loading: i < 3 ? 'eager' : 'lazy', decoding: 'async' }) : h('div', { class: 'cat-cover-empty' }),
         h('span', { class: `cat-status s-${status}` }, t(`cat.status.${status}`)),
         h('span', { class: 'cat-go', 'aria-hidden': 'true' }, '→')),
       h('div', { class: 'cat-body' },
