@@ -11,7 +11,7 @@
 //   right stick: turn / scale · left stick: raise / lower (in walk mode: move, right stick = snap turn)
 //   A = flood risk on / off · B = table ↔ walk 1 : 1 · X = existing streets · Y = put it back in front of me
 // Hands: pinch = grab, two pinches = scale.
-// VR (not MR): the map stands on a table in an exhibition hall (src/hall.js, v0.21); opt.hall = 'auto' | 'day' | 'night' | 'violet', '0' = no hall.
+// VR and MR (v0.27): the map stands on a table in an exhibition hall (src/hall.js, v0.21); opt.hall = 'auto' | 'day' | 'night' | 'violet', '0' = no hall.
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
@@ -20,7 +20,7 @@ import { createHall } from './hall.js?v=0.25';
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。',
-    vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '看见真实房间，地图放在你面前的桌子上，圆盘 0.9 m。',
+    vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 1.4 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['day', '白昼'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
@@ -29,7 +29,7 @@ const T = {
     hud: ['握持键 / 捏合：抓取模型 · 双手：缩放与旋转', '右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 放回面前', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.',
-    vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'See your real room; the map sits on the table in front of you, a 0.9 m disc.',
+    vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 1.4 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['day', 'Day'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
@@ -566,8 +566,8 @@ export function open(api, lang = 'zh', opt = {}){
     catch (e){ try { session = await navigator.xr.requestSession(mode, { optionalFeatures: ['local-floor', 'hand-tracking'] }); } catch (e2){ note.textContent = String(e2.message || e2); return; } }
     xrSession = session; await gl.makeXRCompatible();
     hallPose = null;   // a new session has a new floor origin
-    if (hallOn && !AR && !hall){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
-    const H = hallOn && !AR ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall (none in MR)
+    if (hallOn && !hall){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
+    const H = hallOn ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall: in VR and, since v0.27, in MR too
     const hallShown = () => H && !st.walk && hallPose;
     // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
     root.classList.add('immersive'); const exitB = document.createElement('button'); exitB.className = 'btn exit'; exitB.textContent = AR ? L.exitAR : L.exit;
@@ -656,7 +656,7 @@ export function open(api, lang = 'zh', opt = {}){
       // draw
       const layer = session.renderState.baseLayer; gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
       env = envFn(); const sky = skyColour();
-      if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (hallShown()){ const c = H.clearColour(hallMood()); gl.clearColor(c[0], c[1], c[2], 1); } else if (st.walk || api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
+      if (hallShown()){ const c = H.clearColour(hallMood()); gl.clearColor(c[0], c[1], c[2], 1); } else if (AR && !st.walk) gl.clearColor(0, 0, 0, 0); else if (st.walk || api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.07, 0.07, 0.08, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
       if (api.stream){ const at = st.walk ? head : M.anchor, d = rotY([at[0] - M.pos[0], 0, at[2] - M.pos[2]], -M.yaw);
         updateTiles(t, d[0] / M.s, -d[2] / M.s, st.walk ? 1500 : Math.max(300, Math.min(R_WORLD, TR / M.s))); }
