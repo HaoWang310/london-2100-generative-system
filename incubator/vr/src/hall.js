@@ -40,8 +40,8 @@ export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.
   const a = t + C.twist * v; return [r * Math.cos(a), y, r * Math.sin(a)]; }
 
 /** benches: [angle°, radius m, extra yaw°] around the table */
-export const BENCH_SLOTS = [[205, 2.95, 8], [245, 3.35, -10], [295, 3.0, 12], [335, 3.35, -6]];
-export const SCREEN = { R: 4.5, w: 2.4, h: 1.35, y: 1.6, at: [130, 166, 202, 238, 274, 310, 346] };
+export const BENCH_SLOTS = [[212, 3.15, 6], [328, 3.15, -6]];   // v0.32: two benches, at the sides
+export const SCREEN = { R: 4.5, w: 2.4, h: 1.35, y: 1.6, at: [236, 270, 304], boards: [0, 4, 6] };   // v0.32: three screens behind the table (hydrology · 2100 floods · the multi-scale system)
 // v0.22 · the gallery around the table (after the Winton Gallery): a lowered soffit with cove light, and model plinths on the floor
 export const SOFFIT = { y: 3.0, depth: 0.95, fascia: 0.18 };
 export const soffitY = t => SOFFIT.y + 0.3 * Math.sin(2 * t + 1.1) + 0.12 * Math.sin(5 * t);
@@ -244,9 +244,9 @@ export function createHall(gl, opt = {}){
   const frames = [], boards = BOARDS[lang];
   const boardTex = [], screens = [];
   SCREEN.at.forEach((deg, k) => { const a = deg * Math.PI / 180, len = SCREEN.w / SCREEN.R, th0 = Math.PI / 2 - a - len / 2, { R, h, y } = SCREEN;
-    boardTex[k] = tex(boardC(boards[k]));
+    const b = boards[SCREEN.boards[k]]; boardTex[k] = tex(boardC(b));
     // for pointing at it: the chord's centre, the way it faces (to the table), its width and height (hall space)
-    screens.push({ k, c: [R * Math.cos(a), y, R * Math.sin(a)], n: [-Math.cos(a), 0, -Math.sin(a)], u: [-Math.sin(a), 0, Math.cos(a)], w: SCREEN.w, h, title: boards[k][1] });
+    screens.push({ k, c: [R * Math.cos(a), y, R * Math.sin(a)], n: [-Math.cos(a), 0, -Math.sin(a)], u: [-Math.sin(a), 0, Math.cos(a)], w: SCREEN.w, h, title: b[1] });
     add(flipU(band(R, y - h / 2, y + h / 2, th0, len, 24, [1, 1, 1])), { map: boardTex[k], emiSelf: true, glow: { day: 0.35, night: 0.9, violet: 0.8 }, tint: 'white', screen: k });
     const pad = 0.1 / R, fl = 0.2 / R;
     frames.push(band(R + 0.03, y - h / 2 - 0.08, y + h / 2 + 0.08, th0 - pad, len + 2 * pad, 24, WHITE), band(R + 0.03, 0, y - h / 2 - 0.08, Math.PI / 2 - a - fl / 2, fl, 8, WHITE)); });
