@@ -214,7 +214,10 @@
     {
       "id": "vr",
       "href": "incubator/vr/",
-      "cover": "incubator/vr/assets/cover.webp",
+      "cover": {
+        "zh": "incubator/vr/assets/cover-zh.webp",
+        "en": "incubator/vr/assets/cover-en.webp"
+      },
       "status": "incubating",
       "title": {
         "zh": "VR / MR · Quest 3S",
