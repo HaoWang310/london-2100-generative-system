@@ -54,7 +54,10 @@ for (const item of items) {
       const dir = item.href.replace(/^\.\//, '');
       assert.ok(existsSync(join(ROOT, dir, 'index.html')), `${dir}index.html does not exist`);
     }
-    if (item.cover) assert.ok(existsSync(join(ROOT, item.cover)), `cover ${item.cover} does not exist`);
+    // a cover is one path, or { zh, en } like the title (one image per language)
+    if (item.cover){ const covers = typeof item.cover === 'string' ? [item.cover] : Object.values(item.cover);
+      assert.ok(covers.length && covers.every(c => typeof c === 'string'), `cover of ${item.id} must be a path or { zh, en }`);
+      for (const c of covers) assert.ok(existsSync(join(ROOT, c)), `cover ${c} does not exist`); }
     if (item.embed?.hide !== undefined) assert.ok(Array.isArray(item.embed.hide), 'embed.hide must be a list');
   });
 }
