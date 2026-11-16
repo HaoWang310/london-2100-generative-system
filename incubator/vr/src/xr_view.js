@@ -15,7 +15,7 @@
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
-import { createHall } from './hall.js?v=0.33';
+import { createHall } from './hall.js?v=0.34';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -453,13 +453,13 @@ export function open(api, lang = 'zh', opt = {}){
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
     setEnvUniforms();
     gl.useProgram(prog.p); gl.uniformMatrix4fv(prog.u.uP, false, P); gl.uniformMatrix4fv(prog.u.uV, false, V); gl.uniformMatrix4fv(prog.u.uM, false, M);
-    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : [0, 0, -1]); gl.uniform3fv(prog.u.uTint, [1, 1, 1]);
+    gl.uniform1f(prog.u.uExag, o.exag); gl.uniform1f(prog.u.uAlpha, 1); gl.uniform3fv(prog.u.uClip, api.stream ? clip : sceneClip); gl.uniform3fv(prog.u.uTint, [1, 1, 1]);
     if (api.stream){ drawTiles(P, V, M); return; }
     gl.uniform1f(prog.u.uWidth, 0); gl.uniform1f(prog.u.uLift, 0);
     if (gTex){ gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4); }
     gl.bindVertexArray(tMesh.vao); gl.drawElements(gl.TRIANGLES, tMesh.n, gl.UNSIGNED_INT, 0); gl.disable(gl.POLYGON_OFFSET_FILL);
     if (xMesh && st.bld){ gl.bindVertexArray(xMesh.vao); gl.drawElements(gl.TRIANGLES, xMesh.n, gl.UNSIGNED_INT, 0); }
-    if (gTex){ gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, [0, 0, -1]);
+    if (gTex){ gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, sceneClip);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gTex); gl.uniform1i(tex.u.uT, 0); gl.bindVertexArray(gQuad); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.useProgram(prog.p); }
     gl.uniform1f(prog.u.uWidth, o.width); gl.uniform1f(prog.u.uLift, o.lift);
     if (st.fixed && fMesh.n){ gl.bindVertexArray(fMesh.vao); gl.drawElements(gl.TRIANGLES, fMesh.n, gl.UNSIGNED_INT, 0); }
@@ -471,7 +471,14 @@ export function open(api, lang = 'zh', opt = {}){
   if (hallOn){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
   let hallSel = ['day', 'night', 'violet'].includes(opt.hall) ? opt.hall : 'auto';
   const hallMood = () => hallSel !== 'auto' ? hallSel : env.night > 0.5 ? 'night' : 'day';
-  const hcam = { yaw: 0, pitch: 0.34, dist: 3.0 }, deskR = 0.7, deskS = () => (api.stream ? 2 * deskR : deskR * Math.SQRT2) / terrain.size;
+  // v0.34 · a still model fills the hall's table: the disc spans its Greater London outline (or its smallest outline) with a margin,
+  // cut round at the table's edge (the square plinth goes too); without outlines the whole square fits as before
+  const fitR = (() => { const os = (api.outlines || []).filter(o => o.pts && o.pts.length > 2); if (!os.length) return terrain.size / Math.SQRT2;
+    const r = o => Math.max(...o.pts.map(p => Math.hypot(p[0] - terrain.cx, p[1] - terrain.cy)));
+    const gl_ = os.find(o => /greater london|大伦敦/i.test(o.label || '')) || os.slice().sort((a, b) => r(a) - r(b))[0];
+    return Math.min(terrain.size / Math.SQRT2, r(gl_) * 1.15); })();
+  let sceneClip = [0, 0, -1];   // model space: x, z, radius (−1 = none)
+  const hcam = { yaw: 0, pitch: 0.34, dist: 3.0 }, deskR = 0.7, deskS = () => api.stream ? 2 * deskR / terrain.size : deskR / fitR;
   let pv = hall ? 'hall' : 'map';
   const viewSeg = root.querySelector('.viewSeg'), syncView = () => viewSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.view === pv));
   if (hall){ viewSeg.hidden = false; root.querySelector('.hallGrp').hidden = false; syncView();
@@ -489,6 +496,7 @@ export function open(api, lang = 'zh', opt = {}){
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     env = envFn(); const sky = skyColour();
     if (pv === 'hall' && hall){ previewHall(t, w, h); return; }
+    sceneClip = [0, 0, -1];
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); if (api.stream) gl.clearColor(sky[0], sky[1], sky[2], 1); else gl.clearColor(0.067, 0.067, 0.075, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
     const eye = [cam.tx + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.dist * Math.sin(cam.pitch), cam.tz + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
@@ -509,6 +517,7 @@ export function open(api, lang = 'zh', opt = {}){
     fogSet = api.stream ? { e: [clip[0], 0, clip[1]], r0: clip[2] * 0.3, r1: clip[2] * 1.05, a: env.haze, c: env.fog } : { e: [0, 0, 0], r0: 0, r1: 1, a: 0, c: env.fog };
     carScale = Math.max(1, clip[2] / 600);
     hall.draw(Pm, Vm, M4.id(), mood);
+    sceneClip = api.stream ? [0, 0, -1] : [0, 0, deskR / ms];
     drawScene(Pm, Vm, M4.trs([0, y0 + 0.004, 0], 0, ms), { exag: st.exag, width: 1.6, lift: Math.max(0.0015 / ms, 0.05) });
     if (api.stream) drawWeather(Pm, Vm, [0, y0, 0], deskR, deskR * 0.93, h); }
   // the sky behind the model: the app's sky colour, greyed by the weather
@@ -592,7 +601,7 @@ export function open(api, lang = 'zh', opt = {}){
       shift(hallPose.c); hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); shift(M.pos); shift(M.anchor);
       if (pm.mode === 'world') shift(pm.c); if (detail?.pose) shift(detail.pose.c); };
     window.__vrWalk = () => ({ hall: hallPose && hallPose.c.slice(), map: M.pos.slice() });   // for checking from the console / tests
-    const tableScale = (H ? (api.stream ? 2 * TR : TR * Math.SQRT2) : 0.9) / terrain.size;   // 90 cm across on the table (1.4 m disc in the hall)
+    const tableScale = H ? (api.stream ? 2 * TR / terrain.size : TR / fitR) : 0.9 / terrain.size;   // 90 cm across on the table; in the hall the 1.4 m disc is filled
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
     const chipTex = { show: chipTexture(lang === 'zh' ? '☰  面板' : '☰  Panel'), hide: chipTexture(lang === 'zh' ? '收起' : 'Hide') };
@@ -748,6 +757,7 @@ export function open(api, lang = 'zh', opt = {}){
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
       for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         if (hallShown()) H.draw(P, V, hallPose.m, hallMood());
+        sceneClip = hallShown() && !api.stream ? [0, 0, TR / M.s] : [0, 0, -1];   // the table's edge, whatever the zoom
         drawScene(P, V, Mm, o);
         if (api.stream){ if (st.walk) drawWeather(P, V, [head[0], 0, head[2]], 14, 16, vp.height); else if (M.anchor) drawWeather(P, V, [M.anchor[0], M.pos[1], M.anchor[2]], TR, TR * 0.93, vp.height); }
         // controller rays
