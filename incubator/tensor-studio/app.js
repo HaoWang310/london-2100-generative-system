@@ -1983,7 +1983,7 @@ function drawNet(full){ const g = g2d(L_net); if (full){ g.clearRect(0, 0, VW, V
   if (SCRUB){ for (let i = 0; i < SCRUB.n.length; i++){ const l = SCRUB.o[i], n = SCRUB.n[i]; if (!l || n < 2) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
       if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; const Pp = SCRUB.p[i]; pathLine(g, Pp.length === n ? Pp : Pp.slice(0, n)); g.stroke(); }
     g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; return; }
-  const atWidth = $('lWidth').checked && FINISHED;   // (v8.41) at width the road surface alone tells the grades apart: no centre lines (the edges stay)
+  const atWidth = $('lWidth').checked && FINISHED && !SCRUB;   // (v8.41) at width the road surface alone tells the grades apart: no centre lines (the edges stay)
   for (let i = netDrawn; i < LINES.length; i++){ const l = LINES[i]; if (l.dead || (atWidth && l.level > 0)) continue; const [col, w] = styleFor(l); g.strokeStyle = col; g.lineWidth = w;
     if (THEME === 'dark' && l.level === 1){ g.shadowBlur = 6; } else g.shadowBlur = 0; pathLine(g, l.pts); g.stroke(); }
   g.shadowBlur = 0; netDrawn = LINES.length; netDirty = false; }
@@ -2032,11 +2032,6 @@ function streetWidths(){ const by = $('wBy').value, ls = LINES.filter(l => !l.de
   for (const l of LINES) if (!l.dead && l.circus) out.push({ pts: l.pts, w: l.pts.map(() => widthOf(1)), level: 1 });
   return out; }
 function rampCol(w){ const lo = v('wMin'), hi = Math.max(v('wMax'), lo + 1), t = clamp((w - lo) / (hi - lo), 0, 1); return 'rgb(' + mix(P.wLo, P.wHi, t).join(',') + ')'; }
-function strokeVar(g, sw, pad, colour){ // each segment at its own width; round caps join them
-  for (const st of sw){ const Pp = st.pts; let k = 1;
-    while (k < Pp.length){ const w = st.w[k]; g.beginPath(); g.moveTo(X(Pp[k - 1][0]), Y(Pp[k - 1][1]));
-      while (k < Pp.length && st.w[k] === w){ g.lineTo(X(Pp[k][0]), Y(Pp[k][1])); k++; }
-      g.lineWidth = (w + pad) * view.s; if (colour) g.strokeStyle = rampCol(w); g.stroke(); } } }
 /* (v8.42) the road surface as a real city's: every street at its exact width, coloured by grade (or by width for the other
  * drivers), no centre lines; and at every junction a kerb fillet in each corner, worked out for that corner alone:
  * - the junctions are found from the streets themselves: an end on another street's side (a T), two streets crossing (an
@@ -2438,7 +2433,7 @@ function render(now){
   ctx.drawImage(L_base, 0, 0);
   if (window.ENVANIM && ENVANIM.on) ENVANIM.draw(ctx, now);   // (v8.9) the analysis map, animated (step 2)
   if ($('lFlow').checked) ctx.drawImage(L_flow, 0, 0);
-  if ($('lWidth').checked && FINISHED){ if (widthDirty) drawWidth(); ctx.drawImage(L_width, 0, 0); }
+  if ($('lWidth').checked && FINISHED && !SCRUB){ if (widthDirty) drawWidth(); ctx.drawImage(L_width, 0, 0); }   // (v8.44.1) not over a frame of the growth on the timeline: that frame's streets are drawn as lines
   if (GHOST && $('lStreets').checked){ const ga = GHOSTT ? clamp(1 - (now - GHOSTT) / 1600, 0, 1) : 1; if (ga > 0){ ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = ga;
       ctx.strokeStyle = P.ghost; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const g of GHOST){ ctx.lineWidth = g.level === 1 ? 2.6 : 1.0; ctx.beginPath(); g.pts.forEach((p, k) => k ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))); ctx.stroke(); }
       ctx.restore(); } else GHOST = null; }
