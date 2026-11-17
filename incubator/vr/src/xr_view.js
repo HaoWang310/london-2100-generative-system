@@ -24,7 +24,7 @@ const T = {
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['day', '白昼'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
-    views: [['hall', '展厅视角'], ['map', '只看地图']], exit: '退出 VR', exitAR: '退出 MR',
+    exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
     hud: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
@@ -33,7 +33,7 @@ const T = {
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['day', 'Day'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
-    views: [['hall', 'Gallery view'], ['map', 'Map only']], exit: 'Exit VR', exitAR: 'Exit MR',
+    exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
     hud: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
 };
@@ -226,8 +226,6 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR .keys i{font-style:normal;height:22px;border-radius:6px;background:#2c2c2e;color:#f5f5f7;font:11px ui-monospace,'SF Mono',Menlo,monospace;display:flex;align-items:center;justify-content:center}
 #tsXR .stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:#0a0a0b}
 #tsXR canvas.view{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
-#tsXR .viewSeg{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(28,28,30,.78);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(16px)}
-#tsXR .viewSeg button{height:32px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:#a1a1a6;font-size:12px}#tsXR .viewSeg button.on{background:#f5f5f7;color:#000;font-weight:600}
 #tsXR .showSet{position:absolute;right:16px;top:16px}
 #tsXR .insp{grid-area:insp;background:#111113;border-left:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0}
 #tsXR .insp header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px}#tsXR .insp header b{font-size:15px;font-weight:600}
@@ -237,7 +235,7 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR .foot{grid-area:foot;display:flex;align-items:center;gap:10px;padding:0 20px;border-top:1px solid rgba(255,255,255,.08);background:#0a0a0b;min-width:0}
 #tsXR .dot{width:8px;height:8px;border-radius:50%;background:#8fb59a;flex:none}#tsXR .note{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tsXR.immersive{display:block;background:transparent;pointer-events:none}
-#tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .viewSeg,#tsXR.immersive .showSet,#tsXR.immersive .brand,#tsXR.immersive .crumbs,#tsXR.immersive .loc{display:none}
+#tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .showSet,#tsXR.immersive .brand,#tsXR.immersive .crumbs,#tsXR.immersive .loc{display:none}
 #tsXR.immersive .stage{position:fixed;inset:0;background:transparent}
 #tsXR.immersive .top{position:fixed;top:0;left:0;right:0;z-index:2;height:auto;padding:16px;background:transparent;border:0;pointer-events:none}
 #tsXR.immersive .top .btn{pointer-events:auto;border-radius:999px;backdrop-filter:blur(18px);background:rgba(44,44,46,.82)}#tsXR.immersive .top .btn.exit{background:#d9c4a3}
@@ -267,7 +265,6 @@ export function open(api, lang = 'zh', opt = {}){
   <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
 </aside>
 <main class="stage"><canvas class="view"></canvas>
-  <div class="viewSeg" role="group" hidden>${L.views.map(([k, t]) => `<button type="button" data-view="${k}">${t}</button>`).join('')}</div>
   <button class="btn showSet" type="button" hidden>${L.showSet}</button></main>
 <aside class="insp" aria-label="${L.settings}"><header><b>${L.settings}</b><button class="icon hideSet" type="button" aria-label="${L.hideSet}">${ic.fold}</button></header></aside>
 <footer class="foot"><span class="dot" aria-hidden="true"></span><span class="note"></span></footer>`;
@@ -479,10 +476,8 @@ export function open(api, lang = 'zh', opt = {}){
     return Math.min(terrain.size / Math.SQRT2, r(gl_) * 1.15); })();
   let sceneClip = [0, 0, -1];   // model space: x, z, radius (−1 = none)
   const hcam = { yaw: 0, pitch: 0.34, dist: 3.0 }, deskR = 0.7, deskS = () => api.stream ? 2 * deskR / terrain.size : deskR / fitR;
-  let pv = hall ? 'hall' : 'map';
-  const viewSeg = root.querySelector('.viewSeg'), syncView = () => viewSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.view === pv));
-  if (hall){ viewSeg.hidden = false; root.querySelector('.hallGrp').hidden = false; syncView();
-    viewSeg.onclick = e => { const b = e.target.closest('button'); if (b){ pv = b.dataset.view; syncView(); } };
+  const pv = hall ? 'hall' : 'map';   // v0.35: the preview is always the hall (the map-only switch is gone); 'map' only when the hall is off
+  if (hall){ root.querySelector('.hallGrp').hidden = false;
     const moods = root.querySelector('.mood'), syncMood = () => moods.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mood === hallSel)); syncMood();
     moods.onclick = e => { const b = e.target.closest('button'); if (b){ hallSel = b.dataset.mood; syncMood(); } }; }
   cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam }, h: { ...hcam } }; cv.setPointerCapture(e.pointerId); });
