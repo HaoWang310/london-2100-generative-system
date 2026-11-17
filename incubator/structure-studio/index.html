@@ -53,6 +53,15 @@ button,input,select{font-family:inherit}
 .row .val{flex:1;width:auto;color:var(--ink)}
 .mini{border:1px solid #46464b;background:#2c2c30;color:#f5f5f7;border-radius:10px;font:inherit;font-size:11.5px;font-weight:600;padding:5px 10px;cursor:pointer;white-space:nowrap}
 .mini:hover{background:#414146}
+.mini.primary{background:#f5f5f7;color:#121214;border-color:#f5f5f7}.mini.primary:hover{background:#d1d1d6}
+.mini:disabled{opacity:.4;cursor:default}
+.btns2{display:flex;gap:6px;padding:4px 0 10px;border-bottom:.5px solid var(--line)}.btns2 .mini{flex:1;padding:7px 8px}
+#tsOverlay{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:14px}
+#tsOverlay.on{display:flex}
+#tsOverlay .tsBar{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:0 0 10px;background:rgba(14,14,16,.96);border:1px solid #2f2f34;border-radius:14px;font-size:12.5px}
+#tsOverlay .tsBar b{font-size:13.5px}#tsOverlay .tsBar span{flex:1;color:#a1a1a6;line-height:1.45}
+#tsOverlay .tsBar .mini{padding:7px 14px;font-size:12.5px}
+#tsOverlay iframe{flex:1;width:100%;border:1px solid #2f2f34;border-radius:14px;background:#000}
 .note{margin:6px 0 10px;font-size:11.5px;line-height:1.55;color:var(--grey)}
 input[type=range]{-webkit-appearance:none;appearance:none;height:20px;background:transparent;margin:0;cursor:pointer}
 input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--track)}
@@ -161,7 +170,8 @@ body.cards-on #cardBar{display:flex}
   </div>
   <div class="ts-divider"></div>
   <div class="grp"><h2>场地</h2><div class="card">
-    <div class="row"><label>张量场快照</label><b class="val" id="v_snap">车站 P2</b><button type="button" class="mini" id="loadBtn">载入…</button><input type="file" id="snapFile" accept=".json" hidden></div>
+    <div class="row"><label>张量场结果</label><b class="val" id="v_snap">车站 P2</b></div>
+    <div class="btns2"><button type="button" class="mini primary" id="tsBtn">从张量场工作室取结果</button><button type="button" class="mini" id="loadBtn">载入文件…</button><input type="file" id="snapFile" accept=".json" hidden></div>
     <div class="row"><label for="seed">骨架种子</label><input type="range" id="seed" min="1" max="200" step="1" value="3"><output id="v_seed">3</output></div>
     <p class="note" id="siteHint"></p>
   </div></div>
@@ -234,6 +244,10 @@ body.cards-on #cardBar{display:flex}
 
 <div class="rsz" id="rszL" role="separator" aria-orientation="vertical" aria-label="拖动调整参数栏宽度" tabindex="0"></div>
 <div class="rsz" id="rszR" role="separator" aria-orientation="vertical" aria-label="拖动调整显示栏宽度" tabindex="0"></div>
+<div id="tsOverlay" role="dialog" aria-modal="true" aria-label="张量场工作室">
+  <div class="tsBar"><b>张量场工作室</b><span id="tsMsg">在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边"用这个结果"，结构会在这条路网上重新生成。</span><button type="button" class="mini primary" id="tsUse" disabled>用这个结果</button><button type="button" class="mini" id="tsCancel">取消</button></div>
+  <iframe id="tsFrame" title="张量场工作室"></iframe>
+</div>
 <div id="cardBar"><div class="cbHead"><b>室</b><span id="cbSum"></span><button type="button" id="fitBtn2" class="mini">全部场地</button><button type="button" id="cbHide" class="mini" aria-label="隐藏室列表">隐藏</button></div><div id="cards"></div></div>
 <button type="button" id="cbShow" class="mini">室列表 ▴</button>
 
@@ -243,13 +257,13 @@ body.cards-on #cardBar{display:flex}
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // ---- 中英文：独立打开时用自己的切换；在目录里打开时跟随主程序（postMessage l2100:lang / 本地存储）
-const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴"};
+const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
 const KIND_EN = { '水滴': 'teardrop', '梭形': 'spindle', '枕形': 'pillow' };
 let LANG = (() => { try { return /^en/.test(localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || 'zh') ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
 const L = (zh, en) => LANG === 'en' ? en : zh, KD = k => L(k, KIND_EN[k] || k);
 const ZH0 = new WeakMap(), AT0 = new WeakMap();
 function translateStatic() {
-  const roots = [$('panel'), document.querySelector('.displayPanel'), $('cardBar'), $('cbShow'), $('busy'), $('dlbox'), $('hud')];
+  const roots = [$('panel'), document.querySelector('.displayPanel'), $('cardBar'), $('cbShow'), $('busy'), $('dlbox'), $('hud'), $('tsOverlay')];
   for (const r of roots) { if (!r) continue; const w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT); let n;
     while ((n = w.nextNode())) { if (!ZH0.has(n)) ZH0.set(n, n.nodeValue); const zh = ZH0.get(n), k = zh.trim(); if (!k || !EN[k]) continue; n.nodeValue = LANG === 'en' ? zh.replace(k, EN[k]) : zh; }
     r.querySelectorAll('[aria-label]').forEach(e => { if (!AT0.has(e)) AT0.set(e, e.getAttribute('aria-label')); const zh = AT0.get(e); e.setAttribute('aria-label', LANG === 'en' && EN[zh] ? EN[zh] : zh); }); }
@@ -484,6 +498,29 @@ async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP); $(
   siteText();
   focus = null; solve(false); }
 $('loadBtn').onclick = () => $('snapFile').click();
+// ---- 从张量场工作室直接取结果：在本页里打开张量场工作室（同源 iframe），跑完后读它的正式路网与张量场（不改张量场工作室）
+function snapshotFrom(win, step = 10) {
+  const T = win.__ts6, R = T && T.roadNet(); if (!R) return null;
+  const D = T.D, r1 = v => Math.round(v * 10) / 10, Pp = pts => pts.map(q => [r1(q[0]), r1(q[1])]), fa = win.fieldAtT;
+  const nx = Math.ceil(D.w / step) + 1, ny = Math.ceil(D.h / step) + 1, f = new Uint8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a = typeof fa === 'function' ? fa(i * step, j * step) : null; f[j * nx + i] = a == null ? 255 : Math.round((((a % Math.PI) + Math.PI) % Math.PI) / Math.PI * 254); }
+  let bin = ''; for (let i = 0; i < f.length; i++) bin += String.fromCharCode(f[i]);
+  return { format: 'structure-studio/snapshot@1', source: 'tensor-studio', exported: new Date().toISOString(), site: D.station ? 'station-p2' : 'london-site', origin: D.origin, crs: 'EPSG:27700 (local metres = BNG − origin)', w: D.w, h: D.h,
+    pieces: D.pieces.map(pc => ({ outer: Pp(pc.outer), holes: (pc.holes || []).map(Pp) })), water: (D.ctx.water || []).map(w => w.map(Pp)), streams: (D.ctx.streams || []).map(Pp),
+    attractors: T.attr.map(a => ({ x: a.x, y: a.y, kind: a.kind })), roads: R.streets.map(st => ({ id: st.id, grade: st.grade, level: st.level, width: st.width, pts: Pp(st.pts) })),
+    junctions: R.junctions.map(j => ({ x: r1(j.x), y: r1(j.y), type: j.type })), stats: R.stats, field: { step, nx, ny, enc: 'u8 angle*254/pi, 255 = none', data: btoa(bin) } };
+}
+let tsPoll = null;
+const tsReady = () => { try { const w = $('tsFrame').contentWindow; return !!(w && w.__ts6 && w.__ts6.roadNet()); } catch (e) { return false; } };
+$('tsBtn').onclick = () => { const fr = $('tsFrame'); if (!fr.src) fr.src = '../tensor-studio/'; $('tsOverlay').classList.add('on'); translateStatic();
+  clearInterval(tsPoll); tsPoll = setInterval(() => { $('tsUse').disabled = !tsReady(); }, 800); };
+const tsClose = () => { $('tsOverlay').classList.remove('on'); clearInterval(tsPoll); };
+$('tsCancel').onclick = tsClose;
+$('tsUse').onclick = () => { let snap = null; try { snap = snapshotFrom($('tsFrame').contentWindow); } catch (e) { snap = null; }
+  if (!snap) { $('tsUse').disabled = true; return; }
+  tsClose(); $('busy').style.display = 'block'; SITE = null;
+  setTimeout(() => { const n = snap.roads.length; loadSnap(snap, L(`张量场工作室 · ${n} 条路`, `Tensor Studio · ${n} roads`)); fitPlan(); }, 30); };
+addEventListener('keydown', e => { if (e.key === 'Escape' && $('tsOverlay').classList.contains('on')) tsClose(); });
 $('snapFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { loadSnap(JSON.parse(rd.result), f.name.replace('.snapshot.json', '')); } catch (err) { $('siteHint').textContent = L('读不了这个文件：', 'Cannot read this file: ') + err.message; } }; rd.readAsText(f); };
 document.querySelectorAll('.pmHead').forEach(h => h.onclick = () => h.parentNode.classList.toggle('cur'));
 $('pmAll').onclick = () => { const st = [...document.querySelectorAll('.pmStep')], open = !st.every(x => x.classList.contains('cur')); st.forEach(x => x.classList.toggle('cur', open)); $('pmAll').textContent = open ? L('全部收起', 'Collapse all') : L('全部展开', 'Expand all'); };
