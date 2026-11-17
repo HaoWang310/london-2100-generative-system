@@ -1,11 +1,11 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.39.1-english';
-import {createPlaceSearch} from './place_search.js?v=3.39.1-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.39.1-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.39.1-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.39.1-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.39.1-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.40.0-english';
+import {createPlaceSearch} from './place_search.js?v=3.40.0-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.40.0-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.40.0-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.40.0-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.40.0-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,7 +26,7 @@ try {
   }
 }
 
-const APP_VERSION='3.39.1-english';
+const APP_VERSION='3.40.0-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -159,7 +159,11 @@ let localFloodIsolateMode=false;
 let citySelectionPaintAppliedRing=null;
 let citySelectionPaintAppliedOverride=null;
 let lastCityVehicleView3D=null;
-let lastCityBuildingLodSource=null;
+let lastCityBuildingLodSource=null,lastCityBuildingLodKey='';
+// v3.40.0 · ?lod=old: the building tiles as before v3.40 (every tile on screen at z14, own 'latest' address), for comparison.
+// ?lod=12.6 (a number): the lowest tile zoom aimed for at the far edge (default 12.8; below 12 the far band would go blank).
+const CITY_BUILDING_LOD=(()=>{const v=new URLSearchParams(location.search).get('lod');return v==='old'?'old':(Number.isFinite(+v)&&v!==null&&v!==''?Math.max(12.2,Math.min(14,+v)):12.8);})();
+const CITY_BUILDINGS_FALLBACK_TILES='https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf';
 // Historical variable name retained for compatibility: it now means
 // "OSM labels / POIs hidden", not road/building geometry hidden.
 let osmStructuresHidden=true; // OSM road/place/POI labels start hidden (switch off by default).
@@ -1573,6 +1577,23 @@ function sinkBasemapBelowCityBuildings(){
   }
 }
 
+/*
+ * v3.40.0 · the basemap's own tile address for the 3D buildings.
+ * The Liberty basemap reads its tiles from a dated OpenFreeMap address (planet/<date>/…); the building source used
+ * planet/latest/…, so the browser downloaded every tile the two share twice. Same address → one download, one cache.
+ */
+function cityBuildingTilesUrl(){
+  if(CITY_BUILDING_LOD==='old'||!osmMap)return CITY_BUILDINGS_FALLBACK_TILES;
+  try{
+    for(const id of Object.keys(osmMap.getStyle()?.sources||{})){
+      if(id===CITY_BUILDINGS_SOURCE)continue;
+      const s=osmMap.getSource(id);
+      if(s&&s.type==='vector'&&/tiles\.openfreemap\.org\/planet/.test(String(s.url||''))&&Array.isArray(s.tiles)&&s.tiles[0])return s.tiles[0];
+    }
+  }catch(error){}
+  return CITY_BUILDINGS_FALLBACK_TILES;
+}
+
 function ensureCityBuildings(){
   if(!osmMap||!osmStyleReady)return;
 
@@ -1591,7 +1612,7 @@ function ensureCityBuildings(){
   if(!osmMap.getSource(CITY_BUILDINGS_SOURCE)){
     osmMap.addSource(CITY_BUILDINGS_SOURCE,{
       type:'vector',
-      tiles:['https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf'],
+      tiles:[cityBuildingTilesUrl()],
       minzoom:13,
       maxzoom:14,
       attribution:'OpenFreeMap © OpenMapTiles © OpenStreetMap contributors'
@@ -1751,7 +1772,34 @@ function updateCityBuildingSelectionPaint(){
 function tuneCityBuildingFarField(){
   if(!osmMap)return;
   const source=osmMap.getSource(CITY_BUILDINGS_SOURCE);
-  if(!source||source===lastCityBuildingLodSource)return;
+  if(!source)return;
+  if(CITY_BUILDING_LOD!=='old'){
+    // the basemap's address was not known yet when the source was made: switch once it is
+    const url=cityBuildingTilesUrl();
+    if(url!==CITY_BUILDINGS_FALLBACK_TILES&&Array.isArray(source.tiles)&&source.tiles[0]!==url&&typeof source.setTiles==='function'){
+      try{source.setTiles([url]);}catch(error){console.warn('Unable to share the basemap tile address',error);}
+    }
+    /*
+     * v3.40.0 · near tiles z14, far tiles z13.
+     * One zoom level on screen (below) kept every tile at z14 out to the horizon: at a low, far-reaching camera that is
+     * many detailed tiles, and the city filled in slowly. Now the number of levels follows the camera zoom so that the
+     * far edge aims at about z12.8: MapLibre takes the first tile zoom at or above that, i.e. z13 (a quarter of the tiles,
+     * generalised buildings). It never aims below z12 there, where this source has no tiles (the old blank far band).
+     */
+    const levels=Math.max(1,Math.min(6,1+Math.round((osmMap.getZoom()-CITY_BUILDING_LOD)*4)/4));
+    const key=String(levels);
+    if(source===lastCityBuildingLodSource&&key===lastCityBuildingLodKey)return;
+    if(typeof osmMap.setSourceTileLodParams==='function'){
+      try{
+        osmMap.setSourceTileLodParams(levels,8,CITY_BUILDINGS_SOURCE);
+        lastCityBuildingLodSource=source;lastCityBuildingLodKey=key;
+      }catch(error){
+        console.warn('Unable to tune building tile LOD',error);
+      }
+    }
+    return;
+  }
+  if(source===lastCityBuildingLodSource)return;
 
   /*
    * DISPLAY STABILITY ONLY (v3.21.57)
@@ -2174,7 +2222,7 @@ function initOSM(){
     ensureOverviewLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.39.1-english')
+    import('./tensor_site_ui.js?v=3.40.0-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2215,6 +2263,7 @@ function initOSM(){
   });
 
   osmMap.on('zoom',()=>{
+    tuneCityBuildingFarField();
     syncCityView();
     if(currentProvider==='osm')terrainCameraChanged();
     syncFloodView();

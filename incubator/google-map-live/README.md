@@ -2,6 +2,11 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.40.0: the 3D city fills in faster at a low, far-reaching camera.
+- The building layer now reads the same dated OpenFreeMap tile address as the basemap (it used `planet/latest/…`), so each shared tile downloads once.
+- Near buildings stay on the detailed z14 tiles; the far part of the view uses z13 tiles (generalised buildings, a quarter as many tiles). The number of tile levels follows the camera zoom so the far edge never drops below z13 (the old blank far band).
+- For comparison: `?lod=old` loads the buildings as before; `?lod=12.6` (a number, 12.2–14) sets the lowest far tile zoom aimed for (default 12.8; higher = more detail far away, slower).
+
 Version 3.39.1 (structure only, no change in features or look): the page is split into files.
 - `index.html` — the page's HTML only
 - `styles/app.css` — the page's styles (were inline)
