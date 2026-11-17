@@ -40,15 +40,20 @@ export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.
   const a = t + C.twist * v; return [r * Math.cos(a), y, r * Math.sin(a)]; }
 
 /** benches: [angle°, radius m, extra yaw°] around the table */
-export const BENCH_SLOTS = [[212, 3.15, 6], [328, 3.15, -6]];   // v0.32: two benches, at the sides
-export const SCREEN = { R: 4.5, w: 2.4, h: 1.35, y: 1.6, at: [236, 270, 304], boards: [0, 4, 6] };   // v0.32: three screens behind the table (hydrology · 2100 floods · the multi-scale system)
+export const BENCH_SLOTS = [[64, 3.3, 0], [116, 3.3, 0]];   // v0.41: two benches at the sides of the opening (the screens go all round)
+// v0.41 · the screens: the project overview straight ahead, the app's features (incubator/catalogue.json, in its order, VR itself left out)
+// round the table left to right, 3:2 like their covers, 35° apart, leaving an opening behind you. The list grows with the catalogue.
+export const SCREEN = { R: 4.5, w: 2.1, h: 1.4, y: 1.6, step: 35, span: 280 };
+/** plan angles (°) for n screens centred straight ahead (270°), and the screen width that still leaves a gap */
+export function screenAngles(n){ const st = n > 1 ? Math.min(SCREEN.step, SCREEN.span / (n - 1)) : 0;
+  return { at: Array.from({ length: n }, (_, k) => 270 + (k - (n - 1) / 2) * st), w: Math.min(SCREEN.w, st ? st * Math.PI / 180 * SCREEN.R - 0.35 : SCREEN.w) }; }
 // v0.22 · the gallery around the table (after the Winton Gallery): a lowered soffit with cove light, and model plinths on the floor
 export const SOFFIT = { y: 3.0, depth: 0.95, fascia: 0.18 };
 export const soffitY = t => SOFFIT.y + 0.3 * Math.sin(2 * t + 1.1) + 0.12 * Math.sin(5 * t);
 /** radius of the shell's inside at plan angle t and height y */
 export function wallR(t, y){ const s = Math.asin(Math.min(1, Math.pow(Math.max(0, y) / SHELL.H, 1 / 0.85))) * 2 / Math.PI; return shellR(t - SHELL.twist * s) * prof(s); }
 /** model plinths [angle°, radius m] */
-export const PLINTHS = [[146, 3.85], [34, 3.85]];
+export const PLINTHS = [];   // v0.41: the plinths gave way to the screens
 function quad(g, a, b, c, d, uv = [[0, 0], [1, 0], [1, 1], [0, 1]], col){ const k = [a, b, c, d].map((p, j) => vert(g, p, uv[j], col)); g.i.push(k[0], k[1], k[2], k[0], k[2], k[3]); }
 /** a box turned by yaw about its own centre; front (+z local) face gets frontUV if given */
 function box(cx, cy, cz, w, h, d, yaw, col, frontUV){ const g = geo(), c = Math.cos(yaw), s = Math.sin(yaw);
@@ -135,7 +140,7 @@ export const BOARDS = {
     ['04', '垂直农业塔', 'Vertical Farming', 'bars'], ['05', '2100 洪水情景', 'Flood Scenario 2100', 'waves'], ['06', 'OSM 城市数据', 'OpenStreetMap · 移动加载', 'network'], ['07', '多尺度生成系统', 'London → Region → Wool → Tensor', 'rings']],
   en: [['01', 'Hydrology', 'EA LiDAR · flood risk', 'contour'], ['02', 'Productive Landscape', 'food · water · energy', 'dots'], ['03', 'Tensor-field Streets', 'street generation', 'tensor'],
     ['04', 'Vertical Farming', 'towers', 'bars'], ['05', 'Flood Scenario 2100', 'sea level · rainfall', 'waves'], ['06', 'OSM City Data', 'OpenStreetMap · streaming', 'network'], ['07', 'Multi-scale System', 'London → Region → Wool → Tensor', 'rings']] };
-const boardC = ([no, title, sub, kind]) => canvas(1400, 800, (g, w, h) => {
+const boardC = ([no, title, sub, kind], W = 1400, Hh = 800) => canvas(W, Hh, (g, w, h) => {
   const bg = g.createLinearGradient(0, 0, w, h); bg.addColorStop(0, '#0d1118'); bg.addColorStop(1, '#151b26'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
   const font = (wt, px) => `${wt} ${px}px -apple-system,"PingFang SC","Helvetica Neue",sans-serif`;
   g.fillStyle = '#64d2ff'; g.font = font(600, 28); g.fillText(no, 64, 84); g.fillStyle = '#f5f5f7'; g.font = font(600, 56); g.fillText(title, 64, 156); g.fillStyle = '#8e9aa8'; g.font = font(400, 26); g.fillText(sub, 64, 200);
@@ -148,6 +153,40 @@ const boardC = ([no, title, sub, kind]) => canvas(1400, 800, (g, w, h) => {
   if (kind === 'network'){ const pts = Array.from({ length: 70 }, () => [X + rnd() * Wd, Y + rnd() * Hd]); g.strokeStyle = 'rgba(245,245,247,.25)'; pts.forEach((a, i) => pts.slice(i + 1).forEach(b => { if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 130){ g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); } })); g.fillStyle = '#ff9f0a'; pts.forEach(p => { g.beginPath(); g.arc(p[0], p[1], 5, 0, 7); g.fill(); }); }
   if (kind === 'rings'){ const cx = X + Wd / 2, cy = Y + Hd / 2; ['#f5f5f7', '#64d2ff', '#7ee0a1', '#ffd60a', '#ff9f0a'].forEach((c, i) => { g.strokeStyle = c; g.lineWidth = 4; g.beginPath(); g.arc(cx, cy, 36 + i * 40, 0, 7); g.stroke(); }); }
   g.restore(); });
+
+// v0.41 · the overview board and the features' screens and detail boards
+export const INTRO = { zh: ['项目总介绍', 'London 2100', '多尺度城市生成系统 · 伦敦 → 区域 → Wool → 张量', 'rings'], en: ['Project overview', 'London 2100', 'Multi-scale generative city · London → Region → Wool → Tensor', 'rings'] };
+const STATUS = { zh: { ready: '可用', incubating: '孵化中', planned: '计划中' }, en: { ready: 'Available', incubating: 'Incubating', planned: 'Planned' } };
+const FONT = (wt, px) => `${wt} ${px}px -apple-system,"PingFang SC","Helvetica Neue",sans-serif`;
+function pill(g, x, y, text, ready){ g.font = FONT(600, 26); const tw = g.measureText(text).width; g.fillStyle = 'rgba(16,16,18,.78)'; rr(g, x, y, tw + 64, 48, 24); g.fill();
+  g.fillStyle = ready ? '#30d158' : '#ffd60a'; g.beginPath(); g.arc(x + 26, y + 24, 7, 0, 7); g.fill(); g.fillStyle = '#f5f5f7'; g.textBaseline = 'middle'; g.fillText(text, x + 42, y + 25); g.textBaseline = 'alphabetic'; }
+function cover(g, img, x, y, w, h){ if (!img){ g.fillStyle = '#1c1f26'; g.fillRect(x, y, w, h); return; }
+  const k = Math.max(w / img.width, h / img.height), iw = img.width * k, ih = img.height * k; g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); g.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); g.restore(); }
+function wrap(g, text, maxW){ const out = []; let line = '';   // CJK by character, Latin by word
+  for (const tok of String(text).match(/[\u3000-\u9fff\uff00-\uffef]|[^\s\u3000-\u9fff\uff00-\uffef]+|\s+/g) || []){ const t = line + tok;
+    if (g.measureText(t).width > maxW && line.trim()){ out.push(line.trim()); line = tok.trim() ? tok : ''; } else line = t; }
+  if (line.trim()) out.push(line.trim()); return out; }
+/** a feature's screen: its cover, with number, name and status over a dark foot (1200 × 800, like the covers) */
+export const featureC = (f, img, lang) => canvas(1200, 800, (g, w, h) => { cover(g, img, 0, 0, w, h);
+  const grd = g.createLinearGradient(0, h - 300, 0, h); grd.addColorStop(0, 'rgba(8,10,14,0)'); grd.addColorStop(1, 'rgba(8,10,14,.92)'); g.fillStyle = grd; g.fillRect(0, h - 300, w, 300);
+  pill(g, 40, 36, STATUS[lang][f.status] || STATUS[lang].planned, f.status === 'ready');
+  g.fillStyle = '#64d2ff'; g.font = FONT(600, 34); g.fillText(f.no, 56, h - 118); g.fillStyle = '#f5f5f7'; g.font = FONT(600, 54);
+  const t = wrap(g, f.title, w - 112); g.fillText(t[0] + (t.length > 1 ? '…' : ''), 56, h - 56); });
+/** a feature's detail board, opened in front of you: cover left, name, status and what it does right (1400 × 800) */
+export const detailC = (f, img, lang) => canvas(1400, 800, (g, w, h) => { g.fillStyle = '#0d1118'; g.fillRect(0, 0, w, h);
+  g.save(); rr(g, 48, 48, 780, 520, 22); g.clip(); cover(g, img, 48, 48, 780, 520); g.restore();
+  const X = 876, W = w - X - 56; g.fillStyle = '#64d2ff'; g.font = FONT(600, 30); g.fillText(f.no, X, 96);
+  g.fillStyle = '#f5f5f7'; g.font = FONT(600, 44); let y = 152; for (const l of wrap(g, f.title, W).slice(0, 3)){ g.fillText(l, X, y); y += 54; }
+  pill(g, X, y - 16, STATUS[lang][f.status] || STATUS[lang].planned, f.status === 'ready'); y += 84;
+  g.fillStyle = 'rgba(235,235,245,.78)'; g.font = FONT(400, 26); const lines = wrap(g, f.desc, W), max = Math.floor((h - 60 - y) / 38);
+  lines.slice(0, max).forEach((l, i) => g.fillText(i === max - 1 && lines.length > max ? l + '…' : l, X, y + i * 38));
+  g.fillStyle = 'rgba(235,235,245,.5)'; g.font = FONT(400, 24); g.fillText(f.tags || '', 48, 640);
+  g.fillStyle = 'rgba(100,210,255,.85)'; g.font = FONT(500, 24); g.fillText(lang === 'zh' ? '以后可以在这里直接打开这个功能 · 再按一次扳机关闭' : 'This feature will open here later · pull the trigger again to close', 48, 720); });
+/** the catalogue's features (VR itself left out), numbered as in the app; covers from the repository root */
+export async function loadFeatures(url, root, lang){ const r = await fetch(url); if (!r.ok) throw new Error('catalogue ' + r.status);
+  const pick = v => v && typeof v === 'object' ? v[lang] ?? v.en ?? v.zh : v ?? '';
+  return ((await r.json()).items || []).map((it, i) => ({ it, no: String(i + 1).padStart(2, '0') })).filter(({ it }) => it.id !== 'vr')
+    .map(({ it, no }) => ({ id: it.id, no, title: pick(it.title), desc: pick(it.desc), status: it.status, tags: (it.tags || []).map(pick).join(' · '), cover: it.cover ? new URL(pick(it.cover), root).href : null })); }
 
 // ---------------------------------------------------------------- the bench model (a minimal .glb reader: one mesh, POSITION / NORMAL / indices)
 export function parseGLB(buf){ const dv = new DataView(buf);
@@ -245,17 +284,27 @@ export function createHall(gl, opt = {}){
   for (let k = 0; k < 3; k++){ const u = ((Math.PI / 2 - 0.4) / 3) / (Math.PI * 2) + k / 3, p = canopyPoint(u, 0.97); cables.push(tube([p, [p[0], shellYAt(p[0], p[2]) - 0.02, p[2]]], 0.004, 4, false, CABLE)); }
   add(merge(...cables), {});
 
-  // the curved screens (one texture each) and their white frames and feet (one mesh)
-  const frames = [], boards = BOARDS[lang];
-  const boardTex = [], screens = [];
-  SCREEN.at.forEach((deg, k) => { const a = deg * Math.PI / 180, len = SCREEN.w / SCREEN.R, th0 = Math.PI / 2 - a - len / 2, { R, h, y } = SCREEN;
-    const b = boards[SCREEN.boards[k]]; boardTex[k] = tex(boardC(b));
-    // for pointing at it: the chord's centre, the way it faces (to the table), its width and height (hall space)
-    screens.push({ k, c: [R * Math.cos(a), y, R * Math.sin(a)], n: [-Math.cos(a), 0, -Math.sin(a)], u: [-Math.sin(a), 0, Math.cos(a)], w: SCREEN.w, h, title: b[1] });
-    add(flipU(band(R, y - h / 2, y + h / 2, th0, len, 24, [1, 1, 1])), { map: boardTex[k], emiSelf: true, glow: { day: 0.35, night: 0.9, violet: 0.8 }, tint: 'white', screen: k });
-    const pad = 0.1 / R, fl = 0.2 / R;
-    frames.push(band(R + 0.03, y - h / 2 - 0.08, y + h / 2 + 0.08, th0 - pad, len + 2 * pad, 24, WHITE), band(R + 0.03, 0, y - h / 2 - 0.08, Math.PI / 2 - a - fl / 2, fl, 8, WHITE)); });
-  add(merge(...frames), {});
+  // the curved screens: the overview straight ahead, the app's features round the table (v0.41; built once the catalogue is in)
+  const boardTex = [], detailTex = [], screens = [];
+  const retex = (t, cv) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.generateMipmap(gl.TEXTURE_2D); };
+  function buildScreens(list){   // list: [{ kind: 'intro' } | feature]
+    const { at, w } = screenAngles(list.length), frames = [];
+    list.forEach((f, k) => { const deg = at[k], a = deg * Math.PI / 180, len = w / SCREEN.R, th0 = Math.PI / 2 - a - len / 2, { R, y } = SCREEN, h = w / 1.5;
+      if (f.kind === 'intro'){ boardTex[k] = tex(boardC(INTRO[lang], 1200, 800)); detailTex[k] = tex(boardC(INTRO[lang])); }
+      else { boardTex[k] = tex(featureC(f, null, lang)); detailTex[k] = tex(detailC(f, null, lang));
+        if (f.cover){ const img = new Image(); img.onload = () => { if (gone) return; retex(boardTex[k], featureC(f, img, lang)); retex(detailTex[k], detailC(f, img, lang)); }; img.src = f.cover; } }
+      // for pointing at it: the chord's centre, the way it faces (to the table), its width and height (hall space)
+      screens.push({ k, c: [R * Math.cos(a), y, R * Math.sin(a)], n: [-Math.cos(a), 0, -Math.sin(a)], u: [-Math.sin(a), 0, Math.cos(a)], w, h, title: f.kind === 'intro' ? INTRO[lang][1] : f.title, id: f.id || 'intro' });
+      add(flipU(band(R, y - h / 2, y + h / 2, th0, len, 24, [1, 1, 1])), { map: boardTex[k], emiSelf: true, glow: { day: 0.35, night: 0.9, violet: 0.8 }, tint: 'white', screen: k });
+      const pad = 0.08 / R, fl = 0.2 / R;
+      frames.push(band(R + 0.03, y - h / 2 - 0.07, y + h / 2 + 0.07, th0 - pad, len + 2 * pad, 24, WHITE), band(R + 0.03, 0, y - h / 2 - 0.07, Math.PI / 2 - a - fl / 2, fl, 8, WHITE)); });
+    add(merge(...frames), {}); }
+  // the overview sits in the middle of the row: features 1…half to its left, the rest to its right
+  const root = opt.root || new URL('../../../', import.meta.url).href, catURL = opt.catalogueURL || new URL('../../catalogue.json', import.meta.url).href;
+  const withIntro = fs => { const m = Math.ceil(fs.length / 2); return [...fs.slice(0, m), { kind: 'intro' }, ...fs.slice(m)]; };
+  (opt.features ? Promise.resolve(opt.features) : loadFeatures(catURL, root, lang))
+    .then(fs => { if (!gone) buildScreens(withIntro(fs)); })
+    .catch(e => { console.warn('hall: catalogue', e); if (!gone) buildScreens([{ kind: 'intro' }]); });
 
   // the lowered soffit: a band that follows the wall all the way round, its height in waves, a light line along its edge
   { const N = 220, under = surface((u, v) => { const t = u * Math.PI * 2, y = soffitY(t), rw = wallR(t, y) + 0.05, r = rw - SOFFIT.depth * (1 - v); return [r * Math.cos(t), y, r * Math.sin(t)]; }, N, 6, [0.97, 0.97, 0.96]);
@@ -269,7 +318,7 @@ export function createHall(gl, opt = {}){
     PLINTHS.forEach(([d, r], k) => { const t = d * Math.PI / 180, x = Math.cos(t) * r, z = Math.sin(t) * r;
       bodies.push(box(x, 0, z, 0.9, 0.95, 0.9, t, [0.93, 0.93, 0.92]));
       for (let i = 0; i < 22; i++){ const h = 0.03 + rnd() ** 2 * (k ? 0.32 : 0.18); bodies.push(box(x + (rnd() - 0.5) * 0.66, 0.95, z + (rnd() - 0.5) * 0.66, 0.05 + rnd() * 0.07, h, 0.05 + rnd() * 0.07, t, WHITE)); } });
-    add(merge(...bodies), {}); }
+    if (bodies.length) add(merge(...bodies), {}); }
   add(merge(...glowLines), { unlit: true, glow: { day: 1, night: 1, violet: 1 }, tint: 'glow' });
 
   // the benches, once the model is in
@@ -295,7 +344,8 @@ export function createHall(gl, opt = {}){
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, map); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, emi);
       gl.bindVertexArray(p.vao); gl.drawElements(gl.TRIANGLES, p.n, gl.UNSIGNED_INT, 0); }
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindVertexArray(null); }
-  function dispose(){ for (const t of textures) gl.deleteTexture(t); for (const b of buffers) gl.deleteBuffer(b); for (const p of parts) gl.deleteVertexArray(p.vao); gl.deleteProgram(prog.p); parts.length = 0; }
-  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, screens, boardTexture: k => boardTex[k], setHot(k){ hot = k == null ? -1 : k; },
+  let gone = false;
+  function dispose(){ gone = true; for (const t of textures) gl.deleteTexture(t); for (const b of buffers) gl.deleteBuffer(b); for (const p of parts) gl.deleteVertexArray(p.vao); gl.deleteProgram(prog.p); parts.length = 0; }
+  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, screens, boardTexture: k => detailTex[k] || boardTex[k], setHot(k){ hot = k == null ? -1 : k; },
     /** where you may walk: outside the table, inside the screens */ walkR: [R2 + 0.2, SCREEN.R - 0.45], clearColour: mood => (MOOD[mood] || MOOD.day).clear, triangles: () => parts.reduce((s, p) => s + p.n / 3, 0) };
 }
