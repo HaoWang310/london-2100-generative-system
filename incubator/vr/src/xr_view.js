@@ -22,7 +22,7 @@ const T = {
     sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。',
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 1.4 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
-    mood: '展厅氛围', moods: [['auto', '跟随光照'], ['day', '白昼'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
+    mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
@@ -31,7 +31,7 @@ const T = {
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 1.4 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
-    mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['day', 'Day'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
+    mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
@@ -466,7 +466,7 @@ export function open(api, lang = 'zh', opt = {}){
   // ---- page preview: orbit camera; with the hall, a second camera stands in the gallery (metres, the table at the centre)
   const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 1.25 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
   if (hallOn){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
-  let hallSel = ['day', 'night', 'violet'].includes(opt.hall) ? opt.hall : 'auto';
+  let hallSel = ['night', 'violet'].includes(opt.hall) ? opt.hall : 'auto';   // v0.37: no separate 'day' (following the light is already day by day)
   const hallMood = () => hallSel !== 'auto' ? hallSel : env.night > 0.5 ? 'night' : 'day';
   // v0.34 · a still model fills the hall's table: the disc spans its Greater London outline (or its smallest outline) with a margin,
   // cut round at the table's edge (the square plinth goes too); without outlines the whole square fits as before
