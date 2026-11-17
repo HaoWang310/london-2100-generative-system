@@ -41,7 +41,7 @@ export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.
 
 /** benches: [angle°, radius m, extra yaw°] around the table */
 // v0.42 · benches in front of every other screen (the 2nd, 4th, …), so the row alternates screen-with-bench, screen-without; never in front of the overview
-export const BENCH_R = 3.3;
+export const BENCH_R = 2.75;   // v0.43: 1.75 m in front of the screens (was 1.2 m), still 1.5 m clear of the table's foot
 /** [angle°, radius m, extra yaw°] for n screens; skip: the index left free (the overview) */
 export function benchSlots(n, skip = -1){ const { at } = screenAngles(n); return at.filter((_, k) => k % 2 === 1 && k !== skip).map(d => [d, BENCH_R, 0]); }
 export let BENCH_SLOTS = [];   // filled once the screens are known
