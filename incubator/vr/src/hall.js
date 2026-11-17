@@ -40,7 +40,11 @@ export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.
   const a = t + C.twist * v; return [r * Math.cos(a), y, r * Math.sin(a)]; }
 
 /** benches: [angle°, radius m, extra yaw°] around the table */
-export const BENCH_SLOTS = [[64, 3.3, 0], [116, 3.3, 0]];   // v0.41: two benches at the sides of the opening (the screens go all round)
+// v0.42 · benches in front of every other screen (the 2nd, 4th, …), so the row alternates screen-with-bench, screen-without; never in front of the overview
+export const BENCH_R = 3.3;
+/** [angle°, radius m, extra yaw°] for n screens; skip: the index left free (the overview) */
+export function benchSlots(n, skip = -1){ const { at } = screenAngles(n); return at.filter((_, k) => k % 2 === 1 && k !== skip).map(d => [d, BENCH_R, 0]); }
+export let BENCH_SLOTS = [];   // filled once the screens are known
 // v0.41 · the screens: the project overview straight ahead, the app's features (incubator/catalogue.json, in its order, VR itself left out)
 // round the table left to right, 3:2 like their covers, 35° apart, leaving an opening behind you. The list grows with the catalogue.
 export const SCREEN = { R: 4.5, w: 2.1, h: 1.4, y: 1.6, step: 35, span: 280 };
@@ -252,10 +256,12 @@ export function createHall(gl, opt = {}){
   const { pts, R2, foot } = tableProfile(mapR, tableH);
   const pol = (deg, r) => { const t = deg * Math.PI / 180; return [Math.cos(t) * r, Math.sin(t) * r]; };
   const shadows = [[0, 0, foot + 0.5, foot + 0.5, 0, 0.32]]
-    .concat(PLINTHS.map(([d, r]) => [...pol(d, r), 0.7, 0.7, 0, 0.2])).concat(BENCH_SLOTS.map(([d, r, y]) => { const th = d * Math.PI / 180; return [Math.cos(th) * r, Math.sin(th) * r, 1.15, 0.38, th + Math.PI / 2 - y * Math.PI / 180, 0.26]; }));
+    .concat(PLINTHS.map(([d, r]) => [...pol(d, r), 0.7, 0.7, 0, 0.2]));
+  const benchShadow = ([d, r, y]) => { const th = d * Math.PI / 180; return [Math.cos(th) * r, Math.sin(th) * r, 1.15, 0.38, th + Math.PI / 2 - y * Math.PI / 180, 0.26]; };
   const floor = surface((u, j) => { const t = u * Math.PI * 2, r = shellR(t) * j; return [r * Math.cos(t), 0, r * Math.sin(t)]; }, 128, 24, [1, 1, 1]);
   for (let o = 0; o < floor.v.length; o += F){ floor.v[o + 6] = (floor.v[o] / FLOOR_E + 1) / 2; floor.v[o + 7] = 1 - (floor.v[o + 2] / FLOOR_E + 1) / 2; floor.v[o + 3] = 0; floor.v[o + 4] = 1; floor.v[o + 5] = 0; }
-  add(floor, { map: tex(floorMapC(shadows)), emi: tex(floorEmiC(foot + 0.1)), glow: { day: 0.07, night: 0.85, violet: 0.75 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.88, 0.72, 1.0] } });
+  const floorTex = tex(floorMapC(shadows));
+  add(floor, { map: floorTex, emi: tex(floorEmiC(foot + 0.1)), glow: { day: 0.07, night: 0.85, violet: 0.75 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.88, 0.72, 1.0] } });
   add(disc(3.2, SHELL.H + 0.25, 64, [1, 1, 1], true), { unlit: true, glow: { day: 1, night: 1, violet: 1 }, tint: 'sky' });
   const ocPts = []; for (let k = 0; k < 160; k++) ocPts.push(shellPoint(k / 160, 1));
   const glowLines = [tube(ocPts, 0.035, 6, true)];
@@ -303,8 +309,8 @@ export function createHall(gl, opt = {}){
   const root = opt.root || new URL('../../../', import.meta.url).href, catURL = opt.catalogueURL || new URL('../../catalogue.json', import.meta.url).href;
   const withIntro = fs => { const m = Math.ceil(fs.length / 2); return [...fs.slice(0, m), { kind: 'intro' }, ...fs.slice(m)]; };
   (opt.features ? Promise.resolve(opt.features) : loadFeatures(catURL, root, lang))
-    .then(fs => { if (!gone) buildScreens(withIntro(fs)); })
-    .catch(e => { console.warn('hall: catalogue', e); if (!gone) buildScreens([{ kind: 'intro' }]); });
+    .then(fs => { if (gone) return; const list = withIntro(fs); buildScreens(list); placeBenches(benchSlots(list.length, list.findIndex(f => f.kind === 'intro'))); })
+    .catch(e => { console.warn('hall: catalogue', e); if (!gone){ buildScreens([{ kind: 'intro' }]); placeBenches([]); } });
 
   // the lowered soffit: a band that follows the wall all the way round, its height in waves, a light line along its edge
   { const N = 220, under = surface((u, v) => { const t = u * Math.PI * 2, y = soffitY(t), rw = wallR(t, y) + 0.05, r = rw - SOFFIT.depth * (1 - v); return [r * Math.cos(t), y, r * Math.sin(t)]; }, N, 6, [0.97, 0.97, 0.96]);
@@ -323,8 +329,12 @@ export function createHall(gl, opt = {}){
 
   // the benches, once the model is in
   const benchURL = opt.benchURL || new URL('../assets/zaha-bench.glb', import.meta.url).href;
-  fetch(benchURL).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-    .then(buf => { add(placeCopies(parseGLB(buf), BENCH_SLOTS, WHITE), {}); })
+  const benchModel = fetch(benchURL).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(parseGLB);
+  // once the screens are placed: the benches, and their shadows painted into the floor
+  function placeBenches(slots){ BENCH_SLOTS = slots; if (!slots.length) return;
+    retex(floorTex, floorMapC(shadows.concat(slots.map(benchShadow))));
+    benchModel.then(m => { if (!gone) add(placeCopies(m, slots, WHITE), {}); }).catch(e => console.warn('hall: bench model', e)); }
+  benchModel
     .catch(e => console.warn('hall: bench model', e));
 
   let hot = -1;   // the screen being pointed at glows brighter
