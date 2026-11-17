@@ -12,7 +12,7 @@
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
 <script type="module">
-import { open } from './src/xr_view.js?v=0.39';
+import { open } from './src/xr_view.js?v=0.40';
 import { apiFromScene } from './src/scene.js';
 import { streamApi } from './src/stream.js?v=0.20';
 import { envFromList } from './src/app_state.js?v=0.20';
@@ -47,12 +47,13 @@ function addPicker(){
   sel.onchange = () => { if (sel.value.endsWith('.html')){ location.href = sel.value; return; } const u = new URL(location.href); u.searchParams.set('scene', sel.value); location.href = u.href; };
   bar.querySelector('h3').after(sel);
 }
-const url = q.get('scene') || 'data/hydro-lab-70km.scene.json';
+// v0.40: by default the table shows the 3D city (OSM buildings around central London, loaded as you move); Hydro Lab and the others stay in ?scene=
+const url = q.get('scene') || 'osm:51.50733,-0.12768';
 fetch('data/scenes.json').then(r => r.json()).then(j => { scenes = j.scenes || []; addPicker(); }).catch(() => {});
 const fail = e => { msg.hidden = false; msg.textContent = (lang === 'zh' ? '无法载入 ' : 'Could not load ') + url + ' — ' + e.message; console.error(e); };
 if (url.startsWith('osm:')){
   // osm:lat,lon — live OpenStreetMap (OpenFreeMap tiles), loaded around wherever you look (src/stream.js)
-  const [lat, lon, r] = url.slice(4).split(',').map(Number), name = q.get('name');
+  const [lat, lon, r] = url.slice(4).split(',').map(Number), name = q.get('name') || (q.get('scene') ? null : (lang === 'zh' ? '伦敦市中心' : 'Central London'));
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) fail(new Error('osm:lat,lon'));
   else showApi(streamApi(lat, lon, { tiles: q.get('tiles') || undefined }), 'OSM · ' + (name || lat.toFixed(4) + ', ' + lon.toFixed(4)) + (lang === 'zh' ? ' · 移动加载' : ' · streaming'));
 } else {

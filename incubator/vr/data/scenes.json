@@ -1,6 +1,13 @@
 {
   "scenes": [
     {
+      "file": "osm:51.50733,-0.12768",
+      "title": {
+        "zh": "三维城市 · 伦敦市中心（移动加载）",
+        "en": "3D city · Central London (streaming)"
+      }
+    },
+    {
       "file": "map.html",
       "title": {
         "zh": "伦敦地图 → VR（全部功能）",
@@ -12,13 +19,6 @@
       "title": {
         "zh": "Hydro Lab · 伦敦 70 公里",
         "en": "Hydro Lab · London 70 km"
-      }
-    },
-    {
-      "file": "osm:51.50733,-0.12768",
-      "title": {
-        "zh": "OSM 伦敦（移动加载）",
-        "en": "OSM London (streaming)"
       }
     },
     {
