@@ -235,14 +235,14 @@ body.cards-on #cardBar{display:flex}
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#e0412f"></i><span>主线</span><input type="checkbox" id="c_prim" hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#1e1e1e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></i><span>建筑</span><input type="checkbox" id="c_bld" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#8a8869"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#e1e6cf"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef;box-shadow:inset 0 0 0 1.5px #e0412f"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>图纸元素（比例尺 · 指北 · 坐标）</span><input type="checkbox" id="c_furn" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>阴影</span><input type="checkbox" id="c_shadow" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" hidden><i class="dpSw"></i></label>
   </div>
   <div class="dpSection"><div class="dpTitle">图例</div><div class="dpLegend">
-    <span><i class="lgLine"></i>红线（结构场地外缘）</span><span><i style="background:#f1f1ef"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路段</span><span><i style="background:#8a8869"></i>农田</span><span><i style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i style="background:#6e8796"></i>水体</span><span><i style="background:#f1f1ef;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
+    <span><i class="lgLine"></i>红线（结构场地外缘）</span><span><i style="background:#f1f1ef"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路段</span><span><i style="background:#e1e6cf"></i>农田</span><span><i style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i style="background:#6e8796"></i>水体</span><span><i style="background:#f1f1ef;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
   </div></div>
   <div class="dpSection"><div class="dpTitle">统计</div><div class="dpStats">
     <div><b id="s_cell">–</b><span id="s_cellL">室</span></div><div><b id="s_bld">–</b><span>沿走廊建筑</span></div>
@@ -305,8 +305,8 @@ const MAT = {
   glass: new THREE.MeshStandardMaterial({ color: 0x9fb8ae, roughness: .25, metalness: .1, side: THREE.DoubleSide }),
   bld: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: .9, side: THREE.DoubleSide }),
   bldS: new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: .9, side: THREE.DoubleSide }),
-  farm: new THREE.MeshStandardMaterial({ color: 0x8a8869, roughness: 1, side: THREE.DoubleSide }),
-  towG: new THREE.MeshStandardMaterial({ color: 0x8a8869, roughness: .8 }),
+  farm: new THREE.MeshStandardMaterial({ color: 0xe1e6cf, roughness: 1, side: THREE.DoubleSide }),
+  towG: new THREE.MeshStandardMaterial({ color: 0xe1e6cf, roughness: .8 }),
   towW: new THREE.MeshStandardMaterial({ color: 0xeeefec, roughness: .5 }),
   hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
   plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
@@ -376,7 +376,7 @@ function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
 // 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
-const PAL = { bg: '#0a0a0a', land: '#1b1b1b', farm: '#8a8869', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
+const PAL = { bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
 let hoverId = 0;
 function setHover(id) { if (id === hoverId) return; hoverId = id; if (mode === '2d') drawPlan(); }
 function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
