@@ -119,6 +119,12 @@ label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
 .displayPanel input:checked + .dpSw::after{transform:translateX(12px);background:#1c1c1f}
 .displayPanel .dpLegend{display:grid;gap:6px;font-size:11.5px;color:#c7c7cc}
 .displayPanel .dpLegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-2px;border:1px solid rgba(255,255,255,.12)}
+.swGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px}
+.swChip{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:#a1a1a6;text-align:center;line-height:1.2}
+.swChip i{display:block;width:100%;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.14);box-sizing:border-box}
+.swChip:hover i{border-color:rgba(255,255,255,.5)}
+.swChip.on{color:#f5f5f7}.swChip.on i{border:2px solid #f5f5f7}
+.swChip:focus-visible i{outline:2px solid #f5f5f7;outline-offset:2px}
 .displayPanel .dpLegend i.lgLine{height:0;border:0;border-top:2px dashed #e0412f;border-radius:0;vertical-align:3px}
 .displayPanel .dpStats{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
 .displayPanel .dpStats b{display:block;font-size:14px;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums;color:#f5f5f7}
@@ -241,8 +247,9 @@ body.cards-on #cardBar{display:flex}
 <label class="dpSwitchRow"><span>阴影</span><input type="checkbox" id="c_shadow" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" hidden><i class="dpSw"></i></label>
   </div>
+  <div class="dpSection"><div class="dpTitle">配色</div><div class="swGrid" id="swGrid" role="radiogroup" aria-label="配色"></div></div>
   <div class="dpSection"><div class="dpTitle">图例</div><div class="dpLegend">
-    <span><i class="lgLine"></i>红线（结构场地外缘）</span><span><i style="background:#f1f1ef"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路段</span><span><i style="background:#e1e6cf"></i>农田</span><span><i style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i style="background:#6e8796"></i>水体</span><span><i style="background:#f1f1ef;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
+    <span><i class="lgLine" id="lgRed"></i>红线（结构场地外缘）</span><span><i style="background:#ffffff"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路段</span><span><i id="lgFarm" style="background:#e1e6cf"></i>农田（离核心近亮、远暗）</span><span><i id="lgBld" style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i id="lgWater" style="background:#6e8796"></i>水体</span><span><i id="lgTower" style="background:#ffffff;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
   </div></div>
   <div class="dpSection"><div class="dpTitle">统计</div><div class="dpStats">
     <div><b id="s_cell">–</b><span id="s_cellL">室</span></div><div><b id="s_bld">–</b><span>沿走廊建筑</span></div>
@@ -269,7 +276,7 @@ body.cards-on #cardBar{display:flex}
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // ---- 中英文：独立打开时用自己的切换；在目录里打开时跟随主程序（postMessage l2100:lang / 本地存储）
-const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
+const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "配色": "Colour", "农田（离核心近亮、远暗）": "Farmland (light near the cores, dark at the edge)", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
 const KIND_EN = { '水滴': 'teardrop', '梭形': 'spindle', '枕形': 'pillow' };
 let LANG = (() => { try { return /^en/.test(localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || 'zh') ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
 const L = (zh, en) => LANG === 'en' ? en : zh, KD = k => L(k, KIND_EN[k] || k);
@@ -287,7 +294,7 @@ function setLang(lang, quiet) {
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
   translateStatic(); for (const k in FMT) { const o = $('v_' + k); if (o && P[k] != null) o.textContent = FMT[k](P[k]); }
   if (!quiet && F) { writeTexts(); buildCards(); focusCell(focus); siteText(); drawPlan(); }
-  if (!quiet) { refreshSel(); saveHint(); }
+  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); }
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
@@ -376,7 +383,34 @@ function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
 // 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
-const PAL = { bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
+const PAL = { _: 0, bld: [46, 46, 46], road: '255,255,255', edge: 'rgba(10,10,10,.6)', bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
+// 色卡：渐变 + 顺张量场流线（AADRL / ZHA 式）。每套只改不同的几项，其余用 SCHEME_BASE
+const SCHEME_BASE = { bg: '#050505', land: '#121212', farm: '#222222', grad: null, hatch: { col: 'rgba(255,255,255,.16)', w: 1, step: 9, len: 60 }, deck: '#ffffff', tower: '#ffffff', bridge: 'rgba(200,205,210,1)', water: '#0b0d10', stream: 'rgba(110,120,130,.5)', bld: [12, 12, 12], road: '255,255,255', edge: 'rgba(0,0,0,.55)', red: '#e0412f' };
+const SCHEMES = [ // 核心色都是用户给的色卡 #E1E6CF（浅鼠尾草绿），往外渐变到不同的低饱和深色
+  { id: 'S1', zh: '橄榄', en: 'Olive', o: { grad: [[0, [225, 230, 207]], [0.45, [150, 160, 120]], [1, [36, 40, 30]]], water: '#0c0e0a' } },
+  { id: 'S2', zh: '墨绿', en: 'Forest', o: { grad: [[0, [225, 230, 207]], [0.45, [118, 150, 120]], [1, [18, 36, 30]]], water: '#07120f' } },
+  { id: 'S3', zh: '青灰', en: 'Teal grey', o: { grad: [[0, [225, 230, 207]], [0.45, [120, 150, 150]], [1, [20, 38, 44]]], water: '#071318' } },
+  { id: 'S4', zh: '石板蓝', en: 'Slate', o: { grad: [[0, [225, 230, 207]], [0.45, [118, 138, 160]], [1, [22, 30, 48]]], water: '#080c16' } },
+  { id: 'S5', zh: '炭灰', en: 'Charcoal', o: { grad: [[0, [225, 230, 207]], [0.45, [146, 150, 140]], [1, [30, 30, 30]]], water: '#0d0d0d' } },
+  { id: 'S6', zh: '苔藓棕', en: 'Moss', o: { grad: [[0, [225, 230, 207]], [0.45, [160, 158, 112]], [1, [52, 40, 28]]], water: '#0e0b08' } },
+  { id: 'S7', zh: '雾紫', en: 'Mauve', o: { grad: [[0, [225, 230, 207]], [0.45, [150, 142, 166]], [1, [34, 28, 46]]], water: '#0d0a12' } },
+  { id: 'S8', zh: '纯色场线', en: 'Flat + lines', o: { farm: '#e1e6cf', hatch: { col: 'rgba(40,48,30,.16)', w: 1, step: 8, len: 70 }, water: '#0d1110', bld: [18, 18, 18] } },
+];
+const SCHEME_KEY = 'structureStudio.scheme';
+let SCHEME = 'S1';
+const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
+const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
+function buildSwatches() { const g = $('swGrid'); g.textContent = '';
+  for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
+    b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('i'); i.style.background = gradCss(sc); const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en);
+    b.append(i, t); b.onclick = () => applyScheme(sc.id); g.appendChild(b); } }
+function applyScheme(id, quiet) { const sc = SCHEMES.find(x => x.id === id) || SCHEMES[0]; SCHEME = sc.id; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o)));
+  try { localStorage.setItem(SCHEME_KEY, sc.id); } catch (e) {}
+  $('lgFarm').style.background = gradCss(sc); $('lgWater').style.background = PAL.water; $('lgRed').style.borderTopColor = PAL.red; $('lgTower').style.borderColor = PAL.red; $('lgTower').style.background = PAL.tower; $('lgBld').style.background = rgb(PAL.bld);
+  const mid = PAL.grad ? PAL.grad[Math.floor(PAL.grad.length / 2)][1] : null;
+  if (typeof MAT !== 'undefined') { if (mid) MAT.farm.color.setHex(hex3(mid)); else MAT.farm.color.set(PAL.farm); MAT.water.color.set(PAL.water); MAT.deck.color.set(PAL.deck); MAT.towW.color.set(PAL.tower); MAT.bld.color.setHex(hex3(PAL.bld)); MAT.bldS.color.setHex(hex3(PAL.bld.map(v => v * .8 | 0))); }
+  buildSwatches(); tsBase = null;
+  if (!quiet && F) { $('busy').style.display = 'block'; setTimeout(() => { makePlanBase(); buildCards(); focusCell(focus); drawPlan(); $('busy').style.display = 'none'; }, 20); } }
 let hoverId = 0;
 function setHover(id) { if (id === hoverId) return; hoverId = id; if (mode === '2d') drawPlan(); }
 function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
@@ -385,7 +419,7 @@ function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
 function drawVec(ctx, X, k, o) {
   const path = (Q, close) => { ctx.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); if (close) ctx.closePath(); };
   ctx.save(); ctx.lineJoin = ctx.lineCap = 'round';
-  if (o.cells) { ctx.strokeStyle = 'rgba(10,10,10,.6)'; ctx.lineWidth = .75 * k; for (const cp of F.cellPolys) { path(cp.poly, true); ctx.stroke(); } }
+  if (o.cells) { ctx.strokeStyle = PAL.edge; ctx.lineWidth = .75 * k; for (const cp of F.cellPolys) { path(cp.poly, true); ctx.stroke(); } }
   if (o.prim) { ctx.strokeStyle = PAL.red; ctx.globalAlpha = .9; ctx.lineWidth = 1.1 * k; ctx.setLineDash([6 * k, 4 * k]); for (const S of F.strands) { path(S); ctx.stroke(); } ctx.setLineDash([]); ctx.globalAlpha = 1; }
   if (o.cells) { ctx.strokeStyle = PAL.red; ctx.lineWidth = 1.3 * k; for (const t of F.towers) { const q = X(t), r = Math.max(4 * k, (t[2] + 6) * Math.abs(X([t[0] + 1, t[1]])[0] - q[0])); ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 1.8 * k, 0, 7); ctx.fillStyle = PAL.red; ctx.fill(); } }
   if ((o.hover || o.focus) && F.cellPolys.length) { const ids = cpIds();
@@ -412,6 +446,14 @@ function drawFurniture(ctx, X, pxPerM, R, k) { // 坐标十字（英国国家网
   ctx.font = `${10 * k}px -apple-system,Helvetica Neue,Arial,sans-serif`; ctx.textAlign = 'left'; ctx.fillText('0', bx - 2 * k, by + 13 * k); ctx.textAlign = 'right'; ctx.fillText(m >= 1000 ? m / 1000 + ' km' : m + ' m', bx + L0 + 4 * k, by + 13 * k);
   ctx.beginPath(); ctx.moveTo(nx, ny - 9 * k); ctx.lineTo(nx + 5 * k, ny + 7 * k); ctx.lineTo(nx, ny + 3.5 * k); ctx.lineTo(nx - 5 * k, ny + 7 * k); ctx.closePath(); ctx.fill();
   ctx.textAlign = 'center'; ctx.fillText('N', nx, ny + 20 * k); ctx.restore(); }
+function hatchLines(step, len) { // 顺张量场的流线，在整个场地里起笔（画时再裁到室内），几何与配色、结构参数都无关，按场地缓存
+  const g = F.grid, S = SITE, hs = 4, n = Math.round(len / hs), out = []; let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let y = S.bbox[1]; y < S.bbox[3]; y += step) for (let x = S.bbox[0]; x < S.bbox[2]; x += step) {
+    const p0 = [x + (rnd() - .5) * step, y + (rnd() - .5) * step], i = Math.floor((p0[0] - g.xmin) / g.RES), j = Math.floor((g.ymax - p0[1]) / g.RES);
+    if (i < 0 || j < 0 || i >= g.W || j >= g.H || !S.inSite(p0)) continue; const d0 = S.field(p0); if (!d0) continue;
+    const pts = [p0]; for (const sg of [1, -1]) { let p = p0, pv = [d0[0] * sg, d0[1] * sg]; for (let k = 0; k < n; k++) { let d = S.field(p); if (!d) break; if (d[0] * pv[0] + d[1] * pv[1] < 0) d = [-d[0], -d[1]]; pv = d; p = [p[0] + d[0] * hs, p[1] + d[1] * hs]; sg > 0 ? pts.push(p) : pts.unshift(p); } }
+    out.push(pts); }
+  return out; }
 function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - g.xmin) / g.RES * SC, (g.ymax - p[1]) / g.RES * SC], mPx = SC / g.RES;
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
@@ -424,13 +466,29 @@ function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement(
   ctx.save(); landPath(ctx); ctx.clip('evenodd');
   for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.fillStyle = PAL.farm; ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth = 2 * P.setback * mPx; ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.stroke(); ctx.restore(); }
   ctx.restore();
+  // 可选：地块渐变（离核心近亮、远暗，表达疏密）与顺张量场的流线肌理（ZHA / AADRL 式），都裁在室内
+  if (PAL.grad || PAL.hatch) { ctx.save(); ctx.beginPath(); for (const cp of F.cellPolys) path(ctx, cp.poly, true, false); ctx.clip(); landPath(ctx); ctx.clip('evenodd');
+    if (PAL.grad) { const q = 2, w = Math.ceil(g.W / q), h = Math.ceil(g.H / q), im = new ImageData(w, h), cs = SITE.cores, R = P.coreR * 1.6, st = PAL.grad;
+      if (!F._gd || F._gd.R !== R) { const dd = new Float32Array(w * h); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const x = g.xmin + (i + .5) * q * g.RES, y = g.ymax - (j + .5) * q * g.RES; let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(x - c[0], y - c[1])); dd[j * w + i] = d; } F._gd = { R, dd }; }
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const d = F._gd.dd[j * w + i];
+        let t = Math.min(1, d / R); t = t * t * (3 - 2 * t); let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; }
+        const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0, o = (j * w + i) * 4; for (let c = 0; c < 3; c++) im.data[o + c] = a[1][c] + (b[1][c] - a[1][c]) * u; im.data[o + 3] = 255; }
+      const tc = document.createElement('canvas'); tc.width = w; tc.height = h; tc.getContext('2d').putImageData(im, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(tc, 0, 0, cv.width, cv.height); }
+    if (PAL.hatch) { const Hh = PAL.hatch, key = Hh.step + '/' + Hh.len; ctx.strokeStyle = Hh.col; ctx.lineWidth = Hh.w; ctx.lineCap = ctx.lineJoin = 'round';
+      // 流线先画成白色蒙版缓存（几何与配色无关），换色时只给蒙版上色：切换配色不必重描几万条线
+      if (!SITE._hatch || SITE._hatch.key !== key + '/' + Hh.w + '/' + cv.width) { const mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height; const mx = mk.getContext('2d');
+        mx.strokeStyle = '#fff'; mx.lineWidth = Hh.w; mx.lineCap = mx.lineJoin = 'round'; mx.beginPath(); for (const pts of hatchLines(Hh.step, Hh.len)) path(mx, pts, false, false); mx.stroke(); SITE._hatch = { key: key + '/' + Hh.w + '/' + cv.width, mk }; }
+      const m = /rgba?\(([^)]+)\)/.exec(Hh.col), v = m ? m[1].split(',').map(Number) : [255, 255, 255, 1], tn = document.createElement('canvas'); tn.width = cv.width; tn.height = cv.height; const tx = tn.getContext('2d');
+      tx.drawImage(SITE._hatch.mk, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = `rgb(${v[0]},${v[1]},${v[2]})`; tx.fillRect(0, 0, tn.width, tn.height);
+      ctx.globalAlpha = v.length > 3 ? v[3] : 1; ctx.drawImage(tn, 0, 0); ctx.globalAlpha = 1; }
+    ctx.restore(); }
   // 建筑（栅格，平滑放大）
-  const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), v = 46 - 30 * h; bi.data[i * 4] = bi.data[i * 4 + 1] = bi.data[i * 4 + 2] = v; bi.data[i * 4 + 3] = 255; }
+  const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), f = 1 - .3 * h, B = PAL.bld; bi.data[i * 4] = B[0] * f; bi.data[i * 4 + 1] = B[1] * f; bi.data[i * 4 + 2] = B[2] * f; bi.data[i * 4 + 3] = 255; }
   const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
   ctx.fillStyle = PAL.water; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); }
   ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.3; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
-  if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = r.grade === 'main' ? 'rgba(255,255,255,.55)' : r.grade === 'through' ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.30)'; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
+  if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = `rgba(${PAL.road},${r.grade === 'main' ? .55 : r.grade === 'through' ? .42 : .3})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
   // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开
   const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
   oc.fillStyle = PAL.deck; for (const Pp of F.site.footPolys) { path(oc, Pp, true); oc.fill(); }
@@ -692,6 +750,7 @@ document.querySelectorAll('#langSw button').forEach(b => b.onclick = () => setLa
 setLang(LANG, true);
 initGL(); setMode('2d');
 $('busy').style.display = 'block';
+try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'S1'; } catch (e) {} applyScheme(SCHEME, true);
 boot();
 </script>
 </body>
