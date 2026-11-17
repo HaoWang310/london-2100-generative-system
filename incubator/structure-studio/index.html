@@ -125,6 +125,7 @@ label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
 .pmStep.running{border-color:#f5f5f7;box-shadow:0 0 0 1px #f5f5f7}
 .pmStep.running .pmFlag{color:#f5f5f7}
 .pmStep.done .pmNum{background:#3a3a3e;color:#f5f5f7}
+.nextRow{display:flex;padding:10px 0 2px}.nextRow .mini{flex:1;padding:8px 10px}
 body.demo-run #demo{display:block}
 body.demo-run #dmParams,body.demo-run #dmBar{display:none}
 body.demo-run #hud,body.demo-run #tip{display:none!important}
@@ -349,7 +350,7 @@ function setLang(lang, quiet) {
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
   translateStatic(); for (const k in FMT) { const o = $('v_' + k); if (o && P[k] != null) o.textContent = FMT[k](P[k]); }
   if (!quiet && F) { writeTexts(); buildCards(); focusCell(focus); siteText(); drawPlan(); }
-  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); }
+  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); buildNextBtns(); }
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
@@ -655,7 +656,7 @@ let pending = null;
 $('scaleBtn').onclick = () => { if (!SITE) return; const d1 = SITE.d1, d2 = SITE.d2, set = (k, v) => { const el = $(k); el.value = v; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); };
   set('sCore', Math.round(0.66 * d2 / 5) * 5); set('sOut', Math.round(0.69 * d1 / 10) * 10); set('coreR', Math.round(1.85 * d1 / 25) * 25); P.primShift = Math.round(0.37 * d1 / 10) * 10; if ($('primShift')) set('primShift', P.primShift);
   $('busy').style.display = 'block'; setTimeout(() => solve(false), 30); };
-for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 150); });
+for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 150); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => drawPlan(); $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
@@ -922,7 +923,7 @@ function demoDraw(dt) {
   // 1 水体、溪流、道路
   lay(DEMO.L.water, at(1) ? 0.35 + 0.65 * E(1) : 0.35 * E(0));
   // 1–7 场流粒子（拖尾残影）
-  const fa = !at(1) ? 0 : !at(4) ? Math.min(1, pg(1) * 2.5) : !at(7) ? 0.45 : 0.45 * (1 - E(7));
+  const fa = !at(1) ? 0 : !at(3) ? Math.min(1, pg(1) * 2.5) : !at(4) ? 1 - 0.7 * dmE((pg(3) - .25) / .4) : !at(7) ? 0.3 : 0.3 * (1 - E(7));
   if (fa > 0) { const tc = dmTrail('trail', w, h, pr), tx = dmFade(tc, dt > 0 ? 0.07 : 0); tx.setTransform(pr, 0, 0, pr, 0, 0); tx.globalCompositeOperation = 'lighter'; if (dt > 0) dmStepField(tx, X, dt * 60, 1); tx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = fa; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(tc, 0, 0, w, h); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
   // 3 主线：候选扫描 → 锁定（发光）
@@ -977,7 +978,7 @@ function dmEnterStage(k) { DEMO.stage = k; const s = DST[k];
 function dmParamsTick(k) { const u = dmC01(dmProg(k) / 0.6), e = 1 - (1 - u) ** 3; for (const r of DEMO.prRows || []) { const v = r.v * e; r.b.textContent = (r.dec ? v.toFixed(r.dec) : Math.round(v).toLocaleString()) + r.unit; } }
 function dmPlayBtn() { $('dmPlay').textContent = DEMO.playing ? '❚❚' : '▶'; $('runPause').textContent = DEMO.playing ? L('暂停', 'Pause') : L('继续', 'Resume'); }
 function demoLoop(ts) { if (!DEMO.on) return; const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
-  let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
+  let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); $('runHint').textContent = L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
   try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(demoLoop); }
 async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = $('runNow').disabled = false;
   await demoPrepare(v1 == null ? +P.v1 : v1);
@@ -986,8 +987,23 @@ async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoE
   if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); requestAnimationFrame(demoLoop); }
 function demoExit(keep3d) { if (!DEMO.on) return; DEMO.on = false; document.body.classList.remove('demo-on', 'demo-run'); $('runPause').disabled = $('runNow').disabled = true; $('runPause').textContent = L('暂停', 'Pause'); $('runHint').textContent = L('按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。', 'Builds automatically, step by step, from the site to 3D with the current sliders; the matching steps below open in turn.');
   document.querySelectorAll('.pmStep').forEach(c => c.classList.remove('running', 'done')); const sv = DEMO.saved; DEMO.saved = null; DEMO.L = null; DEMO.trail = DEMO.trail2 = DEMO.deckc = null;
+  const dirty = DEMO.dirty; DEMO.dirty = false; DEMO.guided = false; DEMO.stopAt = null;
+  if (dirty) { F = DEMO.FD; M = null; sceneDirty = true; setMode(keep3d ? '3d' : '2d'); solve(false); return; }
   if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
-$('runBtn').onclick = () => demoStart(undefined, false);
+// 引导模式：每张步骤卡底部"下一步"——播放下一步的生成过程，停在这一步的结果上；此时调这张卡的参数，画面停在这一步实时更新
+const CARD_FIRST = [0, 3, 4, 7, 9], CARD_LAST = [2, 3, 6, 8, 9];
+function buildNextBtns() { const cards = [...document.querySelectorAll('.pmStep')];
+  cards.forEach((c, i) => { let row = c.querySelector('.nextRow'); if (!row) { row = document.createElement('div'); row.className = 'nextRow'; const b = document.createElement('button'); b.type = 'button'; b.className = 'mini primary'; b.onclick = e => { e.stopPropagation(); guidedNext(i); }; row.appendChild(b); c.querySelector('.pmBody').appendChild(row); }
+    const nm = i < cards.length - 1 ? cards[i + 1].querySelector('.pmHead span:nth-child(2)').textContent : ''; row.firstChild.textContent = i < cards.length - 1 ? L(`下一步：${nm} ›`, `Next: ${nm} ›`) : L('完成 · 转到三维 ›', 'Finish · go to 3D ›'); }); }
+async function guidedNext(i) {
+  if (!DEMO.on || DEMO.full) await demoStart(undefined, false);
+  DEMO.guided = true;
+  if (i >= 4) { DEMO.stopAt = null; if (DEMO.T < dmT0[10]) DEMO.T = dmT0[10] + 1e-3; DEMO.playing = true; dmPlayBtn(); return; }
+  const j = i + 1, end = dmT0[CARD_LAST[j]] + DST[CARD_LAST[j]].d - 0.02; if (DEMO.T >= end) DEMO.T = dmT0[CARD_FIRST[j]] + 1e-3; // 已经过了就从这一步开头重播
+  DEMO.stopAt = end; DEMO.playing = true; dmPlayBtn(); }
+async function guidedRefresh() { if (!DEMO.on) return; const T = DEMO.T, pl = DEMO.playing, st = DEMO.stopAt; await demoPrepare(+P.v1 ? 1 : 0); DEMO.T = T; DEMO.stopAt = st; DEMO.playing = pl; DEMO.dirty = true; writeTexts(); DEMO.stage = -1; dmPlayBtn(); }
+buildNextBtns();
+$('runBtn').onclick = () => { DEMO.guided = false; DEMO.stopAt = null; demoStart(undefined, false); };
 $('runFull').onclick = () => { if (DEMO.on && !DEMO.full) { DEMO.full = true; document.body.classList.remove('demo-run'); document.body.classList.add('demo-on'); $('dmHead').style.left = ''; $('dmHead').style.top = ''; if (mode === '2d') dmFit(); } else demoStart(undefined, true); };
 $('runPause').onclick = () => { if (!DEMO.on) return; DEMO.playing = !DEMO.playing; dmPlayBtn(); };
 $('runNow').onclick = () => demoExit();
