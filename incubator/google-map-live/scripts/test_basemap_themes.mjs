@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import {createBasemapThemeController,BASEMAP_THEMES,
   normaliseBasemapTheme} from './osm_basemap_themes.js';
 const read=name=>fs.readFileSync(new URL(name,import.meta.url),'utf8');
-const index=read('../index.html');
+const index=read('../index.html')+read('./app.js');   // v3.39.1: the page's code is in scripts/app.js
 const focus=read('./local_flood_ui.js');
 const basemap=[
  {id:'background',type:'background'},
