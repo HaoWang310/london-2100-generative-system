@@ -202,26 +202,26 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR .loc{font:11px ui-monospace,'SF Mono',Menlo,monospace;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #tsXR .sp{flex:1}
 #tsXR .btn{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#1c1c1e;white-space:nowrap}
-#tsXR .btn:hover{background:#2c2c2e}#tsXR .btn.exit{background:#d9c4a3;border-color:#d9c4a3;color:#1c1c1e;font-weight:600}
+#tsXR .btn:hover{background:#2c2c2e}#tsXR .btn.exit{background:#f5f5f7;border-color:#f5f5f7;color:#1c1c1e;font-weight:600}
 #tsXR .side{grid-area:side;background:#111113;border-right:1px solid rgba(255,255,255,.08);padding:20px 16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
 #tsXR .eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8e8e93}
 #tsXR h1{margin:6px 0 0;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-.02em}#tsXR .lead{margin:6px 0 0;color:#a1a1a6}
 #tsXR .modes{display:flex;flex-direction:column;gap:10px}
 #tsXR .mode{text-align:left;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:#161618;display:flex;flex-direction:column;gap:8px;transition:background .15s,border-color .15s}
-#tsXR .mode:hover{background:#1c1c1e;border-color:rgba(255,255,255,.2)}#tsXR .mode.primary{border-color:#d9c4a3;background:#1c1c1e}
+#tsXR .mode:hover{background:#1c1c1e;border-color:rgba(255,255,255,.2)}#tsXR .mode.primary{border-color:#f5f5f7;background:#1c1c1e}
 #tsXR .mode .mh{display:flex;align-items:center;gap:10px}#tsXR .mode b{font-size:15px;font-weight:600;flex:1}#tsXR .mode .md{color:#a1a1a6}
-#tsXR .mode .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#d9c4a3;color:#1c1c1e;font-weight:600}
-#tsXR .mode .go{display:flex;align-items:center;gap:6px;color:#d9c4a3;font-weight:600;font-size:12px}
+#tsXR .mode .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#f5f5f7;color:#1c1c1e;font-weight:600}
+#tsXR .mode .go{display:flex;align-items:center;gap:6px;color:#f5f5f7;font-weight:600;font-size:12px}
 #tsXR .card{padding:12px;border-radius:12px;background:#1c1c1e;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px}
-#tsXR .url{font:11px ui-monospace,'SF Mono',Menlo,monospace;color:#d9c4a3;word-break:break-all}
+#tsXR .url{font:11px ui-monospace,'SF Mono',Menlo,monospace;color:#f5f5f7;word-break:break-all}
 #tsXR .chips{display:flex;gap:6px;flex-wrap:wrap}#tsXR .chips button{height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#a1a1a6;font-size:12px}
-#tsXR .chips button.on{background:#2c2c2e;border-color:#2c2c2e;color:#f5f5f7}
+#tsXR .chips button.on{background:#2c2c2e;border-color:#f5f5f7;color:#f5f5f7}   /* v0.47: selected = white, as in the app */
 #tsXR .rows{display:flex;flex-direction:column}
 #tsXR .tog{display:flex;align-items:center;justify-content:space-between;height:36px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:none;padding:0;text-align:left}
 #tsXR .tog::after{content:"";width:36px;height:22px;border-radius:11px;background:#2c2c2e;flex:none;box-shadow:inset 0 0 0 9px #2c2c2e;transition:background .15s}
 #tsXR .tog{position:relative}#tsXR .tog::before{content:"";position:absolute;right:16px;top:9px;width:18px;height:18px;border-radius:50%;background:#fff;transition:right .15s;z-index:1}
 #tsXR .tog.on::after{background:#8fb59a;box-shadow:none}#tsXR .tog.on::before{right:2px}
-#tsXR .exagRow{display:flex;align-items:center;gap:10px;height:40px}#tsXR .exagRow span{flex:1}#tsXR .exagRow input{width:110px;accent-color:#d9c4a3}#tsXR .exagRow b{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;min-width:24px;text-align:right}
+#tsXR .exagRow{display:flex;align-items:center;gap:10px;height:40px}#tsXR .exagRow span{flex:1}#tsXR .exagRow input{width:110px;accent-color:#f5f5f7}#tsXR .exagRow b{font:12px ui-monospace,'SF Mono',Menlo,monospace;color:#a1a1a6;min-width:24px;text-align:right}
 #tsXR .keys{display:grid;grid-template-columns:34px 1fr;row-gap:6px;column-gap:8px;align-items:center;color:#a1a1a6;font-size:12px}
 #tsXR .keys i{font-style:normal;height:22px;border-radius:6px;background:#2c2c2e;color:#f5f5f7;font:11px ui-monospace,'SF Mono',Menlo,monospace;display:flex;align-items:center;justify-content:center}
 #tsXR .stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:#0a0a0b}
@@ -238,7 +238,7 @@ export function open(api, lang = 'zh', opt = {}){
 #tsXR.immersive .side,#tsXR.immersive .insp,#tsXR.immersive .showSet,#tsXR.immersive .brand,#tsXR.immersive .crumbs,#tsXR.immersive .loc{display:none}
 #tsXR.immersive .stage{position:fixed;inset:0;background:transparent}
 #tsXR.immersive .top{position:fixed;top:0;left:0;right:0;z-index:2;height:auto;padding:16px;background:transparent;border:0;pointer-events:none}
-#tsXR.immersive .top .btn{pointer-events:auto;border-radius:999px;backdrop-filter:blur(18px);background:rgba(44,44,46,.82)}#tsXR.immersive .top .btn.exit{background:#d9c4a3}
+#tsXR.immersive .top .btn{pointer-events:auto;border-radius:999px;backdrop-filter:blur(18px);background:rgba(44,44,46,.82)}#tsXR.immersive .top .btn.exit{background:#f5f5f7}
 #tsXR.immersive .foot{position:fixed;left:16px;bottom:14px;z-index:2;height:auto;max-width:calc(100% - 32px);padding:6px 12px;border:0;border-radius:999px;background:rgba(28,28,30,.82);backdrop-filter:blur(12px)}
 @media (max-width:900px){#tsXR{display:flex;flex-direction:column;overflow:auto}#tsXR .stage{min-height:56vh;flex:none}#tsXR .top{flex:none;height:56px}#tsXR .foot{flex:none;height:44px}#tsXR .insp{min-height:auto}}`;
   const ic = { vr: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a9 4 0 0 0 18 0"/><path d="M3 9a9 4 0 0 1 18 0"/><path d="M9 13l-1 8h8l-1-8"/></svg>',
