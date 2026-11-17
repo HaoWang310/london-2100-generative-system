@@ -1,6 +1,6 @@
 /* Reference copy of google-map-live/scripts/tensor_studio_site.js (wired in since v3.37): opens Tensor Studio over
  * the London map. The two apps talk only through window.__TENSOR_SITE_INPUT__ = {ring, features, elevation, lang,
- * close, fail, view}: Tensor Studio builds its site from that (scripts/site_builder.js) and calls view({lng, lat,
+ * close, fail, view, mapTheme}: Tensor Studio builds its site from that (scripts/site_builder.js) and calls view({lng, lat,
  * zoom, bearing}) whenever its view moves so the map underneath follows (view(null) when it shows its own basemap).
  * Keep the two files the same.
  */

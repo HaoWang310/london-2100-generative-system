@@ -42,5 +42,5 @@
 ## 导出
 
 - Hydro Lab：在 `incubator/vr` 里运行 `python3 tools/build-scene-hydro-lab.py [网格倍数]`，直接读 `../google-map-live/assets` 里的地形、洪水和汇水面积资源。
-- Tensor Studio 现在：在 `incubator/vr` 里运行 `node tools/export-from-tensor-studio.mjs`，在无界面浏览器里打开 Tensor Studio、立即生成、导出。
+- Tensor Studio 现在：在 `incubator/vr` 里运行 `node tools/export-from-tensor-studio.mjs`，在无界面浏览器里打开 Tensor Studio、立即生成、导出。道路用 Tensor Studio 的**正式路网**（`window.__ts6.roadNet()`，v8.45 起：清理过的街道、真实宽度、主路 / 次路 / 支路三级 `grade`），和它的 GeoJSON、结构工作室用的是同一份。
 - 以后：在 Tensor Studio 里加一个「导出 VR 场景」按钮（读 `streetWidths()`、`D.env.Z`、`D.landMask`、`D.flood.grid`），生成系统那边开发完再加。

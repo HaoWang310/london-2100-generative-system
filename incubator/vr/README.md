@@ -15,6 +15,7 @@ London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 *
 - 地图 → VR：截图的四个角按国家网格放，建筑同一套坐标
 - Hydro Lab 场景重新生成：300 m 网格直接铺在国家网格上（`crs: EPSG:27700`，`origin` 是格子 (0, 0) 中心的国家网格坐标）
 - 换算公式是 `shared/geo-core/epsg27700.js` 的副本（`src/epsg27700.js`），这样 VR 文件夹以后打包 APK 也能单独用；`node incubator/vr/tools/check-geo.mjs` 检查两份是否一致
+- 车站 P2 场景用最新的 Tensor Studio（v8.45）重新导出，道路换成它的**正式路网**（清理过的街道、真实宽度、三级道路），和 Tensor Studio 的 GeoJSON、结构工作室一致；以前是 v8.6 时导出的旧道路
 - 外观和操作没有变化
 
 ## 右摇杆上下：抬头低头（v0.51）
