@@ -238,7 +238,7 @@ function program(gl){ const p = gl.createProgram();
  * mapR: radius of the map disc on the table (m); M: hall space → world (the table centre on the floor).
  */
 export function createHall(gl, opt = {}){
-  const mapR = opt.mapR || 1.0, tableH = opt.tableH || 0.9, lang = opt.lang === 'en' ? 'en' : 'zh';
+  const mapR = opt.mapR || 1.3, tableH = opt.tableH || 0.9, lang = opt.lang === 'en' ? 'en' : 'zh';
   const prog = program(gl), parts = [], textures = [], buffers = [];
   const tex = (cv, repeat) => { const t = gl.createTexture(); textures.push(t); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.generateMipmap(gl.TEXTURE_2D);
