@@ -90,6 +90,22 @@ function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; le
 function inPoly(p, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
 function decodeB64(s) { if (typeof atob === 'function') { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; } return new Uint8Array(Buffer.from(s, 'base64')); }
 
+// 掩膜的外轮廓（Moore 追踪）→ 去台阶：Chaikin 三次 + 轻度平滑，得到光滑矢量轮廓（像素坐标）
+function traceOutlines(M, W, H) {
+  const seen = new Uint8Array(W * H), out = [], D8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], fg = (x, y) => x >= 0 && y >= 0 && x < W && y < H && M[y * W + x];
+  const L = label4(M, W, H);
+  for (let i = 0; i < W * H; i++) { if (!M[i] || seen[L.lab[i]]) continue; seen[L.lab[i]] = 1; if (L.sizes[L.lab[i]] < 50) continue;
+    const sx = i % W, sy = (i / W) | 0; let cx = sx, cy = sy, dir = 0, first = -1; const pts = [[cx + .5, cy + .5]];
+    for (let it = 0; it < 8 * W * H; it++) { let moved = false;
+      for (let q = 0; q < 8; q++) { const d = (dir + 6 + q) % 8, nx = cx + D8[d][0], ny = cy + D8[d][1]; if (!fg(nx, ny)) continue;
+        if (first < 0) first = d; else if (cx === sx && cy === sy && d === first) { moved = null; break; }
+        cx = nx; cy = ny; dir = d; moved = true; break; }
+      if (!moved) break; pts.push([cx + .5, cy + .5]); }
+    let P = pts; for (let k = 0; k < 3; k++) { const Q = []; for (let j = 0; j < P.length; j++) { const a = P[j], b = P[(j + 1) % P.length]; Q.push([a[0] * .75 + b[0] * .25, a[1] * .75 + b[1] * .25], [a[0] * .25 + b[0] * .75, a[1] * .25 + b[1] * .75]); } P = Q; }
+    P = resample([...P, P[0]], 1.0); P.pop(); for (let k = 0; k < 3; k++) P = P.map((q, j) => { const a = P[(j - 1 + P.length) % P.length], b = P[(j + 1) % P.length]; return [q[0] * .5 + (a[0] + b[0]) * .25, q[1] * .5 + (a[1] + b[1]) * .25]; });
+    out.push(P); }
+  return out;
+}
 function prepareSite(snap) {
   const RES = 2, W = Math.ceil(snap.w / RES), H = Math.ceil(snap.h / RES), NN = W * H, xmin = 0, ymax = snap.h;
   const toPix = p => [(p[0] - xmin) / RES, (ymax - p[1]) / RES];
@@ -99,6 +115,13 @@ function prepareSite(snap) {
   // 结构可跨越的范围：各块土地闭运算 25 m（越过铁路、道路缝隙和小洞，外轮廓不变）
   const r = Math.round(25 / RES), dOut = edt(landM, W, H), dil = new Uint8Array(NN); for (let i = 0; i < NN; i++) dil[i] = dOut[i] * RES <= 40 ? 0 : 1;
   const dIn = edt(dil, W, H), siteM = new Uint8Array(NN); for (let i = 0; i < NN; i++) siteM[i] = dIn[i] * RES > 40 ? 1 : 0; void r;
+  // 结构的范围（足迹）= 场地外轮廓（含水面、铁路缝、洞）闭合后的整块 → 结构架在地面之上，只在这条外轮廓处切断
+  const outerM = new Uint8Array(NN); for (const pc of snap.pieces) fillPoly(outerM, W, H, pc.outer.map(toPix), 1); for (let i = 0; i < NN; i++) if (waterM[i] && siteM[i]) outerM[i] = 1;
+  { const dO = edt(outerM, W, H), dl = new Uint8Array(NN); for (let i = 0; i < NN; i++) dl[i] = dO[i] * RES <= 40 ? 0 : 1; const dI = edt(dl, W, H); for (let i = 0; i < NN; i++) siteM[i] = dI[i] * RES > 40 || outerM[i] ? 1 : 0; }
+  { const bg = new Uint8Array(NN); for (let i = 0; i < NN; i++) bg[i] = siteM[i] ? 0 : 1; const L = label4(bg, W, H), edgeLab = new Set();
+    for (let x = 0; x < W; x++) { edgeLab.add(L.lab[x]); edgeLab.add(L.lab[(H - 1) * W + x]); } for (let y = 0; y < H; y++) { edgeLab.add(L.lab[y * W]); edgeLab.add(L.lab[y * W + W - 1]); }
+    for (let i = 0; i < NN; i++) if (bg[i] && !edgeLab.has(L.lab[i])) siteM[i] = 1; }
+  const footPolys = traceOutlines(siteM, W, H).map(P => P.map(q => [xmin + q[0] * RES, ymax - q[1] * RES]));
   const nSite = new Uint8Array(NN); for (let i = 0; i < NN; i++) nSite[i] = siteM[i] ? 0 : 1;
   const bdG = edt(nSite, W, H); // 场内到场地边界的距离（像素）
   const F = snap.field, fu = decodeB64(F.data);
@@ -120,7 +143,7 @@ function prepareSite(snap) {
   let lx0 = 1e9, ly0 = 1e9, lx1 = -1e9, ly1 = -1e9; for (const pc of snap.pieces) for (const p of pc.outer) { lx0 = Math.min(lx0, p[0]); ly0 = Math.min(ly0, p[1]); lx1 = Math.max(lx1, p[0]); ly1 = Math.max(ly1, p[1]); }
   const cores = snap.attractors.filter(a => a.kind === 'main').map(a => [a.x, a.y]).filter(inSite);
   let landA = 0; for (let i = 0; i < NN; i++) landA += landM[i];
-  return { snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
+  return { snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
 }
 
 // ---------------------------------------------------------------- 主生成
@@ -270,21 +293,22 @@ function buildStructure(site, P, EXCL) {
   cellPolys.forEach((cp, ci) => { const pp = cp.poly.map(toPix); fillPoly(inside, W, H, pp, 1); fillPoly(lab, W, H, pp, ci + 1);
     for (const q of resample([...pp, pp[0]], 0.5)) { const xa = Math.max(0, Math.floor(q[0] - Bd)), xb = Math.min(W - 1, Math.ceil(q[0] + Bd)), ya = Math.max(0, Math.floor(q[1] - Bd)), yb = Math.min(H - 1, Math.ceil(q[1] + Bd));
       for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) { const d = Math.hypot(x + .5 - q[0], y + .5 - q[1]); if (d < dB[y * W + x]) dB[y * W + x] = d; } } });
-  // 桥：走廊中心线跨过铁路缝隙 / 水面（两端都在陆地上、跨度 < P.bridgeMax）的一段，按走廊宽画成桥
-  const solid = i => landM[i] && !waterM[i], bridge = new Float32Array(NN); let nBridge = 0;
-  for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return x >= 0 && y >= 0 && x < W && y < H && solid(y * W + x); });
-    let k = 0; while (k < Q.length) { if (on[k]) { k++; continue; } let e = k; while (e < Q.length && !on[e]) e++;
-      if (k > 0 && e < Q.length && (e - k) * 2 <= P.bridgeMax) { nBridge++; const w = (f.prim ? P.wP : P.wS) / 2; for (let i = Math.max(0, k - 3); i < Math.min(Q.length, e + 3); i++) { const t = toPix(Q[i]); stampDisk(bridge, W, H, t[0], t[1], w / RES); } }
+  // 跨水 / 跨铁路段：走廊落在非陆地（水面、铁路缝、洞）上的部分，三维里做成架空桥面，下面每隔 P.colStep 放一对柱子
+  const solid = i => landM[i] && !waterM[i], columns = []; let bridgeL = 0, nBridge = 0;
+  for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return !(x >= 0 && y >= 0 && x < W && y < H) || !siteM[y * W + x] ? 2 : solid(y * W + x) ? 1 : 0; });
+    let k = 0; while (k < Q.length) { if (on[k] !== 0) { k++; continue; } let e = k; while (e < Q.length && on[e] === 0) e++; const L = (e - k) * 2;
+      if (L >= 6) { nBridge++; bridgeL += L; const w = (f.prim ? P.wP : P.wS) / 2 - 2, n = Math.max(1, Math.round(L / P.colStep));
+        for (let c = 0; c < n; c++) { const idx = Math.min(Q.length - 2, k + Math.round((c + 0.5) * (e - k) / n)), t = unit(sub(Q[idx + 1], Q[idx])), nn = [-t[1], t[0]]; columns.push(add(Q[idx], mul(nn, w)), sub(Q[idx], mul(nn, w))); } }
       k = e; } }
   const sdGrid = new Float32Array(NN), corrF = new Float32Array(NN), corr = new Uint8Array(NN), cellsM = new Uint8Array(NN);
   for (let i = 0; i < NN; i++) { let sd = (inside[i] ? dB[i] : -dB[i]) * RES; const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES;
     for (const t of towers) { const dt = Math.hypot(x - t[0], y - t[1]) - (t[2] + 6); if (dt < sd) sd = dt; }
-    sdGrid[i] = sd; const cf = clamp(0.5 - sd / (1.5 * RES), 0, 1); corrF[i] = solid(i) ? cf : siteM[i] || waterM[i] ? Math.min(cf, bridge[i]) : 0; corr[i] = siteM[i] && corrF[i] > 0.5 ? 1 : 0; cellsM[i] = landM[i] && !corr[i] && !waterM[i] ? 1 : 0; }
+    sdGrid[i] = sd; const cf = clamp(0.5 - sd / (1.5 * RES), 0, 1); corrF[i] = siteM[i] ? cf : 0; corr[i] = siteM[i] && corrF[i] > 0.5 ? 1 : 0; cellsM[i] = landM[i] && !corr[i] && !waterM[i] ? 1 : 0; }
   const GP = { nTail: cellPolys.length }, chains = [], merged = new Set(), nSplit = 0, nWeb = 0, nCtrl = 0, mergeAng = 0, FA = P.primAng, coreP = cores[0], nTail = GP.nTail; void nTail;
   const CL = label4(cellsM, W, H); // 室编号
 
   // 8 两侧：建筑带（退线 / 进深 / 切段），其后农田
-  const dc = edt(corr, W, H);
+  const dc = edt(corr, W, H), nonSolid = new Uint8Array(NN); for (let i = 0; i < NN; i++) nonSolid[i] = landM[i] && !waterM[i] ? 0 : 1; const dNS = edt(nonSolid, W, H); // 到水面 / 铁路缝 / 场地边的距离
   // 沿走廊弧长：最近中心线点（向量传播近似最近点）
   const sx = new Float32Array(NN).fill(1e9), sy = new Float32Array(NN).fill(1e9), sa = new Float32Array(NN);
   let off = 0;
@@ -296,7 +320,7 @@ function buildStructure(site, P, EXCL) {
   innerP.forEach(p => { const k = Math.floor(p[0] / jc) + ',' + Math.floor(p[1] / jc); if (!junG.has(k)) junG.set(k, []); junG.get(k).push(p); });
   const nearJ = (x, y) => { const gx = Math.floor(x / jc), gy = Math.floor(y / jc); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = junG.get((gx + a) + ',' + (gy + b)); if (l) for (const p of l) if (Math.hypot(p[0] - x, p[1] - y) < 30 / RES) return true; } return false; };
   let bldM = new Uint8Array(NN);
-  for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth) continue;
+  for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
     if (EXCL && EXCL.has(CL.lab[i])) continue;
     if (((sa[i] % P.segL) + P.segL) % P.segL < P.gap) continue; const x = i % W, y = (i / W) | 0; if (nearJ(x + .5, y + .5)) continue; bldM[i] = 1; }
   bldM = morph(morph(bldM, W, H, 2, true), W, H, 2, false);
@@ -310,7 +334,7 @@ function buildStructure(site, P, EXCL) {
   const d0 = field(cen), nrm = [-d0[1], d0[0]];
   const farm = new Uint8Array(NN), stripe = new Uint8Array(NN); let farmA = 0, corrA = 0;
   for (let i = 0; i < NN; i++) { const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES; stripe[i] = ((((x - cen[0]) * nrm[0] + (y - cen[1]) * nrm[1]) % 9) + 9) % 9 < 6.5 ? 1 : 0;
-    if (cellsM[i] && dc[i] * RES >= P.setback && !bldM[i]) { farm[i] = 1; farmA++; } if (corr[i]) corrA++; }
+    if (cellsM[i] && dc[i] * RES >= P.setback && dNS[i] * RES >= 3 && !bldM[i]) { farm[i] = 1; farmA++; } if (corr[i]) corrA++; }
 
   // 9 室信息（卡片）
   const cells = [];
@@ -330,7 +354,7 @@ function buildStructure(site, P, EXCL) {
   let totL = 0; for (const f of fibres) totL += arclen(f.P).slice(-1)[0];
   return { nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
-    cells, coreP, cores, site, cellPolys, nWaterCut, nBridge, seedsN: seeds.length, stats: { strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, merged: merged.size, split: nSplit, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
+    cells, coreP, cores, site, cellPolys, nWaterCut, nBridge, bridgeL, columns, seedsN: seeds.length, stats: { strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, merged: merged.size, split: nSplit, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
 
 // 并排拉链：对每条纤维的点，若有另一条纤维平行且中心距 < dz，则二者向中线靠拢；靠拢后的段宽度加大（两股 → 一束）
@@ -365,7 +389,7 @@ function ms(F, field, G2, zf, bottom, thr = 0.5) {
     if (poly.length < 3) continue;
     const Z = poly.map(p => zf(p[0], p[1]));
     for (let k = 1; k < poly.length - 1; k++) top.push(poly[0][0], poly[0][1], Z[0], poly[k + 1][0], poly[k + 1][1], Z[k + 1], poly[k][0], poly[k][1], Z[k]);
-    for (let k = 0; k + 1 < cr.length; k += 2) { const A = cr[k], B = cr[k + 1], za = zf(A[0], A[1]), zb = zf(B[0], B[1]), ba = bottom(za), bb = bottom(zb);
+    for (let k = 0; k + 1 < cr.length; k += 2) { const A = cr[k], B = cr[k + 1], za = zf(A[0], A[1]), zb = zf(B[0], B[1]), ba = bottom(za, A[0], A[1]), bb = bottom(zb, B[0], B[1]);
       side.push(A[0], A[1], za, A[0], A[1], ba, B[0], B[1], bb, A[0], A[1], za, B[0], B[1], bb, B[0], B[1], zb); }
   }
   return { top: new Float32Array(top), side: new Float32Array(side) };
@@ -374,7 +398,8 @@ function meshes(F, P) {
   const g = F.grid, { W, H, RES, xmin, ymax } = g, NN = W * H;
   const deckZ = P.deckZ;
   const corrZ = (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; };
-  const corridor = ms(F, g.corrF, 2.0, corrZ, z => z > deckZ + 0.1 ? z - deckZ : 0);
+  const solidAt = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1), k = j * W + i; return F.site.landM[k] && !F.site.waterM[k]; };
+  const corridor = ms(F, g.corrF, 2.0, corrZ, (z, x, y) => !solidAt(x, y) ? z - 1.2 : z > deckZ + 0.1 ? z - deckZ : 0); // 跨水 / 跨铁路段：1.2 m 厚的架空桥面
   const fs = new Float32Array(NN); for (let i = 0; i < NN; i++) fs[i] = g.farm[i] ? 1 : 0; // 三维里农田整片铺（条纹只在平面图上）
   const farm = ms(F, blur(fs, W, H, 0.6), 4.0, () => 0.25, z => z - 0.2);
   const bS = new Float32Array(NN); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let m = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const xx = x + a, yy = y + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) m = Math.max(m, g.hgt[yy * W + xx]); } bS[y * W + x] = m; }
