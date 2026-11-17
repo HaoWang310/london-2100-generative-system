@@ -386,18 +386,18 @@ const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 const PAL = { _: 0, bld: [46, 46, 46], road: '255,255,255', edge: 'rgba(10,10,10,.6)', bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
 // 色卡：渐变 + 顺张量场流线（AADRL / ZHA 式）。每套只改不同的几项，其余用 SCHEME_BASE
 const SCHEME_BASE = { bg: '#050505', land: '#121212', farm: '#222222', grad: null, hatch: { col: 'rgba(255,255,255,.16)', w: 1, step: 9, len: 60 }, deck: '#ffffff', tower: '#ffffff', bridge: 'rgba(200,205,210,1)', water: '#0b0d10', stream: 'rgba(110,120,130,.5)', bld: [12, 12, 12], road: '255,255,255', edge: 'rgba(0,0,0,.55)', red: '#e0412f' };
-const SCHEMES = [ // 核心色都是用户给的色卡 #E1E6CF（浅鼠尾草绿），往外渐变到不同的低饱和深色
-  { id: 'S1', zh: '橄榄', en: 'Olive', o: { grad: [[0, [225, 230, 207]], [0.45, [150, 160, 120]], [1, [36, 40, 30]]], water: '#0c0e0a' } },
-  { id: 'S2', zh: '墨绿', en: 'Forest', o: { grad: [[0, [225, 230, 207]], [0.45, [118, 150, 120]], [1, [18, 36, 30]]], water: '#07120f' } },
-  { id: 'S3', zh: '青灰', en: 'Teal grey', o: { grad: [[0, [225, 230, 207]], [0.45, [120, 150, 150]], [1, [20, 38, 44]]], water: '#071318' } },
-  { id: 'S4', zh: '石板蓝', en: 'Slate', o: { grad: [[0, [225, 230, 207]], [0.45, [118, 138, 160]], [1, [22, 30, 48]]], water: '#080c16' } },
-  { id: 'S5', zh: '炭灰', en: 'Charcoal', o: { grad: [[0, [225, 230, 207]], [0.45, [146, 150, 140]], [1, [30, 30, 30]]], water: '#0d0d0d' } },
-  { id: 'S6', zh: '苔藓棕', en: 'Moss', o: { grad: [[0, [225, 230, 207]], [0.45, [160, 158, 112]], [1, [52, 40, 28]]], water: '#0e0b08' } },
-  { id: 'S7', zh: '雾紫', en: 'Mauve', o: { grad: [[0, [225, 230, 207]], [0.45, [150, 142, 166]], [1, [34, 28, 46]]], water: '#0d0a12' } },
-  { id: 'S8', zh: '纯色场线', en: 'Flat + lines', o: { farm: '#e1e6cf', hatch: { col: 'rgba(40,48,30,.16)', w: 1, step: 8, len: 70 }, water: '#0d1110', bld: [18, 18, 18] } },
+const SCHEMES = [ // 渐变（核心亮 → 外围暗）+ 顺张量场流线
+  { id: 'M', zh: '青到紫', en: 'Cyan–violet', o: { grad: [[0, [205, 242, 240]], [0.45, [112, 122, 192]], [1, [32, 24, 58]]], water: '#0c0a18', red: '#ffffff' } },
+  { id: 'N', zh: '日落', en: 'Sunset', o: { grad: [[0, [255, 214, 140]], [0.45, [204, 106, 92]], [1, [28, 36, 66]]], water: '#0b0f1c', red: '#ffffff' } },
+  { id: 'O', zh: '酸性绿', en: 'Acid green', o: { grad: [[0, [218, 255, 124]], [0.45, [88, 152, 96]], [1, [18, 34, 28]]], water: '#08130f' } },
+  { id: 'P', zh: '冰蓝', en: 'Ice blue', o: { grad: [[0, [232, 246, 255]], [0.45, [92, 142, 204]], [1, [12, 26, 54]]], water: '#060d1b' } },
+  { id: 'Q', zh: '粉到酒红', en: 'Rose', o: { grad: [[0, [255, 204, 214]], [0.45, [190, 80, 112]], [1, [40, 16, 28]]], water: '#14070d', red: '#ffffff' } },
+  { id: 'R', zh: '光谱', en: 'Spectrum', o: { grad: [[0, [250, 230, 92]], [0.33, [92, 190, 122]], [0.66, [40, 112, 142]], [1, [44, 30, 80]]], water: '#0b0a18', red: '#ffffff' } },
+  { id: 'J', zh: '青', en: 'Teal', o: { grad: [[0, [212, 236, 232]], [0.45, [92, 146, 148]], [1, [22, 44, 50]]], water: '#08151b', stream: 'rgba(70,110,125,.6)' } },
+  { id: 'L', zh: '灰到橙', en: 'Heat', o: { grad: [[0, [255, 104, 56]], [0.4, [150, 62, 46]], [1, [34, 34, 34]]], hatch: { col: 'rgba(255,255,255,.12)', w: 1, step: 9, len: 60 }, water: '#0e1114', red: '#ffffff' } },
 ];
 const SCHEME_KEY = 'structureStudio.scheme';
-let SCHEME = 'S1';
+let SCHEME = 'M';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
 function buildSwatches() { const g = $('swGrid'); g.textContent = '';
@@ -750,7 +750,7 @@ document.querySelectorAll('#langSw button').forEach(b => b.onclick = () => setLa
 setLang(LANG, true);
 initGL(); setMode('2d');
 $('busy').style.display = 'block';
-try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'S1'; } catch (e) {} applyScheme(SCHEME, true);
+try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
 boot();
 </script>
 </body>
