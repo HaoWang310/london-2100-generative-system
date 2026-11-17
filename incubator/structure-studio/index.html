@@ -23,7 +23,7 @@ button,input,select{font-family:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #view{position:fixed;inset:0;background:#000}
 #gl,#plan{position:absolute;inset:0;width:100%;height:100%;display:block}
-#plan{background:#0b0c0e;cursor:grab}
+#plan{background:#0a0a0a;cursor:grab}
 
 /* 左：参数栏 */
 #panel.ts-panel{position:fixed;z-index:20;top:14px;left:14px;width:min(var(--lw),calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow-y:auto;scrollbar-width:thin;
@@ -232,17 +232,17 @@ body.cards-on #cardBar{display:flex}
   <div class="dpSection"><div class="dpTitle">视图</div><div class="dpGrid"><button type="button" class="dpTile on" id="v2d"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></svg><span>平面</span></button><button type="button" class="dpTile " id="v3d"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>三维</span></button></div></div>
   <div class="dpSection"><div class="dpTitle">镜头</div><div class="dpGrid"><button type="button" class="dpTile dpRow" id="fitBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>全部场地</span></button><button type="button" class="dpTile dpRow" id="lowBtn"><svg viewBox="0 0 24 24"><path d="M3 17h18M6 17l4-6 3 3 3-5 3 8"/></svg><span>低视角</span></button><button type="button" class="dpTile dpRow" id="topBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg><span>俯视</span></button><button type="button" class="dpTile dpRow" id="rotBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg><span>自动旋转</span></button></div></div>
   <div class="dpSection"><div class="dpTitle">图层</div>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#9a9aa4"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#e0412f"></i><span>主线</span><input type="checkbox" id="c_prim" hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#a29f99"></i><span>建筑</span><input type="checkbox" id="c_bld" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#62735a"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#dcdad4;box-shadow:inset 0 0 0 1.5px #e0412f"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#1e1e1e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></i><span>建筑</span><input type="checkbox" id="c_bld" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#8a8869"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef;box-shadow:inset 0 0 0 1.5px #e0412f"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>图纸元素（比例尺 · 指北 · 坐标）</span><input type="checkbox" id="c_furn" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>阴影</span><input type="checkbox" id="c_shadow" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" hidden><i class="dpSw"></i></label>
   </div>
   <div class="dpSection"><div class="dpTitle">图例</div><div class="dpLegend">
-    <span><i class="lgLine"></i>红线（结构场地外缘）</span><span><i style="background:#dcdad4"></i>种植工厂走廊（结构）</span><span><i style="background:#aab4c2"></i>跨水 / 跨铁路段</span><span><i style="background:#62735a"></i>农田</span><span><i style="background:#a29f99"></i>沿走廊建筑</span><span><i style="background:#1f3343"></i>水体</span><span><i style="background:#dcdad4;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
+    <span><i class="lgLine"></i>红线（结构场地外缘）</span><span><i style="background:#f1f1ef"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路段</span><span><i style="background:#8a8869"></i>农田</span><span><i style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i style="background:#6e8796"></i>水体</span><span><i style="background:#f1f1ef;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
   </div></div>
   <div class="dpSection"><div class="dpTitle">统计</div><div class="dpStats">
     <div><b id="s_cell">–</b><span id="s_cellL">室</span></div><div><b id="s_bld">–</b><span>沿走廊建筑</span></div>
@@ -299,14 +299,14 @@ let SNAP = null, SITE = null, F = null, M = null, PLAN = null, focus = null, mod
 let renderer, scene, camera, sun, G = {};
 const cam = { az: -0.75, el: 0.62, dist: 3200, tx: 0, ty: 0, tz: 0, rot: false };
 const MAT = {
-  land: new THREE.MeshStandardMaterial({ color: 0x3a3b40, roughness: 1, side: THREE.DoubleSide }),
-  water: new THREE.MeshStandardMaterial({ color: 0x2e4a5a, roughness: .3, side: THREE.DoubleSide }),
-  deck: new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: .55, side: THREE.DoubleSide }),
+  land: new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 1, side: THREE.DoubleSide }),
+  water: new THREE.MeshStandardMaterial({ color: 0x6e8796, roughness: .3, side: THREE.DoubleSide }),
+  deck: new THREE.MeshStandardMaterial({ color: 0xf1f1ef, roughness: .55, side: THREE.DoubleSide }),
   glass: new THREE.MeshStandardMaterial({ color: 0x9fb8ae, roughness: .25, metalness: .1, side: THREE.DoubleSide }),
-  bld: new THREE.MeshStandardMaterial({ color: 0xc4c5c2, roughness: .9, side: THREE.DoubleSide }),
-  bldS: new THREE.MeshStandardMaterial({ color: 0x8f9396, roughness: .9, side: THREE.DoubleSide }),
-  farm: new THREE.MeshStandardMaterial({ color: 0x7a8c70, roughness: 1, side: THREE.DoubleSide }),
-  towG: new THREE.MeshStandardMaterial({ color: 0x6d7f63, roughness: .8 }),
+  bld: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: .9, side: THREE.DoubleSide }),
+  bldS: new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: .9, side: THREE.DoubleSide }),
+  farm: new THREE.MeshStandardMaterial({ color: 0x8a8869, roughness: 1, side: THREE.DoubleSide }),
+  towG: new THREE.MeshStandardMaterial({ color: 0x8a8869, roughness: .8 }),
   towW: new THREE.MeshStandardMaterial({ color: 0xeeefec, roughness: .5 }),
   hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
   plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
@@ -375,7 +375,8 @@ function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c
 // ---------------------------------------------------------------- 平面
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
-const PAL = { farm: '#62735a', deck: '#dcdad4', bridge: 'rgba(168,180,194,1)', water: '#1f3343', tower: '#dcdad4', red: '#e0412f' };
+// 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
+const PAL = { bg: '#0a0a0a', land: '#1b1b1b', farm: '#8a8869', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
 let hoverId = 0;
 function setHover(id) { if (id === hoverId) return; hoverId = id; if (mode === '2d') drawPlan(); }
 function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
@@ -384,7 +385,7 @@ function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
 function drawVec(ctx, X, k, o) {
   const path = (Q, close) => { ctx.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); if (close) ctx.closePath(); };
   ctx.save(); ctx.lineJoin = ctx.lineCap = 'round';
-  if (o.cells) { ctx.strokeStyle = 'rgba(14,14,14,.55)'; ctx.lineWidth = .75 * k; for (const cp of F.cellPolys) { path(cp.poly, true); ctx.stroke(); } }
+  if (o.cells) { ctx.strokeStyle = 'rgba(10,10,10,.6)'; ctx.lineWidth = .75 * k; for (const cp of F.cellPolys) { path(cp.poly, true); ctx.stroke(); } }
   if (o.prim) { ctx.strokeStyle = PAL.red; ctx.globalAlpha = .9; ctx.lineWidth = 1.1 * k; ctx.setLineDash([6 * k, 4 * k]); for (const S of F.strands) { path(S); ctx.stroke(); } ctx.setLineDash([]); ctx.globalAlpha = 1; }
   if (o.cells) { ctx.strokeStyle = PAL.red; ctx.lineWidth = 1.3 * k; for (const t of F.towers) { const q = X(t), r = Math.max(4 * k, (t[2] + 6) * Math.abs(X([t[0] + 1, t[1]])[0] - q[0])); ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 1.8 * k, 0, 7); ctx.fillStyle = PAL.red; ctx.fill(); } }
   if ((o.hover || o.focus) && F.cellPolys.length) { const ids = cpIds();
@@ -402,31 +403,34 @@ function drawFurniture(ctx, X, pxPerM, R, k) { // 坐标十字（英国国家网
   ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = .8 * k; const a = 3.5 * k;
   for (let x = x0; x <= x1; x += step) for (let y = y1; y >= y0; y -= step) { const q = X([x, y]); if (q[0] < R.x || q[1] < R.y || q[0] > R.x + R.w || q[1] > R.y + R.h) continue; ctx.beginPath(); ctx.moveTo(q[0] - a, q[1]); ctx.lineTo(q[0] + a, q[1]); ctx.moveTo(q[0], q[1] - a); ctx.lineTo(q[0], q[1] + a); ctx.stroke(); }
   const nice = [20, 50, 100, 200, 250, 500, 1000, 2000, 5000]; let m = nice[0]; for (const v of nice) if (v * pxPerM <= 130 * k) m = v;
-  const L0 = m * pxPerM, bx = R.x + 18 * k, by = R.y + R.h - 22 * k; ctx.strokeStyle = ctx.fillStyle = ink; ctx.lineWidth = 1 * k;
+  const L0 = m * pxPerM, bx = R.x + 18 * k, by = R.y + R.h - 22 * k, nx = R.x + R.w - 22 * k, ny = R.y + 20 * k;
+  const plate = (x, y, w, h) => { ctx.fillStyle = 'rgba(10,10,10,.72)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 5 * k); else ctx.rect(x, y, w, h); ctx.fill(); };
+  plate(bx - 10 * k, by - 12 * k, L0 + 24 * k, 30 * k); plate(nx - 12 * k, ny - 14 * k, 24 * k, 40 * k);
+  ctx.strokeStyle = ctx.fillStyle = ink; ctx.lineWidth = 1 * k;
   ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + L0, by); for (const f of [0, .5, 1]) { ctx.moveTo(bx + L0 * f, by - (f === .5 ? 3 : 5) * k); ctx.lineTo(bx + L0 * f, by + 1 * k); } ctx.stroke();
   ctx.fillRect(bx, by - 2.5 * k, L0 / 2, 2.5 * k);
   ctx.font = `${10 * k}px -apple-system,Helvetica Neue,Arial,sans-serif`; ctx.textAlign = 'left'; ctx.fillText('0', bx - 2 * k, by + 13 * k); ctx.textAlign = 'right'; ctx.fillText(m >= 1000 ? m / 1000 + ' km' : m + ' m', bx + L0 + 4 * k, by + 13 * k);
-  const nx = R.x + R.w - 22 * k, ny = R.y + 20 * k; ctx.beginPath(); ctx.moveTo(nx, ny - 9 * k); ctx.lineTo(nx + 5 * k, ny + 7 * k); ctx.lineTo(nx, ny + 3.5 * k); ctx.lineTo(nx - 5 * k, ny + 7 * k); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(nx, ny - 9 * k); ctx.lineTo(nx + 5 * k, ny + 7 * k); ctx.lineTo(nx, ny + 3.5 * k); ctx.lineTo(nx - 5 * k, ny + 7 * k); ctx.closePath(); ctx.fill();
   ctx.textAlign = 'center'; ctx.fillText('N', nx, ny + 20 * k); ctx.restore(); }
 function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - g.xmin) / g.RES * SC, (g.ymax - p[1]) / g.RES * SC], mPx = SC / g.RES;
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
   const landPath = c => { c.beginPath(); for (const pc of SNAP.pieces) { path(c, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(c, h, true, false); } };
   // 1 地面（矢量）：场地外、土地、农田（按室裁切、条带）、退线带、水体、溪流
-  ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.fillStyle = '#16171b'; for (const P of F.site.footPolys) { path(ctx, P, true); ctx.fill(); }
-  landPath(ctx); ctx.fillStyle = '#232428'; ctx.fill('evenodd');
+  ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = '#141414'; for (const P of F.site.footPolys) { path(ctx, P, true); ctx.fill(); }
+  landPath(ctx); ctx.fillStyle = PAL.land; ctx.fill('evenodd');
   // 农田：纯色低饱和绿；退线带（建筑落位带）只压一层很淡的暗色
   ctx.save(); landPath(ctx); ctx.clip('evenodd');
-  for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.fillStyle = PAL.farm; ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth = 2 * P.setback * mPx; ctx.strokeStyle = 'rgba(0,0,0,.16)'; ctx.stroke(); ctx.restore(); }
+  for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.fillStyle = PAL.farm; ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth = 2 * P.setback * mPx; ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.stroke(); ctx.restore(); }
   ctx.restore();
   // 建筑（栅格，平滑放大）
-  const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), v = 118 + 62 * h; bi.data[i * 4] = v + 3; bi.data[i * 4 + 1] = v + 1; bi.data[i * 4 + 2] = v - 3; bi.data[i * 4 + 3] = 255; }
+  const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), v = 46 - 30 * h; bi.data[i * 4] = bi.data[i * 4 + 1] = bi.data[i * 4 + 2] = v; bi.data[i * 4 + 3] = 255; }
   const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
   ctx.fillStyle = PAL.water; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); }
-  ctx.strokeStyle = 'rgba(88,118,142,.55)'; ctx.lineWidth = 1.1; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
-  if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = r.grade === 'main' ? 'rgba(225,225,232,.30)' : r.grade === 'through' ? 'rgba(215,215,224,.20)' : 'rgba(200,200,210,.13)'; ctx.lineWidth = Math.max(1, r.width * mPx * 0.35); ctx.stroke(); }
+  ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.3; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
+  if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = r.grade === 'main' ? 'rgba(255,255,255,.55)' : r.grade === 'through' ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.30)'; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
   // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开
   const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
   oc.fillStyle = PAL.deck; for (const Pp of F.site.footPolys) { path(oc, Pp, true); oc.fill(); }
@@ -443,7 +447,7 @@ function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement(
 function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
 function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
-  const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (TSV) { if (!tsBase) makeTsBase(); ctx.drawImage(tsBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s); tsHud();
     { const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s]; drawVec(ctx, X, 1, {}); if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1); } return; }
   ctx.drawImage(planBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s);
@@ -640,10 +644,10 @@ let TSV = false, tsBase = null;
 function makeTsBase() { const S = SITE, SC = 2, cv = document.createElement('canvas'); cv.width = S.W * SC; cv.height = S.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - S.xmin) / S.RES * SC, (S.ymax - p[1]) / S.RES * SC], mPx = SC / S.RES;
   const path = (c, Q, close, fresh = true) => { if (fresh) c.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
-  ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.beginPath(); for (const pc of SNAP.pieces) { path(ctx, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(ctx, h, true, false); } ctx.fillStyle = '#1f2024'; ctx.fill('evenodd');
-  ctx.fillStyle = '#17385a'; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); }
-  ctx.lineJoin = ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(70,130,190,.75)'; ctx.lineWidth = 1.5; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
+  ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.beginPath(); for (const pc of SNAP.pieces) { path(ctx, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(ctx, h, true, false); } ctx.fillStyle = '#202020'; ctx.fill('evenodd');
+  ctx.fillStyle = PAL.water; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); }
+  ctx.lineJoin = ctx.lineCap = 'round'; ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.5; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
   if ($('c_tsField').checked) { // 方向线：每 28 m 一根短流线，顺张量场两头各走 5 步
     ctx.strokeStyle = 'rgba(150,170,210,.28)'; ctx.lineWidth = 1.2; const st = 28, h = 6;
     for (let y = S.bbox[1] + st / 2; y < S.bbox[3]; y += st) for (let x = S.bbox[0] + st / 2; x < S.bbox[2]; x += st) { const p0 = [x, y]; if (!S.inSite(p0) || !S.field(p0)) continue;
