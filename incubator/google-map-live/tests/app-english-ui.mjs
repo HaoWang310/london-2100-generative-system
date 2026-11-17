@@ -5,6 +5,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const paths=[
  'index.html',
+ 'styles/app.css',
+ 'scripts/app.js',
+ 'scripts/map_core.js',
  'scripts/flood_detail.js',
  'scripts/place_search.js',
  'scripts/drainage_display.js',
@@ -28,9 +31,10 @@ for(const path of paths){
  assert.equal(offending.length,0,
   path+' contains untranslated Chinese at lines: '+offending.map(x=>x.i).join(','));
 }
-const html=readFileSync('index.html','utf8');
+const html=readFileSync('index.html','utf8'),app=readFileSync('scripts/app.js','utf8');   // v3.39.1: the page's code lives in scripts/app.js
 assert.match(html,/<html\s+lang="en"/i,'HTML document language must be English');
-assert.match(html,/APP_VERSION='3\.39\.0-english'/,'page must use English module build');
-assert.match(html,/ui_language\.js\?v=3\.39\.0-english/,
+assert.match(app,/APP_VERSION='3\.39\.1-english'/,'page must use English module build');
+assert.match(html,/scripts\/app\.js\?v=3\.39\.1-english/,'page must load its code with the current build id');
+assert.match(html,/ui_language\.js\?v=3\.39\.1-english/,
  'bidirectional language layer must use current version');
 console.log('PASS English London Map: '+paths.length+' active HTML/JS files; no visible Chinese source strings');

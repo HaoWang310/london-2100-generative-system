@@ -2,6 +2,15 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.39.1 (structure only, no change in features or look): the page is split into files.
+- `index.html` — the page's HTML only
+- `styles/app.css` — the page's styles (were inline)
+- `scripts/app.js` — the page's own code: the map, its layers, the panel, the Google / OSM switch (was the inline module script)
+- `scripts/map_core.js` — computation without the page: the hydrology grid's projection and tile coordinates, the 70 km study area, the contour worker, flood selection rings
+- the old `v3.html` page is removed (nothing linked to it)
+
+Every statement moved unchanged (checked statement by statement); the page boots the same and looks the same pixel for pixel.
+
 Version 3.39.0: entering a site passes the map's basemap style to Tensor Studio, which picks its light/dark look and particle palette to match.
 
 Version 3.38.0: while Tensor Studio is open its page is transparent outside the site and the map underneath follows its view (centre, zoom, bearing), so the surroundings are the map itself; the camera and the selection layers come back on close.
