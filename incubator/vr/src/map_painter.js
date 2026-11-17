@@ -48,7 +48,7 @@ export async function mapPainter(map, frame){
       if (gone || !alive()) return null;
       const n = 2 ** z, lon = (x + 0.5) / n * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n))) * 180 / Math.PI;
       m.jumpTo({ center: [lon, lat], zoom: z + 1, pitch: 0, bearing: 0 });   // 512-px tiles: a zoom-z tile fills 1024 px at z + 1
-      await idle(10000);
+      await idle(5000);   // v0.36: give up waiting after 5 s (was 10 s); a slow tile no longer holds up the queue
       if (gone) return null;
       const src = m.getCanvas(), c = document.createElement('canvas'); c.width = c.height = PX;
       c.getContext('2d').drawImage(src, 0, 0, src.width, src.height, 0, 0, PX, PX);
