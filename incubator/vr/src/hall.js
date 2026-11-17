@@ -108,8 +108,10 @@ function bez(p0, p1, p2, p3, n){ const out = []; for (let k = 0; k <= n; k++){ c
   out.push([0, 1].map(j => u * u * u * p0[j] + 3 * u * u * t * p1[j] + 3 * u * t * t * p2[j] + t * t * t * p3[j])); } return out; }
 
 /** the table: a white body flared out of the floor; the map sits on its top at tableH */
-export function tableProfile(mapR, h){ const R2 = mapR + 0.1, foot = mapR + 0.55;
-  const pts = bez([foot, 0], [mapR * 0.72 + 0.02, 0], [mapR * 0.42 + 0.05, h * 0.72], [R2, h], 48);
+// v0.45: the base is narrower than the top (was a wide flared foot, mapR + 0.55): it meets the floor at about 0.7 of the top's radius,
+// narrows to a slender waist and opens out into the top, so the table reads as a bowl on a stem
+export function tableProfile(mapR, h){ const R2 = mapR + 0.1, foot = R2 * 0.68;
+  const pts = bez([foot, 0], [mapR * 0.42, h * 0.1], [mapR * 0.3, h * 0.62], [R2, h], 48);
   pts.push([R2 + 0.005, h + 0.012], [R2 - 0.01, h + 0.025], [mapR + 0.02, h + 0.02], [mapR + 0.015, h]);
   return { pts, R2, foot }; }
 
@@ -255,7 +257,7 @@ export function createHall(gl, opt = {}){
   add(surface(shellPoint, 160, 40, [1, 1, 1]), { map: tex(shellMapC(), true), emi: tex(shellEmiC(), true), glow: { day: 0.35, night: 1.5, violet: 1.2 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.85, 0.65, 1.0] } });
   const { pts, R2, foot } = tableProfile(mapR, tableH);
   const pol = (deg, r) => { const t = deg * Math.PI / 180; return [Math.cos(t) * r, Math.sin(t) * r]; };
-  const shadows = [[0, 0, foot + 0.5, foot + 0.5, 0, 0.32]]
+  const shadows = [[0, 0, R2 + 0.35, R2 + 0.35, 0, 0.32]]   // v0.45: the top's shadow (the base is smaller now)
     .concat(PLINTHS.map(([d, r]) => [...pol(d, r), 0.7, 0.7, 0, 0.2]));
   const benchShadow = ([d, r, y]) => { const th = d * Math.PI / 180; return [Math.cos(th) * r, Math.sin(th) * r, 1.15, 0.38, th + Math.PI / 2 - y * Math.PI / 180, 0.26]; };
   const floor = surface((u, j) => { const t = u * Math.PI * 2, r = shellR(t) * j; return [r * Math.cos(t), 0, r * Math.sin(t)]; }, 128, 24, [1, 1, 1]);
