@@ -119,6 +119,31 @@ label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
 .displayPanel input:checked + .dpSw::after{transform:translateX(12px);background:#1c1c1f}
 .displayPanel .dpLegend{display:grid;gap:6px;font-size:11.5px;color:#c7c7cc}
 .displayPanel .dpLegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-2px;border:1px solid rgba(255,255,255,.12)}
+#demo{display:none}
+body.demo-on #demo{display:block}
+body.demo-on #panel,body.demo-on .displayPanel,body.demo-on #cardBar,body.demo-on #cbShow,body.demo-on #hud,body.demo-on #rszL,body.demo-on #rszR,body.demo-on #tip{display:none!important}
+#dmHead{position:fixed;z-index:40;left:34px;top:30px;display:flex;gap:16px;align-items:flex-start;pointer-events:none;color:#f5f5f7;max-width:min(560px,60vw)}
+#dmHead b{font:300 46px/1 "SF Mono",Menlo,Consolas,monospace;letter-spacing:-1px;color:#f5f5f7}
+#dmHead div{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+#dmName{font-size:19px;font-weight:600;letter-spacing:.02em}
+#dmSub{font-style:normal;font-size:12px;line-height:1.5;color:#a1a1a6}
+#dmParams{position:fixed;z-index:40;left:34px;bottom:96px;display:grid;gap:8px;min-width:230px;pointer-events:none}
+#dmParams div{display:flex;justify-content:space-between;gap:22px;border-top:.5px solid rgba(255,255,255,.18);padding-top:6px;font-size:11.5px;color:#a1a1a6}
+#dmParams b{font:500 13px "SF Mono",Menlo,Consolas,monospace;color:#f5f5f7}
+#dmBar{position:fixed;z-index:41;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(14,14,16,.82);border:1px solid #2c2c30;border-radius:14px;padding:8px 10px 12px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#dmBar button,#dmBar select{all:unset;cursor:pointer;color:#f5f5f7;font-size:12px;padding:5px 9px;border-radius:8px;background:#232326}
+#dmBar button:hover{background:#2f2f33}
+#dmBar button:focus-visible,#dmBar select:focus-visible{outline:2px solid #f5f5f7}
+#dmPlay{min-width:22px;text-align:center}
+#dmSteps{display:flex;gap:4px;margin:0 6px}
+#dmSteps button{padding:4px 7px;font:500 11px "SF Mono",Menlo,Consolas,monospace;color:#8e8e93;background:transparent}
+#dmSteps button.on{color:#121214;background:#f5f5f7}
+#dmSteps button.done{color:#f5f5f7}
+.dmSeg{display:flex;gap:2px;background:#1b1b1e;border-radius:9px;padding:2px}
+.dmSeg button{background:transparent!important;color:#8e8e93!important}
+.dmSeg button.on{background:#f5f5f7!important;color:#121214!important}
+#dmProg{position:absolute;left:12px;right:12px;bottom:5px;height:2px;background:rgba(255,255,255,.12);border-radius:1px}
+#dmProg i{display:block;height:100%;width:0;background:#f5f5f7;border-radius:1px}
 .swGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px}
 .swChip{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:#a1a1a6;text-align:center;line-height:1.2}
 .swChip i{display:block;width:100%;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.14);box-sizing:border-box}
@@ -171,6 +196,18 @@ body.cards-on #cardBar{display:flex}
   <canvas id="plan"></canvas>
   <div id="tip"></div>
   <div id="busy">生成中…</div>
+  <div id="demo" aria-live="polite">
+    <div id="dmHead"><b id="dmNum">00</b><div><span id="dmName"></span><i id="dmSub"></i></div></div>
+    <div id="dmParams"></div>
+    <div id="dmBar">
+      <button type="button" id="dmPrev" aria-label="上一步">‹</button><button type="button" id="dmPlay" aria-label="播放 / 暂停">❚❚</button><button type="button" id="dmNext" aria-label="下一步">›</button>
+      <div id="dmSteps"></div>
+      <div class="dmSeg" id="dmLogic"><button type="button" data-v="0">v0</button><button type="button" data-v="1">v1</button></div>
+      <select id="dmSpeed" aria-label="速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+      <button type="button" id="dmExit">退出演示</button>
+      <div id="dmProg"><i></i></div>
+    </div>
+  </div>
   <div id="dlbox"><div class="dlh"><b id="dlname"></b><span><button id="dlcopy">复制</button> <button id="dlclose">关闭</button></span></div><textarea id="dltext"></textarea><img id="dlimg" style="display:none" alt=""><div class="dlhint" id="dlhint"></div></div>
 </div>
 <div id="hud"><b id="hud_t">全部场地</b><span id="hud_s"></span></div>
@@ -238,7 +275,7 @@ body.cards-on #cardBar{display:flex}
 </aside>
 
 <aside class="displayPanel" aria-label="显示">
-  <div class="dpSection"><div class="dpTitle">视图</div><div class="dpGrid"><button type="button" class="dpTile on" id="v2d"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></svg><span>平面</span></button><button type="button" class="dpTile " id="v3d"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>三维</span></button></div></div>
+  <div class="dpSection"><div class="dpTitle">视图</div><div class="dpGrid"><button type="button" class="dpTile on" id="v2d"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></svg><span>平面</span></button><button type="button" class="dpTile " id="v3d"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>三维</span></button></div><button type="button" class="dpTile dpRow" id="demoBtn" style="width:100%;margin-top:8px;justify-content:center"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg><span>演示生成过程</span></button></div>
   <div class="dpSection"><div class="dpTitle">镜头</div><div class="dpGrid"><button type="button" class="dpTile dpRow" id="fitBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>全部场地</span></button><button type="button" class="dpTile dpRow" id="lowBtn"><svg viewBox="0 0 24 24"><path d="M3 17h18M6 17l4-6 3 3 3-5 3 8"/></svg><span>低视角</span></button><button type="button" class="dpTile dpRow" id="topBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg><span>俯视</span></button><button type="button" class="dpTile dpRow" id="rotBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg><span>自动旋转</span></button></div></div>
   <div class="dpSection"><div class="dpTitle">图层</div>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
@@ -279,7 +316,7 @@ body.cards-on #cardBar{display:flex}
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // ---- 中英文：独立打开时用自己的切换；在目录里打开时跟随主程序（postMessage l2100:lang / 本地存储）
-const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "拉伸方式": "Stretch", "核心处次级走廊宽（v1）": "Secondary width at the cores (v1)", "按路网尺度定参": "Set from the street scale", "配色": "Colour", "农田（离核心近亮、远暗）": "Farmland (light near the cores, dark at the edge)", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
+const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "演示生成过程": "Play the process", "退出演示": "Exit demo", "上一步": "Previous step", "下一步": "Next step", "播放 / 暂停": "Play / pause", "速度": "Speed", "拉伸方式": "Stretch", "核心处次级走廊宽（v1）": "Secondary width at the cores (v1)", "按路网尺度定参": "Set from the street scale", "配色": "Colour", "农田（离核心近亮、远暗）": "Farmland (light near the cores, dark at the edge)", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
 const KIND_EN = { '水滴': 'teardrop', '梭形': 'spindle', '枕形': 'pillow' };
 let LANG = (() => { try { return /^en/.test(localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || 'zh') ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
 const L = (zh, en) => LANG === 'en' ? en : zh, KD = k => L(k, KIND_EN[k] || k);
@@ -304,6 +341,7 @@ window.addEventListener('message', e => { if (e.origin === location.origin && e.
 const P = { v1: 0, wCore: 24, seed: 3, nCore: 2, nPrim: 1, primAng: 30, primFollow: 0.08, primSmooth: 240, primStraight: 0.6, primShift: 140, offRoad: 1, rotF: 0, coreR: 700, sCore: 95, sOut: 260, pull: 0.5, wS: 15, wP: 20, blendK: 1, minThick: 40, colStep: 45, avoidWater: false, deckZ: 7.2, nTower: 4, setback: 6, depth: 18, segL: 52, gap: 11 };
 const EXCL = new Set();
 let SNAP = null, SITE = null, F = null, M = null, PLAN = null, focus = null, mode = '2d';
+const DEMO = { on: false }; // 演示播放器状态（见文件末尾）
 
 // ---------------------------------------------------------------- 三维
 let renderer, scene, camera, sun, G = {};
@@ -433,14 +471,14 @@ function drawVec(ctx, X, k, o) {
 function freeRect() { // 两侧浮动面板之间的空白区（比例尺、指北针放在这里）
   const a = $('panel').getBoundingClientRect(), b = document.querySelector('.displayPanel').getBoundingClientRect(), cb = document.body.classList.contains('cards-on') ? 200 : 0;
   const x = a.width ? a.right + 6 : 0, x2 = b.width ? b.left - 6 : innerWidth; return { x, y: 64, w: Math.max(120, x2 - x), h: Math.max(120, innerHeight - 64 - cb - 8) }; }
-function drawFurniture(ctx, X, pxPerM, R, k) { // 坐标十字（英国国家网格整百米）、比例尺、指北针
+function drawFurniture(ctx, X, pxPerM, R, k, sb) { // sb：可选，比例尺左下角位置 [x, y] // 坐标十字（英国国家网格整百米）、比例尺、指北针
   const o = SNAP.origin || [0, 0], g = F.grid; ctx.save(); const ink = 'rgba(232,231,228,.78)';
   let step = 100; for (const v of [100, 200, 500, 1000, 2000, 5000]) { step = v; if (v * pxPerM >= 34 * k) break; }
   const x0 = Math.ceil((g.xmin + o[0]) / step) * step - o[0], y1 = Math.floor((g.ymax + o[1]) / step) * step - o[1], x1 = g.xmin + g.W * g.RES, y0 = g.ymax - g.H * g.RES;
   ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = .8 * k; const a = 3.5 * k;
   for (let x = x0; x <= x1; x += step) for (let y = y1; y >= y0; y -= step) { const q = X([x, y]); if (q[0] < R.x || q[1] < R.y || q[0] > R.x + R.w || q[1] > R.y + R.h) continue; ctx.beginPath(); ctx.moveTo(q[0] - a, q[1]); ctx.lineTo(q[0] + a, q[1]); ctx.moveTo(q[0], q[1] - a); ctx.lineTo(q[0], q[1] + a); ctx.stroke(); }
   const nice = [20, 50, 100, 200, 250, 500, 1000, 2000, 5000]; let m = nice[0]; for (const v of nice) if (v * pxPerM <= 130 * k) m = v;
-  const L0 = m * pxPerM, bx = R.x + 18 * k, by = R.y + R.h - 22 * k, nx = R.x + R.w - 22 * k, ny = R.y + 20 * k;
+  const L0 = m * pxPerM, bx = sb ? sb[0] - L0 : R.x + 18 * k, by = sb ? sb[1] : R.y + R.h - 22 * k, nx = R.x + R.w - 22 * k, ny = R.y + 20 * k;
   const plate = (x, y, w, h) => { ctx.fillStyle = 'rgba(10,10,10,.72)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, 5 * k); else ctx.rect(x, y, w, h); ctx.fill(); };
   plate(bx - 10 * k, by - 12 * k, L0 + 24 * k, 30 * k); plate(nx - 12 * k, ny - 14 * k, 24 * k, 40 * k);
   ctx.strokeStyle = ctx.fillStyle = ink; ctx.lineWidth = 1 * k;
@@ -457,14 +495,18 @@ function hatchLines(step, len) { // 顺张量场的流线，在整个场地里�
     const pts = [p0]; for (const sg of [1, -1]) { let p = p0, pv = [d0[0] * sg, d0[1] * sg]; for (let k = 0; k < n; k++) { let d = S.field(p); if (!d) break; if (d[0] * pv[0] + d[1] * pv[1] < 0) d = [-d[0], -d[1]]; pv = d; p = [p[0] + d[0] * hs, p[1] + d[1] * hs]; sg > 0 ? pts.push(p) : pts.unshift(p); } }
     out.push(pts); }
   return out; }
-function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
+function makePlanBase(only) { // only：演示用，只画某几层（透明底），不改 planBase
+  const Lf = only || { ground: 1, farm: 1, bld: 1, water: 1, deck: 1, towers: 1 }; const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - g.xmin) / g.RES * SC, (g.ymax - p[1]) / g.RES * SC], mPx = SC / g.RES;
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
   const landPath = c => { c.beginPath(); for (const pc of SNAP.pieces) { path(c, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(c, h, true, false); } };
   // 1 地面（矢量）：场地外、土地、农田（按室裁切、条带）、退线带、水体、溪流
+  if (Lf.ground) {
   ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.fillStyle = '#141414'; for (const P of F.site.footPolys) { path(ctx, P, true); ctx.fill(); }
   landPath(ctx); ctx.fillStyle = PAL.land; ctx.fill('evenodd');
+  }
+  if (Lf.farm) {
   // 农田：纯色低饱和绿；退线带（建筑落位带）只压一层很淡的暗色
   ctx.save(); landPath(ctx); ctx.clip('evenodd');
   for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.fillStyle = PAL.farm; ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth = 2 * P.setback * mPx; ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.stroke(); ctx.restore(); }
@@ -485,13 +527,19 @@ function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement(
       tx.drawImage(SITE._hatch.mk, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = `rgb(${v[0]},${v[1]},${v[2]})`; tx.fillRect(0, 0, tn.width, tn.height);
       ctx.globalAlpha = v.length > 3 ? v[3] : 1; ctx.drawImage(tn, 0, 0); ctx.globalAlpha = 1; }
     ctx.restore(); }
+  }
+  if (Lf.bld) {
   // 建筑（栅格，平滑放大）
   const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), f = 1 - .3 * h, B = PAL.bld; bi.data[i * 4] = B[0] * f; bi.data[i * 4 + 1] = B[1] * f; bi.data[i * 4 + 2] = B[2] * f; bi.data[i * 4 + 3] = 255; }
   const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
+  }
+  if (Lf.water) {
   ctx.fillStyle = PAL.water; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); }
   ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.3; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
   if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = `rgba(${PAL.road},${r.grade === 'main' ? .55 : r.grade === 'through' ? .42 : .3})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
+  }
+  if (Lf.deck) {
   // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开
   const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
   oc.fillStyle = PAL.deck; for (const Pp of F.site.footPolys) { path(oc, Pp, true); oc.fill(); }
@@ -503,11 +551,13 @@ function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement(
   bx.globalCompositeOperation = 'destination-out'; landPath(bx); bx.fill('evenodd'); bx.globalCompositeOperation = 'source-over';
   const wm = document.createElement('canvas'); wm.width = cv.width; wm.height = cv.height; const wx = wm.getContext('2d'); landPath(wx); wx.fillStyle = '#fff'; wx.fill('evenodd'); wx.globalCompositeOperation = 'destination-out'; for (const w of SNAP.water) { wx.beginPath(); for (const r of w) if (r.length > 2) path(wx, r, true, false); wx.fill('evenodd'); }
   bx.globalCompositeOperation = 'destination-out'; bx.drawImage(wm, 0, 0); ctx.globalAlpha = 0.55; ctx.drawImage(br, 0, 0); ctx.globalAlpha = 1;
-  for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fillStyle = PAL.tower; ctx.fill(); }
+  }
+  if (Lf.towers)   for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fillStyle = PAL.tower; ctx.fill(); }
+  if (only) return cv;
   planBase = cv; }
 function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
-function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
+function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (TSV) { if (!tsBase) makeTsBase(); ctx.drawImage(tsBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s); tsHud();
     { const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s]; drawVec(ctx, X, 1, {}); if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1); } return; }
@@ -517,11 +567,11 @@ function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan
   if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1);
 }
 (function planEvents() { const cv = $('plan'); let drag = null;
-  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, m: 0 }; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointerdown', e => { if (DEMO.on) return; drag = { x: e.clientX, y: e.clientY, m: 0 }; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; });
   cv.addEventListener('pointermove', e => { if (drag) { PV.ox += e.clientX - drag.x; PV.oy += e.clientY - drag.y; drag.m += Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y); drag.x = e.clientX; drag.y = e.clientY; drawPlan(); return; }
     if (!F || TSV) { setHover(0); return; } const r = cv.getBoundingClientRect(), px = (e.clientX - r.left - PV.ox) / PV.s, py = (e.clientY - r.top - PV.oy) / PV.s, g = F.grid; const id = (px >= 0 && py >= 0 && px < g.W && py < g.H) ? g.cellLab[(py | 0) * g.W + (px | 0)] : 0; showTip(e, id, cv); setHover(id); });
   cv.addEventListener('pointerup', e => { cv.style.cursor = 'grab'; if (drag && drag.m < 4 && !TSV) { const r = cv.getBoundingClientRect(), px = (e.clientX - r.left - PV.ox) / PV.s, py = (e.clientY - r.top - PV.oy) / PV.s, g = F.grid; const id = (px >= 0 && py >= 0 && px < g.W && py < g.H) ? g.cellLab[(py | 0) * g.W + (px | 0)] : 0; const c = F.cells.find(x => x.id === id) || null; focusCell(c && focus && c.id === focus.id ? null : c); } drag = null; });
-  cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
+  cv.addEventListener('wheel', e => { if (DEMO.on) { e.preventDefault(); return; } e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
   cv.addEventListener('pointerleave', () => setHover(0));
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
 function setMode(m) { if (m === '3d' && TSV) setTsv(false); mode = m; if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } }
@@ -544,8 +594,8 @@ function buildCards() {
     el.innerHTML = `<img><span class="num">${String(n + 1).padStart(2, '0')}</span><div class="meta"><div class="t"><b>${cellName(c)}</b><i>${KD(c.kind)}${c.edge ? L(' · 边缘', ' · edge') : ''}</i></div><div class="s"><em class="${ex ? 'no' : ''}">${(c.area / 1e4).toFixed(2)} ha · ${ex ? L('景观', 'landscape') : L('建筑 ', 'bldg ') + c.nb}</em><span class="tag">${ex ? L('恢复', 'Restore') : L('设为景观', 'Landscape')}</span></div></div>`;
     el.onclick = () => focusCell(c); el.querySelector('.tag').onclick = e => { e.stopPropagation(); if (ex) EXCL.delete(c.id); else EXCL.add(c.id); solve(true); };
     host.appendChild(el); });
-  const imgs = [...host.querySelectorAll('.card.cell')]; let i = 0;
-  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
+  const imgs = [...host.querySelectorAll('.card.cell')], F0 = F; let i = 0;
+  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
   setTimeout(step, 20);
 }
 function focusCell(c) {
@@ -757,6 +807,171 @@ document.querySelectorAll('#langSw button').forEach(b => b.onclick = () => setLa
 setLang(LANG, true);
 initGL(); setMode('2d');
 $('busy').style.display = 'block';
+// ---------------------------------------------------------------- 演示：一键播放生成过程（ZHA 式粒子流 + AADRL 式编号与读数）
+const dmC01 = u => Math.max(0, Math.min(1, u)), dmE = u => { u = dmC01(u); return u * u * (3 - 2 * u); };
+const DST = [ // 每一步：时长（秒）、名称、说明、读数
+  { d: 3, zh: '场地', en: 'Site', sub: () => L('红线 = 结构场地外缘（含水面）。结构架在地面之上，只在这里被切断。', 'Red line = the structure site edge, water included. The structure stands above the ground and is cut only here.'),
+    pr: () => [[L('场地', 'Site'), SITE.landHa, 0, ' ha'], [L('张量场道路', 'Tensor-field roads'), SNAP.roads.length, 0, '']] },
+  { d: 6, zh: '张量场', en: 'Tensor field', sub: () => L('道路和结构从同一张张量场长出来。粒子顺场流动，织出场线；再从路网测出尺度。', 'Streets and structure grow from one tensor field. Particles flow along it and weave its lines; the street scale is measured from the network.'),
+    pr: () => [[L('主路间距 d1', 'Main spacing d1'), SITE.d1, 0, ' m'], [L('次路间距 d2', 'Second spacing d2'), SITE.d2, 0, ' m'], [L('场主方向', 'Field direction'), (Math.atan2(SITE.t0[1], SITE.t0[0]) * 180 / Math.PI + 360) % 180, 0, '°']] },
+  { d: 5, zh: '核心与疏密', en: 'Cores and density', sub: () => L('核心 = 主吸引点（环形广场）。节点间距从核心向外渐变：核心密，外围疏。', 'Cores = the main attractors (roundabouts). Node spacing grows outwards: dense at the core, open at the edge.'),
+    pr: () => [[L('核心', 'Cores'), DEMO.FD.cores.length, 0, ''], [L('核心过渡范围', 'Core falloff'), P.coreR, 0, ' m'], [L('核心节点间距', 'Core spacing'), P.sCore, 0, ' m'], [L('外围节点间距', 'Outer spacing'), P.sOut, 0, ' m']] },
+  { d: 6, zh: '主线', en: 'Primaries', sub: () => L('主线顺大尺度张量场穿过核心，再左右扫描，停在离主路最远处（离路）。', 'Primaries follow the large-scale field through the cores, then sweep sideways and settle furthest from the main roads (off road).'),
+    pr: () => [[L('候选', 'Candidates'), DEMO.FD.trace.cand.length, 0, ''], [L('主线', 'Primaries'), DEMO.FD.strands.length, 0, ''], [L('平移范围', 'Sweep'), P.primShift, 0, ' m'], [L('主线顺直度', 'Straightness'), P.primStraight, 1, '']] },
+  { d: 6, zh: '布点', en: 'Seeding', sub: () => DEMO.v1 ? L('v1：顺局部张量场排出等距流线行，种子落在行上；主线两侧成对布点。格网随场连续变形。', 'v1: evenly spaced streamline rows along the local field, seeds dropped on the rows, paired seeds either side of the primaries. The lattice deforms with the field.')
+      : L('v0：在压缩空间里均匀布点，再沿全场主方向整体拉长。', 'v0: seeds laid evenly in a compressed space, then the whole cloud stretched along the field’s main direction.'),
+    pr: () => { const T = DEMO.FD.trace, x = 1 + 1.4 * P.pull; return DEMO.v1 ? [[L('流线行', 'Rows'), T.rows.length, 0, ''], [L('种子', 'Seeds'), T.seedsW.length, 0, ''], [L('拉扯（长宽比）', 'Stretch (aspect)'), x, 2, '×']] : [[L('种子', 'Seeds'), T.seedsW.length, 0, ''], [L('拉扯', 'Stretch'), x, 2, '×']]; } },
+  { d: 5, zh: '分格', en: 'Cells', sub: () => L('每个种子向外长出"气泡"，相遇处成为分格边（Voronoi）。', 'Each seed grows a bubble; where bubbles meet, the cell edges form (Voronoi).'),
+    pr: () => [[L('室', 'Cells'), DEMO.FD.cells.length, 0, '']] },
+  { d: 2.5, zh: '清理', en: 'Clean-up', sub: () => L('太窄、放不下建筑和农田的室合并掉。', 'Cells too thin for buildings and farmland are merged away.'),
+    pr: () => [[L('最小室宽', 'Minimum width'), P.minThick, 0, ' m'], [L('合并', 'Merged'), DEMO.FD.nRemoved, 0, '']] },
+  { d: 6, zh: '走廊与节点', en: 'Corridors and nodes', sub: () => L('分格边加宽成走廊，折角按夹角融成曲线，钝角处鼓成节点板。', 'Cell edges widen into corridors; corners melt into curves by their angle, and obtuse ones swell into node plates.'),
+    pr: () => { const o = [[L('次级走廊', 'Secondary'), P.wS, 0, ' m'], [L('主线走廊', 'Primary'), P.wP, 0, ' m'], [L('走廊中心线', 'Centrelines'), DEMO.FD.stats.totL / 1000, 2, ' km']]; if (DEMO.v1) o.splice(1, 0, [L('核心处次级走廊', 'Secondary at cores'), P.wCore, 0, ' m']); return o; } },
+  { d: 3, zh: '跨越', en: 'Spans', sub: () => L('走廊跨过水面和铁路，不在水边断开；桥下按柱距立柱。', 'Corridors span water and rail instead of stopping at the bank; columns stand below at a set spacing.'),
+    pr: () => [[L('跨越段', 'Spans'), DEMO.FD.nBridge, 0, ''], [L('跨越长度', 'Span length'), DEMO.FD.bridgeL / 1000, 2, ' km'], [L('柱距', 'Column spacing'), P.colStep, 0, ' m']] },
+  { d: 6, zh: '两侧', en: 'Both sides', sub: () => L('走廊外退线，沿走廊排建筑，室内是农田；种植塔落在核心节点上。', 'A setback from the corridor, buildings along it, farmland inside the cell; planting towers on the core nodes.'),
+    pr: () => [[L('沿走廊建筑', 'Buildings'), DEMO.FD.stats.bld, 0, L(' 栋', '')], [L('农田', 'Farmland'), DEMO.FD.stats.farmA / 1e4, 1, ' ha'], [L('种植塔', 'Towers'), DEMO.FD.towers.length, 0, '']] },
+  { d: 8, zh: '三维', en: '3D', sub: () => L('走廊顶面标高 7.2 m，架在街道之上。', 'The corridor deck stands 7.2 m above the streets.'),
+    pr: () => [[L('室', 'Cells'), DEMO.FD.cells.length, 0, ''], [L('走廊中心线', 'Centrelines'), DEMO.FD.stats.totL / 1000, 2, ' km'], [L('农田', 'Farmland'), DEMO.FD.stats.farmA / 1e4, 1, ' ha'], [L('走廊压在道路上', 'Corridors on streets'), DEMO.FD.stats.onRoad * 100, 0, '%']] },
+];
+let dmT0 = []; { let t = 0; for (const s of DST) { dmT0.push(t); t += s.d; } DEMO.total = t; }
+const dmProg = k => dmC01((DEMO.T - dmT0[k]) / DST[k].d), dmStage = () => { for (let k = DST.length - 1; k >= 0; k--) if (DEMO.T >= dmT0[k]) return k; return 0; };
+const dmD2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+function dmClosed(poly, n) { const Q = [...poly, poly[0]], cum = [0]; for (let i = 1; i < Q.length; i++) cum.push(cum[i - 1] + Math.sqrt(dmD2(Q[i], Q[i - 1]))); const L0 = cum[cum.length - 1], out = []; let j = 0;
+  for (let k = 0; k < n; k++) { const t = k / n * L0; while (j < cum.length - 2 && cum[j + 1] < t) j++; const f = (t - cum[j]) / ((cum[j + 1] - cum[j]) || 1); out.push([Q[j][0] + (Q[j + 1][0] - Q[j][0]) * f, Q[j][1] + (Q[j + 1][1] - Q[j][1]) * f]); } return out; }
+const dmArea = Q => { let a = 0; for (let i = 0; i < Q.length; i++) { const p = Q[i], q = Q[(i + 1) % Q.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
+function dmMorph(raw, fin) { const N = 96; let A = dmClosed(raw, N), B = dmClosed(fin, N); if (Math.sign(dmArea(A)) !== Math.sign(dmArea(B))) B.reverse();
+  let bi = 0, bd = 1e18; for (let i = 0; i < N; i++) { const d = dmD2(A[0], B[i]); if (d < bd) { bd = d; bi = i; } } B = B.slice(bi).concat(B.slice(0, bi)); return [A, B]; }
+function dmGrowOrder(pts) { let m = 0, bd = 1e18; for (let i = 0; i < pts.length; i++) for (const c of DEMO.FD.cores) { const d = dmD2(pts[i], c); if (d < bd) { bd = d; m = i; } } return m; }
+function dmPartial(ctx, X, pts, f, mid) { if (f <= 0 || pts.length < 2) return; mid = mid == null ? 0 : mid; const a = Math.max(0, Math.round(mid - f * mid)), b = Math.min(pts.length - 1, Math.round(mid + f * (pts.length - 1 - mid)));
+  ctx.beginPath(); for (let i = a; i <= b; i++) { const q = X(pts[i]); i === a ? ctx.moveTo(q[0], q[1]) : ctx.lineTo(q[0], q[1]); } ctx.stroke(); return [pts[a], pts[b]]; }
+function dmLayerGrad() { const g = F.grid, q = 2, w = Math.ceil(g.W / q), h = Math.ceil(g.H / q), im = new ImageData(w, h), st = PAL.grad || [[0, [230, 230, 230]], [1, [40, 40, 40]]], R = P.coreR * 1.6, cs = DEMO.FD.cores;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const gi = Math.min(g.H - 1, j * q) * g.W + Math.min(g.W - 1, i * q); if (!SITE.siteM[gi]) continue; const x = g.xmin + (i + .5) * q * g.RES, y = g.ymax - (j + .5) * q * g.RES;
+    let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(x - c[0], y - c[1])); let t = Math.min(1, d / R); t = t * t * (3 - 2 * t); let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; }
+    const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0, o = (j * w + i) * 4; for (let c = 0; c < 3; c++) im.data[o + c] = a[1][c] + (b[1][c] - a[1][c]) * u; im.data[o + 3] = 200; }
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').putImageData(im, 0, 0); return cv; }
+function dmLayerBridge() { const g = F.grid, im = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.corr[i] && !(SITE.landM[i] && !SITE.waterM[i])) { im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = 255; im.data[i * 4 + 3] = 255; }
+  const cv = document.createElement('canvas'); cv.width = g.W; cv.height = g.H; cv.getContext('2d').putImageData(im, 0, 0); return cv; }
+function dmFit() { const g = F.grid, w = innerWidth, h = innerHeight, top = 120, bot = 110; PV.s = Math.min((w - 80) / g.W, (h - top - bot) / g.H) * 0.96; PV.ox = (w - g.W * PV.s) / 2 + 60; PV.oy = top + (h - top - bot - g.H * PV.s) / 2; }
+// 粒子：场流（顺张量场）与走廊流（顺走廊中心线）
+function dmSpawnField(i) { const S = SITE, A = DEMO.pf; for (let k = 0; k < 20; k++) { const x = S.bbox[0] + Math.random() * (S.bbox[2] - S.bbox[0]), y = S.bbox[1] + Math.random() * (S.bbox[3] - S.bbox[1]); if (!S.inSite([x, y])) continue;
+    const d = S.field([x, y]) || [1, 0], sg = Math.random() < .5 ? 1 : -1; A.x[i] = x; A.y[i] = y; A.dx[i] = d[0] * sg; A.dy[i] = d[1] * sg; A.life[i] = 40 + Math.random() * 160; return; } A.life[i] = 0; }
+function dmStepField(ctx, X, k, alpha) { const A = DEMO.pf, S = SITE, sp = 4.2 * k; ctx.strokeStyle = `rgba(225,240,255,${0.5 * alpha})`; ctx.lineWidth = 1; ctx.beginPath();
+  for (let i = 0; i < A.n; i++) { if (A.life[i] <= 0) { dmSpawnField(i); continue; } const x = A.x[i], y = A.y[i]; let d = S.field([x, y]); if (!d) { A.life[i] = 0; continue; } if (d[0] * A.dx[i] + d[1] * A.dy[i] < 0) d = [-d[0], -d[1]];
+    const nx = x + d[0] * sp, ny = y + d[1] * sp; A.dx[i] = d[0]; A.dy[i] = d[1]; A.x[i] = nx; A.y[i] = ny; A.life[i] -= k; if (!S.inSite([nx, ny])) A.life[i] = 0;
+    const p = X([x, y]), q = X([nx, ny]); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); } ctx.stroke(); }
+function dmStepFlow(ctx, X, k, col) { const A = DEMO.pc, Fb = DEMO.fib; if (!Fb.length) return; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath();
+  for (let i = 0; i < A.n; i++) { let f = Fb[A.f[i]]; const s0 = A.s[i]; A.s[i] += A.v[i] * k; if (A.s[i] < 0 || A.s[i] > f.L) { A.f[i] = (Math.random() * Fb.length) | 0; f = Fb[A.f[i]]; A.s[i] = Math.random() * f.L; continue; }
+    const p = X(dmAt(f, s0)), q = X(dmAt(f, A.s[i])); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); } ctx.stroke(); }
+function dmAt(f, s) { const c = f.cum; let lo = 0, hi = c.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] < s) lo = m; else hi = m; } const t = (s - c[lo]) / ((c[hi] - c[lo]) || 1); return [f.P[lo][0] + (f.P[hi][0] - f.P[lo][0]) * t, f.P[lo][1] + (f.P[hi][1] - f.P[lo][1]) * t]; }
+async function demoPrepare(v1) { const busy = $('busy'), btxt = busy.textContent; busy.textContent = L('准备演示…', 'Preparing the demo…'); busy.style.display = 'block'; await new Promise(r => setTimeout(r, 40));
+  try {
+    if (!DEMO.saved) DEMO.saved = { F, mode };
+    const FD = SS.buildStructure(SITE, { ...P, v1: v1 ? 1 : 0, trace: 1 }, EXCL); F = FD; M = null; sceneDirty = true; DEMO.FD = FD; DEMO.v1 = !!v1;
+    DEMO.L = {}; for (const k of ['ground', 'farm', 'bld', 'water', 'deck', 'towers']) DEMO.L[k] = makePlanBase({ [k]: 1 });
+    DEMO.L.grad = dmLayerGrad(); DEMO.L.bridge = dmLayerBridge();
+    DEMO.morph = FD.cellPolys.map(cp => dmMorph(cp.raw, cp.poly));
+    DEMO.cells = FD.cellPolys.map(cp => { let cx = 0, cy = 0; for (const p of cp.raw) { cx += p[0]; cy += p[1]; } const c = [cx / cp.raw.length, cy / cp.raw.length]; let r = 0; for (const p of cp.raw) r = Math.max(r, dmD2(p, c)); return { c, r: Math.sqrt(r), raw: cp.raw }; });
+    DEMO.red = F.site.footPolys.map(P0 => { const Q = [...P0, P0[0]], cum = [0]; for (let i = 1; i < Q.length; i++) cum.push(cum[i - 1] + Math.sqrt(dmD2(Q[i], Q[i - 1]))); return { Q, L: cum[cum.length - 1] }; });
+    DEMO.strandMid = FD.strands.map(S => dmGrowOrder(S)); DEMO.rowMid = (FD.trace.rows || []).map(r => Math.floor(r.pts.length / 2));
+    DEMO.fib = FD.fibres.filter(f => f.P.length > 2 && SITE.inSite(f.P[Math.floor(f.P.length / 2)])).map(f => { const cum = [0]; for (let i = 1; i < f.P.length; i++) cum.push(cum[i - 1] + Math.sqrt(dmD2(f.P[i], f.P[i - 1]))); return { P: f.P, cum, L: cum[cum.length - 1] }; });
+    const nF = 3200; DEMO.pf = { n: nF, x: new Float32Array(nF), y: new Float32Array(nF), dx: new Float32Array(nF), dy: new Float32Array(nF), life: new Float32Array(nF) }; for (let i = 0; i < nF; i++) { dmSpawnField(i); DEMO.pf.life[i] *= Math.random(); }
+    const nC = 700; DEMO.pc = { n: nC, f: new Int32Array(nC), s: new Float32Array(nC), v: new Float32Array(nC) }; for (let i = 0; i < nC; i++) { DEMO.pc.f[i] = (Math.random() * Math.max(1, DEMO.fib.length)) | 0; const f = DEMO.fib[DEMO.pc.f[i]]; DEMO.pc.s[i] = f ? Math.random() * f.L : 0; DEMO.pc.v[i] = (Math.random() < .5 ? -1 : 1) * (2.2 + Math.random() * 2.5); }
+    const mid = PAL.grad ? PAL.grad[Math.floor(PAL.grad.length / 2)][1] : [120, 130, 200]; DEMO.flowCol = `rgba(${mid[0]},${mid[1]},${mid[2]},.85)`;
+    DEMO.trail = null; DEMO.trail2 = null; DEMO.stage = -1;
+  } finally { busy.style.display = 'none'; busy.textContent = btxt; } }
+function dmTrail(key, w, h, pr) { let c = DEMO[key]; if (!c || c.width !== w * pr || c.height !== h * pr) { c = document.createElement('canvas'); c.width = w * pr; c.height = h * pr; DEMO[key] = c; } return c; }
+function dmFade(c, a) { const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'destination-out'; x.fillStyle = `rgba(0,0,0,${a})`; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = 'source-over'; return x; }
+function demoDraw(dt) {
+  const k = dmStage(); if (k !== DEMO.stage) dmEnterStage(k);
+  dmParamsTick(k);
+  $('dmProg').firstElementChild.style.width = (DEMO.T / DEMO.total * 100).toFixed(2) + '%';
+  if (k === DST.length - 1) { const u = dmE(dmProg(k)); cam.rot = false; cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; cam.az = -1.6 + 1.5 * u; cam.el = 1.35 - 0.82 * u; cam.dist = 3900 - 1300 * u; return; }
+  const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s], RW = g.W * PV.s, RH = g.H * PV.s, mpx = PV.s / g.RES, at = j => DEMO.T >= dmT0[j];
+  const pg = j => dmProg(j), E = j => dmE(dmProg(j)), FD = DEMO.FD, TR = FD.trace, lay = (c, a) => { if (a <= 0) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(c, PV.ox, PV.oy, RW, RH); ctx.globalAlpha = 1; };
+  const discs = (r, fn) => { ctx.save(); ctx.beginPath(); for (const c of FD.cores) { const q = X(c); ctx.moveTo(q[0] + r, q[1]); ctx.arc(q[0], q[1], Math.max(0.1, r), 0, 7); } ctx.clip(); fn(); ctx.restore(); };
+  const maxR = Math.hypot(RW, RH);
+  const clipSite = () => { ctx.save(); ctx.beginPath(); for (const Pp of F.site.footPolys) Pp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.clip(); };
+  // 0 地面
+  lay(DEMO.L.ground, 0.25 + 0.75 * E(0));
+  // 2 疏密场（核心向外绽放），到第 9 步被农田取代
+  if (at(2)) { const a = 0.9 * (at(9) ? 1 - E(9) : 1); if (a > 0) discs(E(2) * maxR * 0.6, () => lay(DEMO.L.grad, a));
+    if (!at(4)) { ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]); for (const c of FD.cores) { const q = X(c); ctx.beginPath(); ctx.arc(q[0], q[1], P.coreR * mpx * E(2), 0, 7); ctx.stroke(); } ctx.setLineDash([]); } }
+  // 9 农田、建筑（从核心向外长）
+  if (at(9)) { discs(E(9) * maxR * 0.75, () => lay(DEMO.L.farm, 1)); discs(dmE((pg(9) - .15) / .85) * maxR * 0.75, () => lay(DEMO.L.bld, 1)); }
+  // 1 水体、溪流、道路
+  lay(DEMO.L.water, at(1) ? 0.35 + 0.65 * E(1) : 0.35 * E(0));
+  // 1–7 场流粒子（拖尾残影）
+  const fa = !at(1) ? 0 : !at(4) ? Math.min(1, pg(1) * 2.5) : !at(7) ? 0.45 : 0.45 * (1 - E(7));
+  if (fa > 0) { const tc = dmTrail('trail', w, h, pr), tx = dmFade(tc, dt > 0 ? 0.07 : 0); tx.setTransform(pr, 0, 0, pr, 0, 0); tx.globalCompositeOperation = 'lighter'; if (dt > 0) dmStepField(tx, X, dt * 60, 1); tx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = fa; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(tc, 0, 0, w, h); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+  // 3 主线：候选扫描 → 锁定（发光）
+  if (at(3) && !at(9)) { clipSite(); const u = pg(3), C = TR.cand, lineA = at(8) ? 1 - E(8) : 1;
+    if (!at(4) && u < .62) { const n = C.length, idx = Math.floor(u / .62 * n); ctx.lineWidth = 1; for (let j = Math.max(0, idx - 7); j <= Math.min(n - 1, idx); j++) { ctx.strokeStyle = `rgba(255,255,255,${0.12 + 0.6 * (1 - (idx - j) / 8)})`; dmPartial(ctx, X, C[j].S, 1, 0); } }
+    ctx.save(); ctx.strokeStyle = PAL.red; ctx.lineWidth = 2.2; ctx.globalAlpha = lineA; ctx.shadowColor = PAL.red; ctx.shadowBlur = 10; ctx.lineCap = 'round';
+    FD.strands.forEach((S, j) => { const ends = dmPartial(ctx, X, S, at(4) ? 1 : dmE((u - .45) / .55), DEMO.strandMid[j]); if (ends && !at(4) && u > .45 && u < 1) for (const e of ends) { const q = X(e); ctx.beginPath(); ctx.arc(q[0], q[1], 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); } });
+    ctx.restore(); ctx.restore(); }
+  // 4 布点：v1 流线行逐条织出、种子落下；v0 点云整体拉长
+  const seedA = at(4) ? (at(7) ? 1 - E(7) : 1) : 0;
+  if (seedA > 0) { clipSite(); const u = pg(4), S = TR.seedsW;
+    if (DEMO.v1 && TR.rows) { const R = TR.rows, n = R.length, vis = u * n * 1.05; ctx.lineWidth = 1; ctx.strokeStyle = `rgba(255,255,255,${0.42 * (at(5) ? 1 - E(5) * .6 : 1) * seedA})`;
+      for (let j = 0; j < n && j < vis; j++) dmPartial(ctx, X, R[j].pts, Math.min(1, vis - j), DEMO.rowMid[j]);
+      for (let i = 0; i < S.length; i++) { const r = TR.seedRow[i], born = r < 0 ? 0 : (r + 1) / (n * 1.05), s = dmC01((u - born) / 0.06); if (s <= 0) continue; const q = X(S[i]); ctx.beginPath(); ctx.arc(q[0], q[1], 1.5 + 2.5 * s * (1 + 0.6 * (1 - s)), 0, 7); ctx.fillStyle = `rgba(255,255,255,${seedA})`; ctx.fill(); } }
+    else { const V = TR.v0, f = 1 + (V.aS - 1) * dmE((u - .35) / .65), n0 = [-V.t0[1], V.t0[0]];
+      for (let i = 0; i < S.length; i++) { const s = dmC01((u - i / S.length * .3) / .06); if (s <= 0) continue; const q0 = TR.seedsG[i], d = [q0[0] - V.ctr[0], q0[1] - V.ctr[1]], a = d[0] * V.t0[0] + d[1] * V.t0[1], b = d[0] * n0[0] + d[1] * n0[1];
+        const q = X([V.ctr[0] + V.t0[0] * a * f + n0[0] * b, V.ctr[1] + V.t0[1] * a * f + n0[1] * b]); ctx.beginPath(); ctx.arc(q[0], q[1], 1.5 + 2.5 * s, 0, 7); ctx.fillStyle = `rgba(255,255,255,${seedA})`; ctx.fill(); }
+      if (!at(5)) { const c = X(V.ctr), L0 = 160 * dmE((u - .35) / .65); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; for (const sg of [1, -1]) { ctx.beginPath(); ctx.moveTo(c[0], c[1]); const e = [c[0] + V.t0[0] * L0 * sg, c[1] - V.t0[1] * L0 * sg]; ctx.lineTo(e[0], e[1]); ctx.stroke(); } } } ctx.restore(); }
+  // 5 分格：气泡生长；6 清理：被合并的室闪烁消散
+  if (at(5) && !at(8)) { clipSite(); const u = E(5), a = at(7) ? 1 - E(7) : 1; ctx.lineWidth = 1;
+    for (const c of DEMO.cells) { const q = X(c.c), r = c.r * mpx * u * 1.04; ctx.save(); ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(.1, r), 0, 7); ctx.clip(); ctx.beginPath(); c.raw.forEach((p, i) => { const s = X(p); i ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]); }); ctx.closePath();
+      ctx.fillStyle = `rgba(255,255,255,${0.05 * a})`; ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${0.75 * a})`; ctx.stroke(); ctx.restore(); } ctx.restore(); }
+  if (at(6) && !at(7)) { const u = pg(6); for (const kd of TR.killed) { const q = X(kd.p), r = 6 + 40 * u; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.strokeStyle = `rgba(255,90,60,${1 - u})`; ctx.lineWidth = 2; ctx.stroke(); } }
+  // 7 走廊：边加宽、折角融成曲线（形变）；8 起换成完成的结构层
+  if (at(7) && !at(8)) { const u = E(7), dc = dmTrail('deckc', w, h, pr), dx = dc.getContext('2d'); dx.setTransform(pr, 0, 0, pr, 0, 0); dx.clearRect(0, 0, w, h); dx.fillStyle = PAL.deck;
+    for (const Pp of F.site.footPolys) { dx.beginPath(); Pp.forEach((p, i) => { const s = X(p); i ? dx.lineTo(s[0], s[1]) : dx.moveTo(s[0], s[1]); }); dx.closePath(); dx.fill(); }
+    dx.globalCompositeOperation = 'destination-out'; for (const [A, B] of DEMO.morph) { dx.beginPath(); for (let i = 0; i < A.length; i++) { const p = [A[i][0] + (B[i][0] - A[i][0]) * u, A[i][1] + (B[i][1] - A[i][1]) * u], s = X(p); i ? dx.lineTo(s[0], s[1]) : dx.moveTo(s[0], s[1]); } dx.closePath(); dx.fill(); }
+    dx.globalCompositeOperation = 'source-over'; ctx.save(); ctx.globalAlpha = Math.min(1, u * 3); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 4; ctx.drawImage(dc, 0, 0, w, h); ctx.restore(); }
+  if (at(8)) { lay(DEMO.L.deck, 1); if (!at(9)) { const u = pg(8); ctx.globalCompositeOperation = 'lighter'; lay(DEMO.L.bridge, 0.55 * Math.sin(Math.PI * u)); ctx.globalCompositeOperation = 'source-over'; }
+    const ca = at(9) ? 1 - E(9) : 1; if (ca > 0) { const n = FD.columns.length, vis = Math.floor(pg(8) * n); ctx.fillStyle = `rgba(30,30,30,${ca})`; for (let i = 0; i < vis; i++) { const q = X(FD.columns[i]); ctx.fillRect(q[0] - 1.6, q[1] - 1.6, 3.2, 3.2); } } }
+  if (at(9)) { const u = dmC01((pg(9) - .6) / .4); if (u > 0) { lay(DEMO.L.towers, u); drawVec(ctx, X, 1, { cells: true }); } }
+  // 7–9 走廊流粒子（"生产流线"）
+  if (at(7) && pg(7) > .35) { const tc = dmTrail('trail2', w, h, pr), tx = dmFade(tc, dt > 0 ? 0.16 : 0); tx.setTransform(pr, 0, 0, pr, 0, 0); if (dt > 0) dmStepFlow(tx, X, dt * 60, DEMO.flowCol); ctx.globalAlpha = at(8) ? 1 : dmC01((pg(7) - .35) / .3); ctx.drawImage(tc, 0, 0, w, h); ctx.globalAlpha = 1; }
+  // 红线：第 0 步沿外缘画出，之后常在
+  { const u = at(1) ? 1 : E(0); ctx.save(); ctx.strokeStyle = PAL.red; ctx.lineWidth = 2.1; ctx.setLineDash([18, 5, 3, 5]); ctx.lineJoin = 'round';
+    for (const r of DEMO.red) { const lim = r.L * u; let acc = 0; ctx.beginPath(); for (let i = 0; i < r.Q.length; i++) { const s = X(r.Q[i]); if (i) { acc += Math.sqrt(dmD2(r.Q[i], r.Q[i - 1])); if (acc > lim) { const pv = X(r.Q[i - 1]), f = 1 - (acc - lim) / Math.sqrt(dmD2(r.Q[i], r.Q[i - 1])); ctx.lineTo(pv[0] + (s[0] - pv[0]) * f, pv[1] + (s[1] - pv[1]) * f); break; } ctx.lineTo(s[0], s[1]); } else ctx.moveTo(s[0], s[1]); } ctx.stroke(); }
+    ctx.restore(); }
+  // 核心：脉冲圈
+  if (at(2) && !at(9)) { const t = performance.now() / 1000; for (const c of FD.cores) { const q = X(c), ph = (t * .8) % 1; ctx.beginPath(); ctx.arc(q[0], q[1], 6 + 26 * ph, 0, 7); ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - ph) * (at(3) ? .5 : 1)})`; ctx.lineWidth = 1.2; ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); } }
+  if ($('c_furn').checked) { ctx.globalAlpha = E(0); drawFurniture(ctx, X, mpx, { x: 20, y: 110, w: w - 40, h: h - 220 }, 1, [w - 40, h - 104]); ctx.globalAlpha = 1; }
+}
+function dmEnterStage(k) { DEMO.stage = k; const s = DST[k];
+  $('dmNum').textContent = String(k).padStart(2, '0'); $('dmName').textContent = L(s.zh, s.en); $('dmSub').textContent = s.sub();
+  [...$('dmSteps').children].forEach((b, i) => { b.classList.toggle('on', i === k); b.classList.toggle('done', i < k); });
+  const box = $('dmParams'); box.textContent = ''; DEMO.prRows = s.pr().map(([lab, v, dec, unit]) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = lab; d.append(a, b); box.appendChild(d); return { b, v, dec, unit }; });
+  if (k === DST.length - 1) { if (mode !== '3d') setMode('3d'); } else if (mode !== '2d') { setMode('2d'); dmFit(); } }
+function dmParamsTick(k) { const u = dmC01(dmProg(k) / 0.6), e = 1 - (1 - u) ** 3; for (const r of DEMO.prRows || []) { const v = r.v * e; r.b.textContent = (r.dec ? v.toFixed(r.dec) : Math.round(v).toLocaleString()) + r.unit; } }
+function dmPlayBtn() { $('dmPlay').textContent = DEMO.playing ? '❚❚' : '▶'; }
+function demoLoop(ts) { if (!DEMO.on) return; const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
+  let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); } }
+  try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(demoLoop); }
+async function demoStart(v1) { if (!SITE || !F) return; DEMO.on = true; document.body.classList.add('demo-on'); focus = null; $('tip').style.display = 'none';
+  await demoPrepare(v1 == null ? +P.v1 : v1);
+  [...$('dmLogic').children].forEach(b => b.classList.toggle('on', +b.dataset.v === (DEMO.v1 ? 1 : 0)));
+  const st = $('dmSteps'); st.textContent = ''; DST.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = String(i).padStart(2, '0'); b.title = L(s.zh, s.en); b.onclick = () => { DEMO.T = dmT0[i] + 1e-3; }; st.appendChild(b); });
+  if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('dmSpeed').value; DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); requestAnimationFrame(demoLoop); }
+function demoExit() { if (!DEMO.on) return; DEMO.on = false; document.body.classList.remove('demo-on'); const sv = DEMO.saved; DEMO.saved = null; DEMO.L = null; DEMO.trail = DEMO.trail2 = DEMO.deckc = null;
+  if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); setMode(sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
+$('demoBtn').onclick = () => demoStart();
+$('dmExit').onclick = demoExit;
+$('dmPlay').onclick = () => { if (!DEMO.playing && DEMO.T >= DEMO.total - 0.01) DEMO.T = 0; DEMO.playing = !DEMO.playing; dmPlayBtn(); };
+$('dmPrev').onclick = () => { const k = dmStage(); DEMO.T = dmT0[Math.max(0, DEMO.T - dmT0[k] < 0.6 ? k - 1 : k)] + 1e-3; };
+$('dmNext').onclick = () => { const k = dmStage(); DEMO.T = k < DST.length - 1 ? dmT0[k + 1] + 1e-3 : DEMO.total - 1e-3; };
+$('dmSpeed').onchange = e => { DEMO.speed = +e.target.value; };
+[...$('dmLogic').children].forEach(b => b.onclick = async () => { if (!DEMO.on || +b.dataset.v === (DEMO.v1 ? 1 : 0)) return; DEMO.playing = false; await demoPrepare(+b.dataset.v); [...$('dmLogic').children].forEach(x => x.classList.toggle('on', x === b)); if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.playing = true; dmPlayBtn(); });
+addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape') demoExit(); else if (e.key === ' ') { e.preventDefault(); $('dmPlay').click(); } else if (e.key === 'ArrowRight') $('dmNext').click(); else if (e.key === 'ArrowLeft') $('dmPrev').click(); });
+addEventListener('resize', () => { if (DEMO.on && mode === '2d') { dmFit(); DEMO.trail = DEMO.trail2 = null; } });
 try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
 boot();
 </script>

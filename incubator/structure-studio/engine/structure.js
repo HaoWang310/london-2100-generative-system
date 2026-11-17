@@ -163,6 +163,7 @@ function buildStructure(site, P, EXCL) {
   const coreT = p => { let d = 1e9; for (const c of cores) d = Math.min(d, dist(p, c)); let t = clamp((d - 60) / P.coreR, 0, 1); return t * t * (3 - 2 * t); };
   const spacing = p => P.sCore + (P.sOut - P.sCore) * coreT(p);
   const V1 = P.logic === 'v1' || +P.v1 >= 0.5;
+  const TR = P.trace ? { cand: [], killed: [], seedRow: [] } : null; // 演示用：记录每一步的中间结果（平时不记）
   // v1 系统关联：次级走廊宽度随离核心的距离渐变（核心处 wCore，外围 wS）
   const wSecAt = p => V1 && P.wCore ? P.wCore + (P.wS - P.wCore) * coreT(p) : P.wS;
 
@@ -180,7 +181,7 @@ function buildStructure(site, P, EXCL) {
   // 主线与种子无关：按相关参数缓存在场地上，拖动种子时不必重算
   const primKey = JSON.stringify([P.nCore, P.nPrim, P.primAng, P.primFollow, P.primSmooth, P.primStraight, P.primShift, P.offRoad, P.rotF, P.sCore]);
   site.primCache = site.primCache || new Map();
-  let strands = site.primCache.get(primKey);
+  let strands = TR ? null : site.primCache.get(primKey);
   if (!strands) {
   strands = [];
   cores.forEach((c, ci) => { for (let k = 0; k < P.nPrim; k++) {
@@ -190,9 +191,10 @@ function buildStructure(site, P, EXCL) {
       ds.sort((a, b) => a - b); let sc = ds[Math.floor(ds.length * 0.15)] + 0.4 * ds.reduce((s, v) => s + v, 0) / ds.length - 0.05 * Math.abs(o);
       if (P.offRoad < 0.5) sc = -sc; // 贴路：取离主干路最近的
       if (strands.some(T => { let m = 1e9; for (let i = 0; i < S.length; i += 6) for (let j = 0; j < T.length; j += 6) m = Math.min(m, dist(S[i], T[j])); return m < P.sCore * 0.8; })) sc -= 1000;
+      if (TR) TR.cand.push({ core: ci, k, o, sc, S: S.filter((_, i) => i % 5 === 0) });
       if (!best || sc > best.sc) best = { sc, S }; }
     if (best && best.sc > -900) strands.push(best.S); } });
-  site.primCache.set(primKey, strands); }
+  if (!TR) site.primCache.set(primKey, strands); }
 
   // 3 拉扯：v0 = 压缩空间 G 生成均匀绳网 → 沿全场主方向拉长；v1 = 直接在场地里沿局部张量场排流线行布点（格网随场连续变形）
   const t0 = unit(rot(site.t0, P.rotF)), n0 = [-t0[1], t0[0]], aS = 1 + 1.4 * P.pull, ctr = cores[0];
@@ -222,7 +224,7 @@ function buildStructure(site, P, EXCL) {
       for (let k = 0; k < S6.length; k++) { const p = S6[k], tg = unit(sub(S6[Math.min(k + 1, S6.length - 1)], S6[Math.max(0, k - 1)])), nn = [-tg[1], tg[0]], h = hA(p) / 2; A1.push(add(p, mul(nn, h))); A2.push(sub(p, mul(nn, h))); }
       pairRows.push(A1, A2);
       while (t < L) { while (i < S6.length - 2 && s[i + 1] < t) i++; const p = S6[i], tg = unit(sub(S6[i + 1], S6[Math.max(0, i - 1)])), nn = [-tg[1], tg[0]], h = hA(p) / 2;
-        for (const sg of [1, -1]) { const q = add(p, mul(nn, h * sg)); if (inB(q) && primNearG(q).d > h * 0.8) { seeds.push(q); fixedS.push(true); } } t += aL(p); } });
+        for (const sg of [1, -1]) { const q = add(p, mul(nn, h * sg)); if (inB(q) && primNearG(q).d > h * 0.8) { seeds.push(q); fixedS.push(true); if (TR) TR.seedRow.push(-1); } } t += aL(p); } });
     pairRows.forEach(R => { hashRow(R, rows.length); rows.push({ pts: R, paired: true }); });
     // 其余：等距流线（Jobard–Lefer）——从已有行往两侧各偏一个行距起笔，顺局部场追踪，离别的行太近就停
     const trace = q0 => { const halves = [];
@@ -241,7 +243,8 @@ function buildStructure(site, P, EXCL) {
     // 行内布点：顺场间距 aL，随机起点 + 轻微横向抖动；水里不布点
     for (const r of rows) { if (r.paired) continue; const R = resample(r.pts, 3), s = arclen(R), L = s[s.length - 1]; let t = U(0, aL(R[0])), i = 0;
       while (t < L) { while (i < R.length - 2 && s[i + 1] < t) i++; const p = R[i], tg = unit(sub(R[i + 1], R[Math.max(0, i - 1)])), nn = [-tg[1], tg[0]], q = add(p, mul(nn, U(-0.08, 0.08) * hA(p)));
-        if (!(inSite(q) && inWater(q)) && primNearG(q).d > hA(q) * 0.7) { seeds.push(q); fixedS.push(false); } t += aL(p) * U(0.92, 1.08); } }
+        if (!(inSite(q) && inWater(q)) && primNearG(q).d > hA(q) * 0.7) { seeds.push(q); fixedS.push(false); if (TR) TR.seedRow.push(rows.indexOf(r)); } t += aL(p) * U(0.92, 1.08); } }
+    if (TR) TR.rows = rows.map(r => ({ paired: !!r.paired, pts: resample(r.pts, 12) }));
     gx0 = lx0; gy0 = ly0; gx1 = lx1; gy1 = ly1;
   } else {
   const inBox = q => q[0] > gx0 - 80 && q[0] < gx1 + 80 && q[1] > gy0 - 80 && q[1] < gy1 + 80;
@@ -257,6 +260,7 @@ function buildStructure(site, P, EXCL) {
   for (let it = 0; it < 14000; it++) { const q = [U(gx0 - 70, gx1 + 70), U(gy0 - 70, gy1 + 70)]; if (!nearSite(q)) continue; if (okSeed(q)) { seeds.push(q); fixedS.push(false); addSeedHash(q, seeds.length - 1); } }
 
   }
+  if (TR) { TR.seedsG = seeds.map(q => q.slice()); TR.seedsW = seeds.map(A); TR.fixedS = fixedS.slice(); TR.v0 = V1 ? null : { ctr, t0, aS }; }
   // 4 Voronoi（G）→ 拉回场地
   const BIG = [[gx0 - 3000, gy0 - 3000], [gx1 + 3000, gy0 - 3000], [gx1 + 3000, gy1 + 3000], [gx0 - 3000, gy1 + 3000]];
   const voronoi = () => seeds.map((si, i) => { const order = seeds.map((sj, j) => [dist(si, sj), j]).filter(x => x[1] !== i).sort((a, b) => a[0] - b[0]); let c = BIG;
@@ -326,6 +330,7 @@ function buildStructure(site, P, EXCL) {
         let inW = 0, inS = 0; for (let t = 0.05; t < 1; t += 0.1) { const q = add(a, mul(sub(b, a), t)); if (inSite(q)) { inS++; if (inWater(q)) inW++; } }
         if (inS >= 3 && inW / inS > 0.4) { const cand = cs.filter(x => !fixedS[x.seed]).sort((x, y) => Math.abs(polyArea(x.raw)) - Math.abs(polyArea(y.raw))); if (cand.length) { kill.add(cand[0].seed); nWaterCut++; } } } }
     if (!kill.size || pass === 4) break;
+    if (TR) for (const i of kill) TR.killed.push({ pass, p: A(seeds[i]) });
     seeds = seeds.filter((_, i) => !kill.has(i)); fixedS = fixedS.filter((_, i) => !kill.has(i)); nRemoved += kill.size; vc = voronoi();
   }
 
@@ -413,7 +418,7 @@ function buildStructure(site, P, EXCL) {
   let totL = 0; for (const f of fibres) totL += arclen(f.P).slice(-1)[0];
   // 校验：走廊中心线压在道路上（< 8 m）的比例（只计场内）、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
-  return { nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
+  return { trace: TR, nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, coreP, cores, site, cellPolys, nWaterCut, nBridge, bridgeL, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, logic: V1 ? 'v1' : 'v0', strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, merged: merged.size, split: nSplit, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
