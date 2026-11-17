@@ -603,6 +603,7 @@ export function open(api, lang = 'zh', opt = {}){
       if (pm.mode === 'world') shift(pm.c); if (detail?.pose) shift(detail.pose.c); };
     // v0.49 · turning in the hall: the hall, the map and anything placed in the room turn about you (seated, or in an emulator);
     // standing, you can simply turn round. a > 0 turns you to the right
+    const TURN_MAX = Math.PI / 2; let turnVel = 0, turnIn = 0;   // v0.50: up to 90°/s
     const turnHall = a => { const o = [head[0], 0, head[2]], rp = p => { if (!p) return; const r = rotY([p[0] - o[0], 0, p[2] - o[2]], a); p[0] = o[0] + r[0]; p[2] = o[2] + r[2]; };
       rp(hallPose.c); hallPose.yaw += a; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); rp(M.pos); rp(M.anchor); M.yaw += a;
       if (pm.mode === 'world') rp(pm.c); if (detail?.pose){ rp(detail.pose.c); detail.pose.x = rotY(detail.pose.x, a); detail.pose.z = rotY(detail.pose.z, a); }
@@ -661,6 +662,7 @@ export function open(api, lang = 'zh', opt = {}){
       const pose = frame.getViewerPose(ref); if (!pose){ xr.views = 0; return; } xr.views = pose.views.length; const hm = pose.transform.matrix; head = [hm[12], hm[13], hm[14]]; headF = [-hm[8], -hm[9], -hm[10]];
       if (!M.placed){ placeTable(); M.placed = true; }
       // buttons and sticks
+      turnIn = 0;
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
         const hit = k => now[k] && !was[k], ax = gp.axes[2] || gp.axes[0] || 0, ay = gp.axes[3] || gp.axes[1] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
         if (pm.grab && s === pm.grab.src){   // while dragging the panel: stick up / down = further / nearer, left / right = smaller / bigger
@@ -669,10 +671,10 @@ export function open(api, lang = 'zh', opt = {}){
           continue; }
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? 1 : -1) * Math.PI / 6   /* v0.49: pushing right turns you right (was the other way) */, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
-          else if (hallShown() && !grabs.has(s)){   // v0.49: in the hall the right stick turns you: 30° a push, pull back to turn round
-            const was = prevBtn.get('rs') || [0, 0];
-            if (Math.abs(ax) > 0.7 && Math.abs(was[0]) <= 0.7) turnHall((ax > 0 ? 1 : -1) * Math.PI / 6);
-            else if (ay > 0.7 && was[1] <= 0.7 && Math.abs(ax) < 0.5) turnHall(Math.PI);
+          else if (hallShown() && !grabs.has(s)){   // v0.50: in the hall the right stick turns you smoothly (pull back: turn round at once)
+            const was = prevBtn.get('rs') || [0, 0], tx = dz(ax);
+            if (tx) turnIn += Math.sign(tx) * Math.pow((Math.abs(tx) - 0.15) / 0.85, 1.4);   // a light push turns slowly, full tilt about 90°/s
+            if (ay > 0.7 && was[1] <= 0.7 && Math.abs(ax) < 0.5){ turnHall(Math.PI); turnVel = 0; }
             prevBtn.set('rs', [ax, ay]); }
           else {   // turn and scale about the table centre (the anchor), so the place under it stays put; in the hall while holding the map
             const c = M.anchor || M.pos; if (grabs.has(s)) base = 'pending';
@@ -686,7 +688,10 @@ export function open(api, lang = 'zh', opt = {}){
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
           else if (!hallShown() && dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
-      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); const kt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0); if (kt) turnHall(kt * dt * 1.2); }   // Q / E: turn, smoothly
+      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); turnIn += (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0); }   // Q / E: turn
+      // v0.50 · smooth turning: the turn speed eases towards the stick (or Q / E) over about 0.15 s, so it starts and stops softly
+      if (hallShown()){ const tgt = Math.max(-1, Math.min(1, turnIn)) * TURN_MAX; turnVel += (tgt - turnVel) * Math.min(1, dt / 0.15);
+        if (Math.abs(turnVel) > 0.002) turnHall(turnVel * dt); else turnVel = 0; }
       // walk: keep the ground under your feet
       if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
         if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
