@@ -362,18 +362,18 @@ export function open(api, lang = 'zh', opt = {}){
       if ((same && !keep.has(k)) || (!same && (allIn || !T.ready || t - (T.left ||= t) > 25000))){ freeTile(T); tiles.delete(k); freed++; } else if (same) T.left = 0; }
     if (freed) status();
     let mine = 0; for (const T of tiles.values()) if (T.z === z) mine++;
-    for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 4 || mine >= 40) break;
+    for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 8 || mine >= 40) break;   // v0.36: 8 downloads at once (was 4)
       const T = { ready: false, count: 0, z: api.stream.zOf ? api.stream.zOf(k) : 14 }; tiles.set(k, T); loadingN++; mine++; status();
       api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
         T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count;
         T.treeData = d.trees && d.trees.count ? d.trees : null; T.cars = d.cars && d.cars.count ? d.cars.paths : null;   // built on the GPU only when their switch is on
-        // with the app's look coming, show the tile only once it is in that look (no plain-then-styled flash);
-        // the plain paint is the fallback if the app's picture fails or takes over 10 s
+        // with the app's look coming, wait a moment for it (no plain-then-styled flash); v0.36: after 1.2 s (was 10 s) the plain
+        // paint shows and the app's picture replaces it when it arrives, so the table fills while the styled tiles catch up
         if (!d.upgrade){ T.tex = groundTexture(d.canvas); T.ready = true; status(); return; }
         let settled = false; stylingN++; status();
         const settle = cv => { if (settled) return; settled = true; stylingN--; if (tiles.get(k) !== T){ freeTile(T); status(); return; }
           T.tex = groundTexture(cv || d.canvas); T.styled = !!cv; T.ready = true; status(); };
-        const late = setTimeout(() => settle(null), 10000);
+        const late = setTimeout(() => settle(null), 1200);
         d.upgrade.then(cv => { clearTimeout(late); if (settled){ if (cv && tiles.get(k) === T){ gl.deleteTexture(T.tex); T.tex = groundTexture(cv); T.styled = true; status(); } return; } settle(cv); })
           .catch(e => { clearTimeout(late); console.warn('map style tile', e); settle(null); }); })
         .catch(e => { loadingN--; failN++; lastErr = String(e.message || e).slice(0, 80); console.warn(e); status();
