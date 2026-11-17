@@ -322,6 +322,9 @@ function showTip(e, id, host) { const tip = $('tip'), c = F && F.cells.find(x =>
 function hover3d(e) { if (!F) return; showTip(e, pickCell(e), $('gl')); }
 function cellName(c) { return 'C-' + String(F.cells.indexOf(c) + 1).padStart(2, '0'); }
 
+// 三维网格只在三维视图里才生成（平面视图下拖参数不必等它）
+let sceneDirty = true;
+function ensure3D() { if (!F || !sceneDirty) return; if (!M) M = SS.meshes(F, P); buildScene(); sceneDirty = false; setHighlight(focus); }
 function buildScene() {
   for (const k in G) if (G[k]) scene.remove(G[k]);
   G.site = new THREE.Group();
@@ -340,7 +343,7 @@ function buildScene() {
   G.hi = null;
   scene.add(G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
 }
-function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c) return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
+function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c || mode !== '3d') return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
 
 // ---------------------------------------------------------------- 平面
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
@@ -394,7 +397,7 @@ function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan
   cv.addEventListener('pointerup', e => { cv.style.cursor = 'grab'; if (drag && drag.m < 4) { const r = cv.getBoundingClientRect(), px = (e.clientX - r.left - PV.ox) / PV.s, py = (e.clientY - r.top - PV.oy) / PV.s, g = F.grid; const id = (px >= 0 && py >= 0 && px < g.W && py < g.H) ? g.cellLab[(py | 0) * g.W + (px | 0)] : 0; const c = F.cells.find(x => x.id === id) || null; focusCell(c && focus && c.id === focus.id ? null : c); } drag = null; });
   cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
-function setMode(m) { mode = m; $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } }
+function setMode(m) { mode = m; if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } }
 
 // ---------------------------------------------------------------- 卡片
 function thumb(c) {
@@ -447,8 +450,8 @@ function solve(keepExcl) {
   $('busy').style.display = 'block';
   setTimeout(() => {
     if (!keepExcl) EXCL.clear();
-    F = SS.buildStructure(SITE, P, EXCL); M = SS.meshes(F, P); PLAN = SS.planImage(F); makePlanBase();
-    buildScene();
+    F = SS.buildStructure(SITE, P, EXCL); M = null; sceneDirty = true; makePlanBase();
+    if (mode === '3d') ensure3D();
     writeTexts();
     const keepFocus = focus ? F.cells.find(c => Math.hypot(c.c[0] - focus.c[0], c.c[1] - focus.c[1]) < 30) : null;
     buildCards(); focusCell(keepFocus || null); if (mode === '2d') { if (!keepExcl) fitPlan(); drawPlan(); }
@@ -457,8 +460,8 @@ function solve(keepExcl) {
 }
 const FMT = { seed: v => v, nCore: v => v, nPrim: v => v, primAng: v => v + '°', primStraight: v => (+v).toFixed(1), offRoad: v => +v ? L('离路', 'Off road') : L('贴路', 'On road'), rotF: v => v + '°', coreR: v => v + ' m', sCore: v => v + ' m', sOut: v => v + ' m', pull: v => (+v).toFixed(2), wS: v => v + ' m', wP: v => v + ' m', blendK: v => (+v).toFixed(2), minThick: v => v + ' m', colStep: v => v + ' m', deckZ: v => (+v).toFixed(1) + ' m', nTower: v => v, setback: v => v + ' m', depth: v => v + ' m', segL: v => v + ' m', gap: v => v + ' m' };
 let pending = null;
-for (const k in FMT) $(k).addEventListener('input', () => { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); pending = setTimeout(() => solve(false), 220); });
-$('c_bld').onchange = e => G.bld.visible = e.target.checked; $('c_farm').onchange = e => G.farm.visible = e.target.checked; $('c_tower').onchange = e => G.tower.visible = e.target.checked; $('c_plots').onchange = e => { G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => { makePlanBase(); drawPlan(); }; $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
+for (const k in FMT) $(k).addEventListener('input', () => { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 150); });
+$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => { makePlanBase(); drawPlan(); }; $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
 $('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } };
@@ -469,7 +472,7 @@ function dl(name, text, img) { $('dlbox').style.display = 'block'; $('dlname').t
 $('dlclose').onclick = () => $('dlbox').style.display = 'none'; $('dlcopy').onclick = () => { try { navigator.clipboard.writeText($('dltext').value).then(() => $('dlcopy').textContent = L('已复制', 'Copied')); } catch (e) { $('dltext').select(); } };
 $('jsonBtn').onclick = () => dl('linear_farm_fibre.json', JSON.stringify({ params: P, towers: F.towers, nodes: F.nodeP.map((p, k) => ({ id: k, p: p.map(v => +v.toFixed(2)), boundary: F.fixed[k], pulled: F.merged.has(k) })), edges: F.fibres.map(f => ({ a: f.a, b: f.b, shared: f.link, centerline: f.P.filter((_, i) => i % 4 === 0).map(p => p.map(v => +v.toFixed(2))) })), cells: F.cells.map(c => ({ name: cellName(c), kind: c.kind, area_m2: c.area, centroid: c.c.map(v => +v.toFixed(1)), buildings: c.nb, landscape: EXCL.has(c.id) })) }, null, 1));
 $('objBtn').onclick = () => { let s = '# Linear Farm fibre network\n', off = 1; const put = (name, arr) => { s += 'o ' + name + '\n'; for (let i = 0; i < arr.length; i += 3) s += `v ${arr[i].toFixed(2)} ${arr[i + 2].toFixed(2)} ${(-arr[i + 1]).toFixed(2)}\n`; for (let i = 0; i < arr.length / 3; i += 3) s += `f ${off + i} ${off + i + 1} ${off + i + 2}\n`; off += arr.length / 3; };
-  put('corridor_top', M.corridor.top); put('corridor_side', M.corridor.side); put('buildings_top', M.bld.top); put('buildings_side', M.bld.side); dl('linear_farm_fibre.obj', s); };
+  if (!M) M = SS.meshes(F, P); put('corridor_top', M.corridor.top); put('corridor_side', M.corridor.side); put('buildings_top', M.bld.top); put('buildings_side', M.bld.side); dl('linear_farm_fibre.obj', s); };
 $('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).toFixed(2), +(p[1] + o[1]).toFixed(2)], feats = [];
   F.cellPolys.forEach((cp, k) => { const c = F.cells.find(x => x.id === k + 1); const ring = cp.poly.filter((_, i) => i % 2 === 0).map(bng); ring.push(ring[0]); feats.push({ type: 'Feature', properties: { layer: 'cell' }, geometry: { type: 'Polygon', coordinates: [ring] } }); });
   F.fibres.forEach(f => feats.push({ type: 'Feature', properties: { layer: 'corridor centreline', primary: !!f.prim, width_m: f.prim ? P.wP : P.wS, deck_m: P.deckZ }, geometry: { type: 'LineString', coordinates: [f.P[0], f.P[f.P.length - 1]].map(bng) } }));
