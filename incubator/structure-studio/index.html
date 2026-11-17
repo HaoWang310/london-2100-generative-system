@@ -9,7 +9,7 @@
 :root{--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
  --side:#0b0b0d;--card:#1c1c1f;--ink:#f5f5f7;--grey:#a1a1a6;--grey2:#636366;--line:#343438;--fill:#2c2c30;--fill2:#36363a;--raise:#3a3a40;--track:#48484e;--knob:#fff;--accent:#f5f5f7;
  --pl:398px;--pr:252px;--cb:0px}
-body.cards-on{--cb:192px}
+body.cards-on{--cb:200px}
 body.panel-collapsed{--pl:300px}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#000;color:var(--ink);font:13px/1.45 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;color-scheme:dark}
@@ -104,19 +104,21 @@ label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
 /* 顶部提示、底部室卡片条 */
 #hud{position:fixed;z-index:12;top:14px;left:calc(var(--pl) + (100vw - var(--pl) - var(--pr)) / 2);transform:translateX(-50%);max-width:calc(100vw - var(--pl) - var(--pr) - 24px);display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;background:rgba(14,14,16,.88);border:1px solid #2f2f34;border-radius:12px;font-size:12px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:none;text-align:center}
 #hud b{font-weight:600;font-size:12.5px}#hud span{color:#c7c7cc}
-#cardBar{position:fixed;z-index:12;left:var(--pl);right:var(--pr);bottom:14px;height:178px;display:none;flex-direction:column;background:rgba(14,14,16,.92);border:1px solid #2f2f34;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.28);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);padding:8px 10px 10px}
+#cbShow{position:fixed;z-index:12;bottom:14px;left:calc(var(--pl) + (100vw - var(--pl) - var(--pr)) / 2);transform:translateX(-50%);padding:7px 14px;border-radius:999px;background:rgba(14,14,16,.92);border-color:#2f2f34;box-shadow:0 16px 45px rgba(0,0,0,.28)}
+body.cards-on #cbShow{display:none}
+#cardBar{position:fixed;z-index:12;left:var(--pl);right:var(--pr);bottom:14px;height:186px;display:none;flex-direction:column;background:rgba(14,14,16,.92);border:1px solid #2f2f34;border-radius:14px;box-shadow:0 16px 45px rgba(0,0,0,.28);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);padding:8px 10px 10px}
 body.cards-on #cardBar{display:flex}
 .cbHead{display:flex;align-items:baseline;gap:10px;margin:0 2px 7px;font-size:12px}
 .cbHead span{flex:1;color:#a1a1a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#cards{flex:1;display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
-.card.cell{flex:0 0 150px;padding:0;border-radius:10px;overflow:hidden;cursor:pointer;background:#16161a;border:1px solid #2f2f34;position:relative}
+#cards{flex:1;display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;padding-bottom:6px;align-items:flex-start}
+.card.cell{flex:0 0 168px;padding:0;border-radius:10px;overflow:hidden;cursor:pointer;background:#16161a;border:1px solid #2f2f34;position:relative}
 .card.cell:hover{border-color:#55555c}.card.cell.on{border-color:#f5f5f7}
-.card.cell img{width:100%;height:74px;object-fit:cover;display:block;background:#0b0d10}
+.card.cell img{width:100%;height:68px;object-fit:cover;display:block;background:#0b0d10}
 .card.cell .num{position:absolute;left:6px;top:5px;font-size:10px;color:#e5e5ea;background:rgba(0,0,0,.6);border-radius:5px;padding:0 5px}
 .card.cell .meta{padding:5px 8px 6px}
 .card.cell .t{display:flex;justify-content:space-between;align-items:baseline}
 .card.cell .t b{font-size:12px}.card.cell .t i{font-style:normal;font-size:10.5px;color:#a1a1a6}
-.card.cell .s{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:#a1a1a6;margin-top:2px}
+.card.cell .s{display:flex;justify-content:space-between;align-items:center;gap:4px;white-space:nowrap;font-size:10.5px;color:#a1a1a6;margin-top:2px}
 .card.cell .s em{font-style:normal;color:#9ad17b}.card.cell .s em.no{color:#7b8591}
 .card.cell .tag{font-size:10px;border:1px solid #3a3a40;border-radius:5px;padding:0 5px;color:#c7c7cc}
 .card.cell .tag:hover{color:#fff;border-color:#777}
@@ -206,7 +208,7 @@ body.cards-on #cardBar{display:flex}
 <label class="dpSwitchRow"><i class="dpDot" style="background:#6a9a55"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#6aa65c"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>阴影</span><input type="checkbox" id="c_shadow" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" hidden><i class="dpSw"></i></label>
   </div>
   <div class="dpSection"><div class="dpTitle">图例</div><div class="dpLegend">
     <span><i style="background:#f4f4f2"></i>种植工厂走廊（结构）</span><span><i style="background:#cdd7e4"></i>跨水 / 跨铁路段</span><span><i style="background:#58784a"></i>农田（种植条带）</span><span><i style="background:#a3a6aa"></i>沿走廊建筑</span><span><i style="background:#17385a"></i>水体</span><span><i style="background:#6aa65c;border-radius:50%"></i>种植塔</span>
@@ -221,7 +223,8 @@ body.cards-on #cardBar{display:flex}
   <div class="dpSection"><div class="dpTitle">说明</div><p class="dpNote">点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。</p></div>
 </aside>
 
-<div id="cardBar"><div class="cbHead"><b>室</b><span id="cbSum"></span><button type="button" id="fitBtn2" class="mini">全部场地</button></div><div id="cards"></div></div>
+<div id="cardBar"><div class="cbHead"><b>室</b><span id="cbSum"></span><button type="button" id="fitBtn2" class="mini">全部场地</button><button type="button" id="cbHide" class="mini" aria-label="隐藏室列表">隐藏</button></div><div id="cards"></div></div>
+<button type="button" id="cbShow" class="mini">室列表 ▴</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/structure.js"></script>
@@ -342,7 +345,7 @@ function makePlanBase() { const g = F.grid, SC = 2, cv = document.createElement(
   if ($('c_prim').checked) for (const S of F.strands) { path(ctx, S); ctx.strokeStyle = 'rgba(255,90,60,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]); ctx.stroke(); ctx.setLineDash([]); }
   for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fillStyle = '#6aa65c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#111'; ctx.stroke(); }
   planBase = cv; }
-function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 192 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
+function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
 function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
@@ -441,7 +444,8 @@ document.querySelectorAll('.pmHead').forEach(h => h.onclick = () => h.parentNode
 $('pmAll').onclick = () => { const st = [...document.querySelectorAll('.pmStep')], open = !st.every(x => x.classList.contains('cur')); st.forEach(x => x.classList.toggle('cur', open)); $('pmAll').textContent = open ? '全部收起' : '全部展开'; };
 $('tsCollapse').onclick = () => { const c = $('panel').classList.toggle('collapsed'); document.body.classList.toggle('panel-collapsed', c); $('tsCollapse').textContent = c ? '+' : '–'; if (mode === '2d' && F) { fitPlan(); drawPlan(); } };
 document.body.classList.toggle('cards-on', $('c_cards').checked);
-$('c_cards').onchange = e => { document.body.classList.toggle('cards-on', e.target.checked); if (mode === '2d' && F) { fitPlan(); drawPlan(); } };
+const setCards = on => { $('c_cards').checked = on; document.body.classList.toggle('cards-on', on); if (mode === '2d' && F) { fitPlan(); drawPlan(); } };
+$('c_cards').onchange = e => setCards(e.target.checked); $('cbHide').onclick = () => setCards(false); $('cbShow').onclick = () => setCards(true);
 initGL(); setMode('2d');
 $('busy').style.display = 'block';
 fetch('assets/station-p2.snapshot.json').then(r => r.json()).then(j => loadSnap(j, '车站 P2')).catch(err => { $('busy').textContent = '载入快照失败：' + err.message; });
