@@ -15,8 +15,8 @@ above the streets; buildings line both sides; the cells between them are farmlan
   **右侧浮动显示栏**是视图（平面 / 三维）、镜头、图层开关、图例、统计、导出和操作说明。
 - **底部室卡片条**：每个室一张卡（面积、形态、建筑栋数），点卡片聚焦；"设为景观"去掉这个室的建筑；可在右侧图层里关掉。
 - **导出**：GeoJSON（EPSG:27700，可直接叠回伦敦地图）、OBJ（Rhino）、JSON、平面 PNG。
-- **换场地**：在张量场工作室里跑完全流程，把 `scripts/export-snapshot.js` 粘进浏览器控制台，会下载 `<场地>.snapshot.json`；
-  在本页"载入快照…"选它即可。
+- **换场地**：点"从张量场工作室取结果"，在弹出的张量场工作室里选场地、跑完全流程（第 8 步），再点"用这个结果"。
+  也可以在张量场工作室里运行 `scripts/export-snapshot.js` 导出快照文件，用"载入文件…"打开。
 
 ## 文件
 
