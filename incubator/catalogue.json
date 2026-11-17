@@ -306,7 +306,14 @@
           "en": "Linear Farm"
         }
       ],
-      "owner": "HaoWang310"
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "structureStudio.uiLanguage",
+        "langButton": "#langSw button[data-language=\"{lang}\"]",
+        "hide": [
+          "#langSw"
+        ]
+      }
     }
   ]
 }
