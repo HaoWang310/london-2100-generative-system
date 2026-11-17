@@ -19,7 +19,7 @@ import { createHall } from './hall.js?v=0.34';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
-    sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。',
+    sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。', lead1: '戴上 Quest，点一下就进入展厅。',
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 1.4 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
@@ -28,7 +28,7 @@ const T = {
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
     hud: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
-    sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.',
+    sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 1.4 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
@@ -250,11 +250,11 @@ export function open(api, lang = 'zh', opt = {}){
   const root = document.createElement('div'); root.id = 'tsXR';
   root.innerHTML = `<style>${css}</style>
 <header class="top"><div class="brand"><span class="mark" aria-hidden="true"></span><b>London 2100</b><span>${L.sub}</span></div>
-  <nav class="crumbs" aria-label="${lang === 'zh' ? '位置' : 'Location'}"><span>${esc(opt.crumb || (opt.standalone ? 'London 2100' : L.crumb))}</span><span class="sep" aria-hidden="true">›</span><b>${L.here}</b></nav>
+  <nav class="crumbs" aria-label="${lang === 'zh' ? '位置' : 'Location'}"><span>${esc(opt.crumb || (opt.standalone ? 'London 2100' : L.crumb))}</span><span class="sep" aria-hidden="true">›</span><b>${hallOn ? 'VR' : L.here}</b></nav>
   <span class="loc">${esc(opt.title || L.title)}</span><span class="sp"></span><span class="exitSlot"></span>
   ${opt.standalone ? '' : `<button class="btn" data-k="close">${ic.back}${esc(opt.closeLabel && opt.closeLabel !== (lang === 'zh' ? '地图' : 'Map') ? opt.closeLabel : L.back)}</button>`}</header>
 <aside class="side" aria-label="${L.eyebrow}">
-  <div><div class="eyebrow">${L.eyebrow}</div><h1>${L.h1}</h1><p class="lead">${L.lead}</p></div>
+  <div><div class="eyebrow">${L.eyebrow}</div><h1>${L.h1}</h1><p class="lead">${hallOn ? L.lead1 : L.lead}</p></div>
   <div class="modes xrBtns"></div>
   <div class="card noxr" hidden><b>${L.quest}</b><span class="lead" style="margin:0">${L.questD}</span><span class="url"></span><button class="btn copy" type="button">${L.copy}</button></div>
   <div class="hallGrp" hidden><div class="eyebrow" style="margin-bottom:8px">${L.mood}</div><div class="chips mood" role="group" aria-label="${L.mood}">${L.moods.map(([k, t]) => `<button type="button" data-mood="${k}">${t}</button>`).join('')}</div></div>
@@ -529,11 +529,12 @@ export function open(api, lang = 'zh', opt = {}){
     if (!window.isSecureContext){ note.textContent = L.https; }
     if (!navigator.xr){ showNoXR(); return; }
     let n = 0;
-    for (const mode of ['immersive-vr', 'immersive-ar']){
+    // v0.38: with the hall, one way in (VR · Gallery); MR showed the same hall, so its card is gone. Without the hall MR stays (the model on your real table)
+    for (const mode of hallOn ? ['immersive-vr'] : ['immersive-vr', 'immersive-ar']){
       let ok = false; try { ok = await navigator.xr.isSessionSupported(mode); } catch (e){ ok = false; }
       if (!ok) continue; n++;
       const vr = mode === 'immersive-vr', b = document.createElement('button'); b.type = 'button'; b.className = 'mode' + (vr ? ' primary' : '');
-      b.innerHTML = `<span class="mh">${vr ? ic.vr : ic.ar}<b>${vr ? L.vrT : L.arT}</b>${vr ? `<span class="tag">${L.rec}</span>` : ''}</span><span class="md">${vr ? (hallOn ? L.vrD : L.vrDplain) : L.arD}</span><span class="go">${vr ? L.enterVR : L.enterAR}${ic.go}</span>`;
+      b.innerHTML = `<span class="mh">${vr ? ic.vr : ic.ar}<b>${vr ? L.vrT : L.arT}</b>${vr && !hallOn ? `<span class="tag">${L.rec}</span>` : ''}</span><span class="md">${vr ? (hallOn ? L.vrD : L.vrDplain) : L.arD}</span><span class="go">${vr ? L.enterVR : L.enterAR}${ic.go}</span>`;
       b.onclick = () => startXR(mode); xrBox.append(b); }
     if (!n) showNoXR();
   })();
