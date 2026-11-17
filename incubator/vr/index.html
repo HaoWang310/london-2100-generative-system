@@ -12,7 +12,7 @@
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
 <script type="module">
-import { open } from './src/xr_view.js?v=0.38';
+import { open } from './src/xr_view.js?v=0.39';
 import { apiFromScene } from './src/scene.js';
 import { streamApi } from './src/stream.js?v=0.20';
 import { envFromList } from './src/app_state.js?v=0.20';
@@ -20,6 +20,12 @@ import { envFromList } from './src/app_state.js?v=0.20';
 const q = new URLSearchParams(location.search), saved = (() => { try { return localStorage.getItem('l2100.lang'); } catch (e){ return null; } })();
 const lang = (q.get('lang') || saved) === 'en' ? 'en' : 'zh'; document.documentElement.lang = lang;
 const msg = document.getElementById('msg'), drop = document.getElementById('drop');
+// v0.39: the app's 中文 / EN switch while this page is open (the shell posts l2100:lang and stores l2100.lang): reload in that language,
+// except in the headset, where the switch cannot be pressed anyway
+function follow(next){ if ((next !== 'en' && next !== 'zh') || next === lang || document.querySelector('#tsXR.immersive')) return;
+  const u = new URL(location.href); u.searchParams.set('lang', next); location.replace(u.href); }
+addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') follow(e.data.lang); });
+addEventListener('storage', e => { if (e.key === 'l2100.lang') follow(e.newValue); });
 let view = null;
 function show(scene, name){
   try { const api = apiFromScene(scene), t = scene.title ? (scene.title[lang] || scene.title.zh) : name; showApi(api, t); }

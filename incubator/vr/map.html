@@ -29,8 +29,8 @@
 <div id="err"></div>
 <script type="module">
 import { findMap } from './src/map_bridge.js?v=0.20';
-import { openFromMap } from './src/from_map.js?v=0.38';
-import { open } from './src/xr_view.js?v=0.38';
+import { openFromMap } from './src/from_map.js?v=0.39';
+import { open } from './src/xr_view.js?v=0.39';
 import { streamApi } from './src/stream.js?v=0.20';
 import { mapPainter } from './src/map_painter.js?v=0.36';
 import { appPanel } from './src/app_panel.js?v=0.24';
@@ -79,11 +79,11 @@ async function goVR(at){
         onClose: async (info) => { cover.hidden = true; painter?.dispose();   // the map opens where you were looking in VR
           const p = info?.focus ? { ...api.stream.toLatLng(info.focus[0], info.focus[1]), zoom: at.zoom || 15.5 } : at; remember(p);
           try { const m = await waitForMap(8000); m.jumpTo({ center: [p.lng, p.lat], zoom: p.zoom }); } catch (e){} } });
-      cover.hidden = true; remember(at); return;
+      shownLang = lang(); cover.hidden = true; remember(at); return;
     }
     const map = await waitForMap();
     if (at){ coverText.textContent = lang() === 'zh' ? '移动到指定位置…' : 'Moving to the place…'; map.jumpTo({ center: [at.lng, at.lat], zoom: at.zoom, pitch: 0, bearing: 0 }); await sleep(300); }
-    await openFromMap(map, lang(), { hall: q.get('hall') || 'auto', closeLabel: lang() === 'zh' ? '地图' : 'Map', onClose: () => { cover.hidden = true; } });
+    shownLang = lang(); await openFromMap(map, lang(), { hall: q.get('hall') || 'auto', closeLabel: lang() === 'zh' ? '地图' : 'Map', onClose: () => { cover.hidden = true; } });
     cover.hidden = true;
     const c = map.getCenter(); remember({ lat: c.lat, lng: c.lng, zoom: Math.max(15, map.getZoom()) });
   } catch (e){ console.error(e); cover.hidden = true; show((lang() === 'zh' ? 'VR 没能打开：' : 'VR could not open: ') + (e.message || e)); }
@@ -96,6 +96,16 @@ function remember(at){
   {   const rest = new URLSearchParams(location.search); rest.delete('at'); rest.delete('map'); history.replaceState(null, '', location.pathname + '?at=' + s + (rest.toString() ? '&' + rest : '') + location.hash); }
 }
 
+// v0.39: the app's 中文 / EN switch while the view is open: the map takes that language (its own key) and the page reloads in it,
+// at the same place (?at= is in the address); not in the headset. The shell may also switch the map itself: then the map's language changes under us
+let shownLang = null;
+function follow(next){ if ((next !== 'en' && next !== 'zh') || document.querySelector('#tsXR.immersive')) return;
+  if (next === (shownLang || lang())) return;
+  try { localStorage.setItem('londonMap.uiLanguage', next); } catch (e){}
+  location.reload(); }
+addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') follow(e.data.lang); });
+addEventListener('storage', e => { if (e.key === 'l2100.lang') follow(e.newValue); });
+setInterval(() => { if (shownLang && document.querySelector('#tsXR') && lang() !== shownLang) follow(lang()); }, 1500);
 btn.onclick = () => goVR(null);   // from the map: the place the map shows now
 if (q.get('map') === '1') cover.hidden = true;
 else goVR(parseAt(q.get('at')) || parseAt(storedAt) || { lat: 51.50733, lng: -0.12768, zoom: 15.5 });
