@@ -1,38 +1,43 @@
 // OpenStreetMap that loads as you move, like a web map: tiles near the point you look at, at the zoom that suits how far
 // you see (z14 ≈ 1.5 km in London with buildings … z0 the whole world), are fetched, painted and (z13–14) extruded; tiles that drift out of range are dropped. xr_view asks for tiles and draws them.
 //
-// Plan metres: x east, y north, (0, 0) at the starting point; Web Mercator × cos(start latitude).
+// Plan metres: British National Grid (EPSG:27700) minus the starting point's grid point — x east, y north (grid), see geo.js.
 // Model space (as in xr_view): x = plan x, y up, z = −plan y.
 
 import { decodeMVT, paintLayers, buildingMesh, tileTemplate, GROUND_COLOUR } from './osm.js?v=0.20';
 import { treesForTile, carsForTile } from './features.js?v=0.20';
+import { localGrid } from './geo.js?v=0.52';
 
 const ZMAX = 14, R = 6378137, WORLD = 2 * Math.PI * R;
 const tileM = z => WORLD / 2 ** z;   // Web Mercator metres per tile side at zoom z
 
 export function osmStream(lat, lon, opt = {}){
-  const K = Math.cos(lat * Math.PI / 180), mx0 = R * lon * Math.PI / 180, my0 = R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+  const G = opt.grid || localGrid({ lat, lon }), K = Math.cos(lat * Math.PI / 180);
   const PX = opt.texture || 512;
   let tpl = opt.tiles || null;
-  // tile ↔ plan, at zoom z
-  const tileX = (z, px) => Math.floor((px / K + mx0 + WORLD / 2) / tileM(z)), tileY = (z, py) => Math.floor((WORLD / 2 - (py / K + my0)) / tileM(z));
-  const planOf = (z, tx, ty) => [((tx * tileM(z) - WORLD / 2) - mx0) * K, ((WORLD / 2 - ty * tileM(z)) - my0) * K];   // north-west corner of a tile
-  const sizeOf = z => tileM(z) * K;
+  // plan → tile numbers at zoom z (through Web Mercator, which the tiles are cut in)
+  const tileXY = (z, p) => { const m = G.toMerc(p), s = tileM(z); return [Math.floor((m[0] + WORLD / 2) / s), Math.floor((WORLD / 2 - m[1]) / s)]; };
+  const sizeOf = z => tileM(z) * K;   // about a tile's side on the ground, metres
   const parse = key => key.split('/').map(Number);
 
   return {
-    origin: { lat, lon }, tileSize: sizeOf(ZMAX), painter: opt.painter || null,
+    origin: { lat, lon }, grid: G, crs: G.crs, bng: G.origin, tileSize: sizeOf(ZMAX), painter: opt.painter || null,
     /** plan metres → { lat, lng } */
-    toLatLng(px, py){ const mx = px / K + mx0, my = py / K + my0; return { lng: mx / R * 180 / Math.PI, lat: (2 * Math.atan(Math.exp(my / R)) - Math.PI / 2) * 180 / Math.PI }; },
+    toLatLng(px, py){ const [lng, la] = G.toLL([px, py]); return { lng, lat: la }; },
+    /** { lat, lng } → plan metres */
+    toPlan(la, lng){ return G.fromLL([lng, la]); },
     /** the zoom that puts about three tiles across a circle of radius r (14 = streets with buildings … 0 = the world) */
     zoomExact(r){ return Math.log2(3 * sizeOf(0) / (2 * r)); },
     zoomFor(r){ return Math.max(0, Math.min(ZMAX, Math.round(this.zoomExact(r)))); },
     /** keys "z/x/y" of tiles whose square touches the circle (px, py, r) in plan metres, nearest first */
     near(px, py, r, z = this.zoomFor(r)){
-      const out = [], n = 2 ** z, size = sizeOf(z);
-      const xa = Math.max(0, tileX(z, px - r)), xb = Math.min(n - 1, tileX(z, px + r)), ya = Math.max(0, tileY(z, py + r)), yb = Math.min(n - 1, tileY(z, py - r));
+      const out = [], n = 2 ** z;
+      // tile range: the circle's box (and its side midpoints) through to tile numbers, one tile spare each way
+      let xa = Infinity, xb = -Infinity, ya = Infinity, yb = -Infinity;
+      for (const [dx, dy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]){ const [tx, ty] = tileXY(z, [px + dx * r, py + dy * r]); xa = Math.min(xa, tx); xb = Math.max(xb, tx); ya = Math.min(ya, ty); yb = Math.max(yb, ty); }
+      xa = Math.max(0, xa - 1); xb = Math.min(n - 1, xb + 1); ya = Math.max(0, ya - 1); yb = Math.min(n - 1, yb + 1);
       for (let x = xa; x <= xb; x++) for (let y = ya; y <= yb; y++){
-        const [x0, y1] = planOf(z, x, y), x1 = x0 + size, y0 = y1 - size;
+        const [x0, y0, x1, y1] = G.tile(z, x, y).box;
         const dx = Math.max(x0 - px, 0, px - x1), dy = Math.max(y0 - py, 0, py - y1), d = Math.hypot(dx, dy);
         if (d <= r) out.push({ key: z + '/' + x + '/' + y, d: Math.hypot((x0 + x1) / 2 - px, (y0 + y1) / 2 - py) }); }
       return out.sort((a, b) => a.d - b.d).map(o => o.key);
@@ -40,7 +45,7 @@ export function osmStream(lat, lon, opt = {}){
     zOf(key){ return parse(key)[0]; },
     /** the same tile drawn again in the app's (new) look */
     repaint(key, alive){ if (!opt.painter) return Promise.resolve(null); const [z, x, y] = parse(key); return opt.painter.render(z, x, y, alive); },
-    /** one tile → { canvas, quad: [x0, y0, x1, y1] plan metres, mesh: { v, i } model space, count } */
+    /** one tile → { canvas, quad: [x0, y0, x1, y1] plan box, ground: corner grid, mesh: { v, i } model space, count } */
     async load(key, alive = () => true){
       const [z, x, y] = parse(key), size = sizeOf(z);
       if (!tpl) tpl = await tileTemplate();
@@ -57,17 +62,18 @@ export function osmStream(lat, lon, opt = {}){
       const bld = paintLayers(g, [t], (tt, ext) => q => [q[0] / ext * PX, q[1] / ext * PX], PX / size);
       // buildings (z13–14 only): keep those whose centroid is inside this tile, so neighbours never draw one twice
       let B = { mesh: null, count: 0 }, trees = null, cars = null;
-      const [px0, py1] = planOf(z, x, y), plan = ext => q => [px0 + q[0] / ext * size, py1 - q[1] / ext * size];
+      const TG = G.tile(z, x, y), plan = ext => q => TG.at(q[0] / ext, q[1] / ext);
       // street level only: trees in green spaces and vehicle paths along the larger streets (drawn when the app's switches are on)
       if (z >= 14){ trees = treesForTile(t.layers, plan, size, x, y); cars = carsForTile(t.layers, plan, size, x, y); }
-      if (z >= 13){ const x0 = px0, y1 = py1, list = [];
-        for (const { f } of bld){ const P = plan(f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0;
-          for (const part of f.parts){ if (part.length < 4) continue; list.push({ ring: part.map(P), h, h0 }); } }
-        B = buildingMesh(list.filter(o => area(o.ring) < 0), 0, 0, size, size, x0, y1 - size, [1, 1, 1]); }   // white; xr_view tints them with the app's building colour
+      if (z >= 13){ const list = [];
+        for (const { f } of bld){ const P = plan(f.extent), h = +f.props.render_height || +f.props.height || 8, h0 = +f.props.render_min_height || 0, E = f.extent;
+          for (const part of f.parts){ if (part.length < 4) continue; let cu = 0, cv = 0; for (const q of part){ cu += q[0]; cv += q[1]; } cu /= part.length; cv /= part.length;
+            if (cu < 0 || cv < 0 || cu >= E || cv >= E) continue; list.push({ ring: part.map(P), h, h0 }); } }
+        B = buildingMesh(list.filter(o => area(o.ring) < 0), 0, 0, 2e12, 2e12, -1e12, -1e12, [1, 1, 1]); }   // white; xr_view tints them with the app's building colour
       // with the map app at hand: the same tile in the app's own look follows when it is drawn
       const upgrade = opt.painter ? opt.painter.render(z, x, y, alive) : null;
-      const [x0, y1] = planOf(z, x, y);
-      return { z, canvas: cv, quad: [x0, y1 - size, x0 + size, y1], mesh: B.mesh, count: B.count, trees, cars, upgrade };
+      // quad: the tile's box in plan metres · ground: { N, pts } its corner grid (row 0 north, column 0 west) for the picture
+      return { z, canvas: cv, quad: TG.box, ground: { N: TG.N, pts: TG.pts }, mesh: B.mesh, count: B.count, trees, cars, upgrade };
     }
   };
 }

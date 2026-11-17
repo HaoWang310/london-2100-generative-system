@@ -337,13 +337,20 @@ export function open(api, lang = 'zh', opt = {}){
     const an = gl.getExtension('EXT_texture_filter_anisotropic'); if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
     return t; }
   function groundQuad(){ const x = api.groundHalf ? api.groundHalf[0] : terrain.cx, z = api.groundHalf ? api.groundHalf[1] : terrain.cy, vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-x, 0, z, 0, 0, x, 0, z, 1, 0, -x, 0, -z, 0, 1, x, 0, -z, 1, 1]), gl.STATIC_DRAW);
+    const Q = api.groundCorners;   // v0.52: the map picture's corners on the National Grid (from_map), else a centred box
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Q ? [Q.sw[0], 0, -Q.sw[1], 0, 0, Q.se[0], 0, -Q.se[1], 1, 0, Q.nw[0], 0, -Q.nw[1], 0, 1, Q.ne[0], 0, -Q.ne[1], 1, 1]
+      : [-x, 0, z, 0, 0, x, 0, z, 1, 0, -x, 0, -z, 0, 1, x, 0, -z, 1, 1]), gl.STATIC_DRAW);
     const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return vao; }
 
   // ---- streaming tiles (api.stream): load near the focus, drop far ones, clip to a circle
-  function tileQuad(q){ const [x0, y0, x1, y1] = q, vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([x0, 0, -y0, 0, 0, x1, 0, -y0, 1, 0, x0, 0, -y1, 0, 1, x1, 0, -y1, 1, 1]), gl.STATIC_DRAW);
-    const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return { vao, b }; }
+  // v0.52: a tile is a small grid of National Grid points (g: { N, pts }, row 0 north), so its picture sits exactly under its buildings
+  function tileQuad(q, g){ const vao = gl.createVertexArray(); gl.bindVertexArray(vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    if (!g){ const [x0, y0, x1, y1] = q; g = { N: 1, pts: [x0, y1, x1, y1, x0, y0, x1, y0] }; }
+    const N = g.N, P = g.pts, out = new Float32Array(N * N * 6 * 5); let o = 0;
+    const put = (i, j) => { const k = (j * (N + 1) + i) * 2; out[o++] = P[k]; out[o++] = 0; out[o++] = -P[k + 1]; out[o++] = i / N; out[o++] = 1 - j / N; };
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){ put(i, j + 1); put(i + 1, j + 1); put(i, j); put(i + 1, j + 1); put(i + 1, j); put(i, j); }
+    gl.bufferData(gl.ARRAY_BUFFER, out, gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(tex.p, 'aPos'), u = gl.getAttribLocation(tex.p, 'aUV'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(u); gl.vertexAttribPointer(u, 2, gl.FLOAT, false, 20, 12); gl.bindVertexArray(null); return { vao, b, n: N * N * 6 }; }
   function freeTile(T){   // also for a tile dropped half-built (waiting for its picture)
     if (T.tex){ gl.deleteTexture(T.tex); T.tex = null; } if (T.quad){ gl.deleteVertexArray(T.quad.vao); gl.deleteBuffer(T.quad.b); T.quad = null; }
     if (T.mesh){ gl.deleteVertexArray(T.mesh.vao); gl.deleteBuffer(T.mesh.vb); gl.deleteBuffer(T.mesh.ib); T.mesh = null; }
@@ -368,7 +375,7 @@ export function open(api, lang = 'zh', opt = {}){
     for (const k of want){ if (tiles.has(k)) continue; if (loadingN >= 8 || mine >= 40) break;   // v0.36: 8 downloads at once (was 4)
       const T = { ready: false, count: 0, z: api.stream.zOf ? api.stream.zOf(k) : 14 }; tiles.set(k, T); loadingN++; mine++; status();
       api.stream.load(k, () => tiles.get(k) === T).then(d => { loadingN--; if (tiles.get(k) !== T) return;
-        T.quad = tileQuad(d.quad); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count;
+        T.quad = tileQuad(d.quad, d.ground); T.mesh = d.count ? mesh(gl, prog, d.mesh) : null; T.count = d.count;
         T.treeData = d.trees && d.trees.count ? d.trees : null; T.cars = d.cars && d.cars.count ? d.cars.paths : null;   // built on the GPU only when their switch is on
         // with the app's look coming, wait a moment for it (no plain-then-styled flash); v0.36: after 1.2 s (was 10 s) the plain
         // paint shows and the app's picture replaces it when it arrives, so the table fills while the styled tiles catch up
@@ -396,9 +403,9 @@ export function open(api, lang = 'zh', opt = {}){
     gl.useProgram(tex.p); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M); gl.uniform3fv(tex.u.uClip, clip);
     gl.activeTexture(gl.TEXTURE0); gl.uniform1i(tex.u.uT, 0);
     gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);   // a level being replaced sits just under the new one
-    for (const T of tiles.values()) if (T.ready && T.z !== curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    for (const T of tiles.values()) if (T.ready && T.z !== curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLES, 0, T.quad.n); }
     gl.disable(gl.POLYGON_OFFSET_FILL);
-    for (const T of tiles.values()) if (T.ready && T.z === curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+    for (const T of tiles.values()) if (T.ready && T.z === curZ){ gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.bindVertexArray(T.quad.vao); gl.drawArrays(gl.TRIANGLES, 0, T.quad.n); }
     // building shadows on the ground: the same meshes, flattened along the sun's direction, each pixel darkened once
     if (st.bld && env.shadow > 0){ const ly = Math.max(env.dir[1], 0.14);
       gl.useProgram(shProg.p); gl.uniformMatrix4fv(shProg.u.uP, false, P); gl.uniformMatrix4fv(shProg.u.uV, false, V); gl.uniformMatrix4fv(shProg.u.uM, false, M);

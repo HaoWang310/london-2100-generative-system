@@ -27,7 +27,7 @@
 }
 ```
 
-坐标都是**本地米制**，x 向东，y 向北。Tensor Studio 场景里 `国家网格 = origin + [x, y]`；Hydro Lab 场景用的是 Web Mercator × cos(51.507°)，`crs` 和 `note` 字段写明了换算。`Z` 里可以用 `null` 表示没有数据。
+坐标都是**本地米制**，x 向东，y 向北，统一用**英国国家网格（EPSG:27700）**：`国家网格 = origin + [x, y]`，Tensor Studio 和 Hydro Lab 场景都一样（v0.52 起；之前 Hydro Lab 用的是 Web Mercator × cos(51.507°)，和国家网格差约 1.5° 的转角）。VR 里实时加载的 OSM 建筑、地图 → VR 也用同一套国家网格。`Z` 里可以用 `null` 表示没有数据。
 
 ## 以后可以加的（加字段不加版本号）
 

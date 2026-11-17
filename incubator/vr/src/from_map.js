@@ -5,11 +5,11 @@
 //   3. the camera goes back exactly as it was, and the VR view opens over the map
 // Closing the view (or leaving the headset) returns to the map as it was. Call: openFromMap(map, 'zh' | 'en').
 
-import { open } from './xr_view.js?v=0.51';
+import { open } from './xr_view.js?v=0.52';
 import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.20';
+import { localGrid } from './geo.js?v=0.52';
 
-const R = 6378137, MAX_TEX = 4096, MIN_ZOOM = 15;
-const merc = ([lon, lat]) => [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360))];
+const MAX_TEX = 4096, MIN_ZOOM = 15;
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const idle = (map, ms) => new Promise(res => { let done = false; const fin = () => { if (!done){ done = true; res(); } }; map.once('idle', fin); setTimeout(fin, ms); map.triggerRepaint(); });
 
@@ -42,22 +42,29 @@ export async function openFromMap(map, lang = 'zh', viewOpt = {}){
     shot = await capture(map); bounds = map.getBounds(); feats = buildingFeatures(map);
   } finally { map.jumpTo(cam); note.remove(); }
 
-  // plan metres: x east, y north, (0, 0) at the south-west corner; Web Mercator × cos(lat) is true distance at this scale
-  const sw = merc([bounds.getWest(), bounds.getSouth()]), ne = merc([bounds.getEast(), bounds.getNorth()]);
-  const K = Math.cos(map.getCenter().lat * Math.PI / 180), W = (ne[0] - sw[0]) * K, H = (ne[1] - sw[1]) * K;
-  const plan = q => { const m = merc(q); return [(m[0] - sw[0]) * K, (m[1] - sw[1]) * K]; };
+  // plan metres: British National Grid minus the view centre's grid point (geo.js), x east, y north. The captured picture is
+  // north-up Web Mercator, so on the grid it is a quadrilateral turned about 1.5°: its four corners go to xr_view as they are.
+  const c0 = map.getCenter(), G = localGrid({ lat: c0.lat, lon: c0.lng }), plan = q => G.fromLL(q);
+  const w = bounds.getWest(), s = bounds.getSouth(), e = bounds.getEast(), n = bounds.getNorth();
+  const corners = { sw: plan([w, s]), se: plan([e, s]), nw: plan([w, n]), ne: plan([e, n]) };
+  const W = (Math.hypot(corners.se[0] - corners.sw[0], corners.se[1] - corners.sw[1]) + Math.hypot(corners.ne[0] - corners.nw[0], corners.ne[1] - corners.nw[1])) / 2;
+  const H = (Math.hypot(corners.nw[0] - corners.sw[0], corners.nw[1] - corners.sw[1]) + Math.hypot(corners.ne[0] - corners.se[0], corners.ne[1] - corners.se[1])) / 2;
+  const quad = [corners.sw, corners.se, corners.ne, corners.nw];   // anticlockwise
+  const inside = ring => { let mx = 0, my = 0; for (const q of ring){ mx += q[0]; my += q[1]; } mx /= ring.length; my /= ring.length;
+    for (let i = 0; i < 4; i++){ const a = quad[i], b = quad[(i + 1) % 4]; if ((b[0] - a[0]) * (my - a[1]) - (b[1] - a[1]) * (mx - a[0]) < 0) return false; } return true; };
+  const meshOf = l => buildingMesh(l.filter(o => inside(o.ring)), 0, 0, 2e12, 2e12, -1e12, -1e12);   // the centroid test above replaces buildingMesh's box
   const list = [];
   for (const f of feats){ const g = f.geometry, p = f.properties || {}; if (!g || p.hide_3d) continue;
     const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
     for (const poly of polys) if (poly[0] && poly[0].length > 3) list.push({ ring: poly[0].map(plan), h: +p.render_height || +p.height || 8, h0: +p.render_min_height || 0 }); }
   // the map loads buildings only from zoom 13 up: when it has none here, read them from the OSM tiles directly
-  let B = buildingMesh(list, W / 2, H / 2, W, H), extraNote = '';
+  let B = meshOf(list), extraNote = '';
   if (B.count < 20){
     const n2 = busy(lang);
     try {
       const r = await osmBuildingsIn(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth(), plan,
         { maxTiles: 9, onProgress: (d, n) => { n2.textContent = (lang === 'zh' ? '正在读取 OSM 建筑… ' : 'Reading OSM buildings… ') + d + ' / ' + n; } });
-      B = buildingMesh(r.list, W / 2, H / 2, W, H);
+      B = meshOf(r.list);
       if (r.partial) extraNote = lang === 'zh' ? '范围太大，只显示中心约 4 公里内的建筑；放大地图再按 VR 可以看到当前范围全部建筑' : 'The view is large: buildings only within about 4 km of the centre; zoom in for all of them';
     } catch (e){ console.error(e); extraNote = (lang === 'zh' ? '没能读取 OSM 建筑：' : 'Could not read OSM buildings: ') + (e.message || e); }
     finally { n2.remove(); }
@@ -66,7 +73,7 @@ export async function openFromMap(map, lang = 'zh', viewOpt = {}){
 
   const api = {
     D: { landMask: null, fixed: { streets: [], bridges: [] } }, nx, ny, cell, ENV: null, FR: null, DR: null,
-    ground: shot, groundHalf: [W / 2, H / 2], extra: B.count ? B.mesh : null, buildings: B.count,
+    ground: shot, groundHalf: [W / 2, H / 2], groundCorners: corners, crs: G.crs, bng: G.origin, extra: B.count ? B.mesh : null, buildings: B.count,
     outlines: [], view: { exag: 1 }, streets: () => [], lines: () => [], finished: () => true
   };
   const c = map.getCenter(), km = (Math.max(W, H) / 1000).toFixed(1);
