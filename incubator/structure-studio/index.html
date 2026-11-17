@@ -56,6 +56,10 @@ button,input,select{font-family:inherit}
 .mini.primary{background:#f5f5f7;color:#121214;border-color:#f5f5f7}.mini.primary:hover{background:#d1d1d6}
 .mini:disabled{opacity:.4;cursor:default}
 .btns2{display:flex;gap:6px;padding:4px 0 10px;border-bottom:.5px solid var(--line)}.btns2 .mini{flex:1;padding:7px 8px}
+.sel{flex:1 1 auto;min-width:0;width:100%;background:#2c2c30;color:#f5f5f7;border:1px solid #46464b;border-radius:10px;font:inherit;font-size:12px;padding:6px 8px;outline:none}
+.sel:focus{border-color:#f5f5f7}
+#renRow[hidden]{display:none}
+.mini.warn{background:#f5f5f7;color:#121214}
 #tsOverlay{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:14px}
 #tsOverlay.on{display:flex}
 #tsOverlay .tsBar{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:0 0 10px;background:rgba(14,14,16,.96);border:1px solid #2f2f34;border-radius:14px;font-size:12.5px}
@@ -170,10 +174,13 @@ body.cards-on #cardBar{display:flex}
   </div>
   <div class="ts-divider"></div>
   <div class="grp"><h2>场地</h2><div class="card">
-    <div class="row"><label>张量场结果</label><b class="val" id="v_snap">车站 P2</b></div>
+    <div class="row"><label for="srcSel">输入</label><select id="srcSel" class="sel" aria-label="输入"></select></div>
+    <div class="row" id="renRow" hidden><input type="text" id="renIn" class="sel" maxlength="60" aria-label="改名"><button type="button" class="mini" id="renOk">确定</button></div>
     <div class="btns2"><button type="button" class="mini primary" id="tsBtn">从张量场工作室取结果</button><button type="button" class="mini" id="loadBtn">载入文件…</button><input type="file" id="snapFile" accept=".json" hidden></div>
+    <div class="btns2"><button type="button" class="mini" id="renBtn">改名</button><button type="button" class="mini" id="delBtn">删除</button><button type="button" class="mini" id="expBtn">导出快照</button></div>
     <div class="row"><label for="seed">骨架种子</label><input type="range" id="seed" min="1" max="200" step="1" value="3"><output id="v_seed">3</output></div>
     <p class="note" id="siteHint"></p>
+    <p class="note" id="saveHint"></p>
   </div></div>
   <div class="grp" id="pmBox"><div class="pmTop"><h2>生成流程</h2><button type="button" id="pmAll">全部展开</button></div>
     <ol class="pmList" id="pmList">
@@ -257,7 +264,7 @@ body.cards-on #cardBar{display:flex}
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // ---- 中英文：独立打开时用自己的切换；在目录里打开时跟随主程序（postMessage l2100:lang / 本地存储）
-const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
+const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "核心取张量场的主吸引点（环形广场）；节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "两侧": "Both sides", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
 const KIND_EN = { '水滴': 'teardrop', '梭形': 'spindle', '枕形': 'pillow' };
 let LANG = (() => { try { return /^en/.test(localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || 'zh') ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
 const L = (zh, en) => LANG === 'en' ? en : zh, KD = k => L(k, KIND_EN[k] || k);
@@ -275,6 +282,7 @@ function setLang(lang, quiet) {
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
   translateStatic(); for (const k in FMT) { const o = $('v_' + k); if (o && P[k] != null) o.textContent = FMT[k](P[k]); }
   if (!quiet && F) { writeTexts(); buildCards(); focusCell(focus); siteText(); drawPlan(); }
+  if (!quiet) { refreshSel(); saveHint(); }
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
@@ -456,9 +464,8 @@ function writeTexts() {
   $('sum4').textContent = L(`${st.cells} 室 · 跨越 ${(F.bridgeL / 1000).toFixed(1)} km`, `${st.cells} cells · spans ${(F.bridgeL / 1000).toFixed(1)} km`); $('sum5').textContent = L(`${st.bld} 栋`, `${st.bld} buildings`);
 }
 function siteText() { if (!SITE) return; const st = SNAP.stats || {};
-  $('siteHint').textContent = L(`${SITE.landHa.toFixed(0)} ha · 张量场道路 ${SNAP.roads.length} 条（主干 ${(st.km1 || 0).toFixed(1)} km、次路 ${(st.km2 || 0).toFixed(1)} km）· 核心 ${SITE.cores.length} 个（主吸引点）。其他场地：在张量场工作室里运行 scripts/export-snapshot.js 导出。`,
-    `${SITE.landHa.toFixed(0)} ha · ${SNAP.roads.length} tensor-field roads (main ${(st.km1 || 0).toFixed(1)} km, other ${(st.km2 || 0).toFixed(1)} km) · ${SITE.cores.length} cores (main attractors). Another site: run scripts/export-snapshot.js in Tensor Studio.`);
-  if (SNAP.site === 'station-p2' && /P2/.test($('v_snap').textContent)) $('v_snap').textContent = L('车站 P2', 'Station P2'); }
+  $('siteHint').textContent = L(`${SITE.landHa.toFixed(0)} ha · 张量场道路 ${SNAP.roads.length} 条（主干 ${(st.km1 || 0).toFixed(1)} km、次路 ${(st.km2 || 0).toFixed(1)} km）· 核心 ${SITE.cores.length} 个（主吸引点）。`,
+    `${SITE.landHa.toFixed(0)} ha · ${SNAP.roads.length} tensor-field roads (main ${(st.km1 || 0).toFixed(1)} km, other ${(st.km2 || 0).toFixed(1)} km) · ${SITE.cores.length} cores (main attractors). `); }
 function solve(keepExcl) {
   if (!SITE) return;
   $('busy').style.display = 'block';
@@ -466,7 +473,7 @@ function solve(keepExcl) {
     if (!keepExcl) EXCL.clear();
     F = SS.buildStructure(SITE, P, EXCL); M = null; sceneDirty = true; makePlanBase();
     if (mode === '3d') ensure3D();
-    writeTexts();
+    writeTexts(); savePSoon();
     const keepFocus = focus ? F.cells.find(c => Math.hypot(c.c[0] - focus.c[0], c.c[1] - focus.c[1]) < 30) : null;
     buildCards(); focusCell(keepFocus || null); if (mode === '2d') { if (!keepExcl) fitPlan(); drawPlan(); }
     $('busy').style.display = 'none';
@@ -494,7 +501,7 @@ $('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).
   dl('structure-studio.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, source: SNAP.site, params: P, features: feats })); };
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; cv.getContext('2d').drawImage(planBase, 0, 0); dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
-async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP); $('v_snap').textContent = name || SNAP.site;
+async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP);
   siteText();
   focus = null; solve(false); }
 $('loadBtn').onclick = () => $('snapFile').click();
@@ -519,9 +526,76 @@ $('tsCancel').onclick = tsClose;
 $('tsUse').onclick = () => { let snap = null; try { snap = snapshotFrom($('tsFrame').contentWindow); } catch (e) { snap = null; }
   if (!snap) { $('tsUse').disabled = true; return; }
   tsClose(); $('busy').style.display = 'block'; SITE = null;
-  setTimeout(() => { const n = snap.roads.length; loadSnap(snap, L(`张量场工作室 · ${n} 条路`, `Tensor Studio · ${n} roads`)); fitPlan(); }, 30); };
+  setTimeout(() => addInput(snap, 'ts'), 30); };
 addEventListener('keydown', e => { if (e.key === 'Escape' && $('tsOverlay').classList.contains('on')) tsClose(); });
-$('snapFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { loadSnap(JSON.parse(rd.result), f.name.replace('.snapshot.json', '')); } catch (err) { $('siteHint').textContent = L('读不了这个文件：', 'Cannot read this file: ') + err.message; } }; rd.readAsText(f); };
+$('snapFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const j = JSON.parse(rd.result); if (!j || !Array.isArray(j.roads) || !Array.isArray(j.pieces)) throw new Error(L('不是结构工作室的快照', 'not a Structure Studio snapshot')); addInput(j, 'file', f.name.replace(/(\.snapshot)?\.json$/i, '')); } catch (err) { $('siteHint').textContent = L('读不了这个文件：', 'Cannot read this file: ') + err.message; } }; rd.readAsText(f); e.target.value = ''; };
+// ---- 输入：内置示例（仓库里的车站 P2）+ 本机保存的结果（IndexedDB）。取来 / 载入的结果自动保存；每份记着自己的参数；
+//      打开 09 时回到上次用的那份。快照格式 structure-studio/snapshot@1 = 第 1 步（张量场）交给第 2 步（结构）的数据。
+const STORE = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { try { const rq = indexedDB.open('structureStudio', 1);
+    rq.onupgradeneeded = () => { const db = rq.result; if (!db.objectStoreNames.contains('inputs')) db.createObjectStore('inputs', { keyPath: 'id' }); if (!db.objectStoreNames.contains('snaps')) db.createObjectStore('snaps', { keyPath: 'id' }); };
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); rq.onblocked = () => rej(new Error('blocked')); } catch (e) { rej(e); } }));
+  const run = (names, mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction(names, mode); let out; const r = fn(...[].concat(names).map(n => t.objectStore(n)));
+    if (r && 'onsuccess' in r) r.onsuccess = () => { out = r.result; }; t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('abort')); }));
+  return { metas: () => run('inputs', 'readonly', s => s.getAll()), snap: id => run('snaps', 'readonly', s => s.get(id)).then(r => r && r.snap),
+    putMeta: m => run('inputs', 'readwrite', s => s.put(m)), add: (m, snap) => run(['inputs', 'snaps'], 'readwrite', (a, b) => { a.put(m); b.put({ id: m.id, snap }); }),
+    del: id => run(['inputs', 'snaps'], 'readwrite', (a, b) => { a.delete(id); b.delete(id); }) };
+})();
+const SESS_KEY = 'structureStudio.session', P0 = JSON.parse(JSON.stringify(P));
+const sess = () => { try { return JSON.parse(localStorage.getItem(SESS_KEY) || '{}') || {}; } catch (e) { return {}; } };
+const setSess = o => { try { localStorage.setItem(SESS_KEY, JSON.stringify(Object.assign(sess(), o))); } catch (e) {} };
+let CUR = 'builtin', LIST = [], IDB_OK = true, BUILTIN = null, saveT = null;
+const curMeta = () => LIST.find(m => m.id === CUR);
+function applyP(p) { Object.assign(P, P0); if (p) for (const k in P0) if (p[k] != null && typeof p[k] === typeof P0[k]) P[k] = p[k];
+  for (const k in FMT) { const el = $(k); el.value = P[k]; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); } $('avoidWater').checked = !!P.avoidWater; }
+function savePSoon() { clearTimeout(saveT); saveT = setTimeout(() => { const p = JSON.parse(JSON.stringify(P));
+  if (CUR === 'builtin') setSess({ builtinP: p }); else { const m = curMeta(); if (m) { m.P = p; STORE.putMeta(m).catch(() => {}); } } }, 500); }
+function hashSnap(snap) { const t = JSON.stringify([snap.origin, snap.pieces.length, snap.roads.map(r => r.pts)]); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + t.length.toString(36); }
+const stamp = t => { const d = new Date(t), z = v => String(v).padStart(2, '0'); return `${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+function refreshSel() { const sel = $('srcSel'); sel.textContent = '';
+  const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  add('builtin', L('内置示例 · 车站 P2', 'Built-in example · Station P2'));
+  if (LIST.length) { const g = document.createElement('optgroup'); g.label = L('已保存（这台电脑）', 'Saved (this computer)'); sel.appendChild(g);
+    for (const m of [...LIST].sort((a, b) => b.created - a.created)) { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; g.appendChild(o); } }
+  sel.value = CUR; const b = CUR === 'builtin'; $('renBtn').disabled = $('delBtn').disabled = b; resetDel(); }
+function saveHint() { $('saveHint').textContent = IDB_OK
+  ? L(`从张量场取来或载入的结果自动存在这台电脑的浏览器里（已存 ${LIST.length} 份），每份记着自己的参数；打开 09 时回到上次用的那份。清除浏览器数据或换电脑会丢失，要长期保留请"导出快照"。`,
+      `Results taken from Tensor Studio or loaded from a file are saved in this computer’s browser (${LIST.length} saved), each with its own settings; 09 reopens on the one you used last. Clearing browser data or changing computer loses them; use "Export snapshot" to keep one.`)
+  : L('这个浏览器不能保存结果（可能是无痕 / 隐私模式），关掉页面就没了；要保留请"导出快照"。', 'This browser cannot save results (perhaps a private window), so they are lost when the page closes; use "Export snapshot" to keep one.'); }
+async function switchTo(id) { $('busy').style.display = 'block'; $('renRow').hidden = true; if (IDB_OK || CUR !== '__tmp') saveHint();
+  if (id !== 'builtin') { const m = LIST.find(x => x.id === id); let snap = null; try { snap = m && await STORE.snap(id); } catch (e) {}
+    if (m && snap) { CUR = id; setSess({ cur: id }); applyP(m.P); refreshSel(); loadSnap(snap, m.name); return; } id = 'builtin'; }
+  if (!BUILTIN) BUILTIN = await fetch('assets/station-p2.snapshot.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  CUR = 'builtin'; setSess({ cur: 'builtin' }); applyP(sess().builtinP); refreshSel(); loadSnap(BUILTIN, L('车站 P2', 'Station P2')); }
+async function addInput(snap, kind, fname) { const h = hashSnap(snap), same = LIST.find(m => m.hash === h);
+  if (same) { await switchTo(same.id); $('saveHint').textContent = L(`这份结果已经保存过："${same.name}"，已切换过去。`, `This result was already saved as "${same.name}"; switched to it.`); return; }
+  const n = snap.roads.length, now = Date.now(), name = kind === 'file' && snap.name ? String(snap.name).slice(0, 60) : kind === 'file' ? `${fname} · ${n} ${L('条路', 'roads')}` : L(`张量场 · ${stamp(now)} · ${n} 条路`, `Tensor Studio · ${stamp(now)} · ${n} roads`);
+  const m = { id: 'in' + now.toString(36), name, created: now, kind, site: snap.site, roads: n, exported: snap.exported || null, hash: h, format: snap.format || 'structure-studio/snapshot@1', P: JSON.parse(JSON.stringify(snap.structureParams || P)) };
+  if (snap.structureParams) applyP(snap.structureParams);
+  let ok = IDB_OK; if (ok) { try { await STORE.add(m, snap); LIST.push(m); } catch (e) { ok = false; } }
+  CUR = ok ? m.id : 'builtin'; if (ok) setSess({ cur: m.id }); refreshSel();
+  if (!ok) { const sel = $('srcSel'), o = document.createElement('option'); o.value = '__tmp'; o.textContent = name + L('（未保存）', ' (not saved)'); sel.appendChild(o); sel.value = '__tmp'; CUR = '__tmp'; $('renBtn').disabled = $('delBtn').disabled = true; }
+  $('busy').style.display = 'block'; loadSnap(snap, name); saveHint();
+  if (!ok) $('saveHint').textContent = L('没能保存到浏览器（空间不够或不允许）。这份结果只在本次打开有效，要保留请"导出快照"。', 'Could not save to the browser (no space or not allowed). This result lasts only until the page closes; use "Export snapshot" to keep it.'); }
+$('srcSel').onchange = e => { const v = e.target.value; if (v !== '__tmp') switchTo(v).catch(err => { $('busy').textContent = L('载入快照失败：', 'Could not load the snapshot: ') + err.message; }); };
+$('renBtn').onclick = () => { const m = curMeta(); if (!m) return; $('renRow').hidden = false; $('renIn').value = m.name; $('renIn').focus(); $('renIn').select(); };
+const renDone = save => { const m = curMeta(), v = $('renIn').value.trim(); $('renRow').hidden = true; if (save && m && v && v !== m.name) { m.name = v; STORE.putMeta(m).catch(() => {}); refreshSel(); } };
+$('renOk').onclick = () => renDone(true); $('renIn').onkeydown = e => { if (e.key === 'Enter') renDone(true); else if (e.key === 'Escape') { e.stopPropagation(); renDone(false); } };
+let delArm = null; function resetDel() { clearTimeout(delArm); delArm = null; const b = $('delBtn'); b.classList.remove('warn'); b.textContent = L('删除', 'Delete'); }
+$('delBtn').onclick = async () => { const m = curMeta(); if (!m) return;
+  if (!delArm) { const b = $('delBtn'); b.classList.add('warn'); b.textContent = L('再点一次删除', 'Click again to delete'); delArm = setTimeout(resetDel, 3000); return; }
+  resetDel(); try { await STORE.del(m.id); } catch (e) {} LIST = LIST.filter(x => x.id !== m.id); saveHint(); await switchTo('builtin'); };
+$('expBtn').onclick = () => { if (!SNAP) return; const m = curMeta(), d = new Date(m ? m.created : Date.now()), z = v => String(v).padStart(2, '0');
+  const base = CUR === 'builtin' ? 'station-p2' : `structure-input-${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}-${SNAP.roads.length}roads`;
+  const out = Object.assign({}, SNAP, { name: CUR === 'builtin' ? L('车站 P2', 'Station P2') : (m ? m.name : undefined), structureParams: JSON.parse(JSON.stringify(P)) }), text = JSON.stringify(out), fn = base + '.snapshot.json';
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+  catch (e) { dl(fn, text); } };
+async function boot() { $('busy').style.display = 'block';
+  try { if (!('indexedDB' in window)) throw 0; LIST = (await STORE.metas()) || []; } catch (e) { IDB_OK = false; LIST = []; }
+  saveHint(); const s = sess();
+  try { await switchTo(s.cur && LIST.some(m => m.id === s.cur) ? s.cur : 'builtin'); }
+  catch (err) { $('busy').textContent = L('载入快照失败：', 'Could not load the snapshot: ') + err.message; } }
 document.querySelectorAll('.pmHead').forEach(h => h.onclick = () => h.parentNode.classList.toggle('cur'));
 $('pmAll').onclick = () => { const st = [...document.querySelectorAll('.pmStep')], open = !st.every(x => x.classList.contains('cur')); st.forEach(x => x.classList.toggle('cur', open)); $('pmAll').textContent = open ? L('全部收起', 'Collapse all') : L('全部展开', 'Expand all'); };
 $('tsCollapse').onclick = () => { const c = $('panel').classList.toggle('collapsed'); document.body.classList.toggle('panel-collapsed', c); $('tsCollapse').textContent = c ? '+' : '–'; if (mode === '2d' && F) { fitPlan(); drawPlan(); } };
@@ -547,7 +621,7 @@ document.querySelectorAll('#langSw button').forEach(b => b.onclick = () => setLa
 setLang(LANG, true);
 initGL(); setMode('2d');
 $('busy').style.display = 'block';
-fetch('assets/station-p2.snapshot.json').then(r => r.json()).then(j => loadSnap(j, L('车站 P2', 'Station P2'))).catch(err => { $('busy').textContent = L('载入快照失败：', 'Could not load the snapshot: ') + err.message; });
+boot();
 </script>
 </body>
 </html>
