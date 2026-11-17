@@ -53,3 +53,16 @@ test('v1 field lattice: sensible cells, structure inside the site, smooth outlin
   assert.ok(site.d1 > 200 && site.d1 < 600 && site.d2 > 60 && site.d2 < 250, 'd1 ' + site.d1 + ' d2 ' + site.d2);
   assert.ok(F1.stats.onRoad >= 0 && F1.stats.onRoad < 0.35, 'onRoad ' + F1.stats.onRoad);
 });
+
+// 三种吸引点：主节点成环形广场（中心塔）、次节点加密 + 小塔、边界节点生成入口主线 + 入口板
+test('attractors: roundabout at main nodes, towers at secondary nodes, entry line from an edge node', () => {
+  const F0 = SS.buildStructure(site, P, new Set());
+  for (const c of site.cores) assert.ok(F0.towers.some(t => Math.hypot(t[0] - c[0], t[1] - c[1]) < 1 && t[2] >= 20), 'big tower at plaza centre');
+  assert.equal(site.secs.length, 2); for (const a of site.secs) assert.ok(F0.towers.some(t => t[4] === 'sec' && Math.hypot(t[0] - a.p[0], t[1] - a.p[1]) < 80), 'small tower near sec node');
+  const s2 = JSON.parse(JSON.stringify(snap)); s2.attractors.push({ x: 609, y: 864, kind: 'edge', reach: 340, pull: 2.4 });
+  const site2 = SS.prepareSite(s2), F2 = SS.buildStructure(site2, P, new Set());
+  assert.equal(F2.entryStrands.length, 1); const E = F2.entryStrands[0], end = E[E.length - 1];
+  assert.ok(Math.min(...site2.cores.map(c => Math.hypot(c[0] - end[0], c[1] - end[1]))) < 60, 'entry line reaches a core');
+  const g = F2.grid, q = [Math.floor((609 - g.xmin) / g.RES), Math.floor((g.ymax - 864) / g.RES)]; let n = 0; for (let y = q[1] - 6; y <= q[1] + 6; y++) for (let x = q[0] - 6; x <= q[0] + 6; x++) if (g.corr[y * g.W + x]) n++;
+  assert.ok(n > 40, 'entry plate is structure');
+});
