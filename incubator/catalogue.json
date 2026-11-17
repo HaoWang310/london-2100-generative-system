@@ -220,21 +220,17 @@
       },
       "status": "incubating",
       "title": {
-        "zh": "VR / MR · Quest 3S",
-        "en": "VR / MR · Quest 3S"
+        "zh": "VR · Quest 3S",
+        "en": "VR · Quest 3S"
       },
       "desc": {
-        "zh": "把伦敦地图、地形、洪水风险和汇水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 或 MR，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、汇水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
-        "en": "The London map, terrain, flood risk and drainage as a 3D model you can walk into: preview it on the desktop; on a Meta Quest 3S enter VR or MR, walk around, slide, turn and zoom London on the table, switch flood risk, drainage and buildings, open the screens for the project, or walk the city at 1:1."
+        "zh": "把伦敦地图、地形、洪水风险和汇水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 展厅，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、汇水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
+        "en": "The London map, terrain, flood risk and drainage as a 3D model you can walk into: preview it on the desktop; on a Meta Quest 3S enter the VR gallery, walk around, slide, turn and zoom London on the table, switch flood risk, drainage and buildings, open the screens for the project, or walk the city at 1:1."
       },
       "tags": [
         {
           "zh": "WebXR",
           "en": "WebXR"
-        },
-        {
-          "zh": "混合现实",
-          "en": "Mixed reality"
         },
         {
           "zh": "三维",
