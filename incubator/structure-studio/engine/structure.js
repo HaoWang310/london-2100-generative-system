@@ -167,7 +167,12 @@ function buildStructure(site, P, EXCL) {
       for (let it = 0; it < 900; it++) { let fd = rot(primField(p), sgnRot); if (dot(fd, d) < 0) fd = mul(fd, -1); d = unit(add(mul(d, 1 - P.primFollow), mul(fd, P.primFollow))); p = add(p, mul(d, 4)); pts.push(p.slice()); if (p[0] < lx0 - 60 || p[0] > lx1 + 60 || p[1] < ly0 - 60 || p[1] > ly1 + 60) break; }
       halves.push(pts); }
     return resample([...halves[1].slice().reverse(), seed, ...halves[0]], 4); };
-  const strands = [];
+  // 主线与种子无关：按相关参数缓存在场地上，拖动种子时不必重算
+  const primKey = JSON.stringify([P.nCore, P.nPrim, P.primAng, P.primFollow, P.primSmooth, P.primStraight, P.primShift, P.offRoad, P.rotF, P.sCore]);
+  site.primCache = site.primCache || new Map();
+  let strands = site.primCache.get(primKey);
+  if (!strands) {
+  strands = [];
   cores.forEach((c, ci) => { for (let k = 0; k < P.nPrim; k++) {
     const ang = (k - (P.nPrim - 1) / 2) * P.primAng, d0 = rot(primField(c), ang), nn = [-d0[1], d0[0]]; let best = null;
     for (let o = -P.primShift; o <= P.primShift; o += 10) { const seed = add(c, mul(nn, o)); if (!inSite(seed)) continue; const S = trace(seed, ang), ds = [];
@@ -177,6 +182,7 @@ function buildStructure(site, P, EXCL) {
       if (strands.some(T => { let m = 1e9; for (let i = 0; i < S.length; i += 6) for (let j = 0; j < T.length; j += 6) m = Math.min(m, dist(S[i], T[j])); return m < P.sCore * 0.8; })) sc -= 1000;
       if (!best || sc > best.sc) best = { sc, S }; }
     if (best && best.sc > -900) strands.push(best.S); } });
+  site.primCache.set(primKey, strands); }
 
   // 3 拉扯：压缩空间 G 生成均匀绳网 → 沿主方向拉长
   const t0 = unit(rot(site.t0, P.rotF)), n0 = [-t0[1], t0[0]], aS = 1 + 1.4 * P.pull, ctr = cores[0];
@@ -289,10 +295,10 @@ function buildStructure(site, P, EXCL) {
   towers.length = Math.min(towers.length, P.nTower);
 
   // 7 栅格：由室多边形求有符号距离
-  const inside = new Uint8Array(NN), Bd = 8, dB = new Float32Array(NN).fill(Bd), lab = new Int32Array(NN);
-  cellPolys.forEach((cp, ci) => { const pp = cp.poly.map(toPix); fillPoly(inside, W, H, pp, 1); fillPoly(lab, W, H, pp, ci + 1);
-    for (const q of resample([...pp, pp[0]], 0.5)) { const xa = Math.max(0, Math.floor(q[0] - Bd)), xb = Math.min(W - 1, Math.ceil(q[0] + Bd)), ya = Math.max(0, Math.floor(q[1] - Bd)), yb = Math.min(H - 1, Math.ceil(q[1] + Bd));
-      for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) { const d = Math.hypot(x + .5 - q[0], y + .5 - q[1]); if (d < dB[y * W + x]) dB[y * W + x] = d; } } });
+  const inside = new Uint8Array(NN), Bd = 4.5, dB = new Float32Array(NN).fill(Bd), lab = new Int32Array(NN);
+  cellPolys.forEach((cp, ci) => { const pp = resample([...cp.poly, cp.poly[0]].map(toPix), 1.2); pp.pop(); fillPoly(lab, W, H, pp, ci + 1);
+    for (const q of pp) { const xa = Math.max(0, Math.floor(q[0] - Bd)), xb = Math.min(W - 1, Math.ceil(q[0] + Bd)), ya = Math.max(0, Math.floor(q[1] - Bd)), yb = Math.min(H - 1, Math.ceil(q[1] + Bd));
+      for (let y = ya; y <= yb; y++) { const dy = y + .5 - q[1], row = y * W; for (let x = xa; x <= xb; x++) { const dx = x + .5 - q[0], d = Math.sqrt(dx * dx + dy * dy); if (d < dB[row + x]) dB[row + x] = d; } } } });
   // 跨水 / 跨铁路段：走廊落在非陆地（水面、铁路缝、洞）上的部分，三维里做成架空桥面，下面每隔 P.colStep 放一对柱子
   const solid = i => landM[i] && !waterM[i], columns = []; let bridgeL = 0, nBridge = 0;
   for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return !(x >= 0 && y >= 0 && x < W && y < H) || !siteM[y * W + x] ? 2 : solid(y * W + x) ? 1 : 0; });
@@ -301,26 +307,29 @@ function buildStructure(site, P, EXCL) {
         for (let c = 0; c < n; c++) { const idx = Math.min(Q.length - 2, k + Math.round((c + 0.5) * (e - k) / n)), t = unit(sub(Q[idx + 1], Q[idx])), nn = [-t[1], t[0]]; columns.push(add(Q[idx], mul(nn, w)), sub(Q[idx], mul(nn, w))); } }
       k = e; } }
   const sdGrid = new Float32Array(NN), corrF = new Float32Array(NN), corr = new Uint8Array(NN), cellsM = new Uint8Array(NN);
-  for (let i = 0; i < NN; i++) { let sd = (inside[i] ? dB[i] : -dB[i]) * RES; const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES;
-    for (const t of towers) { const dt = Math.hypot(x - t[0], y - t[1]) - (t[2] + 6); if (dt < sd) sd = dt; }
-    sdGrid[i] = sd; const cf = clamp(0.5 - sd / (1.5 * RES), 0, 1); corrF[i] = siteM[i] ? cf : 0; corr[i] = siteM[i] && corrF[i] > 0.5 ? 1 : 0; cellsM[i] = landM[i] && !corr[i] && !waterM[i] ? 1 : 0; }
+  for (let i = 0; i < NN; i++) { inside[i] = lab[i] ? 1 : 0; sdGrid[i] = (inside[i] ? dB[i] : -dB[i]) * RES; }
+  for (const t of towers) { const R = t[2] + 6 + 10, q = toPix(t), x0 = Math.max(0, Math.floor(q[0] - R / RES)), x1 = Math.min(W - 1, Math.ceil(q[0] + R / RES)), y0 = Math.max(0, Math.floor(q[1] - R / RES)), y1 = Math.min(H - 1, Math.ceil(q[1] + R / RES));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const dt = Math.hypot((x + .5 - q[0]) * RES, (y + .5 - q[1]) * RES) - (t[2] + 6), i = y * W + x; if (dt < sdGrid[i]) sdGrid[i] = dt; } }
+  for (let i = 0; i < NN; i++) { const sd = sdGrid[i]; const cf = clamp(0.5 - sd / (1.5 * RES), 0, 1); corrF[i] = siteM[i] ? cf : 0; corr[i] = siteM[i] && corrF[i] > 0.5 ? 1 : 0; cellsM[i] = landM[i] && !corr[i] && !waterM[i] ? 1 : 0; }
   const GP = { nTail: cellPolys.length }, chains = [], merged = new Set(), nSplit = 0, nWeb = 0, nCtrl = 0, mergeAng = 0, FA = P.primAng, coreP = cores[0], nTail = GP.nTail; void nTail;
   const CL = label4(cellsM, W, H); // 室编号
 
-  // 8 两侧：建筑带（退线 / 进深 / 切段），其后农田
-  const dc = edt(corr, W, H), nonSolid = new Uint8Array(NN); for (let i = 0; i < NN; i++) nonSolid[i] = landM[i] && !waterM[i] ? 0 : 1; const dNS = edt(nonSolid, W, H); // 到水面 / 铁路缝 / 场地边的距离
+  // 8 两侧：建筑带（退线 / 进深 / 切段），其后农田（快速预览 P.quick 时只出农田，不排建筑）
+  const dc = edt(corr, W, H), nonSolid = site.dNS ? null : new Uint8Array(NN); if (nonSolid) for (let i = 0; i < NN; i++) nonSolid[i] = landM[i] && !waterM[i] ? 0 : 1; const dNS = site.dNS || (site.dNS = edt(nonSolid, W, H)); // 到水面 / 铁路缝 / 场地边的距离（与种子无关，缓存在场地上）
   // 沿走廊弧长：最近中心线点（向量传播近似最近点）
   const sx = new Float32Array(NN).fill(1e9), sy = new Float32Array(NN).fill(1e9), sa = new Float32Array(NN);
+  if (!P.quick) {
   let off = 0;
   for (const f of fibres) { const Q = resample(f.P, 2), s = arclen(Q); Q.forEach((p, i) => { const q = toPix(p), x = Math.floor(q[0]), y = Math.floor(q[1]); if (x < 0 || y < 0 || x >= W || y >= H) return; const k = y * W + x; sx[k] = q[0]; sy[k] = q[1]; sa[k] = s[i] + off; }); off += s[s.length - 1] + 1000; }
   const relax = (k, kk, x, y) => { if (sx[kk] > 1e8) return; const d1 = (sx[kk] - x) ** 2 + (sy[kk] - y) ** 2, d0 = (sx[k] - x) ** 2 + (sy[k] - y) ** 2; if (d1 < d0) { sx[k] = sx[kk]; sy[k] = sy[kk]; sa[k] = sa[kk]; } };
   for (let y = 0; y < H; y++) { for (let x = 0; x < W; x++) { const k = y * W + x, px = x + .5, py = y + .5; if (x > 0) relax(k, k - 1, px, py); if (y > 0) { relax(k, k - W, px, py); if (x > 0) relax(k, k - W - 1, px, py); if (x < W - 1) relax(k, k - W + 1, px, py); } } for (let x = W - 1; x >= 0; x--) { const k = y * W + x; if (x < W - 1) relax(k, k + 1, x + .5, y + .5); } }
   for (let y = H - 1; y >= 0; y--) { for (let x = W - 1; x >= 0; x--) { const k = y * W + x, px = x + .5, py = y + .5; if (x < W - 1) relax(k, k + 1, px, py); if (y < H - 1) { relax(k, k + W, px, py); if (x < W - 1) relax(k, k + W + 1, px, py); if (x > 0) relax(k, k + W - 1, px, py); } } for (let x = 0; x < W; x++) { const k = y * W + x; if (x > 0) relax(k, k - 1, x + .5, y + .5); } }
+  }
   const innerP = inner.map(k => toPix(nodeP[k])), junG = new Map(), jc = 32;
   innerP.forEach(p => { const k = Math.floor(p[0] / jc) + ',' + Math.floor(p[1] / jc); if (!junG.has(k)) junG.set(k, []); junG.get(k).push(p); });
   const nearJ = (x, y) => { const gx = Math.floor(x / jc), gy = Math.floor(y / jc); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = junG.get((gx + a) + ',' + (gy + b)); if (l) for (const p of l) if (Math.hypot(p[0] - x, p[1] - y) < 30 / RES) return true; } return false; };
   let bldM = new Uint8Array(NN);
-  for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
+  if (!P.quick) for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
     if (EXCL && EXCL.has(CL.lab[i])) continue;
     if (((sa[i] % P.segL) + P.segL) % P.segL < P.gap) continue; const x = i % W, y = (i / W) | 0; if (nearJ(x + .5, y + .5)) continue; bldM[i] = 1; }
   bldM = morph(morph(bldM, W, H, 2, true), W, H, 2, false);
@@ -340,7 +349,8 @@ function buildStructure(site, P, EXCL) {
   const cells = [];
   { const acc = []; for (let k = 0; k <= CL.n; k++) acc.push({ n: 0, sx: 0, sy: 0, sxx: 0, syy: 0, sxy: 0, x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, b: new Set(), edge: false });
     for (let i = 0; i < NN; i++) { const k = CL.lab[i]; if (!k) continue; const a = acc[k], x = i % W, y = (i / W) | 0; a.n++; a.sx += x; a.sy += y; a.sxx += x * x; a.syy += y * y; a.sxy += x * y; a.x0 = Math.min(a.x0, x); a.y0 = Math.min(a.y0, y); a.x1 = Math.max(a.x1, x); a.y1 = Math.max(a.y1, y);
-      if (BL.lab[i] && bldM[i]) a.b.add(BL.lab[i]); if (!a.edge && (x === 0 || !landM[i - 1] || !landM[i + 1] || !landM[i - W] || !landM[i + W])) a.edge = true; }
+      if (!a.edge && (x === 0 || !landM[i - 1] || !landM[i + 1] || !landM[i - W] || !landM[i + W])) a.edge = true; }
+    { const seen = new Uint8Array(BL.n + 1); for (let i = 0; i < NN; i++) { const b = BL.lab[i]; if (!b || !bldM[i] || seen[b]) continue; seen[b] = 1; const k = CL.lab[i]; if (k) acc[k].b.add(b); else { /* 建筑在室边缘外的像素上：找相邻室 */ const x = i % W, y = (i / W) | 0; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < NN && CL.lab[j]) { acc[CL.lab[j]].b.add(b); break; } } } }
     for (let k = 1; k <= CL.n; k++) { const a = acc[k]; if (a.n < 400) continue; const mx = a.sx / a.n, my = a.sy / a.n, cxx = a.sxx / a.n - mx * mx, cyy = a.syy / a.n - my * my, cxy = a.sxy / a.n - mx * my;
       const tr = cxx + cyy, de = Math.sqrt(Math.max(0, (cxx - cyy) ** 2 / 4 + cxy * cxy)), l1 = tr / 2 + de, l2 = Math.max(1e-6, tr / 2 - de), ang = 0.5 * Math.atan2(2 * cxy, cxx - cyy);
       // 偏度：沿长轴的三阶矩 → 一头圆一头尖
