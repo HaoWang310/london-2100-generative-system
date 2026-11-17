@@ -106,8 +106,8 @@ function traceOutlines(M, W, H) {
     out.push(P); }
   return out;
 }
-function prepareSite(snap) {
-  const RES = 2, W = Math.ceil(snap.w / RES), H = Math.ceil(snap.h / RES), NN = W * H, xmin = 0, ymax = snap.h;
+function prepareSite(snap, res) { // res：栅格精度（米），默认 2；拖动滑块时用 4 m 做快速预览
+  const RES = res || 2, W = Math.ceil(snap.w / RES), H = Math.ceil(snap.h / RES), NN = W * H, xmin = 0, ymax = snap.h;
   const toPix = p => [(p[0] - xmin) / RES, (ymax - p[1]) / RES];
   const landM = new Uint8Array(NN), waterM = new Uint8Array(NN);
   for (const pc of snap.pieces) { fillPoly(landM, W, H, pc.outer.map(toPix), 1); for (const h of pc.holes || []) if (h.length > 2) fillPoly(landM, W, H, h.map(toPix), 0); }
@@ -163,6 +163,7 @@ function buildStructure(site, P, EXCL) {
   const coreT = p => { let d = 1e9; for (const c of cores) d = Math.min(d, dist(p, c)); let t = clamp((d - 60) / P.coreR, 0, 1); return t * t * (3 - 2 * t); };
   const spacing = p => P.sCore + (P.sOut - P.sCore) * coreT(p);
   const V1 = P.logic === 'v1' || +P.v1 >= 0.5;
+  const FAST = !!P.fast; // 拖动预览：曲线光顺用较粗的点距、较少轮数（松手后的精算不受影响）
   const TR = P.trace ? { cand: [], killed: [], seedRow: [] } : null; // 演示用：记录每一步的中间结果（平时不记）
   // v1 系统关联：次级走廊宽度随离核心的距离渐变（核心处 wCore，外围 wS）
   const wSecAt = p => V1 && P.wCore ? P.wCore + (P.wS - P.wCore) * coreT(p) : P.wS;
@@ -301,14 +302,14 @@ function buildStructure(site, P, EXCL) {
     return despike(res);
   }
   // 去尖刺 / 回折：反复删掉转角 > 50° 的点（内缩后近平行边留下的小凹口），再做两轮轻度平滑
-  function despike(Q0) { let Q = resample([...Q0, Q0[0]], 1.5); Q.pop();
+  function despike(Q0) { let Q = resample([...Q0, Q0[0]], FAST ? 3 : 1.5); Q.pop();
     for (let it = 0; it < 60 && Q.length > 12; it++) { let worst = -1, wt = 100 * Math.PI / 180;
       for (let i = 0; i < Q.length; i++) { const a = Q[(i - 1 + Q.length) % Q.length], b = Q[i], c = Q[(i + 1) % Q.length], u = sub(b, a), v = sub(c, b), t = Math.abs(Math.atan2(crs(u, v), dot(u, v))); if (t > wt) { wt = t; worst = i; } }
       if (worst < 0) break; Q.splice(worst, 1); }
     for (let it = 0; it < 4; it++) Q = Q.map((q, i) => { const a = Q[(i - 1 + Q.length) % Q.length], b = Q[(i + 1) % Q.length]; return [q[0] * 0.5 + (a[0] + b[0]) * 0.25, q[1] * 0.5 + (a[1] + b[1]) * 0.25]; });
     // 兜底：重采样到 2 m，仍有 > 25° 的折点就只在它附近 ±6 个点内局部平滑，直到全部顺滑
-    for (let round = 0; round < 3; round++) { Q = resample([...Q, Q[0]], 2); Q.pop();
-    for (let it = 0; it < 80; it++) { const n = Q.length, bad = [];
+    for (let round = 0; round < (FAST ? 1 : 3); round++) { Q = resample([...Q, Q[0]], FAST ? 3.5 : 2); Q.pop();
+    for (let it = 0; it < (FAST ? 12 : 80); it++) { const n = Q.length, bad = [];
       for (let i = 0; i < n; i++) { const a = Q[(i - 1 + n) % n], b = Q[i], c = Q[(i + 1) % n], u = sub(b, a), v = sub(c, b); if (Math.abs(Math.atan2(crs(u, v), dot(u, v))) > 25 * Math.PI / 180) bad.push(i); }
       if (!bad.length) break; const mark = new Uint8Array(n); for (const i of bad) for (let k = -6; k <= 6; k++) mark[(i + k + n) % n] = 1;
       Q = Q.map((q, i) => { if (!mark[i]) return q; const a = Q[(i - 1 + n) % n], b = Q[(i + 1) % n]; return [q[0] * 0.5 + (a[0] + b[0]) * 0.25, q[1] * 0.5 + (a[1] + b[1]) * 0.25]; }); } }

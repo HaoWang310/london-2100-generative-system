@@ -526,11 +526,11 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
   const landPath = c => { c.beginPath(); for (const pc of SNAP.pieces) { path(c, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(c, h, true, false); } };
   // 1 地面（矢量）：场地外、土地、农田（按室裁切、条带）、退线带、水体、溪流
-  if (Lf.ground) {
+  if (Lf.ground) { const gk = [PAL.bg, PAL.land, $('c_ctx').checked, cv.width, SNAP.site].join('|'), cs = F.site; if (!cs._gc || cs._gc.k !== gk) { const gc = document.createElement('canvas'); gc.width = cv.width; gc.height = cv.height; const ctx = gc.getContext('2d');
   ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, cv.width, cv.height); drawContext(ctx, path, mPx);
   ctx.fillStyle = '#141414'; for (const P of F.site.footPolys) { path(ctx, P, true); ctx.fill(); }
   landPath(ctx); ctx.fillStyle = PAL.land; ctx.fill('evenodd');
-  }
+    cs._gc = { k: gk, cv: gc }; } ctx.drawImage(cs._gc.cv, 0, 0); }
   if (Lf.farm) {
   // 农田：纯色低饱和绿；退线带（建筑落位带）只压一层很淡的暗色
   ctx.save(); landPath(ctx); ctx.clip('evenodd');
@@ -546,11 +546,11 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
       const tc = document.createElement('canvas'); tc.width = w; tc.height = h; tc.getContext('2d').putImageData(im, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(tc, 0, 0, cv.width, cv.height); }
     if (PAL.hatch) { const Hh = PAL.hatch, key = Hh.step + '/' + Hh.len; ctx.strokeStyle = Hh.col; ctx.lineWidth = Hh.w; ctx.lineCap = ctx.lineJoin = 'round';
       // 流线先画成白色蒙版缓存（几何与配色无关），换色时只给蒙版上色：切换配色不必重描几万条线
-      if (!SITE._hatch || SITE._hatch.key !== key + '/' + Hh.w + '/' + cv.width) { const mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height; const mx = mk.getContext('2d');
-        mx.strokeStyle = '#fff'; mx.lineWidth = Hh.w; mx.lineCap = mx.lineJoin = 'round'; mx.beginPath(); for (const pts of hatchLines(Hh.step, Hh.len)) path(mx, pts, false, false); mx.stroke(); SITE._hatch = { key: key + '/' + Hh.w + '/' + cv.width, mk }; }
-      const m = /rgba?\(([^)]+)\)/.exec(Hh.col), v = m ? m[1].split(',').map(Number) : [255, 255, 255, 1], tn = document.createElement('canvas'); tn.width = cv.width; tn.height = cv.height; const tx = tn.getContext('2d');
-      tx.drawImage(SITE._hatch.mk, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = `rgb(${v[0]},${v[1]},${v[2]})`; tx.fillRect(0, 0, tn.width, tn.height);
-      ctx.globalAlpha = v.length > 3 ? v[3] : 1; ctx.drawImage(tn, 0, 0); ctx.globalAlpha = 1; }
+      if (!SITE._hatch || SITE._hatch.key !== key + '/' + Hh.w) { const mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height; const mx = mk.getContext('2d');
+        mx.strokeStyle = '#fff'; mx.lineWidth = Hh.w; mx.lineCap = mx.lineJoin = 'round'; mx.beginPath(); for (const pts of hatchLines(Hh.step, Hh.len)) path(mx, pts, false, false); mx.stroke(); SITE._hatch = { key: key + '/' + Hh.w, mk }; }
+      const m = /rgba?\(([^)]+)\)/.exec(Hh.col), v = m ? m[1].split(',').map(Number) : [255, 255, 255, 1], mk = SITE._hatch.mk, tk = Hh.col + '|' + SITE._hatch.key; if (!SITE._hatchT || SITE._hatchT.k !== tk) { const tn = document.createElement('canvas'); tn.width = mk.width; tn.height = mk.height; const tx = tn.getContext('2d');
+      tx.drawImage(mk, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = `rgb(${v[0]},${v[1]},${v[2]})`; tx.fillRect(0, 0, tn.width, tn.height); SITE._hatchT = { k: tk, cv: tn }; } const tn = SITE._hatchT.cv;
+      ctx.globalAlpha = v.length > 3 ? v[3] : 1; ctx.drawImage(tn, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
     ctx.restore(); }
   }
   if (Lf.bld) {
@@ -559,11 +559,11 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
   }
-  if (Lf.water) {
+  if (Lf.water) { const wk = [PAL.water, PAL.stream, PAL.road, $('c_plots').checked, cv.width].join('|'), cs = F.site; if (!cs._wc || cs._wc.k !== wk) { const wc = document.createElement('canvas'); wc.width = cv.width; wc.height = cv.height; const ctx = wc.getContext('2d');
   ctx.fillStyle = PAL.water; ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); ctx.stroke(); }
   ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.3; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
   if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = `rgba(${PAL.road},${r.grade === 'main' ? .55 : r.grade === 'through' ? .42 : .3})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
-  }
+    cs._wc = { k: wk, cv: wc }; } ctx.drawImage(cs._wc.cv, 0, 0); }
   if (Lf.deck) {
   // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开
   const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
@@ -652,7 +652,7 @@ function solve(keepExcl) {
   $('busy').style.display = 'block';
   setTimeout(() => {
     if (!keepExcl) EXCL.clear();
-    F = SS.buildStructure(SITE, P, EXCL); M = null; sceneDirty = true; makePlanBase();
+    clearTimeout(fine); swapF(SS.buildStructure(SITE, P, EXCL)); M = null; sceneDirty = true; makePlanBase();
     if (mode === '3d') ensure3D();
     writeTexts(); savePSoon();
     const keepFocus = focus ? F.cells.find(c => Math.hypot(c.c[0] - focus.c[0], c.c[1] - focus.c[1]) < 30) : null;
@@ -661,11 +661,21 @@ function solve(keepExcl) {
   }, 30);
 }
 const FMT = { v1: v => +v ? L('局部场格网（v1）', 'Field lattice (v1)') : L('全局（v0）', 'Global (v0)'), wCore: v => v + ' m', seed: v => v, nCore: v => v, nPrim: v => v, primAng: v => v + '°', primStraight: v => (+v).toFixed(1), offRoad: v => +v ? L('离路', 'Off road') : L('贴路', 'On road'), rotF: v => v + '°', coreR: v => v + ' m', sCore: v => v + ' m', sOut: v => v + ' m', pull: v => (+v).toFixed(2), wS: v => v + ' m', wP: v => v + ' m', blendK: v => (+v).toFixed(2), minThick: v => v + ' m', colStep: v => v + ' m', deckZ: v => (+v).toFixed(1) + ' m', nTower: v => v, setback: v => v + ' m', depth: v => v + ' m', segL: v => v + ' m', gap: v => v + ' m' };
-let pending = null;
+let pending = null, fine = null, SITE4 = null;
+// 两档精度：拖动时 4 m 栅格快速预览（约快 3–4 倍），松手后 2 m 精算一次
+const swapF = nf => { if (F && F.grid && nf.grid.RES !== F.grid.RES) PV.s *= nf.grid.RES / F.grid.RES; F = nf; };
+function solvePreview() { if (!SITE || mode !== '2d' || TSV) return; if (!SITE4) SITE4 = SS.prepareSite(SNAP, 4);
+  swapF(SS.buildStructure(SITE4, { ...P, fast: 1 }, new Set())); M = null; sceneDirty = true; focus = null; makePlanBase(); writeTexts(); drawPlan(); }
+let pvRun = false, pvAgain = false; // 边拖边算：上一次预览算完，立刻用最新数值再算一次（不会排队堆积）
+function kickPreview() { if (pvRun) { pvAgain = true; return; } pvRun = true; setTimeout(() => { try { solvePreview(); } catch (e) { console.error(e); } finally { pvRun = false; if (pvAgain) { pvAgain = false; kickPreview(); } } }, 0); }
+function scheduleSolve() { clearTimeout(pending); clearTimeout(fine); $('busy').style.display = 'block';
+  if (mode === '2d' && !TSV) { kickPreview(); fine = setTimeout(() => solve(false), 700); }
+  else pending = setTimeout(() => solve(false), 150); }
 $('scaleBtn').onclick = () => { if (!SITE) return; const d1 = SITE.d1, d2 = SITE.d2, set = (k, v) => { const el = $(k); el.value = v; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); };
   set('sCore', Math.round(0.66 * d2 / 5) * 5); set('sOut', Math.round(0.69 * d1 / 10) * 10); set('coreR', Math.round(1.85 * d1 / 25) * 25); P.primShift = Math.round(0.37 * d1 / 10) * 10; if ($('primShift')) set('primShift', P.primShift);
   $('busy').style.display = 'block'; setTimeout(() => solve(false), 30); };
-for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 150); });
+for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
+for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => drawPlan(); $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
@@ -686,7 +696,7 @@ $('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; const x = cv.getContext('2d'); x.drawImage(TSV && tsBase ? tsBase : planBase, 0, 0);
   { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: $('c_prim').checked }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
-async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP); tsBase = null;
+async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   siteText();
   focus = null; solve(false); }
 $('loadBtn').onclick = () => $('snapFile').click();
