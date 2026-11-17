@@ -278,6 +278,35 @@
           "#langbar"
         ]
       }
+    },
+    {
+      "id": "structure-studio",
+      "href": "incubator/structure-studio/",
+      "cover": "assets/catalogue/structure-studio.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "结构工作室 · Linear Farm 走廊",
+        "en": "Structure Studio · Linear Farm corridors"
+      },
+      "desc": {
+        "zh": "在张量场工作室生成的真实场地上，生成架在街道之上的种植工厂走廊网：离路主线顺张量场、核心密外围疏、按夹角光滑过渡的节点，两侧建筑、室内农田；导出 GeoJSON（英国国家网格）与 OBJ。",
+        "en": "Planting-factory corridors over a site grown in Tensor Studio: off-road primaries along the tensor field, dense at the cores and open at the edge, nodes blended by their angle, buildings on both sides and farmland in the cells; exported as GeoJSON (British National Grid) and OBJ."
+      },
+      "tags": [
+        {
+          "zh": "结构形态",
+          "en": "Structure"
+        },
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        },
+        {
+          "zh": "Linear Farm",
+          "en": "Linear Farm"
+        }
+      ],
+      "owner": "HaoWang310"
     }
   ]
 }

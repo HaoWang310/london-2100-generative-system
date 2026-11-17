@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>结构工作室 · Structure Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--pw:#ffffff;--pline:#e6e6e8;--ptxt:#111;--pdim:#7a7a80;--bg:#050607;--card:#121416;--cline:#24282c;--ctxt:#e9eaec;--cdim:#8a9099}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);font:13px/1.45 -apple-system,"PingFang SC","Helvetica Neue",Inter,Arial,sans-serif;overflow:hidden;color:var(--ctxt)}
+#app{display:grid;grid-template-columns:312px 1fr;height:100%}
+#left{background:var(--pw);color:var(--ptxt);border-right:1px solid var(--pline);padding:20px 18px 28px;overflow-y:auto}
+#left h1{font-size:18px;font-weight:600;letter-spacing:-.2px}
+#left .sub{color:var(--pdim);font-size:12px;margin:4px 0 14px}
+.sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--pline)}
+.sec h2{font-size:11px;letter-spacing:1.4px;color:var(--pdim);text-transform:uppercase;margin-bottom:8px;font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;margin:8px 0 2px;font-size:12.5px}
+.row .v{color:var(--pdim);font-variant-numeric:tabular-nums}
+.row.key label{font-weight:600}
+input[type=range]{width:100%;accent-color:#111;margin:0 0 4px;height:18px}
+button{background:#fff;color:#111;border:1px solid #d6d6da;border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+button:hover{border-color:#999}
+button.on{background:#111;color:#fff;border-color:#111}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat{background:#f5f5f7;border-radius:8px;padding:8px 10px}
+.stat .n{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--pdim)}
+.steps{display:flex;flex-direction:column;gap:6px}
+.step{background:#f5f5f7;border-radius:8px;padding:8px 10px}
+.step b{display:block;font-size:12px}
+.step span{color:var(--pdim);font-size:11.5px}
+.hint{font-size:11px;color:var(--pdim);margin-top:8px}
+.chk{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-top:6px}
+.chk label{display:flex;align-items:center;gap:4px}
+.seg{display:flex;border:1px solid #d6d6da;border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;flex:1}
+#right{display:grid;grid-template-rows:58% 42%;min-height:0;background:var(--bg)}
+#view{position:relative;background:#000;overflow:hidden}
+#gl,#plan{width:100%;height:100%;display:block;position:absolute;inset:0}
+#plan{display:none;background:#0b0c0e;cursor:grab}
+#hud{position:absolute;left:16px;top:14px;font-size:12px;color:var(--cdim);pointer-events:none}
+#hud b{color:#fff;font-weight:600;font-size:13px}
+#tip{position:absolute;display:none;background:rgba(20,22,25,.92);color:#fff;border:1px solid #2c3136;border-radius:7px;padding:5px 9px;font-size:12px;pointer-events:none;white-space:nowrap}
+#legend{position:absolute;right:14px;top:12px;display:flex;gap:6px}
+#legend button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);padding:4px 10px;font-size:12px}
+#legend button.on{background:#fff;color:#111}
+#busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:13px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:8px;display:none}
+#key{position:absolute;left:16px;bottom:14px;display:flex;gap:12px;font-size:11px;color:var(--cdim);pointer-events:none}
+#key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+#cards{overflow-y:auto;padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:10px;align-content:start;grid-auto-rows:max-content;border-top:1px solid #1a1d20}
+.card{background:var(--card);border:1px solid var(--cline);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
+.card:hover{border-color:#3b4147}
+.card.on{border-color:#fff}
+.card img{width:100%;height:auto;aspect-ratio:300/190;flex:none;display:block;background:#0b0d10;object-fit:cover}
+.card .num{position:absolute;left:8px;top:7px;font-size:10.5px;color:#cfd3d8;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:1px 6px}
+.card .meta{padding:7px 9px 8px}
+.card .t{display:flex;justify-content:space-between;align-items:baseline}
+.card .t b{font-size:12.5px;color:#fff}
+.card .t i{font-style:normal;font-size:11px;color:var(--cdim)}
+.card .s{font-size:11px;color:var(--cdim);margin-top:2px;display:flex;justify-content:space-between;align-items:center}
+.card .s em{font-style:normal;color:#9ad17b}
+.card .s em.no{color:#7b8591}
+.card .tag{font-size:10px;border:1px solid var(--cline);border-radius:5px;padding:1px 6px;color:var(--cdim);background:#1a1d21}
+.card .tag:hover{border-color:#555;color:#fff}
+#dlbox{position:absolute;left:16px;bottom:16px;width:460px;max-height:80%;overflow:auto;background:rgba(18,20,23,.96);border:1px solid #2c3136;border-radius:10px;padding:10px;z-index:9;display:none;color:#fff}
+#dlbox textarea{width:100%;height:150px;background:#0b0d10;color:#c9ced6;border:1px solid #2c3136;border-radius:7px;font:11px monospace;padding:6px;margin-top:6px}
+#dlbox img{width:100%;margin-top:6px;border-radius:6px}
+#dlbox button{background:#1f2327;color:#fff;border-color:#3a4047}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left">
+    <h1>结构工作室 · Linear Farm 走廊</h1>
+    <div class="sub">在张量场工作室生成的真实场地上，生成架在街道之上的种植工厂走廊网：核心 + 疏密场 → 离路主线 → 松弛线网 → 拉扯 → 按夹角光滑过渡 → 两侧建筑 / 农田。</div>
+
+    <div class="sec"><h2>场地</h2>
+      <div class="row"><label>张量场快照</label><span class="v" id="v_snap">车站 P2</span></div>
+      <div class="btns"><button id="loadBtn">载入快照…</button><input type="file" id="snapFile" accept=".json" style="display:none"></div>
+      <div class="hint" id="siteHint">来自张量场工作室（第 8 步完成后的正式路网、张量场、水体、吸引点）。其他场地：在张量场工作室里运行 scripts/export-snapshot.js 导出。</div>
+    </div>
+
+    <div class="sec"><h2>① 线网 · 核心 + 离路主线</h2>
+      <div class="row"><label>骨架种子</label><span class="v" id="v_seed">3</span></div><input type="range" id="seed" min="1" max="99" step="1" value="3">
+      <div class="row"><label>核心数（张量场主吸引点）</label><span class="v" id="v_nCore">2</span></div><input type="range" id="nCore" min="1" max="2" step="1" value="2">
+      <div class="row"><label>每个核心的主线</label><span class="v" id="v_nPrim">1</span></div><input type="range" id="nPrim" min="0" max="2" step="1" value="1">
+      <div class="row"><label>主线夹角（每核心 2 条时）</label><span class="v" id="v_primAng">30°</span></div><input type="range" id="primAng" min="10" max="70" step="2" value="30">
+      <div class="row"><label>主线顺直度</label><span class="v" id="v_primStraight">0.6</span></div><input type="range" id="primStraight" min="0" max="2" step="0.1" value="0.6">
+      <div class="row"><label>主线：贴路 0 / 离路 1</label><span class="v" id="v_offRoad">1</span></div><input type="range" id="offRoad" min="0" max="1" step="1" value="1">
+      <div class="row"><label>方向场旋转</label><span class="v" id="v_rotF">0°</span></div><input type="range" id="rotF" min="-90" max="90" step="2" value="0">
+      <div class="row"><label>核心过渡范围</label><span class="v" id="v_coreR">700 m</span></div><input type="range" id="coreR" min="250" max="1400" step="25" value="700">
+      <div class="row"><label>核心节点间距</label><span class="v" id="v_sCore">95 m</span></div><input type="range" id="sCore" min="60" max="180" step="5" value="95">
+      <div class="row"><label>外围节点间距</label><span class="v" id="v_sOut">260 m</span></div><input type="range" id="sOut" min="140" max="420" step="10" value="260">
+      <div class="hint">主线顺着张量场（大尺度平均）穿过核心，并在两侧平移到离主干路最远处，所以走廊不压在路上；其余次级线按疏密场长成松弛线网。</div>
+    </div>
+
+    <div class="sec"><h2>② 拉扯</h2>
+      <div class="row key"><label>拉扯强度</label><span class="v" id="v_pull">0.5</span></div><input type="range" id="pull" min="0" max="1" step="0.05" value="0.5">
+      <div class="hint" id="strHint">沿主方向拉长整张网：外围室成顺主线的透镜 / 水滴。</div>
+    </div>
+
+    <div class="sec"><h2>③ 走廊 · 种植工厂</h2>
+      <div class="row"><label>次级走廊宽</label><span class="v" id="v_wS">15 m</span></div><input type="range" id="wS" min="10" max="25" step="1" value="15">
+      <div class="row"><label>主线走廊宽</label><span class="v" id="v_wP">20 m</span></div><input type="range" id="wP" min="12" max="30" step="1" value="20">
+      <div class="row"><label>节点过渡强度</label><span class="v" id="v_blendK">1</span></div><input type="range" id="blendK" min="0.3" max="1.8" step="0.05" value="1">
+      <div class="hint">每个室角按夹角做五次曲线过渡（两端切线连续、曲率为 0）：钝角退让长 → 节点板；锐角退让短 → 尖尾。</div>
+      <div class="row"><label>最小室宽（防细条）</label><span class="v" id="v_minThick">40 m</span></div><input type="range" id="minThick" min="0" max="90" step="2" value="40">
+      <div class="row"><label>最大桥跨（水面 / 铁路）</label><span class="v" id="v_bridgeMax">120 m</span></div><input type="range" id="bridgeMax" min="0" max="300" step="10" value="120">
+      <div class="chk"><label><input type="checkbox" id="avoidWater" checked>避开水面（大半在水上的走廊删掉，两室合并）</label></div>
+      <div class="row"><label>走廊顶标高（3.6 m 层）</label><span class="v" id="v_deckZ">7.2 m</span></div><input type="range" id="deckZ" min="3.6" max="10.8" step="3.6" value="7.2">
+      <div class="row"><label>种植塔</label><span class="v" id="v_nTower">4</span></div><input type="range" id="nTower" min="0" max="8" step="1" value="4">
+    </div>
+
+    <div class="sec"><h2>④ 两侧 · 建筑与农田</h2>
+      <div class="row"><label>建筑退线</label><span class="v" id="v_setback">6 m</span></div><input type="range" id="setback" min="2" max="14" step="1" value="6">
+      <div class="row"><label>建筑进深</label><span class="v" id="v_depth">18 m</span></div><input type="range" id="depth" min="10" max="32" step="1" value="18">
+      <div class="row"><label>建筑段长</label><span class="v" id="v_segL">52 m</span></div><input type="range" id="segL" min="30" max="100" step="2" value="52">
+      <div class="row"><label>段间隙</label><span class="v" id="v_gap">11 m</span></div><input type="range" id="gap" min="5" max="24" step="1" value="11">
+    </div>
+
+    <div class="sec"><h2>显示</h2>
+      <div class="seg"><button id="v3d" class="on">三维</button><button id="v2d">平面</button></div>
+      <div class="chk"><label><input type="checkbox" id="c_bld" checked>建筑</label><label><input type="checkbox" id="c_farm" checked>农田</label><label><input type="checkbox" id="c_tower" checked>种植塔</label><label><input type="checkbox" id="c_plots" checked>张量场道路</label><label><input type="checkbox" id="c_prim">主线</label><label><input type="checkbox" id="c_shadow" checked>阴影</label></div>
+      <div class="btns"><button id="fitBtn">全部场地</button><button id="lowBtn">低视角</button><button id="topBtn">俯视</button><button id="rotBtn">自动旋转</button></div>
+    </div>
+
+    <div class="sec"><h2>统计</h2>
+      <div class="stats">
+        <div class="stat"><div class="n" id="s_fib">–</div><div class="l">主线（离路）</div></div>
+        <div class="stat"><div class="n" id="s_node">–</div><div class="l">节点 / 主线边</div></div>
+        <div class="stat"><div class="n" id="s_cell">–</div><div class="l" id="s_cellL">室</div></div>
+        <div class="stat"><div class="n" id="s_bld">–</div><div class="l">沿走廊建筑（栋）</div></div>
+        <div class="stat"><div class="n" id="s_len">–</div><div class="l">走廊中心线 km</div></div>
+        <div class="stat"><div class="n" id="s_area">–</div><div class="l">农田 / 走廊 ha</div></div>
+      </div>
+    </div>
+
+    <div class="sec"><h2>流程</h2>
+      <div class="steps">
+        <div class="step"><b>0 输入</b><span>张量场工作室第 8 步完成后的场地：正式路网（三级）、张量场、水体与溪流、主吸引点。单独打开时读车站 P2 快照。</span></div>
+        <div class="step"><b>1 核心 + 疏密</b><span>核心取张量场的主吸引点（环形广场）；节点间距从核心约 95 m 渐变到外围约 260 m。</span></div>
+        <div class="step"><b>2 离路主线</b><span>主线顺着大尺度平均后的张量场穿过核心，再在垂直方向上平移，取离主干路最远的位置，所以走廊不压在街道上。</span></div>
+        <div class="step"><b>3 松弛线网 + 拉扯</b><span>主线两侧成对布点使主线成为连续的边；其余按疏密场布点，在压缩空间里做 Voronoi 绳网，再沿主方向拉长回场地。</span></div>
+        <div class="step"><b>4 走廊与节点</b><span>每个室按边内缩（主线 / 次级半宽），每个角按夹角用五次曲线光滑过渡：钝角成节点板，锐角成尖尾。走廊只落在陆地上，跨铁路和水面的短段画成桥。</span></div>
+        <div class="step"><b>5 防细条 / 防跨水</b><span>比"最小室宽"窄的室、以及大半落在水上的走廊，删掉一侧的种子让两室合并，再重算。</span></div>
+        <div class="step"><b>6 两侧</b><span>走廊外退线 → 建筑带 → 室内农田；张量场的支路留作室内部道路。卡片里可把某个室设为景观。</span></div>
+      </div>
+    </div>
+
+    <div class="sec"><h2>导出</h2>
+      <div class="btns"><button id="objBtn">OBJ（Rhino）</button><button id="jsonBtn">JSON（节点 / 边 / 室）</button><button id="geoBtn">GeoJSON（BNG）</button><button id="pngBtn">平面 PNG</button></div>
+      <div class="hint">点卡片聚焦该室；悬停可看室编号与形态。右键 / Shift 拖动平移，滚轮缩放。</div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="view">
+      <canvas id="gl"></canvas>
+      <canvas id="plan"></canvas>
+      <div id="hud"><b id="hud_t">全部场地</b> · <span id="hud_s"></span></div>
+      <div id="tip"></div>
+      <div id="legend"><button id="fitBtn2">全部场地</button></div>
+      <div id="key"><span><i style="background:#f4f4f1"></i>种植工厂走廊</span><span><i style="background:#9aa09f"></i>沿走廊建筑</span><span><i style="background:#8fbf72"></i>农田</span><span><i style="background:#5f9a55"></i>种植塔</span></div>
+      <div id="busy">生成中…</div>
+      <div id="dlbox"><div style="display:flex;justify-content:space-between;align-items:center"><b id="dlname"></b><span><button id="dlcopy">复制</button> <button id="dlclose">关闭</button></span></div><textarea id="dltext"></textarea><img id="dlimg" style="display:none"><div class="hint" id="dlhint" style="color:#8a9099">复制后存为同名文件即可导入。</div></div>
+    </div>
+    <div id="cards"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="engine/structure.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const P = { seed: 3, nCore: 2, nPrim: 1, primAng: 30, primFollow: 0.08, primSmooth: 240, primStraight: 0.6, primShift: 140, offRoad: 1, rotF: 0, coreR: 700, sCore: 95, sOut: 260, pull: 0.5, wS: 15, wP: 20, blendK: 1, minThick: 40, bridgeMax: 120, avoidWater: true, deckZ: 7.2, nTower: 4, setback: 6, depth: 18, segL: 52, gap: 11 };
+const EXCL = new Set();
+let SNAP = null, SITE = null, F = null, M = null, PLAN = null, focus = null, mode = '2d';
+
+// ---------------------------------------------------------------- 三维
+let renderer, scene, camera, sun, G = {};
+const cam = { az: -0.75, el: 0.62, dist: 3200, tx: 0, ty: 0, tz: 0, rot: false };
+const MAT = {
+  land: new THREE.MeshStandardMaterial({ color: 0x3a3b40, roughness: 1, side: THREE.DoubleSide }),
+  water: new THREE.MeshStandardMaterial({ color: 0x2e4a5a, roughness: .3, side: THREE.DoubleSide }),
+  deck: new THREE.MeshStandardMaterial({ color: 0xf6f6f3, roughness: .55, side: THREE.DoubleSide }),
+  glass: new THREE.MeshStandardMaterial({ color: 0x9fb8ae, roughness: .25, metalness: .1, side: THREE.DoubleSide }),
+  bld: new THREE.MeshStandardMaterial({ color: 0xc4c5c2, roughness: .9, side: THREE.DoubleSide }),
+  bldS: new THREE.MeshStandardMaterial({ color: 0x8f9396, roughness: .9, side: THREE.DoubleSide }),
+  farm: new THREE.MeshStandardMaterial({ color: 0x8fbf72, roughness: 1, side: THREE.DoubleSide }),
+  towG: new THREE.MeshStandardMaterial({ color: 0x5f9a55, roughness: .8 }),
+  towW: new THREE.MeshStandardMaterial({ color: 0xeeefec, roughness: .5 }),
+  hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
+  plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
+  roadM: new THREE.LineBasicMaterial({ color: 0xc9c2ee, transparent: true, opacity: .8 }),
+};
+function shapeOf(poly) { const s = new THREE.Shape(); poly.forEach((p, i) => i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])); return s; }
+function flat(poly, z, mat) { const m = new THREE.Mesh(new THREE.ShapeGeometry(shapeOf(poly)), mat); m.position.z = z; m.receiveShadow = true; return m; }
+function triMesh(arr, mat) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; return m; }
+function initGL() {
+  const c = $('gl');
+  renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
+  camera = new THREE.PerspectiveCamera(36, 1, 1, 20000);
+  scene.add(new THREE.HemisphereLight(0xe2eaf2, 0x3a3a3a, 0.78));
+  sun = new THREE.DirectionalLight(0xfff4e6, 1.3); sun.position.set(900, -650, 1500); sun.castShadow = true;
+  sun.shadow.mapSize.set(4096, 4096); const sc = sun.shadow.camera; sc.left = -1500; sc.right = 1500; sc.top = 1500; sc.bottom = -1500; sc.near = 100; sc.far = 5000; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.4;
+  scene.add(sun, sun.target);
+  const fill = new THREE.DirectionalLight(0xbfd0e8, 0.35); fill.position.set(-500, 400, 300); scene.add(fill);
+  let drag = null;
+  c.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, sh: e.shiftKey, moved: 0 }; c.setPointerCapture(e.pointerId); });
+  c.addEventListener('pointermove', e => { if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+      if (drag.b === 2 || drag.sh) { const s = cam.dist / 900; cam.tx -= (dx * Math.cos(cam.az) + dy * Math.sin(cam.az)) * s; cam.ty += (dx * Math.sin(cam.az) - dy * Math.cos(cam.az)) * s; }
+      else { cam.az -= dx * 0.006; cam.el = clamp(cam.el + dy * 0.006, 0.06, 1.55); } }
+    else hover3d(e); });
+  c.addEventListener('pointerup', e => { if (drag && drag.moved < 4 && drag.b === 0) { const id = pickCell(e); focusCell(id && focus && id === focus.id ? null : F.cells.find(x => x.id === id) || null); } drag = null; });
+  c.addEventListener('contextmenu', e => e.preventDefault());
+  c.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist * (1 + e.deltaY * 0.0012), 60, 9000); }, { passive: false });
+  const loop = () => { const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+    if (cam.rot) cam.az += 0.0025; if (mode === '3d') { placeCam(camera, cam); renderer.render(scene, camera); } requestAnimationFrame(loop); };
+  loop();
+}
+function placeCam(camera, cam) { const ex = cam.tx + cam.dist * Math.cos(cam.el) * Math.cos(cam.az), ey = cam.ty + cam.dist * Math.cos(cam.el) * Math.sin(cam.az), ez = cam.tz + cam.dist * Math.sin(cam.el);
+  camera.position.set(ex, ey, ez); camera.up.set(0, 0, 1); camera.lookAt(cam.tx, cam.ty, cam.tz); }
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+function cellAt(x, y) { const g = F.grid, i = Math.floor((x - g.xmin) / g.RES), j = Math.floor((g.ymax - y) / g.RES); if (i < 0 || j < 0 || i >= g.W || j >= g.H) return 0; return g.cellLab[j * g.W + i]; }
+function pickCell(e) { const r = $('gl').getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane0, p)) return 0; return cellAt(p.x, p.y); }
+function showTip(e, id, host) { const tip = $('tip'), c = F && F.cells.find(x => x.id === id); if (!c) { tip.style.display = 'none'; return; } const r = host.getBoundingClientRect(); tip.style.display = 'block'; tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 10) + 'px'; tip.textContent = cellName(c) + ' · ' + c.kind + ' · ' + (c.area / 1e4).toFixed(2) + ' ha · 建筑 ' + c.nb + (EXCL.has(c.id) ? ' · 景观' : ''); }
+function hover3d(e) { if (!F) return; showTip(e, pickCell(e), $('gl')); }
+function cellName(c) { return 'C-' + String(F.cells.indexOf(c) + 1).padStart(2, '0'); }
+
+function buildScene() {
+  for (const k in G) if (G[k]) scene.remove(G[k]);
+  G.site = new THREE.Group();
+  for (const pc of SNAP.pieces) { const sh = shapeOf(pc.outer); for (const h of pc.holes || []) if (h.length > 2) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), MAT.land); m.position.z = -0.05; m.receiveShadow = true; G.site.add(m); }
+  for (const w of SNAP.water) if (w[0] && w[0].length > 2) G.site.add(flat(w[0], 0.1, MAT.water));
+  G.plots = new THREE.Group(); for (const r of SNAP.roads) { const pts = r.pts.map(p => new THREE.Vector3(p[0], p[1], 0.4)); G.plots.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), r.grade === 'main' ? MAT.roadM : MAT.plot)); } G.plots.visible = $('c_plots').checked;
+  G.corr = new THREE.Group(); G.corr.add(triMesh(M.corridor.top, MAT.deck), triMesh(M.corridor.side, MAT.glass));
+  G.bld = new THREE.Group(); G.bld.add(triMesh(M.bld.top, MAT.bld), triMesh(M.bld.side, MAT.bldS)); G.bld.visible = $('c_bld').checked;
+  G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
+  G.tower = new THREE.Group(); const tmp = new THREE.Object3D(); const slabs = []; for (const t of F.towers) { const [x, y, r, h] = t; for (let z = 0, k = 0; z < h; z += 3.6, k++) slabs.push([x, y, r * (1 - 0.18 * z / h), z, Math.min(3.6, h - z), k % 2]); }
+  const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
+  for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; G.tower.add(im); }
+  G.tower.visible = $('c_tower').checked;
+  G.hi = null;
+  scene.add(G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
+}
+function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c) return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
+
+// ---------------------------------------------------------------- 平面
+const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
+function makePlanBase() { const g = F.grid, cv = document.createElement('canvas'); cv.width = g.W * 2; cv.height = g.H * 2; const ctx = cv.getContext('2d');
+  const raw = document.createElement('canvas'); raw.width = g.W; raw.height = g.H; raw.getContext('2d').putImageData(new ImageData(PLAN, g.W, g.H), 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(raw, 0, 0, cv.width, cv.height);
+  const X = p => [(p[0] - g.xmin) / g.RES * 2, (g.ymax - p[1]) / g.RES * 2], path = (c, P, close) => { c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
+  if ($('c_plots').checked) { ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = r.grade === 'main' ? 'rgba(205,198,240,.55)' : r.grade === 'through' ? 'rgba(170,165,205,.4)' : 'rgba(140,138,165,.3)'; ctx.lineWidth = r.width / g.RES * 2 * 0.6; ctx.stroke(); } }
+  // 走廊：先按栅格得到场内可建走廊的范围，再用室的矢量轮廓精确挖空 → 边缘干净
+  const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
+  const id = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) { const a = g.corrF[i] > 0.02 || F.grid.sd[i] > -4 && F.grid.sd[i] < 4 ? (g.corrF[i] > 0 ? 255 : 0) : 0; id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 244; id.data[i * 4 + 3] = Math.max(a, Math.round(g.corrF[i] * 255)); }
+  const r2 = document.createElement('canvas'); r2.width = g.W; r2.height = g.H; r2.getContext('2d').putImageData(id, 0, 0); oc.imageSmoothingEnabled = true; oc.drawImage(r2, 0, 0, ov.width, ov.height);
+  oc.globalCompositeOperation = 'destination-out'; for (const cp of F.cellPolys) { path(oc, cp.poly, true); oc.fill(); }
+  oc.globalCompositeOperation = 'source-over'; oc.fillStyle = 'rgb(244,244,244)'; for (const t of F.towers) { const q = X(t); oc.beginPath(); oc.arc(q[0], q[1], (t[2] + 6) / g.RES * 2, 0, 7); oc.fill(); }
+  ctx.drawImage(ov, 0, 0);
+  for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+  if ($('c_prim').checked) for (const S of F.strands) { path(ctx, S); ctx.strokeStyle = 'rgba(255,90,60,.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]); ctx.stroke(); ctx.setLineDash([]); }
+  for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] / g.RES * 2, 0, 7); ctx.fillStyle = '#6aa65c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#111'; ctx.stroke(); }
+  planBase = cv; }
+function fitPlan() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F.grid; PV.s = Math.min(w / g.W, h / g.H) * 0.96; PV.ox = (w - g.W * PV.s) / 2; PV.oy = (h - g.H * PV.s) / 2; }
+function drawPlan() { if (mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = '#0b0c0e'; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(planBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s);
+  if (focus) { const g = F.grid, bb = focus.bb; ctx.strokeStyle = '#ff5a3c'; ctx.lineWidth = 2; ctx.strokeRect(PV.ox + bb[0] * PV.s - 4, PV.oy + bb[1] * PV.s - 4, (bb[2] - bb[0]) * PV.s + 8, (bb[3] - bb[1]) * PV.s + 8); }
+  ctx.font = '600 11px -apple-system,PingFang SC,sans-serif'; ctx.textAlign = 'center';
+  F.cells.forEach((c, k) => { if (c.area < 15000 / Math.max(1, PV.s * 2) || (c.edge && c.area < 30000 / Math.max(1, PV.s * 2))) return; const g = F.grid, x = PV.ox + (c.mx + .5) * PV.s, y = PV.oy + (c.my + .5) * PV.s; ctx.fillStyle = 'rgba(17,17,17,.78)'; ctx.fillText('C-' + String(k + 1).padStart(2, '0'), x, y - 1); ctx.font = '10px -apple-system,PingFang SC,sans-serif'; ctx.fillStyle = 'rgba(40,60,30,.75)'; ctx.fillText(c.kind, x, y + 12); ctx.font = '600 11px -apple-system,PingFang SC,sans-serif'; });
+}
+(function planEvents() { const cv = $('plan'); let drag = null;
+  cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, m: 0 }; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointermove', e => { if (drag) { PV.ox += e.clientX - drag.x; PV.oy += e.clientY - drag.y; drag.m += Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y); drag.x = e.clientX; drag.y = e.clientY; drawPlan(); return; }
+    if (!F) return; const r = cv.getBoundingClientRect(), px = (e.clientX - r.left - PV.ox) / PV.s, py = (e.clientY - r.top - PV.oy) / PV.s, g = F.grid; const id = (px >= 0 && py >= 0 && px < g.W && py < g.H) ? g.cellLab[(py | 0) * g.W + (px | 0)] : 0; showTip(e, id, cv); });
+  cv.addEventListener('pointerup', e => { cv.style.cursor = 'grab'; if (drag && drag.m < 4) { const r = cv.getBoundingClientRect(), px = (e.clientX - r.left - PV.ox) / PV.s, py = (e.clientY - r.top - PV.oy) / PV.s, g = F.grid; const id = (px >= 0 && py >= 0 && px < g.W && py < g.H) ? g.cellLab[(py | 0) * g.W + (px | 0)] : 0; const c = F.cells.find(x => x.id === id) || null; focusCell(c && focus && c.id === focus.id ? null : c); } drag = null; });
+  cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
+  addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
+function setMode(m) { mode = m; $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } }
+
+// ---------------------------------------------------------------- 卡片
+function thumb(c) {
+  const g = F.grid, bb = c.bb, m = 40, x0 = Math.max(0, bb[0] - m), y0 = Math.max(0, bb[1] - m), x1 = Math.min(g.W, bb[2] + m), y1 = Math.min(g.H, bb[3] + m), w = x1 - x0, h = y1 - y0;
+  const cv = document.createElement('canvas'); cv.width = 300; cv.height = 190; const ctx = cv.getContext('2d'); ctx.fillStyle = '#0b0d10'; ctx.fillRect(0, 0, 300, 190);
+  const s = Math.min(300 / w, 190 / h), dx = (300 - w * s) / 2, dy = (190 - h * s) / 2;
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; const tc = tmp.getContext('2d'); tc.drawImage(planBase, x0 * 2, y0 * 2, w * 2, h * 2, 0, 0, w, h);
+  const id = tc.getImageData(0, 0, w, h), d = id.data; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = (y0 + y) * g.W + x0 + x; if (g.cellLab[k] !== c.id && !g.corr[k]) { const p = (y * w + x) * 4; d[p] *= .4; d[p + 1] *= .4; d[p + 2] *= .42; } } tc.putImageData(id, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(tmp, dx, dy, w * s, h * s); return cv.toDataURL('image/png');
+}
+function overviewThumb() { const g = F.grid, cv = document.createElement('canvas'); cv.width = 300; cv.height = 190; const ctx = cv.getContext('2d'); ctx.fillStyle = '#0b0d10'; ctx.fillRect(0, 0, 300, 190); const s = Math.min(300 / g.W, 190 / g.H); ctx.drawImage(planBase, (300 - g.W * s) / 2, (190 - g.H * s) / 2, g.W * s, g.H * s); return cv.toDataURL('image/png'); }
+function buildCards() {
+  const host = $('cards'); host.innerHTML = '';
+  const kinds = ['水滴', '梭形', '枕形'].map(k => F.cells.filter(c => c.kind === k).length).concat([F.cells.filter(c => c.edge).length]);
+  const all = document.createElement('div'); all.className = 'card on'; all.id = 'card_all';
+  all.innerHTML = `<img><span class="num">00</span><div class="meta"><div class="t"><b>全部场地</b><i>ALL</i></div><div class="s"><span>水滴 ${kinds[0]} · 梭形 ${kinds[1]} · 枕形 ${kinds[2]}（边缘 ${kinds[3]}）</span></div></div>`;
+  all.onclick = () => focusCell(null); host.appendChild(all);
+  F.cells.forEach((c, n) => { const ex = EXCL.has(c.id), el = document.createElement('div'); el.className = 'card'; el.dataset.id = c.id;
+    el.innerHTML = `<img><span class="num">${String(n + 1).padStart(2, '0')}</span><div class="meta"><div class="t"><b>${cellName(c)}</b><i>${c.kind}${c.edge ? ' · 边缘' : ''}</i></div><div class="s"><em class="${ex ? 'no' : ''}">${(c.area / 1e4).toFixed(2)} ha · ${ex ? '景观' : '建筑 ' + c.nb}</em><span class="tag">${ex ? '恢复' : '设为景观'}</span></div></div>`;
+    el.onclick = () => focusCell(c); el.querySelector('.tag').onclick = e => { e.stopPropagation(); if (ex) EXCL.delete(c.id); else EXCL.add(c.id); solve(true); };
+    host.appendChild(el); });
+  const imgs = [...host.querySelectorAll('.card')]; let i = 0;
+  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
+  setTimeout(step, 20);
+}
+function focusCell(c) {
+  focus = c; document.querySelectorAll('.card').forEach(el => el.classList.toggle('on', c ? el.dataset.id == c.id : el.id === 'card_all')); setHighlight(c);
+  if (c) { const g = F.grid, ext = Math.max(c.bb[2] - c.bb[0], c.bb[3] - c.bb[1]) * g.RES; cam.tx = c.c[0]; cam.ty = c.c[1]; cam.tz = 4; cam.dist = ext * 2.2 + 120; cam.el = Math.max(cam.el, 0.45); $('hud_t').textContent = cellName(c) + ' · ' + c.kind + ' · ' + (c.area / 1e4).toFixed(2) + ' ha';
+    const el = document.querySelector(`.card[data-id="${c.id}"]`); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  else { cam.tx = SITE ? SITE.cen[0] : 0; cam.ty = SITE ? SITE.cen[1] : 0; cam.tz = 0; cam.dist = 3200; $('hud_t').textContent = '全部场地'; }
+  drawPlan();
+}
+
+// ---------------------------------------------------------------- 主流程
+function solve(keepExcl) {
+  if (!SITE) return;
+  $('busy').style.display = 'block';
+  setTimeout(() => {
+    if (!keepExcl) EXCL.clear();
+    F = SS.buildStructure(SITE, P, EXCL); M = SS.meshes(F, P); PLAN = SS.planImage(F); makePlanBase();
+    buildScene();
+    const st = F.stats, kinds = ['水滴', '梭形', '枕形'].map(k => F.cells.filter(c => c.kind === k).length);
+    $('s_fib').textContent = st.strands; $('s_node').textContent = st.nodes + ' / ' + st.primE; $('s_cell').textContent = st.cells; $('s_cellL').textContent = `室 · 水滴 ${kinds[0]} / 梭形 ${kinds[1]} / 枕形 ${kinds[2]}`; $('s_bld').textContent = st.bld;
+    $('s_len').textContent = (st.totL / 1000).toFixed(2); $('s_area').textContent = (st.farmA / 1e4).toFixed(1) + ' / ' + (st.corrA / 1e4).toFixed(1);
+    $('strHint').textContent = `沿张量场主方向拉长 ${(1 + 1.4 * P.pull).toFixed(2)} 倍。0 = 各向均匀的绳网；1 = 室被拉成顺主线的透镜 / 水滴，尖端指向节点。`;
+    $('hud_s').textContent = `${SNAP.site} · ${SITE.landHa.toFixed(0)} ha · 拉扯 ${P.pull.toFixed(2)} · ${st.cells} 室 · 合并 ${F.nRemoved}（跨水 ${F.nWaterCut}）· 桥 ${F.nBridge} · ${st.bld} 栋 · ${F.towers.length} 塔 · 种子 ${P.seed}`;
+    const keepFocus = focus ? F.cells.find(c => Math.hypot(c.c[0] - focus.c[0], c.c[1] - focus.c[1]) < 30) : null;
+    buildCards(); focusCell(keepFocus || null); if (mode === '2d') { if (!keepExcl) fitPlan(); drawPlan(); }
+    $('busy').style.display = 'none';
+  }, 30);
+}
+const FMT = { seed: v => v, nCore: v => v, nPrim: v => v, primAng: v => v + '°', primStraight: v => (+v).toFixed(1), offRoad: v => +v ? '离路' : '贴路', rotF: v => v + '°', coreR: v => v + ' m', sCore: v => v + ' m', sOut: v => v + ' m', pull: v => (+v).toFixed(2), wS: v => v + ' m', wP: v => v + ' m', blendK: v => (+v).toFixed(2), minThick: v => v + ' m', bridgeMax: v => v + ' m', deckZ: v => (+v).toFixed(1) + ' m', nTower: v => v, setback: v => v + ' m', depth: v => v + ' m', segL: v => v + ' m', gap: v => v + ' m' };
+let pending = null;
+for (const k in FMT) $(k).addEventListener('input', () => { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(pending); pending = setTimeout(() => solve(false), 220); });
+$('c_bld').onchange = e => G.bld.visible = e.target.checked; $('c_farm').onchange = e => G.farm.visible = e.target.checked; $('c_tower').onchange = e => G.tower.visible = e.target.checked; $('c_plots').onchange = e => { G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => { makePlanBase(); drawPlan(); }; $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
+$('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
+$('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
+$('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } };
+$('lowBtn').onclick = () => { setMode('3d'); cam.el = 0.2; cam.dist = Math.min(cam.dist, 650); }; $('topBtn').onclick = () => { setMode('3d'); cam.el = 1.55; };
+$('rotBtn').onclick = e => { cam.rot = !cam.rot; e.target.classList.toggle('on', cam.rot); };
+function dl(name, text, img) { $('dlbox').style.display = 'block'; $('dlname').textContent = name; $('dltext').style.display = img ? 'none' : 'block'; $('dlimg').style.display = img ? 'block' : 'none'; $('dlcopy').style.display = img ? 'none' : 'inline-block'; $('dlhint').textContent = img ? '右键图片 → 另存为。' : '复制后存为同名文件即可导入。';
+  if (img) $('dlimg').src = img; else $('dltext').value = text; $('dlcopy').textContent = '复制'; }
+$('dlclose').onclick = () => $('dlbox').style.display = 'none'; $('dlcopy').onclick = () => { try { navigator.clipboard.writeText($('dltext').value).then(() => $('dlcopy').textContent = '已复制'); } catch (e) { $('dltext').select(); } };
+$('jsonBtn').onclick = () => dl('linear_farm_fibre.json', JSON.stringify({ params: P, towers: F.towers, nodes: F.nodeP.map((p, k) => ({ id: k, p: p.map(v => +v.toFixed(2)), boundary: F.fixed[k], pulled: F.merged.has(k) })), edges: F.fibres.map(f => ({ a: f.a, b: f.b, shared: f.link, centerline: f.P.filter((_, i) => i % 4 === 0).map(p => p.map(v => +v.toFixed(2))) })), cells: F.cells.map(c => ({ name: cellName(c), kind: c.kind, area_m2: c.area, centroid: c.c.map(v => +v.toFixed(1)), buildings: c.nb, landscape: EXCL.has(c.id) })) }, null, 1));
+$('objBtn').onclick = () => { let s = '# Linear Farm fibre network\n', off = 1; const put = (name, arr) => { s += 'o ' + name + '\n'; for (let i = 0; i < arr.length; i += 3) s += `v ${arr[i].toFixed(2)} ${arr[i + 2].toFixed(2)} ${(-arr[i + 1]).toFixed(2)}\n`; for (let i = 0; i < arr.length / 3; i += 3) s += `f ${off + i} ${off + i + 1} ${off + i + 2}\n`; off += arr.length / 3; };
+  put('corridor_top', M.corridor.top); put('corridor_side', M.corridor.side); put('buildings_top', M.bld.top); put('buildings_side', M.bld.side); dl('linear_farm_fibre.obj', s); };
+$('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).toFixed(2), +(p[1] + o[1]).toFixed(2)], feats = [];
+  F.cellPolys.forEach((cp, k) => { const c = F.cells.find(x => x.id === k + 1); const ring = cp.poly.filter((_, i) => i % 2 === 0).map(bng); ring.push(ring[0]); feats.push({ type: 'Feature', properties: { layer: 'cell' }, geometry: { type: 'Polygon', coordinates: [ring] } }); });
+  F.fibres.forEach(f => feats.push({ type: 'Feature', properties: { layer: 'corridor centreline', primary: !!f.prim, width_m: f.prim ? P.wP : P.wS, deck_m: P.deckZ }, geometry: { type: 'LineString', coordinates: [f.P[0], f.P[f.P.length - 1]].map(bng) } }));
+  F.towers.forEach(t => feats.push({ type: 'Feature', properties: { layer: 'planting tower', radius_m: t[2], height_m: t[3] }, geometry: { type: 'Point', coordinates: bng(t) } }));
+  dl('structure-studio.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, source: SNAP.site, params: P, features: feats })); };
+$('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; cv.getContext('2d').drawImage(planBase, 0, 0); dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
+
+async function loadSnap(obj, name) { SNAP = obj; SITE = SS.prepareSite(SNAP); $('v_snap').textContent = name || SNAP.site;
+  const st = SNAP.stats || {}; $('siteHint').textContent = `${SITE.landHa.toFixed(0)} ha · 张量场道路 ${SNAP.roads.length} 条（主干 ${(st.km1 || 0).toFixed(1)} km、次路 ${(st.km2 || 0).toFixed(1)} km）· 核心 ${SITE.cores.length} 个（主吸引点）。其他场地：在张量场工作室里运行 scripts/export-snapshot.js 导出。`;
+  focus = null; solve(false); }
+$('loadBtn').onclick = () => $('snapFile').click();
+$('snapFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { loadSnap(JSON.parse(rd.result), f.name.replace('.snapshot.json', '')); } catch (err) { $('siteHint').textContent = '读不了这个文件：' + err.message; } }; rd.readAsText(f); };
+initGL(); setMode('2d');
+$('busy').style.display = 'block';
+fetch('assets/station-p2.snapshot.json').then(r => r.json()).then(j => loadSnap(j, '车站 P2')).catch(err => { $('busy').textContent = '载入快照失败：' + err.message; });
+</script>
+</body>
+</html>
