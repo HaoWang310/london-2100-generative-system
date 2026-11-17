@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Growth simulator · London 2100 module preview</title>
+  <link rel="stylesheet" href="../../shared/ui/theme.css?v=79ca30f">
+  <style>
+    .pv { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: 48px 1fr 52px; height: 100vh; }
+    .pv-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--hairline); }
+    .pv-top .sp { flex: 1; }
+    .pv-map { position: relative; background: #0b0b0c; }
+    .pv-side { grid-row: 2 / 4; background: var(--surface-1); border-left: 1px solid var(--hairline); padding: 4px 16px 16px; overflow: auto; }
+    .pv-tl { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-top: 1px solid var(--hairline); }
+    .pv-tl input { flex: 1; accent-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="pv">
+    <header class="pv-top"><span class="mono muted" id="code"></span><b id="title"></b><span class="sp"></span><div id="lang"></div></header>
+    <main class="pv-map"><div id="map" style="position:absolute;inset:0"></div></main>
+    <aside class="pv-side" id="side"></aside>
+    <footer class="pv-tl"><button class="btn ghost" id="play">▶</button><input type="range" id="scrub" min="0" max="75" value="0"><span class="mono" id="year">2025</span></footer>
+  </div>
+  <script type="module">
+    // Standalone preview of 01: the map, the growth overlay, the panel and a year slider.
+    import mod, { createGrowthTool } from './module.js?v=79ca30f';
+    import { createMapViewer } from '../../shared/map-viewer/index.js?v=79ca30f';
+    import { pick, onLangChange } from '../../shared/i18n/index.js?v=79ca30f';
+    import { mountLangSwitch } from '../../shared/ui/index.js?v=79ca30f';
+
+    const $ = id => document.getElementById(id);
+    $('code').textContent = `${mod.id} · v${mod.version}`;
+    const titles = () => { $('title').textContent = pick(mod.title); };
+    titles(); mountLangSwitch($('lang'));
+    const viewer = await createMapViewer($('map'), { theme: 'dark' });
+    let timer = null;
+    const stop = () => { clearInterval(timer); timer = null; $('play').textContent = '▶'; };
+    const show = () => { $('year').textContent = 2025 + tool.state.year; $('scrub').value = tool.state.year; };
+    const play = from => { stop(); if (from !== undefined) tool.setYear(from); else if (tool.state.year >= 75) tool.setYear(0);
+      $('play').textContent = '❚❚'; timer = setInterval(() => { if (tool.state.year >= 75) stop(); else tool.setYear(tool.state.year + 1); }, 1000 / 7); };
+    const tool = createGrowthTool(viewer, { onState: what => {
+      if (what === 'loaded') viewer.fit(tool.ring(), { animate: false });
+      if (what === 'year') show();
+      if (what === 'ran' && tool.state.variation) play(0);
+    } });
+    $('side').append(tool.container);
+    await tool.open();
+    $('scrub').addEventListener('input', e => { stop(); tool.setYear(+e.target.value); });
+    $('play').addEventListener('click', () => (timer ? stop() : play()));
+    onLangChange(() => { titles(); tool.relang(); });
+    window.addEventListener('resize', () => tool.resize());
+  </script>
+</body>
+</html>
