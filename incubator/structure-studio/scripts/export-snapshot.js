@@ -19,6 +19,8 @@
     attractors: T.attr.map(a => ({ x: a.x, y: a.y, kind: a.kind })),
     roads: R.streets.map(s => ({ id: s.id, grade: s.grade, level: s.level, width: s.width, pts: P(s.pts) })),
     junctions: R.junctions.map(j => ({ x: r1(j.x), y: r1(j.y), type: j.type })), stats: R.stats,
+    // 周边环境（现状建筑、小路、现状主路、建成区），09 只画在红线以外
+    context: { bld: (D.ctx.bld || []).map(r => r.map(P)), lanes: (D.ctx.lanes || []).map(P), prim: (D.ctx.prim || []).map(P), urban: (D.ctx.urban || []).map(r => r.map(P)) },
     field: { step, nx, ny, enc: 'u8 angle*254/pi, 255 = none', data: btoa(bin) },
   };
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(snap)], { type: 'application/json' })); a.download = snap.site + '.snapshot.json'; a.click();
