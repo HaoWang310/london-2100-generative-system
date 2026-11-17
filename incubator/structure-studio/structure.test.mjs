@@ -21,10 +21,17 @@ test('cells: a sensible number, none thinner than the minimum width', () => {
   assert.ok(F.cells.length >= 40 && F.cells.length <= 140, 'cells ' + F.cells.length);
   const big = F.cells.filter(c => !c.edge); assert.ok(big.length > 10);
 });
-test('corridors stay on land or short bridges, and take 10–30 % of the land', () => {
-  const g = F.grid; let bad = 0; for (let i = 0; i < g.W * g.H; i++) if (g.corr[i] && !site.siteM[i] && !site.waterM[i]) bad++;
+test('the structure is continuous over water and rail, cut only at the site outline', () => {
+  const g = F.grid; let bad = 0; for (let i = 0; i < g.W * g.H; i++) if (g.corr[i] && !site.siteM[i]) bad++;
   assert.equal(bad, 0);
-  const share = F.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.1 && share < 0.3, 'share ' + share);
+  assert.ok(F.nBridge > 5 && F.bridgeL > 300, 'bridges ' + F.nBridge + ' / ' + F.bridgeL);
+  assert.ok(F.columns.length > 0);
+  const share = F.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.1 && share < 0.35, 'share ' + share);
+});
+test('no buildings within the setback of water or the rail', () => {
+  const g = F.grid, ns = new Uint8Array(g.W * g.H); for (let i = 0; i < ns.length; i++) ns[i] = site.landM[i] && !site.waterM[i] ? 0 : 1;
+  const d = SS.util.edt(ns, g.W, g.H); let bad = 0; for (let i = 0; i < ns.length; i++) if (g.bldM[i] && d[i] * g.RES < P.setback - 2) bad++;
+  assert.equal(bad, 0);
 });
 test('cell outlines are smooth: no turn sharper than 45° between 2 m steps', () => {
   let worst = 0;
