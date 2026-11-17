@@ -16,7 +16,7 @@
     site: D.station ? 'station-p2' : 'london-site', origin: D.origin, crs: 'EPSG:27700 (local metres = BNG − origin)', w: D.w, h: D.h,
     pieces: D.pieces.map(p => ({ outer: P(p.outer), holes: (p.holes || []).map(P) })),
     water: (D.ctx.water || []).map(w => w.map(P)), streams: (D.ctx.streams || []).map(P),
-    attractors: T.attr.map(a => ({ x: a.x, y: a.y, kind: a.kind })),
+    attractors: T.attr.map(a => ({ x: a.x, y: a.y, kind: a.kind, reach: a.kind === 'main' ? 230 : a.kind === 'edge' ? 340 : 140, pull: +((document.getElementById('pull') || {}).value || 2.4) })),
     roads: R.streets.map(s => ({ id: s.id, grade: s.grade, level: s.level, width: s.width, pts: P(s.pts) })),
     junctions: R.junctions.map(j => ({ x: r1(j.x), y: r1(j.y), type: j.type })), stats: R.stats,
     // 周边环境（现状建筑、小路、现状主路、建成区），09 只画在红线以外

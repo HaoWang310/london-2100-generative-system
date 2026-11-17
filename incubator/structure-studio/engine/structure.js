@@ -141,7 +141,12 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
   const roadHash = new Map(), RH = 40; roadPts.forEach(q => { const k = Math.floor(q[0] / RH) + ',' + Math.floor(q[1] / RH); if (!roadHash.has(k)) roadHash.set(k, []); roadHash.get(k).push(q); });
   const roadDist = p => { const gx = Math.floor(p[0] / RH), gy = Math.floor(p[1] / RH); let best = 1e9; for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) { const l = roadHash.get((gx + a) + ',' + (gy + b)); if (l) for (const q of l) best = Math.min(best, dist(p, q)); } return best; };
   let lx0 = 1e9, ly0 = 1e9, lx1 = -1e9, ly1 = -1e9; for (const pc of snap.pieces) for (const p of pc.outer) { lx0 = Math.min(lx0, p[0]); ly0 = Math.min(ly0, p[1]); lx1 = Math.max(lx1, p[0]); ly1 = Math.max(ly1, p[1]); }
+  // 三种吸引点（来自张量场）：主节点 = 核心；次节点 = 街区中心（局部加密 + 节点板 + 小种植塔）；边界节点 = 入口（入口主线 + 入口板）
+  const strengthOf = a => clamp(a.pull != null ? a.pull / 2.4 : 1, 0.3, 1.5);
   const cores = snap.attractors.filter(a => a.kind === 'main').map(a => [a.x, a.y]).filter(inSite);
+  const coreAtt = snap.attractors.filter(a => a.kind === 'main' && inSite([a.x, a.y])).map(a => ({ p: [a.x, a.y], reach: a.reach || 230, s: strengthOf(a) }));
+  const secs = snap.attractors.filter(a => a.kind === 'sec' && inSite([a.x, a.y])).map(a => ({ p: [a.x, a.y], reach: a.reach || 140, s: strengthOf(a) }));
+  const gates = snap.attractors.filter(a => a.kind === 'edge').map(a => ({ p: [a.x, a.y], reach: a.reach || 340, s: strengthOf(a) }));
   let landA = 0; for (let i = 0; i < NN; i++) landA += landM[i];
   // 路网尺度：主路 / 全部道路的距离场；平行路网里点到路的平均距离 = 间距 / 4，由此估主路间距 d1、次路间距 d2
   const rasterRoads = list => { const M = new Uint8Array(NN); for (const r of list) for (const q of resample(r.pts, RES * 0.5).map(toPix)) { const x = Math.floor(q[0]), y = Math.floor(q[1]); if (x >= 0 && y >= 0 && x < W && y < H) M[y * W + x] = 1; } return M; };
@@ -149,7 +154,7 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
   let sMain = 0, sAll = 0, nR = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i]) { sMain += Math.min(dMainG[i] * RES, 400); sAll += Math.min(dAllG[i] * RES, 200); nR++; }
   const d1 = nR ? 4 * sMain / nR : 300, d2 = nR ? 4 * sAll / nR : 115;
   const roadDistAll = p => { const q = toPix(p), x = Math.floor(q[0]), y = Math.floor(q[1]); return x >= 0 && y >= 0 && x < W && y < H ? dAllG[y * W + x] * RES : 1e9; };
-  return { d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
+  return { coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
 }
 
 // ---------------------------------------------------------------- 主生成
@@ -158,10 +163,13 @@ function buildStructure(site, P, EXCL) {
   const { RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, inSite, inWater, bdist, roadDist, cen } = site;
   const field = p => { const d = site.field(p); return d ? rot(d, P.rotF) : rot(site.t0, P.rotF); };
   const [lx0, ly0, lx1, ly1] = site.bbox;
-  const cores = site.cores; // 核心 = 张量场的全部主吸引点（由上游决定，不在这里设）
+  const cores = site.cores, coreAtt = site.coreAtt || cores.map(p => ({ p, reach: 230, s: 1 })); // 核心 = 张量场的全部主吸引点（由上游决定，不在这里设）
   // 1 疏密场：到最近核心的距离
   const coreT = p => { let d = 1e9; for (const c of cores) d = Math.min(d, dist(p, c)); let t = clamp((d - 60) / P.coreR, 0, 1); return t * t * (3 - 2 * t); };
-  const spacing = p => P.sCore + (P.sOut - P.sCore) * coreT(p);
+  const secs = site.secs || [], gates = site.gates || [];
+  // 次节点（街区中心）：影响范围内局部加密，中心处间距减到约 (1 − 0.35·强度)
+  const secK = p => { let k = 1; for (const a of secs) { const R = Math.max(220, a.reach * 1.6), d = dist(p, a.p); if (d < R) { const t = 1 - d / R; k = Math.min(k, 1 - 0.35 * a.s * t * t * (3 - 2 * t)); } } return k; };
+  const spacing = p => (P.sCore + (P.sOut - P.sCore) * coreT(p)) * (secs.length ? secK(p) : 1);
   const V1 = P.logic === 'v1' || +P.v1 >= 0.5;
   const FAST = !!P.fast; // 拖动预览：曲线光顺用较粗的点距、较少轮数（松手后的精算不受影响）
   const TR = P.trace ? { cand: [], killed: [], seedRow: [] } : null; // 演示用：记录每一步的中间结果（平时不记）
@@ -196,6 +204,17 @@ function buildStructure(site, P, EXCL) {
       if (!best || sc > best.sc) best = { sc, S }; }
     if (best && best.sc > -900) strands.push(best.S); } });
   if (!TR) site.primCache.set(primKey, strands); }
+  // 边界节点（入口）：从场地边上的入口出发，顺大尺度张量场、逐渐被最近的核心吸过去，形成一条入口主线
+  const entryStrands = [];
+  for (const gt of gates) { if (!cores.length) break; let c = cores[0]; for (const k of cores) if (dist(k, gt.p) < dist(c, gt.p)) c = k;
+    const D0 = dist(gt.p, c); if (D0 < 60) continue; let p = gt.p.slice(), d = unit(sub(c, p)); const pts = [sub(p, mul(d, 60)), p.slice()];
+    for (let it = 0; it < 1200; it++) { const toC = unit(sub(c, p)), w = clamp(0.6 + 0.4 * (1 - dist(p, c) / D0), 0.6, 1); let fd = primField(p); if (dot(fd, toC) < 0) fd = mul(fd, -1);
+      d = unit(add(mul(d, 0.75), mul(unit(add(mul(fd, 1 - w), mul(toC, w))), 0.25))); p = add(p, mul(d, 4)); pts.push(p.slice()); if (dist(p, c) < Math.max(30, P.sCore * 0.35)) break; }
+    entryStrands.push(resample(pts, 4)); }
+  if (entryStrands.length) strands = strands.concat(entryStrands);
+  // 主节点（环形广场）：中心一个种子 + 外圈一圈均匀种子 → 分格后自然形成中心广场岛、环形走廊（主线宽）和向外放射的走廊
+  const rings = coreAtt.map(a => ({ c: a.p, r: clamp(Math.max(0.32 * a.reach * a.s, 0.8 * P.sCore), 55, 130), w: P.wP }));
+
 
   // 3 拉扯：v0 = 压缩空间 G 生成均匀绳网 → 沿全场主方向拉长；v1 = 直接在场地里沿局部张量场排流线行布点（格网随场连续变形）
   const t0 = unit(rot(site.t0, P.rotF)), n0 = [-t0[1], t0[0]], aS = 1 + 1.4 * P.pull, ctr = cores[0];
@@ -261,6 +280,10 @@ function buildStructure(site, P, EXCL) {
   for (let it = 0; it < 14000; it++) { const q = [U(gx0 - 70, gx1 + 70), U(gy0 - 70, gy1 + 70)]; if (!nearSite(q)) continue; if (okSeed(q)) { seeds.push(q); fixedS.push(false); addSeedHash(q, seeds.length - 1); } }
 
   }
+  for (const g of rings) { const R2 = 2 * g.r, n = Math.max(6, Math.round(2 * Math.PI * R2 / (1.3 * spacing(g.c)))), a0 = Math.atan2(field(g.c)[1], field(g.c)[0]);
+    const keep = seeds.map(q => dist(A(q), g.c) > R2 * 1.15); seeds = seeds.filter((_, i) => keep[i]); fixedS = fixedS.filter((_, i) => keep[i]); if (TR) TR.seedRow = TR.seedRow.filter((_, i) => keep[i]);
+    seeds.push(Ai(g.c)); fixedS.push(true); if (TR) TR.seedRow.push(-1);
+    for (let k = 0; k < n; k++) { const a = a0 + 2 * Math.PI * (k + 0.5) / n; seeds.push(Ai(add(g.c, [R2 * Math.cos(a), R2 * Math.sin(a)]))); fixedS.push(true); if (TR) TR.seedRow.push(-1); } }
   if (TR) { TR.seedsG = seeds.map(q => q.slice()); TR.seedsW = seeds.map(A); TR.fixedS = fixedS.slice(); TR.v0 = V1 ? null : { ctr, t0, aS }; }
   // 4 Voronoi（G）→ 拉回场地
   const BIG = [[gx0 - 3000, gy0 - 3000], [gx1 + 3000, gy0 - 3000], [gx1 + 3000, gy1 + 3000], [gx0 - 3000, gy1 + 3000]];
@@ -272,7 +295,7 @@ function buildStructure(site, P, EXCL) {
 
   // 5 室：内缩（主线 / 次线半宽）→ 按夹角五次曲线过渡；防细条与防跨水
   const setbackOf = th => P.blendK * (th < 40 ? 12 : th < 60 ? 12 + (th - 40) / 20 * 4 : th < 90 ? 16 + (th - 60) / 30 * 16 : th < 120 ? 32 + (th - 90) / 30 * 20 : th < 150 ? 52 + (th - 120) / 30 * 16 : 68);
-  const isPrimEdge = (a, b) => { const m = mul(add(a, b), 0.5), pn = primNearG(Ai(m)), t = unit(sub(Ai(b), Ai(a))); return pn.d < spG(Ai(m)) * 0.16 + 3 && Math.abs(dot(pn.t, t)) > 0.8; };
+  const isPrimEdge = (a, b) => { const m = mul(add(a, b), 0.5); if (rings.some(g => Math.abs(dist(m, g.c) - g.r) < 0.22 * g.r)) return true; const pn = primNearG(Ai(m)), t = unit(sub(Ai(b), Ai(a))); return pn.d < spG(Ai(m)) * 0.16 + 3 && Math.abs(dot(pn.t, t)) > 0.8; };
   function insetPoly(P0) {
     const Pp = []; for (const q of P0) if (!Pp.length || dist(q, Pp[Pp.length - 1]) > 4) Pp.push(q); while (Pp.length > 3 && dist(Pp[0], Pp[Pp.length - 1]) <= 4) Pp.pop(); if (Pp.length < 3) return null;
     const n = Pp.length, sg = polyArea(Pp) > 0 ? 1 : -1, lines = [];
@@ -345,9 +368,13 @@ function buildStructure(site, P, EXCL) {
   const inner = nodeP.map((_, k) => k).filter(k => !fixed[k] && deg[k] >= 3);
 
   // 种植塔：核心处大塔，其余靠核心的节点小塔
-  const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
+  const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
   for (const k of inner.slice().sort((a, b) => Math.min(...cores.map(c => dist(nodeP[a], c))) - Math.min(...cores.map(c => dist(nodeP[b], c))))) { if (towers.length >= P.nTower) break; const p = nodeP[k]; if (bdist(p) < 50 || inWater(p)) continue; if (towers.every(t => dist(p, t) > 260)) towers.push([p[0], p[1], 12, 80]); }
-  towers.length = Math.min(towers.length, P.nTower);
+  // 次节点：最近的节点上放中型节点板 + 小种植塔（不受种植塔数量限制）
+  for (const a of secs) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], a.p); if (d < bd) { bd = d; best = nodeP[k]; } } const p = best && bd < 70 ? best : a.p; if (inWater(p) || towers.some((t, i) => i < cores.length && dist(p, t) < 60)) continue; for (let i = towers.length - 1; i >= cores.length; i--) if (towers[i][4] !== 'sec' && dist(p, towers[i]) < 200) towers.splice(i, 1); towers.push([p[0], p[1], 16, 90, 'sec']); }
+  { const keep = towers.filter(t => t[4] === 'sec'), rest = towers.filter(t => t[4] !== 'sec'); rest.length = Math.min(rest.length, Math.max(cores.length, P.nTower)); towers.length = 0; towers.push(...rest, ...keep); }
+  // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
+  const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
 
   // 7 栅格：由室多边形求有符号距离
   const inside = new Uint8Array(NN), Bd = 4.5, dB = new Float32Array(NN).fill(Bd), lab = new Int32Array(NN);
@@ -365,6 +392,9 @@ function buildStructure(site, P, EXCL) {
   for (let i = 0; i < NN; i++) { inside[i] = lab[i] ? 1 : 0; sdGrid[i] = (inside[i] ? dB[i] : -dB[i]) * RES; }
   for (const t of towers) { const R = t[2] + 6 + 10, q = toPix(t), x0 = Math.max(0, Math.floor(q[0] - R / RES)), x1 = Math.min(W - 1, Math.ceil(q[0] + R / RES)), y0 = Math.max(0, Math.floor(q[1] - R / RES)), y1 = Math.min(H - 1, Math.ceil(q[1] + R / RES));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const dt = Math.hypot((x + .5 - q[0]) * RES, (y + .5 - q[1]) * RES) - (t[2] + 6), i = y * W + x; if (dt < sdGrid[i]) sdGrid[i] = dt; } }
+  const stamp = (cx, R, fn) => { const q = toPix(cx), x0 = Math.max(0, Math.floor(q[0] - R / RES)), x1 = Math.min(W - 1, Math.ceil(q[0] + R / RES)), y0 = Math.max(0, Math.floor(q[1] - R / RES)), y1 = Math.min(H - 1, Math.ceil(q[1] + R / RES));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const dt = fn(Math.hypot((x + .5 - q[0]) * RES, (y + .5 - q[1]) * RES)), i = y * W + x; if (dt < sdGrid[i]) sdGrid[i] = dt; } };
+  for (const g of gatePlates) stamp(g.c, g.r + 10, d => d - g.r);
   for (let i = 0; i < NN; i++) { const sd = sdGrid[i]; const cf = clamp(0.5 - sd / (1.5 * RES), 0, 1); corrF[i] = siteM[i] ? cf : 0; corr[i] = siteM[i] && corrF[i] > 0.5 ? 1 : 0; cellsM[i] = landM[i] && !corr[i] && !waterM[i] ? 1 : 0; }
   const GP = { nTail: cellPolys.length }, chains = [], merged = new Set(), nSplit = 0, nWeb = 0, nCtrl = 0, mergeAng = 0, FA = P.primAng, coreP = cores[0], nTail = GP.nTail; void nTail;
   const CL = label4(cellsM, W, H); // 室编号
@@ -419,7 +449,7 @@ function buildStructure(site, P, EXCL) {
   let totL = 0; for (const f of fibres) totL += arclen(f.P).slice(-1)[0];
   // 校验：走廊中心线压在道路上（< 8 m）的比例（只计场内）、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
-  return { trace: TR, nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
+  return { rings, gatePlates, entryStrands, secs, gates, trace: TR, nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, coreP, cores, site, cellPolys, nWaterCut, nBridge, bridgeL, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, logic: V1 ? 'v1' : 'v0', strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, merged: merged.size, split: nSplit, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }

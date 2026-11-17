@@ -23,6 +23,7 @@
 | `roads[]` | 正式路网（`__ts6.roadNet()`）：`grade`（main / through / local）、`level`、`width`（12 / 9 / 6.5 m）、`pts` |
 | `junctions[]` | 路口 `{x, y, type: T / X / Y / joint / dead end}` |
 | `stats` | 路网统计（主路、次路 km，密度，路口比例） |
+| `attractors[].reach` · `.pull` | 吸引点的影响范围（主 230 / 次 140 / 边界 340 m）与强度（张量场"pull"，默认 2.4）；09 用强度缩放局部加密、环形广场与入口板的大小 |
 | `context` | 可选，周边环境（红线以外的现状城市）：`bld` 建筑多边形、`lanes` 小路、`prim` 现状主路、`urban` 建成区。来自张量场工作室的 `D.ctx`；内置 P2 示例从 `tensor-studio/assets/station-p2.json` 读出（坐标同一套） |
 | `name` · `structureParams` | 可选，09"导出快照"时附上的名字与结构参数 |
 | `field` | 张量场主方向：`step` 米一格、`nx × ny`，每格一个字节 = 角度 × 254 / π（0–180°），255 = 场外；base64 |
