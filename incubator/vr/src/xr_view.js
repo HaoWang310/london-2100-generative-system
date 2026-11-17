@@ -23,19 +23,21 @@ const T = {
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 2.6 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 2.6 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
-    keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
+    keyList: [['L', '左摇杆：走动'], ['R', '右摇杆：左右转身 · 向下转 180°'], ['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
+    hud: ['左摇杆：走动 · 右摇杆：左右转身，向下转身 180°', '指着屏幕按扳机：放大看 · 握住地图 + 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'],
+    hudPlain: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 2.6 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 2.6 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
-    keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
+    keyList: [['L', 'Left stick: walk'], ['R', 'Right stick: turn · down: turn around'], ['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
+    hud: ['Left stick: walk · right stick: turn, down to turn around', 'Point + trigger: open a screen · hold the map + right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'],
+    hudPlain: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
 };
 
 // ---------------------------------------------------------------- geometry (pure, testable in node)
@@ -262,7 +264,7 @@ export function open(api, lang = 'zh', opt = {}){
     <button class="tog" type="button" data-k="flood">${L.flood}</button><button class="tog" type="button" data-k="drain">${L.drain}</button>
     <button class="tog on" type="button" data-k="fixed">${fixedLabel}</button>
     <label class="exagRow"><span>${L.exag}</span><input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label></div></div>
-  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.filter(([k]) => !(k === 'X' && !xLabel) && !(k === 'A' && !api.FR)).map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
+  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.filter(([k]) => !(k === 'X' && !xLabel) && !(k === 'A' && !api.FR) && !((k === 'L' || k === 'R') && !hallOn)).map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
 </aside>
 <main class="stage"><canvas class="view"></canvas>
   <button class="btn showSet" type="button" hidden>${L.showSet}</button></main>
@@ -544,7 +546,7 @@ export function open(api, lang = 'zh', opt = {}){
   function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 470; const g = c.getContext('2d');
     g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 470, r) : g.rect(0, 0, 1024, 470); g.fill();
     g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
-    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(xLabel ? s.replace('{x}', xLabel) : s.replace(/X \{x\} · /, ''), 44, 140 + i * 52));
+    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; (hallOn ? L.hud : L.hudPlain).map(s => xLabel ? s.replace('{x}', xLabel) : s.replace(/X \{x\} · /, '')).map(s => api.FR ? s : s.replace(/^A [^·]+ · /, '')).forEach((s, i) => g.fillText(s, 44, 140 + i * 52));
     if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 438); }
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
@@ -586,7 +588,7 @@ export function open(api, lang = 'zh', opt = {}){
     // walking in the hall (v0.30): the left stick moves the hall, the map and anything placed in the room the other way, so you
     // walk through it (moving the world, not the reference space, works the same in every browser and emulator)
     const keys = new Set();
-    const onKey = e => { if (!xrSession) return; const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
+    const onKey = e => { if (!xrSession) return; const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); session.addEventListener('end', () => { keys.clear(); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); });
     const keyAxes = () => [(keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0), (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0)];
     const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
@@ -599,6 +601,13 @@ export function open(api, lang = 'zh', opt = {}){
       const shift = p => { if (p){ p[0] += mx; p[2] += mz; } };
       shift(hallPose.c); hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); shift(M.pos); shift(M.anchor);
       if (pm.mode === 'world') shift(pm.c); if (detail?.pose) shift(detail.pose.c); };
+    // v0.49 · turning in the hall: the hall, the map and anything placed in the room turn about you (seated, or in an emulator);
+    // standing, you can simply turn round. a > 0 turns you to the right
+    const turnHall = a => { const o = [head[0], 0, head[2]], rp = p => { if (!p) return; const r = rotY([p[0] - o[0], 0, p[2] - o[2]], a); p[0] = o[0] + r[0]; p[2] = o[2] + r[2]; };
+      rp(hallPose.c); hallPose.yaw += a; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); rp(M.pos); rp(M.anchor); M.yaw += a;
+      if (pm.mode === 'world') rp(pm.c); if (detail?.pose){ rp(detail.pose.c); detail.pose.x = rotY(detail.pose.x, a); detail.pose.z = rotY(detail.pose.z, a); }
+      if (grabs.size) base = 'pending'; };
+    window.__vrTurn = a => { if (hallPose) turnHall(a); return hallPose && { hall: hallPose.c.slice(), yaw: hallPose.yaw }; };
     window.__vrWalk = () => ({ hall: hallPose && hallPose.c.slice(), map: M.pos.slice() });   // for checking from the console / tests
     const tableScale = H ? (api.stream ? 2 * TR / terrain.size : TR / fitR) : 0.9 / terrain.size;   // 90 cm across on the table; in the hall the 2 m disc is filled
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
@@ -659,9 +668,14 @@ export function open(api, lang = 'zh', opt = {}){
           if (dz(ax)){ const w1 = Math.max(0.18, Math.min(1.4, pm.w * Math.exp(dz(ax) * dt * 1.2))); pm.grab.lu *= w1 / pm.w; pm.grab.lv *= w1 / pm.w; pm.w = w1; }
           continue; }
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
-          if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? -1 : 1) * Math.PI / 6, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
-          else {   // turn and scale about the table centre (the anchor), so the place under it stays put
-            const c = M.anchor || M.pos;
+          if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? 1 : -1) * Math.PI / 6   /* v0.49: pushing right turns you right (was the other way) */, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
+          else if (hallShown() && !grabs.has(s)){   // v0.49: in the hall the right stick turns you: 30° a push, pull back to turn round
+            const was = prevBtn.get('rs') || [0, 0];
+            if (Math.abs(ax) > 0.7 && Math.abs(was[0]) <= 0.7) turnHall((ax > 0 ? 1 : -1) * Math.PI / 6);
+            else if (ay > 0.7 && was[1] <= 0.7 && Math.abs(ax) < 0.5) turnHall(Math.PI);
+            prevBtn.set('rs', [ax, ay]); }
+          else {   // turn and scale about the table centre (the anchor), so the place under it stays put; in the hall while holding the map
+            const c = M.anchor || M.pos; if (grabs.has(s)) base = 'pending';
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
             if (dz(ay)){ const k0 = Math.exp(-dz(ay) * dt * 1.2), s1 = Math.max(api.stream ? TR / R_WORLD : tableScale * 0.15, Math.min(tableScale * 40, M.s * k0)), k = s1 / M.s;
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
@@ -672,7 +686,7 @@ export function open(api, lang = 'zh', opt = {}){
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
           else if (!hallShown() && dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
-      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); }
+      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); const kt = (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0); if (kt) turnHall(kt * dt * 1.2); }   // Q / E: turn, smoothly
       // walk: keep the ground under your feet
       if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
         if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
@@ -774,7 +788,8 @@ export function open(api, lang = 'zh', opt = {}){
           const hot = pm.grab || barHit.size, bc = [c[0] + y[0] * barY, c[1] + y[1] * barY, c[2] + y[2] * barY], bw = hot ? 0.15 : 0.13;
           gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, bc, [bw, bw * 48 / 256])); gl.bindTexture(gl.TEXTURE_2D, hot ? barTex.hot : barTex.idle); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
           gl.disable(gl.BLEND); }
-        else if (lp){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]], z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
+        else if (lp && (xr.frames < 900 || lp.p[1] > head[1] - 0.05)){ const p = [lp.p[0], lp.p[1] + 0.13, lp.p[2]],   // v0.49: the help card for the first ~10 s, then when you raise your left hand
+           z = [head[0] - p[0], head[1] - p[1], head[2] - p[2]], zl = Math.hypot(...z) || 1; for (let k = 0; k < 3; k++) z[k] /= zl;
           const x = [z[2], 0, -z[0]], xl = Math.hypot(...x) || 1; for (let k = 0; k < 3; k++) x[k] /= xl; const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
           gl.useProgram(tex.p); gl.uniform3fv(tex.u.uClip, [0, 0, -1]); gl.uniformMatrix4fv(tex.u.uP, false, P); gl.uniformMatrix4fv(tex.u.uV, false, V); gl.uniformMatrix4fv(tex.u.uM, false, M4.basis(x, y, z, p, [0.22, 0.101]));
           gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.CULL_FACE); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, hud); gl.uniform1i(tex.u.uT, 0);
