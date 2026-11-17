@@ -188,7 +188,7 @@ export function open(api, lang = 'zh', opt = {}){
   const st = { bld: true, flood: !!api.FR && (VW.flood ?? api.floodShown?.() !== false), drain: !!api.DR && VW.drain !== false, fixed: true, exag: VW.exag || 3, walk: false, sig: '', terrain: null };
   const tOpt = () => ({ exag: st.exag, flood: st.flood, drain: st.drain, res: VW.res });
   let snap = snapshot(api), terrain = buildTerrain(snap.S, tOpt());
-  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : (api.extra || api.stream) ? L.buildings : fixedLabel;
+  const fixedLabel = snap.hasFixed ? L.existing : L.outline, xLabel = api.DR ? L.drain : (api.extra || api.stream) ? null : fixedLabel;   // v0.46: X no longer hides the buildings
   // v0.24 · the page looks like the rest of London 2100 (shared/ui/theme.css): black / graphite, one warm sand accent,
   // top bar · "into the headset" on the left · the live view · the map settings on the right · a status bar
   const css = `#tsXR{position:fixed;inset:0;z-index:9999;background:#000;color:#f5f5f7;font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;
@@ -258,11 +258,11 @@ export function open(api, lang = 'zh', opt = {}){
   <div class="modes xrBtns"></div>
   <div class="card noxr" hidden><b>${L.quest}</b><span class="lead" style="margin:0">${L.questD}</span><span class="url"></span><button class="btn copy" type="button">${L.copy}</button></div>
   <div class="hallGrp" hidden><div class="eyebrow" style="margin-bottom:8px">${L.mood}</div><div class="chips mood" role="group" aria-label="${L.mood}">${L.moods.map(([k, t]) => `<button type="button" data-mood="${k}">${t}</button>`).join('')}</div></div>
-  <div><div class="eyebrow" style="margin-bottom:4px">${L.model}</div><div class="rows">
+  <div class="modelGrp"><div class="eyebrow" style="margin-bottom:4px">${L.model}</div><div class="rows">
     <button class="tog" type="button" data-k="flood">${L.flood}</button><button class="tog" type="button" data-k="drain">${L.drain}</button>
-    <button class="tog on" type="button" data-k="bld">${L.buildings}</button><button class="tog on" type="button" data-k="fixed">${fixedLabel}</button>
+    <button class="tog on" type="button" data-k="fixed">${fixedLabel}</button>
     <label class="exagRow"><span>${L.exag}</span><input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label></div></div>
-  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
+  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.filter(([k]) => !(k === 'X' && !xLabel) && !(k === 'A' && !api.FR)).map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
 </aside>
 <main class="stage"><canvas class="view"></canvas>
   <button class="btn showSet" type="button" hidden>${L.showSet}</button></main>
@@ -319,8 +319,9 @@ export function open(api, lang = 'zh', opt = {}){
   // buttons
   const btn = k => root.querySelector(`button[data-k="${k}"]`);
   const sync = () => { btn('flood').classList.toggle('on', st.flood); btn('drain').classList.toggle('on', st.drain); btn('fixed').classList.toggle('on', st.fixed);
-    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline; btn('bld').hidden = !api.extra && !api.stream; btn('bld').classList.toggle('on', st.bld); };
-  btn('bld').onclick = () => { st.bld = !st.bld; sync(); };
+    btn('flood').hidden = !api.FR; btn('drain').hidden = !api.DR; btn('fixed').hidden = !snap.hasFixed && !snap.hasOutline;
+    // v0.46: 3D buildings are always shown (no switch); the 'Model' group goes when nothing in it is left to set
+    const mg = root.querySelector('.modelGrp'); if (mg) mg.hidden = ![...mg.querySelectorAll('.rows > *')].some(el => !el.hidden && getComputedStyle(el).display !== 'none'); };
   btn('flood').onclick = () => { st.flood = !st.flood; refresh(true); sync(); };
   btn('drain').onclick = () => { st.drain = !st.drain; refresh(true); sync(); };
   btn('fixed').onclick = () => { st.fixed = !st.fixed; sync(); };
@@ -543,7 +544,7 @@ export function open(api, lang = 'zh', opt = {}){
   function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 470; const g = c.getContext('2d');
     g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 470, r) : g.rect(0, 0, 1024, 470); g.fill();
     g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
-    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(s.replace('{x}', xLabel), 44, 140 + i * 52));
+    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; L.hud.forEach((s, i) => g.fillText(xLabel ? s.replace('{x}', xLabel) : s.replace(/X \{x\} · /, ''), 44, 140 + i * 52));
     if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 438); }
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
@@ -666,7 +667,7 @@ export function open(api, lang = 'zh', opt = {}){
               M.pos = [c[0] + (M.pos[0] - c[0]) * k, M.pos[1], c[2] + (M.pos[2] - c[2]) * k]; M.s = s1; } } }
         // left stick click: show / hide the panel (it comes back where it was: on the hand, or where you placed it)
         if (key === 'left' && panel && hit(3)){ if (pm.mode === 'off') showPanel(); else hidePanel(); }
-        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (api.extra || api.stream) st.bld = !st.bld; else st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
+        if (key === 'left'){ if (hit(4)){ if (api.DR){ st.drain = !st.drain; refresh(true); } else if (!api.extra && !api.stream) st.fixed = !st.fixed; sync(); } if (hit(5)){ placeTable(api.stream ? focusModel(M.anchor) : null); grabs.clear(); base = null; }
           const moving = st.walk && (dz(ax) || dz(ay)); hold = moving ? hold + dt : 0;   // walk, then faster the longer the stick is held
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
