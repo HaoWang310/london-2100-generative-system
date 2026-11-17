@@ -23,20 +23,20 @@ const T = {
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 2.6 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 2.6 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
-    keyList: [['L', '左摇杆：走动'], ['R', '右摇杆：左右转身 · 向下转 180°'], ['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
+    keyList: [['L', '左摇杆：走动'], ['R', '右摇杆：左右转身 · 上下抬头低头 · 按下回正'], ['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['左摇杆：走动 · 右摇杆：左右转身，向下转身 180°', '指着屏幕按扳机：放大看 · 握住地图 + 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'],
+    hud: ['左摇杆：走动 · 右摇杆：左右转身 · 上下抬头低头（按下回正）', '指着屏幕按扳机：放大看 · 握住地图 + 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'],
     hudPlain: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 2.6 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 2.6 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
-    keyList: [['L', 'Left stick: walk'], ['R', 'Right stick: turn · down: turn around'], ['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
+    keyList: [['L', 'Left stick: walk'], ['R', 'Right stick: turn · look up / down · click: level'], ['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Left stick: walk · right stick: turn, down to turn around', 'Point + trigger: open a screen · hold the map + right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'],
+    hud: ['Left stick: walk · right stick: turn · look up and down (click: level)', 'Point + trigger: open a screen · hold the map + right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'],
     hudPlain: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
 };
 
@@ -588,7 +588,7 @@ export function open(api, lang = 'zh', opt = {}){
     // walking in the hall (v0.30): the left stick moves the hall, the map and anything placed in the room the other way, so you
     // walk through it (moving the world, not the reference space, works the same in every browser and emulator)
     const keys = new Set();
-    const onKey = e => { if (!xrSession) return; const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
+    const onKey = e => { if (!xrSession) return; const k = e.key.toLowerCase(); if (!['w', 'a', 's', 'd', 'q', 'e', 'r', 'f', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) return; e.type === 'keydown' ? keys.add(k) : keys.delete(k); e.preventDefault(); };
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); session.addEventListener('end', () => { keys.clear(); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); });
     const keyAxes = () => [(keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0), (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0)];
     const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
@@ -604,6 +604,22 @@ export function open(api, lang = 'zh', opt = {}){
     // v0.49 · turning in the hall: the hall, the map and anything placed in the room turn about you (seated, or in an emulator);
     // standing, you can simply turn round. a > 0 turns you to the right
     const TURN_MAX = Math.PI / 2; let turnVel = 0, turnIn = 0;   // v0.50: up to 90°/s
+    // v0.51 · looking up and down with the right stick: every pose the headset reports (the eyes and the controllers) is turned
+    // about your eyes' left-right axis, so the hall tilts in view and pointing still lands where you see it
+    const PITCH_MAX = Math.PI / 3, PITCH_RATE = Math.PI / 3; let pitch = 0, pitchVel = 0, pitchIn = 0, levelling = false;
+    const rigidInv = m => { const o = new Float32Array(16); for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) o[c * 4 + r] = m[r * 4 + c];
+      for (let r = 0; r < 3; r++) o[12 + r] = -(o[r] * m[12] + o[4 + r] * m[13] + o[8 + r] * m[14]); o[15] = 1; return o; };
+    const pitched = frame => { if (!pitch) return frame;
+      const raw = frame.getViewerPose(ref); if (!raw) return frame; const hm = raw.transform.matrix, h = [hm[12], hm[13], hm[14]];
+      let ux = hm[0], uz = hm[2]; const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul;   // the eyes' right, level
+      const c = Math.cos(pitch), sn = Math.sin(pitch), t = 1 - c, R = [t * ux * ux + c, -sn * uz, t * ux * uz, sn * uz, c, -sn * ux, t * ux * uz, sn * ux, t * uz * uz + c];
+      const W = M4.id(); W[0] = R[0]; W[1] = R[3]; W[2] = R[6]; W[4] = R[1]; W[5] = R[4]; W[6] = R[7]; W[8] = R[2]; W[9] = R[5]; W[10] = R[8];
+      for (let k = 0; k < 3; k++) W[12 + k] = h[k] - (W[k] * h[0] + W[4 + k] * h[1] + W[8 + k] * h[2]);
+      const tf = tr => { const m = M4.mul(W, tr.matrix || rigidInv(tr.inverse.matrix)); return { matrix: m, position: { x: m[12], y: m[13], z: m[14] }, inverse: { matrix: rigidInv(m) } }; };
+      return { session: frame.session,
+        getViewerPose: r => { const p = r === ref ? raw : frame.getViewerPose(r); return p && { transform: tf(p.transform), views: p.views.map(v => ({ __orig: v, eye: v.eye, projectionMatrix: v.projectionMatrix, transform: tf(v.transform) })) }; },
+        getPose: (sp, r) => { const p = frame.getPose(sp, r); return p && { transform: tf(p.transform) }; } }; };
+    window.__vrPitch = () => pitch;
     const turnHall = a => { const o = [head[0], 0, head[2]], rp = p => { if (!p) return; const r = rotY([p[0] - o[0], 0, p[2] - o[2]], a); p[0] = o[0] + r[0]; p[2] = o[2] + r[2]; };
       rp(hallPose.c); hallPose.yaw += a; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); rp(M.pos); rp(M.anchor); M.yaw += a;
       if (pm.mode === 'world') rp(pm.c); if (detail?.pose){ rp(detail.pose.c); detail.pose.x = rotY(detail.pose.x, a); detail.pose.z = rotY(detail.pose.z, a); }
@@ -656,13 +672,13 @@ export function open(api, lang = 'zh', opt = {}){
       + (api.stream ? ' · ' + streamLine() : '') + (xr.err ? (lang === 'zh' ? ' · 出错：' : ' · error: ') + xr.err : ''); };
     let tPrev = 0;
     const onFrame = (t, frame) => { session.requestAnimationFrame(onFrame);
-      try { frameBody(t, frame); xr.frames++; } catch (e){ if (!xr.err){ xr.err = String(e.message || e).slice(0, 120); console.error(e); } }
+      try { frameBody(t, pitched(frame)); xr.frames++; } catch (e){ if (!xr.err){ xr.err = String(e.message || e).slice(0, 120); console.error(e); } }
       if (xr.frames % 30 === 1 || xr.err) xrNote(); };
     const frameBody = (t, frame) => { const dt = Math.min(0.05, tPrev ? (t - tPrev) / 1000 : 0); tPrev = t; follow(t);
       const pose = frame.getViewerPose(ref); if (!pose){ xr.views = 0; return; } xr.views = pose.views.length; const hm = pose.transform.matrix; head = [hm[12], hm[13], hm[14]]; headF = [-hm[8], -hm[9], -hm[10]];
       if (!M.placed){ placeTable(); M.placed = true; }
       // buttons and sticks
-      turnIn = 0;
+      turnIn = 0; pitchIn = 0;
       for (const s of session.inputSources){ const gp = s.gamepad; if (!gp) continue; const key = s.handedness, was = prevBtn.get(key) || [], now = gp.buttons.map(b => b.pressed); prevBtn.set(key, now);
         const hit = k => now[k] && !was[k], ax = gp.axes[2] || gp.axes[0] || 0, ay = gp.axes[3] || gp.axes[1] || 0, dz = q => Math.abs(q) > 0.15 ? q : 0;
         if (pm.grab && s === pm.grab.src){   // while dragging the panel: stick up / down = further / nearer, left / right = smaller / bigger
@@ -671,11 +687,11 @@ export function open(api, lang = 'zh', opt = {}){
           continue; }
         if (key === 'right'){ if (hit(4)){ st.flood = !st.flood; refresh(true); sync(); } if (hit(5)){ if (st.walk) placeTable(api.stream ? focusModel(head) : null); else placeWalk(); grabs.clear(); base = null; }
           if (st.walk){ if (hit(2) || (Math.abs(ax) > 0.75 && !(prevBtn.get('rx') > 0.75))){ const a = (ax > 0 ? 1 : -1) * Math.PI / 6   /* v0.49: pushing right turns you right (was the other way) */, r = rotY([M.pos[0] - head[0], 0, M.pos[2] - head[2]], a); M.pos = [head[0] + r[0], M.pos[1], head[2] + r[2]]; M.yaw += a; } prevBtn.set('rx', Math.abs(ax)); }
-          else if (hallShown() && !grabs.has(s)){   // v0.50: in the hall the right stick turns you smoothly (pull back: turn round at once)
-            const was = prevBtn.get('rs') || [0, 0], tx = dz(ax);
-            if (tx) turnIn += Math.sign(tx) * Math.pow((Math.abs(tx) - 0.15) / 0.85, 1.4);   // a light push turns slowly, full tilt about 90°/s
-            if (ay > 0.7 && was[1] <= 0.7 && Math.abs(ax) < 0.5){ turnHall(Math.PI); turnVel = 0; }
-            prevBtn.set('rs', [ax, ay]); }
+          else if (hallShown() && !grabs.has(s)){   // in the hall the right stick turns you (v0.50) and looks up and down (v0.51); click: level again
+            const tx = Math.abs(ax) >= Math.abs(ay) * 0.6 ? dz(ax) : 0, ty = Math.abs(ay) >= Math.abs(ax) * 0.6 ? dz(ay) : 0, curve = q => Math.sign(q) * Math.pow((Math.abs(q) - 0.15) / 0.85, 1.4);
+            if (tx) turnIn += curve(tx);   // a light push turns slowly, full tilt about 90°/s
+            if (ty){ pitchIn -= curve(ty); levelling = false; }   // stick forward (−1) looks up
+            if (hit(3)) levelling = true; }
           else {   // turn and scale about the table centre (the anchor), so the place under it stays put; in the hall while holding the map
             const c = M.anchor || M.pos; if (grabs.has(s)) base = 'pending';
             if (dz(ax)){ const a = -dz(ax) * dt * 1.4, r = rotY([M.pos[0] - c[0], 0, M.pos[2] - c[2]], a); M.pos = [c[0] + r[0], M.pos[1], c[2] + r[2]]; M.yaw += a; }
@@ -688,10 +704,15 @@ export function open(api, lang = 'zh', opt = {}){
           if (st.walk){ const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1, sp = Math.min(6 * (1 + hold * hold * 3), Math.max(6, terrain.size / 120)) * dt; M.pos[0] -= (f[0] / l * -dz(ay) + -f[2] / l * dz(ax)) * sp; M.pos[2] -= (f[2] / l * -dz(ay) + f[0] / l * dz(ax)) * sp; }
           else if (hallShown() && (dz(ax) || dz(ay))) walkHall(dz(ax), dz(ay), dt);   // in the hall the map stays on its table
           else if (!hallShown() && dz(ay)) M.pos[1] = Math.max(0.1, Math.min(2.2, M.pos[1] - dz(ay) * dt * 0.5)); } }
-      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); turnIn += (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0); }   // Q / E: turn
+      if (keys.size && hallShown()){ const [kx, ky] = keyAxes(); if (kx || ky) walkHall(kx, ky, dt); turnIn += (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0); const kp = (keys.has('r') ? 1 : 0) - (keys.has('f') ? 1 : 0); if (kp){ pitchIn += kp; levelling = false; } }   // Q / E: turn · R / F: look up / down
       // v0.50 · smooth turning: the turn speed eases towards the stick (or Q / E) over about 0.15 s, so it starts and stops softly
       if (hallShown()){ const tgt = Math.max(-1, Math.min(1, turnIn)) * TURN_MAX; turnVel += (tgt - turnVel) * Math.min(1, dt / 0.15);
-        if (Math.abs(turnVel) > 0.002) turnHall(turnVel * dt); else turnVel = 0; }
+        if (Math.abs(turnVel) > 0.002) turnHall(turnVel * dt); else turnVel = 0;
+        // v0.51 · looking up and down: the same easing, up to 60° either way; clicking the stick levels the view again
+        pitchVel += (Math.max(-1, Math.min(1, pitchIn)) * PITCH_RATE - pitchVel) * Math.min(1, dt / 0.15);
+        if (levelling){ pitch += (0 - pitch) * Math.min(1, dt * 5); pitchVel = 0; if (Math.abs(pitch) < 0.003){ pitch = 0; levelling = false; } }
+        else pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, pitch + pitchVel * dt)); }
+      else { pitch = 0; pitchVel = 0; }
       // walk: keep the ground under your feet
       if (st.walk && !grabs.size){ const d = rotY([head[0] - M.pos[0], 0, head[2] - M.pos[2]], -M.yaw), x = d[0] / M.s + terrain.cx, y = -d[2] / M.s + terrain.cy;
         if (Hs !== snap.S){ Hs = snap.S; Hg = heightSampler(Hs); } M.pos[1] = -Hg.at(x, y) * M.s; }
@@ -773,7 +794,7 @@ export function open(api, lang = 'zh', opt = {}){
       H?.setHot(hotK);
       const hudKey = snap.lines.length + (api.stream ? '|' + streamLine() : '');
       if (hudKey !== hudN && t - hudT > 500){ hudN = hudKey; hudT = t; gl.deleteTexture(hud); hud = hudTexture(); }
-      for (const view of pose.views){ const vp = layer.getViewport(view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
+      for (const view of pose.views){ const vp = layer.getViewport(view.__orig || view); gl.viewport(vp.x, vp.y, vp.width, vp.height); const P = view.projectionMatrix, V = view.transform.inverse.matrix;
         if (hallShown()) H.draw(P, V, hallPose.m, hallMood());
         sceneClip = hallShown() && !api.stream ? [0, 0, TR / M.s] : [0, 0, -1];   // the table's edge, whatever the zoom
         drawScene(P, V, Mm, o);
