@@ -21,8 +21,8 @@ const MOOD = {
 export const HALL_MOODS = Object.keys(MOOD);
 
 // ---------------------------------------------------------------- the shape (pure, testable in node)
-export const SHELL = { H: 6.2, oculus: 0.28, twist: 0.35 };
-export const shellR = t => 7.2 + 0.8 * Math.sin(2 * t + 0.5) + 0.3 * Math.sin(3 * t - 1.0);   // plan: an uneven oval
+export const SHELL = { H: 7.5, oculus: 0.28, twist: 0.35 };   // v0.44: the gallery about 1.3× larger (was 6.2 m high)
+export const shellR = t => 9.5 + 1.05 * Math.sin(2 * t + 0.5) + 0.4 * Math.sin(3 * t - 1.0);   // v0.44: 9.5 m on average (was 7.2 m)   // plan: an uneven oval
 const prof = s => SHELL.oculus + (1 - SHELL.oculus) * Math.pow(Math.cos(s * Math.PI / 2), 0.75); // section: wall rolls into ceiling
 const profY = s => SHELL.H * Math.pow(Math.sin(s * Math.PI / 2), 0.85);
 export function shellPoint(u, s){ const t = u * Math.PI * 2, r = shellR(t) * prof(s), a = t + SHELL.twist * s; return [r * Math.cos(a), profY(s), r * Math.sin(a)]; }
@@ -30,30 +30,30 @@ export function shellPoint(u, s){ const t = u * Math.PI * 2, r = shellR(t) * pro
 export function shellYAt(x, z){ const r = Math.hypot(x, z), ang = Math.atan2(z, x);
   for (let s = 0; s <= 1; s += 0.004){ if (shellR(ang - SHELL.twist * s) * prof(s) <= r) return profY(s); } return SHELL.H; }
 
-export const CANOPY = { ri: 1.2, yi: 3.2, twist: 0.6, p: 2.5 };
+export const CANOPY = { ri: 1.5, yi: 3.9, twist: 0.6, p: 2.5 };
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-const canRo = t => 3.8 + 0.7 * Math.sin(3 * t + 0.4) + 0.2 * Math.sin(5 * t);   // three petals
-const canYo = t => 4.3 + 0.4 * Math.sin(3 * t + 1.6);
+const canRo = t => 5.0 + 0.9 * Math.sin(3 * t + 0.4) + 0.25 * Math.sin(5 * t);   // three petals
+const canYo = t => 5.3 + 0.5 * Math.sin(3 * t + 1.6);
 export function canopyPoint(u, v){ const t = u * Math.PI * 2, C = CANOPY, r = C.ri + (canRo(t) - C.ri) * v;
   let y = C.yi + (canYo(t) - C.yi) * (1 - Math.pow(1 - v, C.p));            // steep at the centre, flat outside: a funnel
-  y -= 0.35 * ss(0.82, 1, v) * (1 + Math.sin(3 * t + 0.4)) / 2;              // the petal edges curl down
+  y -= 0.45 * ss(0.82, 1, v) * (1 + Math.sin(3 * t + 0.4)) / 2;              // the petal edges curl down
   const a = t + C.twist * v; return [r * Math.cos(a), y, r * Math.sin(a)]; }
 
 /** benches: [angle°, radius m, extra yaw°] around the table */
 // v0.42 · benches in front of every other screen (the 2nd, 4th, …), so the row alternates screen-with-bench, screen-without; never in front of the overview
-export const BENCH_R = 2.75;   // v0.43: 1.75 m in front of the screens (was 1.2 m), still 1.5 m clear of the table's foot
+export const BENCH_R = 3.6;   // v0.44: about 2 m clear of the table's foot, 2.4 m in front of the screens (was 2.75 m)
 /** [angle°, radius m, extra yaw°] for n screens; skip: the index left free (the overview) */
 export function benchSlots(n, skip = -1){ const { at } = screenAngles(n); return at.filter((_, k) => k % 2 === 1 && k !== skip).map(d => [d, BENCH_R, 0]); }
 export let BENCH_SLOTS = [];   // filled once the screens are known
 // v0.41 · the screens: the project overview straight ahead, the app's features (incubator/catalogue.json, in its order, VR itself left out)
 // round the table left to right, 3:2 like their covers, 35° apart, leaving an opening behind you. The list grows with the catalogue.
-export const SCREEN = { R: 4.5, w: 2.1, h: 1.4, y: 1.6, step: 35, span: 280 };
+export const SCREEN = { R: 6.0, w: 2.7, h: 1.8, y: 1.75, step: 35, span: 280 };   // v0.44: 6 m out, 2.7 × 1.8 m (was 4.5 m, 2.1 × 1.4 m)
 /** plan angles (°) for n screens centred straight ahead (270°), and the screen width that still leaves a gap */
 export function screenAngles(n){ const st = n > 1 ? Math.min(SCREEN.step, SCREEN.span / (n - 1)) : 0;
   return { at: Array.from({ length: n }, (_, k) => 270 + (k - (n - 1) / 2) * st), w: Math.min(SCREEN.w, st ? st * Math.PI / 180 * SCREEN.R - 0.35 : SCREEN.w) }; }
 // v0.22 · the gallery around the table (after the Winton Gallery): a lowered soffit with cove light, and model plinths on the floor
-export const SOFFIT = { y: 3.0, depth: 0.95, fascia: 0.18 };
-export const soffitY = t => SOFFIT.y + 0.3 * Math.sin(2 * t + 1.1) + 0.12 * Math.sin(5 * t);
+export const SOFFIT = { y: 3.6, depth: 1.2, fascia: 0.2 };
+export const soffitY = t => SOFFIT.y + 0.36 * Math.sin(2 * t + 1.1) + 0.14 * Math.sin(5 * t);
 /** radius of the shell's inside at plan angle t and height y */
 export function wallR(t, y){ const s = Math.asin(Math.min(1, Math.pow(Math.max(0, y) / SHELL.H, 1 / 0.85))) * 2 / Math.PI; return shellR(t - SHELL.twist * s) * prof(s); }
 /** model plinths [angle°, radius m] */
@@ -122,12 +122,12 @@ function stripes(g, w, h, N, step, col, lw){ g.strokeStyle = col; g.lineWidth = 
 const shellMapC = () => canvas(2048, 512, (g, w, h) => { g.fillStyle = '#f2f2f0'; g.fillRect(0, 0, w, h); stripes(g, w, h, 72, 1, 'rgba(160,168,178,.55)', 3); });
 const shellEmiC = () => canvas(2048, 512, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); stripes(g, w, h, 72, 3, '#fff', 2);
   const grd = g.createLinearGradient(0, h, 0, h - 26); grd.addColorStop(0, 'rgba(255,255,255,.95)'); grd.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = grd; g.fillRect(0, h - 26, w, 26); });
-const FLOOR_E = 9.5;
-const floorMapC = (shadows) => canvas(1024, 1024, (g, S) => { g.fillStyle = '#d4d4d3'; g.fillRect(0, 0, S, S); const C = v => (v / FLOOR_E + 1) / 2 * S;
+const FLOOR_E = 11.5;   // v0.44: the larger floor
+const floorMapC = (shadows) => canvas(1536, 1536, (g, S) => { g.fillStyle = '#d4d4d3'; g.fillRect(0, 0, S, S); const C = v => (v / FLOOR_E + 1) / 2 * S;
   for (const [x, z, rx, rz, ang, a] of shadows){ g.save(); g.translate(C(x), C(z)); g.rotate(ang); g.scale(1, rz / rx);
     const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx / FLOOR_E / 2 * S); gr.addColorStop(0, `rgba(60,60,66,${a})`); gr.addColorStop(1, 'rgba(60,60,66,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx / FLOOR_E / 2 * S, 0, 7); g.fill(); g.restore(); } });
 const floorEmiC = (keepOut) => canvas(2048, 2048, (g, S) => { g.fillStyle = '#000'; g.fillRect(0, 0, S, S); const C = v => (v / FLOOR_E + 1) / 2 * S; g.lineCap = 'round';
-  for (let k = 0; k < 220; k++){ const r0 = keepOut + 0.15 + rnd() * 5.5, a0 = rnd() * Math.PI * 2; let x = Math.cos(a0) * r0, z = Math.sin(a0) * r0;
+  for (let k = 0; k < 300; k++){ const r0 = keepOut + 0.15 + rnd() * 7.5, a0 = rnd() * Math.PI * 2; let x = Math.cos(a0) * r0, z = Math.sin(a0) * r0;
     g.strokeStyle = `rgba(255,255,255,${0.25 + rnd() * 0.5})`; g.lineWidth = 1.5 + rnd() * 2; g.beginPath(); g.moveTo(C(x), C(z));
     for (let st = 0; st < 220; st++){ const r = Math.hypot(x, z), th = Math.atan2(z, x); if (r < keepOut || r > shellR(th) * 0.97) break;
       const ang = th + Math.PI / 2 + 0.45 * Math.sin(0.55 * x + 0.35 * z) + 0.25 * Math.cos(0.4 * z - 0.2 * x); x += Math.cos(ang) * 0.06; z += Math.sin(ang) * 0.06; g.lineTo(C(x), C(z)); }
@@ -236,7 +236,7 @@ function program(gl){ const p = gl.createProgram();
  * mapR: radius of the map disc on the table (m); M: hall space → world (the table centre on the floor).
  */
 export function createHall(gl, opt = {}){
-  const mapR = opt.mapR || 0.7, tableH = opt.tableH || 0.9, lang = opt.lang === 'en' ? 'en' : 'zh';
+  const mapR = opt.mapR || 1.0, tableH = opt.tableH || 0.9, lang = opt.lang === 'en' ? 'en' : 'zh';
   const prog = program(gl), parts = [], textures = [], buffers = [];
   const tex = (cv, repeat) => { const t = gl.createTexture(); textures.push(t); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.generateMipmap(gl.TEXTURE_2D);
@@ -262,7 +262,7 @@ export function createHall(gl, opt = {}){
   for (let o = 0; o < floor.v.length; o += F){ floor.v[o + 6] = (floor.v[o] / FLOOR_E + 1) / 2; floor.v[o + 7] = 1 - (floor.v[o + 2] / FLOOR_E + 1) / 2; floor.v[o + 3] = 0; floor.v[o + 4] = 1; floor.v[o + 5] = 0; }
   const floorTex = tex(floorMapC(shadows));
   add(floor, { map: floorTex, emi: tex(floorEmiC(foot + 0.1)), glow: { day: 0.07, night: 0.85, violet: 0.75 }, tint: { day: GLOW.day, night: GLOW.day, violet: [0.88, 0.72, 1.0] } });
-  add(disc(3.2, SHELL.H + 0.25, 64, [1, 1, 1], true), { unlit: true, glow: { day: 1, night: 1, violet: 1 }, tint: 'sky' });
+  add(disc(4.2, SHELL.H + 0.25, 64, [1, 1, 1], true), { unlit: true, glow: { day: 1, night: 1, violet: 1 }, tint: 'sky' });
   const ocPts = []; for (let k = 0; k < 160; k++) ocPts.push(shellPoint(k / 160, 1));
   const glowLines = [tube(ocPts, 0.035, 6, true)];
 

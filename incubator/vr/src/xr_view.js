@@ -15,12 +15,12 @@
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
-import { createHall } from './hall.js?v=0.43';
+import { createHall } from './hall.js?v=0.44';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。', lead1: '戴上 Quest，点一下就进入展厅。',
-    vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 1.4 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 1.4 m。',
+    vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 2 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 2 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
@@ -29,7 +29,7 @@ const T = {
     hud: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
-    vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 1.4 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 1.4 m disc.',
+    vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 2 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 2 m disc.',
     quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
@@ -465,7 +465,7 @@ export function open(api, lang = 'zh', opt = {}){
 
   // ---- page preview: orbit camera; with the hall, a second camera stands in the gallery (metres, the table at the centre)
   const cam = { yaw: 0.55, pitch: 0.85, dist: api.stream ? 1.25 : 1.55, tx: 0, tz: 0 }; let drag = null, raf = 0, xrSession = null;
-  if (hallOn){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
+  if (hallOn){ try { hall = createHall(gl, { mapR: 1.0, lang }); } catch (e){ console.warn('hall', e); } }
   let hallSel = ['night', 'violet'].includes(opt.hall) ? opt.hall : 'auto';   // v0.37: no separate 'day' (following the light is already day by day)
   const hallMood = () => hallSel !== 'auto' ? hallSel : env.night > 0.5 ? 'night' : 'day';
   // v0.34 · a still model fills the hall's table: the disc spans its Greater London outline (or its smallest outline) with a margin,
@@ -475,18 +475,19 @@ export function open(api, lang = 'zh', opt = {}){
     const gl_ = os.find(o => /greater london|大伦敦/i.test(o.label || '')) || os.slice().sort((a, b) => r(a) - r(b))[0];
     return Math.min(terrain.size / Math.SQRT2, r(gl_) * 1.15); })();
   let sceneClip = [0, 0, -1];   // model space: x, z, radius (−1 = none)
-  const hcam = { yaw: 0, pitch: 0.34, dist: 3.0 }, deskR = 0.7, deskS = () => api.stream ? 2 * deskR / terrain.size : deskR / fitR;
+  const hcam = { yaw: 0, pitch: 0.36, dist: 4.4 }, deskR = 1.0,   // v0.44: a 2 m table in a larger gallery
+   deskS = () => api.stream ? 2 * deskR / terrain.size : deskR / fitR;
   const pv = hall ? 'hall' : 'map';   // v0.35: the preview is always the hall (the map-only switch is gone); 'map' only when the hall is off
   if (hall){ root.querySelector('.hallGrp').hidden = false;
     const moods = root.querySelector('.mood'), syncMood = () => moods.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mood === hallSel)); syncMood();
     moods.onclick = e => { const b = e.target.closest('button'); if (b){ hallSel = b.dataset.mood; syncMood(); } }; }
   cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, c: { ...cam }, h: { ...hcam } }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener('pointermove', e => { if (!drag) return; const dx = (e.clientX - drag.x) / cv.clientWidth, dy = (e.clientY - drag.y) / cv.clientHeight;
-    if (pv === 'hall'){ hcam.yaw = drag.h.yaw - dx * 4; hcam.pitch = Math.max(0.04, Math.min(0.55, drag.h.pitch + dy * 2)); return; }
+    if (pv === 'hall'){ hcam.yaw = drag.h.yaw - dx * 4; hcam.pitch = Math.max(0.04, Math.min(0.45, drag.h.pitch + dy * 2)); return; }
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
     else { cam.yaw = drag.c.yaw - dx * 4; cam.pitch = Math.max(0.08, Math.min(1.52, drag.c.pitch + dy * 3)); } });
   cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('contextmenu', e => e.preventDefault());
-  cv.addEventListener('wheel', e => { e.preventDefault(); if (pv === 'hall'){ hcam.dist = Math.max(1.3, Math.min(4.2, hcam.dist * Math.exp(e.deltaY * 0.001))); return; } cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+  cv.addEventListener('wheel', e => { e.preventDefault(); if (pv === 'hall'){ hcam.dist = Math.max(1.8, Math.min(6, hcam.dist * Math.exp(e.deltaY * 0.001))); return; } cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
   function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
     env = envFn(); const sky = skyColour();
@@ -571,7 +572,7 @@ export function open(api, lang = 'zh', opt = {}){
     catch (e){ try { session = await navigator.xr.requestSession(mode, { optionalFeatures: ['local-floor', 'hand-tracking'] }); } catch (e2){ note.textContent = String(e2.message || e2); return; } }
     xrSession = session; await gl.makeXRCompatible();
     hallPose = null;   // a new session has a new floor origin
-    if (hallOn && !hall){ try { hall = createHall(gl, { mapR: 0.7, lang }); } catch (e){ console.warn('hall', e); } }
+    if (hallOn && !hall){ try { hall = createHall(gl, { mapR: 1.0, lang }); } catch (e){ console.warn('hall', e); } }
     const H = hallOn ? hall : null; TR = H ? H.mapR : 0.45;   // this session's hall: in VR and, since v0.27, in MR too
     const hallShown = () => H && !st.walk && hallPose;
     // an emulator on a desktop shows the headset picture behind this page layer: make it see-through while immersive
@@ -588,7 +589,8 @@ export function open(api, lang = 'zh', opt = {}){
     addEventListener('keydown', onKey, true); addEventListener('keyup', onKey, true); session.addEventListener('end', () => { keys.clear(); removeEventListener('keydown', onKey, true); removeEventListener('keyup', onKey, true); });
     const keyAxes = () => [(keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0), (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0)];
     const walkHall = (ax, ay, dt) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
-      const sp = 1.8 * dt, d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
+      const sp = 2.2 * dt,   // v0.44: a little quicker in the larger gallery (was 1.8 m/s)
+       d = [(f[0] * -ay + -f[2] * ax) * sp, (f[2] * -ay + f[0] * ax) * sp];
       // stay between the table and the screens (hall space: undo the hall's turn about its centre)
       const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), wx = head[0] + d[0] - c[0], wz = head[2] + d[1] - c[2];
       const lx = wx * cs - wz * sn, lz = wx * sn + wz * cs, r = Math.hypot(lx, lz) || 1e-6, [r0, r1] = H.walkR, rc = Math.max(r0, Math.min(r1, r)), k = rc / r;
@@ -597,7 +599,7 @@ export function open(api, lang = 'zh', opt = {}){
       shift(hallPose.c); hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); shift(M.pos); shift(M.anchor);
       if (pm.mode === 'world') shift(pm.c); if (detail?.pose) shift(detail.pose.c); };
     window.__vrWalk = () => ({ hall: hallPose && hallPose.c.slice(), map: M.pos.slice() });   // for checking from the console / tests
-    const tableScale = H ? (api.stream ? 2 * TR / terrain.size : TR / fitR) : 0.9 / terrain.size;   // 90 cm across on the table; in the hall the 1.4 m disc is filled
+    const tableScale = H ? (api.stream ? 2 * TR / terrain.size : TR / fitR) : 0.9 / terrain.size;   // 90 cm across on the table; in the hall the 2 m disc is filled
     const M = { pos: [0, 0.8, -0.7], yaw: 0, s: tableScale, placed: false };
     const grabs = new Map(); let base = null; const prevBtn = new Map(); let hud = hudTexture(), hudN = '', hudT = 0; const hq = quad();
     const chipTex = { show: chipTexture(lang === 'zh' ? '☰  面板' : '☰  Panel'), hide: chipTexture(lang === 'zh' ? '收起' : 'Hide') };
@@ -605,7 +607,7 @@ export function open(api, lang = 'zh', opt = {}){
     const placeTable = (keep) => { const f = [headF[0], 0, headF[2]], l = Math.hypot(f[0], f[2]) || 1; f[0] /= l; f[2] /= l;
       M.s = tableScale;
       if (H){   // the hall is set once per session, its table just in front of you; the map goes back onto that table
-        if (!hallPose){ const d = Math.max(H.standAt + 0.2, 2.2); /* start a couple of steps back: room to walk up to the table */ hallPose = { c: [head[0] + f[0] * d, 0, head[2] + f[2] * d], yaw: yawOf(f[0], f[2]) }; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); }
+        if (!hallPose){ const d = Math.max(H.standAt + 0.2, 2.6); /* v0.44: 2.6 m for the 2 m table. start a couple of steps back: room to walk up to the table */ hallPose = { c: [head[0] + f[0] * d, 0, head[2] + f[2] * d], yaw: yawOf(f[0], f[2]) }; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); }
         M.yaw = hallPose.yaw; M.pos = [hallPose.c[0], H.tableTop + 0.004, hallPose.c[2]]; }
       else { M.yaw = yawOf(f[0], f[2]); M.pos = [head[0] + f[0] * 0.75, Math.max(0.7, head[1] - 0.5), head[2] + f[2] * 0.75]; }
       M.anchor = M.pos.slice();
