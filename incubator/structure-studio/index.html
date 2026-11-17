@@ -59,6 +59,7 @@ button,input,select{font-family:inherit}
 .sel{flex:1 1 auto;min-width:0;width:100%;background:#2c2c30;color:#f5f5f7;border:1px solid #46464b;border-radius:10px;font:inherit;font-size:12px;padding:6px 8px;outline:none}
 .sel:focus{border-color:#f5f5f7}
 #renRow[hidden],#tsFieldRow[hidden]{display:none}
+#saveHint:empty{display:none}
 .mini.warn{background:#f5f5f7;color:#121214}
 #tsOverlay{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:14px}
 #tsOverlay.on{display:flex}
@@ -562,10 +563,8 @@ function refreshSel() { const sel = $('srcSel'); sel.textContent = '';
   if (LIST.length) { const g = document.createElement('optgroup'); g.label = L('已保存（这台电脑）', 'Saved (this computer)'); sel.appendChild(g);
     for (const m of [...LIST].sort((a, b) => b.created - a.created)) { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; g.appendChild(o); } }
   sel.value = CUR; const b = CUR === 'builtin'; $('renBtn').disabled = $('delBtn').disabled = b; resetDel(); }
-function saveHint() { $('saveHint').textContent = IDB_OK
-  ? L(`从张量场取来或载入的结果自动存在这台电脑的浏览器里（已存 ${LIST.length} 份），每份记着自己的参数；打开 09 时回到上次用的那份。清除浏览器数据或换电脑会丢失，要长期保留请"导出快照"。`,
-      `Results taken from Tensor Studio or loaded from a file are saved in this computer’s browser (${LIST.length} saved), each with its own settings; 09 reopens on the one you used last. Clearing browser data or changing computer loses them; use "Export snapshot" to keep one.`)
-  : L('这个浏览器不能保存结果（可能是无痕 / 隐私模式），关掉页面就没了；要保留请"导出快照"。', 'This browser cannot save results (perhaps a private window), so they are lost when the page closes; use "Export snapshot" to keep one.'); }
+function saveHint() { // 正常情况下不显示说明；只在浏览器不能保存时提示
+  $('saveHint').textContent = IDB_OK ? '' : L('这个浏览器不能保存结果（可能是无痕 / 隐私模式），关掉页面就没了；要保留请"导出快照"。', 'This browser cannot save results (perhaps a private window), so they are lost when the page closes; use "Export snapshot" to keep one.'); }
 async function switchTo(id) { $('busy').style.display = 'block'; $('renRow').hidden = true; if (IDB_OK || CUR !== '__tmp') saveHint();
   if (id !== 'builtin') { const m = LIST.find(x => x.id === id); let snap = null; try { snap = m && await STORE.snap(id); } catch (e) {}
     if (m && snap) { CUR = id; setSess({ cur: id }); applyP(m.P); refreshSel(); loadSnap(snap, m.name); return; } id = 'builtin'; }
