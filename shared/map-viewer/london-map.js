@@ -128,7 +128,20 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   // ------------------------------------------------------------ 3D city (ensureCityBuildings / syncCityView)
   const sources = map.getStyle()?.sources || {};
   const roadSource = sources.openmaptiles ? 'openmaptiles' : Object.keys(sources).find(id => sources[id].type === 'vector') || ID.citySrc;
-  map.addSource(ID.citySrc, { type: 'vector', tiles: ['https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf'], minzoom: 13, maxzoom: 14,
+  // Same as the incubator London map v3.40.0: the buildings read the basemap's own dated tile address (one download per
+  // shared tile, not two), near tiles stay z14 and the far part of a low camera uses z13. ?lod=old: as before; ?lod=12.6: far aim.
+  const LATEST = 'https://tiles.openfreemap.org/planet/latest/{z}/{x}/{y}.pbf';
+  const LOD = (() => { const v = new URLSearchParams(location.search).get('lod'); return v === 'old' ? 'old' : (v && Number.isFinite(+v) ? Math.max(12.2, Math.min(14, +v)) : 12.8); })();
+  const baseTiles = () => {
+    if (LOD === 'old') return LATEST;
+    for (const id of Object.keys(map.getStyle()?.sources || {})) {
+      if (id === ID.citySrc) continue;
+      const s = map.getSource(id);
+      if (s?.type === 'vector' && /tiles\.openfreemap\.org\/planet/.test(String(s.url || '')) && s.tiles?.[0]) return s.tiles[0];
+    }
+    return LATEST;
+  };
+  map.addSource(ID.citySrc, { type: 'vector', tiles: [baseTiles()], minzoom: 13, maxzoom: 14,
     attribution: 'OpenFreeMap © OpenMapTiles © OpenStreetMap contributors' });
   const keep = ['!', ['boolean', ['get', 'hide_3d'], false]];
   map.addLayer({ id: ID.cityDriver, type: 'fill', source: ID.citySrc, 'source-layer': 'building', minzoom: 13, filter: keep, paint: { 'fill-color': '#000', 'fill-opacity': 0 } }, firstSymbol());
@@ -137,7 +150,18 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
       'fill-extrusion-base': ['max', 0, ['to-number', ['get', 'render_min_height'], 0]], 'fill-extrusion-opacity': 1, 'fill-extrusion-vertical-gradient': false } }, firstSymbol());
   map.addLayer({ id: ID.city2D, type: 'fill', source: ID.citySrc, 'source-layer': 'building', minzoom: 13, filter: keep, layout: { visibility: 'none' },
     paint: { 'fill-color': cityColour(), 'fill-opacity': 0.96 } }, firstSymbol());
-  try { map.setSourceTileLodParams?.(1, 8, ID.citySrc); } catch { /* older MapLibre */ }
+  let lodKey = '';
+  function tuneCity() {
+    const src = map.getSource(ID.citySrc); if (!src) return;
+    if (LOD === 'old') { if (!lodKey) { lodKey = 'old'; try { map.setSourceTileLodParams?.(1, 8, ID.citySrc); } catch { /* older MapLibre */ } } return; }
+    const url = baseTiles();   // the basemap's address may arrive after the source was made
+    if (url !== LATEST && src.tiles?.[0] !== url && typeof src.setTiles === 'function') { try { src.setTiles([url]); } catch { /* keep latest */ } }
+    // levels follow the zoom so the far edge aims at about z12.8 → z13 tiles (never z12, where buildings have no tiles)
+    const levels = Math.max(1, Math.min(6, 1 + Math.round((map.getZoom() - LOD) * 4) / 4)), key = String(levels);
+    if (key === lodKey) return;
+    try { map.setSourceTileLodParams?.(levels, 8, ID.citySrc); lodKey = key; } catch { /* older MapLibre */ }
+  }
+  tuneCity();
   const setVis = (id, vis) => { if (map.getLayer(id) && map.getLayoutProperty(id, 'visibility') !== vis) map.setLayoutProperty(id, 'visibility', vis); };
   let lastPitch3D = null;
   function syncCity() {
@@ -315,11 +339,12 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   // ------------------------------------------------------------ camera events
   map.on('sourcedata', e => {
     if (e.sourceId === ID.citySrc) syncCity();
+    if (e.sourceId === ID.citySrc || e.sourceId === roadSource) tuneCity();
     if (e.sourceId === ID.floodDetailSrc) syncFloodView();
     if (e.sourceId === ID.terrainSrc && st.terrain.on && st.terrain.status !== 'visible' && map.isSourceLoaded(ID.terrainSrc)) { st.terrain.status = 'visible'; emit('layers'); }
     if (!st.labels) syncLabels();
   });
-  for (const ev of ['pitch', 'rotate', 'zoom', 'moveend']) map.on(ev, () => { syncCity(); if (ev !== 'pitch') syncFloodView(); });
+  for (const ev of ['pitch', 'rotate', 'zoom', 'moveend']) map.on(ev, () => { if (ev === 'zoom') tuneCity(); syncCity(); if (ev !== 'pitch') syncFloodView(); });
   syncCity(); syncLabels(); syncFocus();
 
   return {
