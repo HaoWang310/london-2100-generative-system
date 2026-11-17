@@ -158,7 +158,7 @@ function buildStructure(site, P, EXCL) {
   const { RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, inSite, inWater, bdist, roadDist, cen } = site;
   const field = p => { const d = site.field(p); return d ? rot(d, P.rotF) : rot(site.t0, P.rotF); };
   const [lx0, ly0, lx1, ly1] = site.bbox;
-  const cores = site.cores.slice(0, Math.max(1, P.nCore));
+  const cores = site.cores; // 核心 = 张量场的全部主吸引点（由上游决定，不在这里设）
   // 1 疏密场：到最近核心的距离
   const coreT = p => { let d = 1e9; for (const c of cores) d = Math.min(d, dist(p, c)); let t = clamp((d - 60) / P.coreR, 0, 1); return t * t * (3 - 2 * t); };
   const spacing = p => P.sCore + (P.sOut - P.sCore) * coreT(p);
