@@ -14,12 +14,15 @@ await p.waitForTimeout(3000);
 await p.evaluate(() => document.getElementById('bInstant').click());
 await p.waitForFunction(() => { try { return FINISHED === true; } catch (e) { return false; } }, null, { timeout: 180000 });
 const scene = await p.evaluate(() => {
-  const r = a => Array.from(a, x => Math.round(x * 100) / 100);
-  const D = window.__TS.D;
-  return { format: 'london-2100-vr/scene', version: 1, source: 'Tensor Studio v8.6 · station P2 example · show result (mode ' + MODE + ')',
-    crs: 'EPSG:27700', origin: D.origin, grid: D.grid,
+  const r = a => Array.from(a, x => Math.round(x * 100) / 100), q = x => Math.round(x * 10) / 10;
+  const D = window.__TS.D, RN = window.__ts6.roadNet();   // (v0.52) the road network as built (Tensor Studio v8.45+), the same one its GeoJSON and Structure Studio use
+  if (!RN) throw new Error('Tensor Studio has no finished road network');
+  const ver = (document.body.innerText.match(/v8\.\d+(?:\.\d+)?/) || [''])[0];
+  return { format: 'london-2100-vr/scene', version: 1, source: 'Tensor Studio' + (ver ? ' ' + ver : '') + ' · station P2 example · show result (mode ' + MODE + ') · road network as built',
+    title: { zh: 'Tensor Studio · 车站 P2', en: 'Tensor Studio · station P2' },
+    exported: new Date().toISOString(), crs: 'EPSG:27700', origin: D.origin, grid: D.grid,
     Z: D.env ? r(D.env.Z) : null, land: D.landMask ? Array.from(D.landMask) : null, flood: D.flood && D.flood.grid ? Array.from(D.flood.grid) : null,
-    streets: streetWidths().map(s => ({ level: s.level, pts: s.pts.map(q => [Math.round(q[0]*10)/10, Math.round(q[1]*10)/10]), w: s.w.map(x => Math.round(x*10)/10) })),
+    streets: RN.streets.map(s => ({ level: s.level, grade: s.grade, pts: s.pts.map(p => [q(p[0]), q(p[1])]), w: q(s.width) })),
     fixed: (D.fixed.streets || []), bridges: (D.fixed.bridges || []) };
 });
 fs.writeFileSync(OUT, JSON.stringify(scene));
