@@ -94,3 +94,24 @@ test('planting towers come from the tensor field; primaries never narrower than 
   const Fw = SS.buildStructure(site, { ...P, wS: 25, wP: 12 }, new Set()), Fe = SS.buildStructure(site, { ...P, wS: 25, wP: 25 }, new Set());
   assert.equal(Fw.stats.corrA, Fe.stats.corrA, 'wP below wS is lifted to wS');
 });
+
+// 算法修正：主线做成主线走廊；场内没有比最小室宽更窄的室；没有主吸引点也能生成
+const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+const primCover = Fx => { const pf = Fx.fibres.filter(f => f.prim); let n = 0, c = 0;
+  for (const S of Fx.strands) for (let i = 0; i < S.length; i += 5) { const p = S[i]; if (!site.inSite(p) || site.bdist(p) < 40 || Fx.rings.some(r => Math.hypot(p[0] - r.c[0], p[1] - r.c[1]) < 2.6 * r.r)) continue; n++;
+    let m = 1e9; for (const f of pf) for (let k = 1; k < f.P.length; k++) m = Math.min(m, segD(p, f.P[k - 1], f.P[k])); if (m < 8) c++; } return c / n; };
+test('primaries become primary corridors (mode 1, strong pull, radial web)', () => {
+  assert.ok(primCover(F) > 0.9, 'mode 1 ' + primCover(F));
+  const Fp = SS.buildStructure(site, { ...P, pull: 2 }, new Set()); assert.ok(primCover(Fp) > 0.8, 'pull 2 ' + primCover(Fp));
+  const Fr = SS.buildStructure(site, { ...P, mode: 'radial' }, new Set()); assert.ok(primCover(Fr) > 0.85, 'radial ' + primCover(Fr));
+});
+test('no cell inside the site is thinner than the minimum width (cells along primaries included)', () => {
+  const minW = Pp => { let best = 1e9; for (let i = 0; i < Pp.length; i++) { const a = Pp[i], b = Pp[(i + 1) % Pp.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1) continue; const nn = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L]; let m = 0; for (const q of Pp) m = Math.max(m, Math.abs((q[0] - a[0]) * nn[0] + (q[1] - a[1]) * nn[1])); best = Math.min(best, m); } return best; };
+  for (const o of [{}, { pull: 2 }, { mode: 'v2' }]) { const Fx = SS.buildStructure(site, { ...P, ...o }, new Set());
+    const bad = Fx.cellPolys.filter(cp => !cp.narrow && cp.raw.filter(p => site.inSite(p)).length > cp.raw.length / 2 && minW(cp.V.map(v => v.p)) < P.minThick - 0.5); assert.equal(bad.length, 0, JSON.stringify(o)); }
+});
+test('a site without main attractors still builds in every mode', () => {
+  const s2 = JSON.parse(JSON.stringify(snap)); s2.attractors = s2.attractors.filter(a => a.kind !== 'main'); const site2 = SS.prepareSite(s2);
+  assert.equal(site2.cores.length, 0);
+  for (const mode of ['v0', 'v1', 'v2', 'radial', 'dual', 'frei', 'vein', 'slime']) { const Fx = SS.buildStructure(site2, { ...P, mode }, new Set()); assert.ok(Fx.cells.length >= 20, mode + ' ' + Fx.cells.length); assert.ok(Fx.towers.every(t => t[4]), 'no big tower without a main attractor'); }
+});

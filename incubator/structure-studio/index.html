@@ -274,7 +274,7 @@ body.cards-on #cardBar{display:flex}
 <div class="row"><label for="wCore">核心处次级走廊宽（模式 2 / 5）</label><input type="range" id="wCore" min="10" max="30" step="1" value="24"><output id="v_wCore">24 m</output></div>
 <div class="row"><label for="wP">主线走廊宽</label><input type="range" id="wP" min="12" max="40" step="1" value="20"><output id="v_wP">20 m</output></div>
 <div class="row"><label for="blendK">节点过渡强度</label><input type="range" id="blendK" min="0.3" max="1.5" step="0.05" value="1"><output id="v_blendK">1.00</output></div>
-<div class="row"><label for="minThick">最小室宽</label><input type="range" id="minThick" min="24" max="80" step="2" value="48"><output id="v_minThick">48 m</output></div>
+<div class="row"><label for="minThick">最小室宽</label><input type="range" id="minThick" min="24" max="80" step="2" value="40"><output id="v_minThick">40 m</output></div>
 <div class="row"><label for="colStep">桥下柱距</label><input type="range" id="colStep" min="20" max="60" step="5" value="45"><output id="v_colStep">45 m</output></div>
 <label class="lay">避开水面（打开后大半在水上的走廊删掉，两室合并）<input type="checkbox" id="avoidWater"></label>
 <div class="row"><label for="deckZ">走廊顶标高</label><input type="range" id="deckZ" min="3.6" max="10.8" step="3.6" value="7.2"><output id="v_deckZ">7.2 m · 2 层</output></div><p class="pmOut" id="deckHint"></p>
@@ -351,7 +351,7 @@ function setLang(lang, quiet) {
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
-const P = { mode: 'v0', v1: 0, wCore: 24, seed: 3, nCore: 2, nPrim: 1, primAng: 30, primFollow: 0.08, primSmooth: 240, primStraight: 0.6, primShift: 140, offRoad: 1, rotF: 0, coreR: 700, sCore: 95, sOut: 260, pull: 0.5, wS: 15, wP: 20, blendK: 1, minThick: 48, colStep: 45, avoidWater: false, deckZ: 7.2, setback: 6, depth: 18, segL: 52, gap: 11 };
+const P = { mode: 'v0', v1: 0, wCore: 24, seed: 3, nPrim: 1, primAng: 30, primFollow: 0.08, primSmooth: 240, primStraight: 0.6, primShift: 140, offRoad: 1, rotF: 0, coreR: 700, sCore: 95, sOut: 260, pull: 0.5, wS: 15, wP: 20, blendK: 1, minThick: 40, colStep: 45, avoidWater: false, deckZ: 7.2, setback: 6, depth: 18, segL: 52, gap: 11 };
 const EXCL = new Set();
 let SNAP = null, SITE = null, F = null, M = null, PLAN = null, focus = null, mode = '2d';
 const DEMO = { on: false }; // 演示播放器状态（见文件末尾）
@@ -406,7 +406,7 @@ function placeCam(camera, cam) { const ex = cam.tx + cam.dist * Math.cos(cam.el)
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 function cellAt(x, y) { const g = F.grid, i = Math.floor((x - g.xmin) / g.RES), j = Math.floor((g.ymax - y) / g.RES); if (i < 0 || j < 0 || i >= g.W || j >= g.H) return 0; return g.cellLab[j * g.W + i]; }
 function pickCell(e) { const r = $('gl').getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane0, p)) return 0; return cellAt(p.x, p.y); }
-function showTip(e, id, host) { const tip = $('tip'), c = F && F.cells.find(x => x.id === id); if (!c) { tip.style.display = 'none'; return; } const r = host.getBoundingClientRect(); tip.style.display = 'block'; tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 10) + 'px'; tip.textContent = cellName(c) + ' · ' + KD(c.kind) + ' · ' + (c.area / 1e4).toFixed(2) + ' ha · ' + L('建筑 ', 'buildings ') + c.nb + (EXCL.has(c.id) ? L(' · 景观', ' · landscape') : ''); }
+function showTip(e, id, host) { const tip = $('tip'), c = F && F.cells.find(x => x.id === id); if (!c) { tip.style.display = 'none'; return; } const r = host.getBoundingClientRect(); tip.style.display = 'block'; tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 10) + 'px'; tip.textContent = cellName(c) + ' · ' + KD(c.kind) + ' · ' + (c.area / 1e4).toFixed(2) + ' ha'; }
 function hover3d(e) { if (!F) return; showTip(e, pickCell(e), $('gl')); }
 function cellName(c) { return 'C-' + String(F.cells.indexOf(c) + 1).padStart(2, '0'); }
 
@@ -630,9 +630,9 @@ function buildCards() {
   const host = $('cards'); host.innerHTML = '';
   const kinds = ['水滴', '梭形', '枕形'].map(k => F.cells.filter(c => c.kind === k).length).concat([F.cells.filter(c => c.edge).length]);
   $('cbSum').textContent = L(`${F.cells.length} 个 · 水滴 ${kinds[0]} · 梭形 ${kinds[1]} · 枕形 ${kinds[2]}（贴场地边 ${kinds[3]}）· 点卡片聚焦，“设为景观”去掉该室的建筑`, `${F.cells.length} · teardrop ${kinds[0]} · spindle ${kinds[1]} · pillow ${kinds[2]} (on the site edge ${kinds[3]}) · click a card to focus; 'Landscape' removes its buildings`);
-  F.cells.forEach((c, n) => { const ex = EXCL.has(c.id), el = document.createElement('div'); el.className = 'card cell'; el.dataset.id = c.id;
-    el.innerHTML = `<img><span class="num">${String(n + 1).padStart(2, '0')}</span><div class="meta"><div class="t"><b>${cellName(c)}</b><i>${KD(c.kind)}${c.edge ? L(' · 边缘', ' · edge') : ''}</i></div><div class="s"><em class="${ex ? 'no' : ''}">${(c.area / 1e4).toFixed(2)} ha · ${ex ? L('景观', 'landscape') : L('建筑 ', 'bldg ') + c.nb}</em><span class="tag">${ex ? L('恢复', 'Restore') : L('设为景观', 'Landscape')}</span></div></div>`;
-    el.onclick = () => focusCell(c); el.querySelector('.tag').onclick = e => { e.stopPropagation(); if (ex) EXCL.delete(c.id); else EXCL.add(c.id); solve(true); };
+  F.cells.forEach((c, n) => { const el = document.createElement('div'); el.className = 'card cell'; el.dataset.id = c.id;
+    el.innerHTML = `<img><span class="num">${String(n + 1).padStart(2, '0')}</span><div class="meta"><div class="t"><b>${cellName(c)}</b><i>${KD(c.kind)}${c.edge ? L(' · 边缘', ' · edge') : ''}</i></div><div class="s"><em>${(c.area / 1e4).toFixed(2)} ha · ${L('长宽比', 'ratio')} ${c.ratio.toFixed(1)}</em></div></div>`;
+    el.onclick = () => focusCell(c);
     host.appendChild(el); });
   const imgs = [...host.querySelectorAll('.card.cell')], F0 = F; let i = 0;
   const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
@@ -908,7 +908,7 @@ const DST = [ // 每一步：时长（秒）、名称、说明、读数
     pr: () => { const T = DEMO.FD.trace, x = 1 + 1.4 * P.pull; if (!DEMO.v1 && !T.v0) return [[L('种子', 'Seeds'), T.seedsW.length, 0, ''], [L('网线', 'Net lines'), (T.net || []).length, 0, ''], [L('拉扯（长宽比）', 'Stretch (aspect)'), x, 2, '×']]; return DEMO.v1 ? [[L('流线行', 'Rows'), T.rows.length, 0, ''], [L('种子', 'Seeds'), T.seedsW.length, 0, ''], [L('拉扯（长宽比）', 'Stretch (aspect)'), x, 2, '×']] : [[L('种子', 'Seeds'), T.seedsW.length, 0, ''], [L('拉扯', 'Stretch'), x, 2, '×']]; } },
   { d: 5, zh: '分格', en: 'Cells', sub: () => L('每个种子向外长出"气泡"，相遇处成为分格边（Voronoi）。', 'Each seed grows a bubble; where bubbles meet, the cell edges form (Voronoi).'),
     pr: () => [[L('室', 'Cells'), DEMO.FD.cells.length, 0, '']] },
-  { d: 2.5, zh: '清理', en: 'Clean-up', sub: () => L('太窄、放不下建筑和农田的室合并掉。', 'Cells too thin for buildings and farmland are merged away.'),
+  { d: 2.5, zh: '清理', en: 'Clean-up', sub: () => L('太窄的室合并掉；主线两侧和广场上的室保留，改由相邻的室并进来。', 'Cells that are too thin are merged away; cells along the primaries and on the plazas stay, and a neighbour is merged into them instead.'),
     pr: () => [[L('最小室宽', 'Minimum width'), P.minThick, 0, ' m'], [L('合并', 'Merged'), DEMO.FD.nRemoved, 0, '']] },
   { d: 6, zh: '走廊与节点', en: 'Corridors and nodes', sub: () => L('分格边加宽成走廊，折角按夹角融成曲线，钝角处鼓成节点板。', 'Cell edges widen into corridors; corners melt into curves by their angle, and obtuse ones swell into node plates.'),
     pr: () => { const o = [[L('次级走廊', 'Secondary'), P.wS, 0, ' m'], [L('主线走廊', 'Primary'), P.wP, 0, ' m'], [L('走廊中心线', 'Centrelines'), DEMO.FD.stats.totL / 1000, 2, ' km']]; if (DEMO.v1) o.splice(1, 0, [L('核心处次级走廊', 'Secondary at cores'), P.wCore, 0, ' m']); return o; } },
