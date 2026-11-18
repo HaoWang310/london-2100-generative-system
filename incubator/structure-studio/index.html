@@ -241,7 +241,6 @@ body.cards-on #cardBar{display:flex}
   <div class="grp" id="pmBox"><div class="pmTop"><h2>生成流程</h2><button type="button" id="pmAll">全部展开</button></div>
   <div class="card runBox">
     <div class="btns3"><button type="button" class="mini primary" id="runBtn">▶ 逐步生成</button><button type="button" class="mini" id="runPause" disabled>暂停</button><button type="button" class="mini" id="runNow" disabled>立即完成</button></div>
-    <div class="row"><label for="runMode">演示模式</label><select id="runMode" class="sel" style="max-width:62%"><option value="v0">1 · 全局拉伸</option><option value="v1">2 · 局部场流线行</option><option value="v2">3 · 各向异性分格</option><option value="radial">4 · 放射蛛网（核心）</option><option value="dual">5 · 双向流线格网</option><option value="frei">6 · Frei Otto 湿毛线</option><option value="vein">7 · 叶脉生长 + 闭环</option><option value="slime">8 · 黏菌 / 智能体</option></select></div>
     <div class="row"><label for="runSpeed">演示速度</label><input type="range" id="runSpeed" min="0.5" max="2" step="0.5" value="1"><output id="v_runSpeed">1×</output></div>
     <div class="btns2" style="border-bottom:0;padding-bottom:4px"><button type="button" class="mini" id="runFull">全屏演示</button></div>
     <p class="pmOut" id="runHint">按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。</p>
@@ -744,7 +743,7 @@ $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.wi
   { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: $('c_prim').checked }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
 async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } INTRO = true; SNAP = obj;
-  P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; $('runMode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 演示；其余参数照保存的
+  P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
   SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   siteText();
   focus = null; solve(false); }
@@ -1060,7 +1059,7 @@ function demoLoop(ts) { if (!DEMO.on) return; const dt = DEMO.last ? Math.min(0.
   let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“生成这一步”，结构会一步步长出来。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
   try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(demoLoop); }
 async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = $('runNow').disabled = false;
-  await demoPrepare(v1 != null ? v1 : DEMO.guided ? P.mode : $('runMode').value);
+  await demoPrepare(v1 != null ? v1 : P.mode); // 演示统一跟着第 3 步的生成模式
   $('dmLogic').value = DEMO.mode;
   const st = $('dmSteps'); st.textContent = ''; DST.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = String(i).padStart(2, '0'); b.title = L(s.zh, s.en); b.onclick = () => { DEMO.T = dmT0[i] + 1e-3; }; st.appendChild(b); });
   if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); requestAnimationFrame(demoLoop); }
@@ -1101,7 +1100,8 @@ $('dmPlay').onclick = () => { if (!DEMO.playing && DEMO.T >= DEMO.total - 0.01) 
 $('dmPrev').onclick = () => { const k = dmStage(); DEMO.T = dmT0[Math.max(0, DEMO.T - dmT0[k] < 0.6 ? k - 1 : k)] + 1e-3; };
 $('dmNext').onclick = () => { const k = dmStage(); DEMO.T = k < DST.length - 1 ? dmT0[k + 1] + 1e-3 : DEMO.total - 1e-3; };
 $('dmSpeed').onchange = e => { DEMO.speed = +e.target.value; $('runSpeed').value = e.target.value; $('v_runSpeed').textContent = e.target.value + '×'; };
-$('dmLogic').onchange = async e => { if (!DEMO.on) return; DEMO.playing = false; await demoPrepare(e.target.value); $('runMode').value = e.target.value; if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.playing = true; dmPlayBtn(); };
+// 全屏里换模式 = 第 3 步也换，演示结束后的结果用同一个模式
+$('dmLogic').onchange = async e => { if (!DEMO.on) return; DEMO.playing = false; P.mode = e.target.value; P.v1 = P.mode === 'v1' ? 1 : 0; $('mode').value = P.mode; syncWCore(); DEMO.dirty = true; savePSoon(); await demoPrepare(P.mode); if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.playing = true; dmPlayBtn(); };
 addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape') demoExit(); else if (!DEMO.full) return; else if (e.key === ' ') { e.preventDefault(); $('dmPlay').click(); } else if (e.key === 'ArrowRight') $('dmNext').click(); else if (e.key === 'ArrowLeft') $('dmPrev').click(); });
 addEventListener('resize', () => { if (DEMO.on && mode === '2d') dmFit(); });
 syncPrimAng();
