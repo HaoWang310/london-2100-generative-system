@@ -125,3 +125,11 @@ test('street crossings are elevated with enough clearance; no column on a road s
   for (let i = 0; i < S.length; i += 3) { const x = Math.floor((S[i] - g.xmin) / g.RES), y = Math.floor((g.ymax - S[i + 1]) / g.RES); if (site.roadM[y * g.W + x] && site.landM[y * g.W + x] && !site.waterM[y * g.W + x] && S[i + 2] > 0.01 && S[i + 2] < 5 - 0.01) low++; }
   assert.ok(low / (S.length / 3) < 0.02, 'corridor geometry between the street and 5 m: ' + low);
 });
+
+// 极端情况：没有主干路时主路间距不失控，重要路口退到贯通 × 贯通
+test('main-road spacing stays sensible without main roads', () => {
+  const a = JSON.parse(JSON.stringify(snap)); a.roads = a.roads.filter(r => r.grade !== 'main'); const sa = SS.prepareSite(a);
+  assert.ok(sa.d1 >= 1.6 * sa.d2 && sa.d1 <= 3.5 * sa.d2, 'd1 ' + sa.d1); assert.ok(sa.hubs.length > 0, 'through x through junctions');
+  const b = JSON.parse(JSON.stringify(a)); b.roads = b.roads.filter(r => r.grade === 'local'); const sb = SS.prepareSite(b); assert.ok(sb.d1 <= 3.5 * sb.d2, 'd1 ' + sb.d1);
+  assert.ok(Math.abs(site.d1 - 378) < 5, 'P2 unchanged ' + site.d1);
+});
