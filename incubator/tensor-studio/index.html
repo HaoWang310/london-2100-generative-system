@@ -352,6 +352,21 @@ window.addEventListener('DOMContentLoaded',()=>{
 @media(max-height:780px){.displayPanel .dpSection{padding:9px 12px 8px}.displayPanel .dpTile{min-height:42px}.displayPanel .dpTile.dpRow{min-height:30px}}
 @media(max-width:760px){#panel.ts-panel{width:min(330px,calc(100vw - 28px));max-height:52dvh}.displayPanel{top:auto;bottom:52px;width:180px;max-height:40dvh}}
 @media(prefers-reduced-motion:reduce){.displayPanel .dpSw,.displayPanel .dpSw::after{transition:none}}
+/* (v8.47) phones only (html.phoneUi: a touch screen whose short side is under 600 px): the control panel is a sheet along
+   the bottom, the display panel opens from a button, the timeline sits just above the folded sheet. Computers, iPads: as before */
+html.phoneUi #panel.ts-panel{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;width:100%!important;min-width:0!important;max-width:none!important;
+  max-height:calc(100dvh - 64px)!important;border-radius:20px 20px 0 0!important;border-bottom:0!important;padding:0 14px calc(12px + env(safe-area-inset-bottom))!important;z-index:40;transition:height .28s cubic-bezier(.2,0,0,1)}
+html.phoneUi #panel.ts-panel.sheetDragging{transition:none}
+html.phoneUi #panel.collapsed{height:auto!important;min-width:0!important;padding-bottom:calc(10px + env(safe-area-inset-bottom))!important}
+html.phoneUi #panel.collapsed > .sheetHandle{display:block!important}
+#panel .sheetHandle{all:unset;display:block;position:sticky;top:0;z-index:2;width:100%;height:26px;margin:0 0 2px;background:inherit;cursor:grab;touch-action:none}
+#panel .sheetHandle::before{content:"";position:absolute;left:50%;top:9px;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:#5c5c61}
+html.phoneUi #tsResize{display:none!important}
+html.phoneUi #pmBar{bottom:calc(var(--sheet-fold,100px) + 8px)!important}
+html.phoneUi .dpToggle{position:fixed;z-index:21;top:12px;right:8px;height:40px;padding:0 16px;border-radius:12px;border:1px solid #2f2f34;background:rgba(14,14,16,.94);color:#f5f5f7;font:600 13px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+html.phoneUi .dpToggle[aria-expanded="true"]{background:#f5f5f7;color:#0b0b0d;border-color:#f5f5f7}
+html.phoneUi .displayPanel{top:60px!important;bottom:auto!important;right:8px!important;width:min(240px,calc(100vw - 16px))!important;max-height:calc(100dvh - 190px)!important}
+html.phoneUi.dpHidden .displayPanel{display:none!important}
 
 /* (v8.7) the process mode: the steps in the left panel, the timeline at the bottom */
 body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-box{display:none!important}
@@ -511,7 +526,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.46.0" data-en="Station P2 example · v8.46.0">车站 P2 示例 · v8.46.0</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.47.0" data-en="Station P2 example · v8.47.0">车站 P2 示例 · v8.47.0</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -669,6 +684,41 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
   new ResizeObserver(place).observe(p); place(); })();
 </script>
 <script>
+// (v8.47) phones: the control panel is a sheet along the bottom. It starts folded (title only) so the plan fills the screen;
+// tap its handle (or − / +) to open it halfway or fold it, drag the handle to any height (it settles folded, half or nearly
+// full). The display panel opens from a "Display" button (hidden at first) and the wind rose starts off. Computers, iPads: as before.
+(() => { let phone = false; try { phone = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch (e) {}
+  const p = document.getElementById('panel'), b = document.getElementById('tsCollapse'), root = document.documentElement; if (!phone || !p) return;
+  root.classList.add('phoneUi');
+  const FULL = () => Math.max(200, innerHeight - 64), HALF = () => Math.round(innerHeight * 0.52);
+  const set = st => { const folded = st === 'folded'; p.classList.toggle('collapsed', folded); p.dataset.sheet = st;
+    if (b){ b.textContent = folded ? '+' : '−'; b.setAttribute('aria-expanded', String(!folded)); }
+    p.style.height = folded ? '' : (st === 'full' ? FULL() : HALF()) + 'px';
+    if (folded) requestAnimationFrame(() => root.style.setProperty('--sheet-fold', Math.round(p.getBoundingClientRect().height) + 'px'));
+    if (window.__TS_INSETS) window.__TS_INSETS(); };
+  const handle = document.createElement('button'); handle.type = 'button'; handle.className = 'sheetHandle'; handle.setAttribute('aria-label', 'Show or hide the control panel'); p.prepend(handle);
+  let drag = null;
+  handle.addEventListener('pointerdown', e => { drag = { id: e.pointerId, y: e.clientY, h: p.getBoundingClientRect().height, moved: false }; handle.setPointerCapture(e.pointerId); });
+  handle.addEventListener('pointermove', e => { if (!drag || e.pointerId !== drag.id) return; const dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dy) < 6) return;
+    if (!drag.moved){ drag.moved = true; p.classList.remove('collapsed'); p.classList.add('sheetDragging'); }
+    p.style.height = Math.max(72, Math.min(FULL(), drag.h - dy)) + 'px'; });
+  const end = e => { if (!drag || e.pointerId !== drag.id) return; const d = drag; drag = null; p.classList.remove('sheetDragging');
+    if (!d.moved){ set(p.classList.contains('collapsed') ? 'half' : 'folded'); return; }
+    const h = p.getBoundingClientRect().height; set(h < HALF() * 0.55 ? 'folded' : h < (HALF() + FULL()) / 2 ? 'half' : 'full'); };
+  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+  if (b) b.onclick = () => set(p.classList.contains('collapsed') ? 'half' : 'folded');
+  set('folded');
+  addEventListener('resize', () => set(p.dataset.sheet || 'folded'));
+  const d = document.getElementById('displayPanel');
+  if (d){ root.classList.add('dpHidden');
+    const t = document.createElement('button'); t.type = 'button'; t.id = 'dpToggle'; t.className = 'dpToggle'; t.setAttribute('aria-controls', 'displayPanel');
+    t.innerHTML = '<span data-i18n data-zh="显示" data-en="Display">显示</span>';
+    const sync = () => t.setAttribute('aria-expanded', String(!root.classList.contains('dpHidden')));
+    t.onclick = () => { root.classList.toggle('dpHidden'); sync(); }; sync(); d.before(t); }
+  const rose = document.getElementById('lRose'); if (rose) rose.checked = false;
+})();
+</script>
+<script>
 (()=>{const d=document.getElementById('advanced');if(!d)return;
  try{if(localStorage.getItem('tensorStudio.advancedOpen')==='1')d.open=true;}catch(e){}
  d.addEventListener('toggle',()=>{try{localStorage.setItem('tensorStudio.advancedOpen',d.open?'1':'0');}catch(e){}});})();
@@ -678,10 +728,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.46.0';
-import { floodForSite } from './scripts/flood_risk.js?v=8.46.0';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.46.0';
-const V = '8.46.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.47.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.47.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.47.0';
+const V = '8.47.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
