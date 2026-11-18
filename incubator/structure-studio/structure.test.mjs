@@ -140,3 +140,14 @@ test('index.html inline script parses', () => {
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]); assert.ok(scripts.length >= 1);
   for (const src of scripts) assert.doesNotThrow(() => new Function(src));
 });
+
+// 方案打分（与张量场工作室统一：5 组 0–100、按权重加权）；后台线程脚本能解析
+test('structure score: five groups in 0–100, weighted total, deterministic; worker script parses', () => {
+  const s = SS.scoreStructure(F); assert.deepEqual(Object.keys(s.groups).sort(), ['cells', 'eff', 'farm', 'prim', 'span']);
+  for (const v of Object.values(s.groups)) if (v != null) assert.ok(v >= 0 && v <= 100);
+  assert.ok(s.total > 40 && s.total <= 100, 'P2 default scores sensibly ' + s.total);
+  assert.equal(SS.scoreStructure(SS.buildStructure(site, P, new Set())).total, s.total, 'same seed, same score');
+  const only = SS.scoreStructure(F, { farm: 0, cells: 0, prim: 1, span: 0, eff: 0 }); assert.equal(only.total, s.groups.prim, 'weights select groups');
+  const sk = SS.runSketch(F); assert.equal(sk.cells.length, F.cellPolys.length); assert.equal(sk.towers.length, F.towers.length);
+  assert.doesNotThrow(() => new Function('importScripts', readFileSync(new URL('./engine/compare-worker.js', import.meta.url), 'utf8')));
+});

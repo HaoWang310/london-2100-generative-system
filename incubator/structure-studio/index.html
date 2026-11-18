@@ -198,6 +198,42 @@ body.cards-on #cardBar{display:flex}
 @media(max-width:900px){:root{--pr:14px}.displayPanel{top:auto;bottom:14px;width:190px;max-height:40dvh}#panel.ts-panel{max-height:55dvh}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
+/* 方案比较（与张量场工作室统一） */
+.pmScore{margin:10px 0 6px}
+.pmSHead{display:flex;align-items:baseline;gap:6px;margin:0 0 6px}.pmSHead span{font-size:12px;color:var(--grey);margin-right:auto}.pmSHead b{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}.pmSHead i{font-style:normal;font-size:12px;color:var(--grey)}
+.pmSRow{display:grid;grid-template-columns:1fr 56px 26px 74px;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.pmSName b{display:block;font-size:12.5px;font-weight:500;color:var(--ink)}.pmSName span{display:block;font-size:10.5px;color:var(--grey);line-height:1.35}
+.pmSBar{height:6px;border-radius:3px;background:var(--fill)}.pmSBar i{display:block;height:100%;border-radius:3px;background:var(--ink)}
+.pmSVal{font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+.pmSW{display:flex;align-items:center;gap:4px}.pmSW input{width:54px}.pmSW em{font-style:normal;font-size:10.5px;color:var(--grey);width:16px;text-align:right;font-variant-numeric:tabular-nums}
+.pmHint{font-size:11.5px;line-height:1.5;color:var(--grey);margin:6px 0}
+.pmWarn{font-size:11.5px;color:#ff9f0a;margin:4px 0}
+.pmCmp{border-top:1px solid var(--line);padding-top:8px;margin:4px 0 6px}
+.pmCHead{display:flex;align-items:center;justify-content:space-between}.pmCHead b{font-size:12.5px;font-weight:500;color:var(--ink)}
+.pmLink{border:0;background:none;color:#0a84ff;font:inherit;font-size:12px;cursor:pointer;padding:2px 0}
+.pmProg{height:4px;border-radius:2px;background:var(--fill);margin:6px 0 0}.pmProg i{display:block;height:100%;border-radius:2px;background:var(--ink);transition:width .2s}
+.pmCList{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.pmCCard{display:grid;grid-template-columns:76px 1fr;gap:9px;padding:7px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.pmCCard.cur{border-color:var(--grey2)}.pmCCard.view{border-color:#0a84ff}
+.pmCCard img{width:76px;height:76px;border-radius:6px;display:block;cursor:pointer;background:#000}
+.pmCT{display:flex;align-items:baseline;gap:6px}.pmCT b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}.pmCT span{font-size:11.5px;color:var(--grey)}
+.pmCG{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:11px;color:var(--ink);margin:2px 0;font-variant-numeric:tabular-nums}
+.pmCS{font-size:10.5px;line-height:1.4;color:var(--grey)}
+.pmCCtl{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:8px;margin:6px 0}.pmCCtl label{font-size:12px;color:var(--grey)}.pmCCtl output{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink);min-width:20px;text-align:right}
+.pmCCtl .pmSeg{grid-column:2 / 4}
+.pmSeg{display:flex;background:var(--fill);border-radius:8px;padding:2px;gap:2px}.pmSeg button{flex:1;border:0;background:none;color:var(--grey);font:inherit;font-size:11.5px;padding:5px 4px;border-radius:6px;cursor:pointer}.pmSeg button.on{background:var(--raise);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.25)}.pmSeg button:disabled{opacity:.35;cursor:default}
+.pmActs{display:flex;gap:8px;margin:8px 0 2px}.pmActs button{flex:1}
+.pmPrev{color:#0a84ff}
+#cmpStage{position:fixed;z-index:12;top:72px;left:calc(var(--pl) + (100vw - var(--pl) - var(--pr)) / 2);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;background:rgba(14,14,16,.88);border:1px solid #2f2f34;border-radius:12px;color:#f5f5f7;font-size:12px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);pointer-events:none;white-space:nowrap}
+#cmpStage[hidden]{display:none}#cmpStage b{font-weight:600;font-size:12.5px}#cmpStage span{color:#c7c7cc}
+#cmpPop{position:fixed;z-index:13;top:42%;left:calc(var(--pl) + (100vw - var(--pl) - var(--pr)) / 2);transform:translate(-50%,-50%) scale(.92);opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:14px 26px;border-radius:18px;background:rgba(14,14,16,.86);color:#f5f5f7;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#cmpPop.show{opacity:1;transform:translate(-50%,-50%) scale(1)}#cmpPop b{font-size:52px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}#cmpPop span{font-size:12px;color:#c7c7cc;margin-top:4px}#cmpPop.best b{color:#30d158}
+#cmpStrip{position:fixed;z-index:12;bottom:calc(var(--cb) + 64px);left:calc(var(--pl) + (100vw - var(--pl) - var(--pr)) / 2);transform:translateX(-50%);max-width:calc(100vw - var(--pl) - var(--pr) - 40px);display:flex;gap:4px;padding:6px;background:rgba(14,14,16,.88);border:1px solid #2f2f34;border-radius:12px;overflow-x:auto;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#cmpStrip[hidden]{display:none}
+.pmTh{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px solid transparent;border-radius:9px;background:none;padding:2px;color:#f5f5f7;font:inherit;font-size:11px;font-variant-numeric:tabular-nums;cursor:pointer}
+.pmTh img{width:52px;height:52px;border-radius:6px;display:block;background:#000}.pmTh.best{border-color:#30d158}.pmTh.view{border-color:#0a84ff}.pmTh.cur span{color:#c7c7cc}
+body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
+@media (prefers-reduced-motion: reduce){#cmpPop{transition:none}}
 </style>
 </head>
 <body>
@@ -281,7 +317,7 @@ body.cards-on #cardBar{display:flex}
         </div></div></li>
       <li class="pmStep" data-k="5"><button type="button" class="pmHead"><span class="pmNum">5</span><span>方案</span><span class="pmFlag" id="sum5"></span></button>
         <div class="pmBody"><p class="pmNote">最后一步：换一个随机种子，得到同一套规律下的另一种方案。室内现在铺满农田；沿走廊的建筑之后单独做成一个功能，这里先不排。</p><div class="card pmCard">
-<div class="row"><label for="seed">方案（随机种子）</label><input type="range" id="seed" min="1" max="200" step="1" value="3"><output id="v_seed">3</output></div></div><p class="pmOut">其他参数都调好后，拖这里换方案：规律不变，只是网的具体排布不同；同一个编号每次结果一样。</p></div></li>
+<div class="row"><label for="seed">方案（随机种子）</label><input type="range" id="seed" min="1" max="200" step="1" value="3"><output id="v_seed">3</output></div></div><p class="pmOut">其他参数都调好后，拖这里换方案：规律不变，只是网的具体排布不同；同一个编号每次结果一样。</p><div class="pmScore" id="scoreBox"></div><div class="pmCmp" id="cmpBox"></div></div></li>
     </ol></div>
 </aside>
 
@@ -346,7 +382,7 @@ function setLang(lang, quiet) {
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
   translateStatic(); for (const k in FMT) { const o = $('v_' + k); if (o && P[k] != null) o.textContent = FMT[k](P[k]); }
   if (!quiet && F) { writeTexts(); buildCards(); focusCell(focus); siteText(); drawPlan(); }
-  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); buildNextBtns(); syncPrimAng(); }
+  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); buildNextBtns(); syncPrimAng(); if (typeof CMP !== 'undefined') { renderScore(); renderCmp(); strip(); } }
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
@@ -603,9 +639,9 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (TSV) { if (!tsBase) makeTsBase(); ctx.drawImage(tsBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s); tsHud();
     { const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s]; drawVec(ctx, X, 1, {}); if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1); } return; }
-  ctx.drawImage(planBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s);
+  const pv = typeof CMP !== 'undefined' && CMP.preview != null && cmpBase; ctx.drawImage(pv ? cmpBase : planBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s);
   const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s];
-  drawVec(ctx, X, 1, { cells: true, prim: $('c_prim').checked, hover: hoverId, focus: focus && focus.id });
+  drawVec(ctx, X, 1, pv ? {} : { cells: true, prim: $('c_prim').checked, hover: hoverId, focus: focus && focus.id }); // 预览比较里的某个方案时只画它自己的平面
   if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1);
 }
 (function planEvents() { const cv = $('plan'); let drag = null;
@@ -616,7 +652,7 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
   cv.addEventListener('wheel', e => { if (DEMO.on) { e.preventDefault(); return; } e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
   cv.addEventListener('pointerleave', () => setHover(0));
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
-function setMode(m) { if (m === '3d' && TSV) setTsv(false); mode = m; if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } }
+function setMode(m) { if (m === '3d' && TSV) setTsv(false); mode = m; if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
 
 // ---------------------------------------------------------------- 卡片
 function thumb(c) {
@@ -693,7 +729,7 @@ function solve(keepExcl) {
     clearTimeout(fine); swapF(SS.buildStructure(SITE, INTRO ? { ...P, trace: 1 } : P, EXCL)); M = null; sceneDirty = true;
     if (INTRO) { writeTexts(); fitPlan(); $('busy').style.display = 'none'; INTRO = false; guidedIntro(); return; } // 开场：结构已带过程记录，直接交给逐步演示
     makePlanBase(); if (mode === '3d') ensure3D();
-    writeTexts(); savePSoon();
+    writeTexts(); savePSoon(); scoreSoon();
     const keepFocus = focus ? F.cells.find(c => Math.hypot(c.c[0] - focus.c[0], c.c[1] - focus.c[1]) < 30) : null;
     buildCards(); focusCell(keepFocus || null); if (mode === '2d') { if (!keepExcl) fitPlan(); drawPlan(); }
     $('busy').style.display = 'none';
@@ -721,6 +757,7 @@ function syncPrimAng() { const auto = +P.nPrim >= 3, el = $('primAng'); el.disab
 $('nPrim').addEventListener('input', () => setTimeout(syncPrimAng, 0));
 $('mode').onchange = e => { P.mode = e.target.value; P.v1 = P.mode === 'v1' ? 1 : 0; syncWCore(); if (DEMO.on && DEMO.guided && !DEMO.full) { clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 60); return; } if (DEMO.on) demoExit(); clearTimeout(fine); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 30); };
 for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
+for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => drawPlan(); $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
@@ -742,7 +779,7 @@ $('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; const x = cv.getContext('2d'); x.drawImage(TSV && tsBase ? tsBase : planBase, 0, 0);
   { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: $('c_prim').checked }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
-async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } INTRO = true; SNAP = obj;
+async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj;
   P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
   SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   siteText();
@@ -1055,19 +1092,156 @@ function dmEnterStage(k) { DEMO.stage = k; const s = DST[k];
   $('runHint').textContent = DEMO.guided && !DEMO.playing && k <= 1 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“生成这一步”，结构会一步步长出来。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : DEMO.guided && !DEMO.playing ? L('停在这一步：调整参数，画面在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Paused at this step: adjust its settings and the picture updates here; then press “Next” at the bottom of the card. Click an earlier step card to go back.') : L(`第 ${String(k).padStart(2, '0')} 步 · ${s.zh}`, `Step ${String(k).padStart(2, '0')} · ${s.en}`); }
 function dmParamsTick(k) { const u = dmC01(dmProg(k) / 0.6), e = 1 - (1 - u) ** 3; for (const r of DEMO.prRows || []) { const v = r.v * e; r.b.textContent = (r.dec ? v.toFixed(r.dec) : Math.round(v).toLocaleString()) + r.unit; } }
 function dmPlayBtn() { $('dmPlay').textContent = DEMO.playing ? '❚❚' : '▶'; $('runPause').textContent = DEMO.playing ? L('暂停', 'Pause') : L('继续', 'Resume'); }
-function demoLoop(ts) { if (!DEMO.on) return; const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
+// 每次开始演示只留最新的一个动画循环（连续开始时旧循环会叠加：时间走两倍、读到还没准备好的图层）
+function demoLoop(ts, id) { if (!DEMO.on || id !== DEMO.lid) return; if (!DEMO.L) { requestAnimationFrame(t => demoLoop(t, id)); return; } const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
   let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“生成这一步”，结构会一步步长出来。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
-  try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(demoLoop); }
+  try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(t => demoLoop(t, id)); }
 async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = $('runNow').disabled = false;
   await demoPrepare(v1 != null ? v1 : P.mode); // 演示统一跟着第 3 步的生成模式
   $('dmLogic').value = DEMO.mode;
   const st = $('dmSteps'); st.textContent = ''; DST.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = String(i).padStart(2, '0'); b.title = L(s.zh, s.en); b.onclick = () => { DEMO.T = dmT0[i] + 1e-3; }; st.appendChild(b); });
-  if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); requestAnimationFrame(demoLoop); }
+  if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); const lid = DEMO.lid = (DEMO.lid || 0) + 1; requestAnimationFrame(t => demoLoop(t, lid)); }
 function demoExit(keep3d) { if (!DEMO.on) return; DEMO.on = false; document.body.classList.remove('demo-on', 'demo-run'); $('runPause').disabled = $('runNow').disabled = true; $('runPause').textContent = L('暂停', 'Pause'); $('runHint').textContent = L('按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。', 'Builds automatically, step by step, from the site to 3D with the current sliders; the matching steps below open in turn.');
   document.querySelectorAll('.pmStep').forEach(c => c.classList.remove('running', 'done')); const sv = DEMO.saved; DEMO.saved = null; DEMO.L = null; DEMO.trail = DEMO.trail2 = DEMO.deckc = null;
   const dirty = DEMO.dirty; DEMO.dirty = false; DEMO.guided = false; DEMO.stopAt = null;
   if (dirty) { F = DEMO.FD; M = null; sceneDirty = true; setMode(keep3d ? '3d' : '2d'); solve(false); return; }
-  if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); buildCards(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
+  if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); buildCards(); buildNextBtns(); if (typeof scoreSoon === 'function') scoreSoon(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
+// ── 方案比较（与张量场工作室统一）：5 组自动打分（各 0–100，按权重加权），按设定的数量自动试多个方案，排序比较 ──
+const SGROUPS = [['farm', '农田', 'Farmland', '农田占场地的比例', 'farmland share of the site'], ['cells', '室', 'Cells', '大小均匀、过小与尖角的室', 'even sizes, small and sharp cells'],
+  ['prim', '主线', 'Primaries', '主线做成主线走廊的比例', 'primaries built as primary corridors'], ['span', '跨越', 'Spans', '跨街道 / 水面的长度、顺街走的段', 'length over streets / water, runs along streets'],
+  ['eff', '效率', 'Efficiency', '每公顷农田需要的走廊面积', 'corridor area per hectare of farmland']];
+const MODES8 = ['v0', 'v1', 'v2', 'radial', 'dual', 'frei', 'vein', 'slime'];
+const modeName = m => { const o = $('mode').querySelector('option[value="' + m + '"]'); return o ? o.textContent : m; };
+const SW = Object.assign({}, SS.SCORE_W0); try { const s = JSON.parse(localStorage.getItem('structureStudio.scoreW') || 'null'); if (s) Object.assign(SW, s); } catch (e) {}
+var CMP = { N: 1, range: 'seed', show: 'result', list: [], running: false, stop: false, preview: null, stale: false, i: 0, n: 0, n1: 0 };
+try { const s = JSON.parse(localStorage.getItem('structureStudio.cmp') || 'null'); if (s) { CMP.N = s.N || 1; CMP.range = s.range || 'seed'; CMP.show = s.show || 'result'; } } catch (e) {}
+const saveCmpSet = () => { try { localStorage.setItem('structureStudio.cmp', JSON.stringify({ N: CMP.N, range: CMP.range, show: CMP.show })); } catch (e) {} };
+const totalOf = g => { let tw = 0, ts = 0; for (const [k] of SGROUPS) { if (g[k] == null) continue; tw += SW[k]; ts += SW[k] * g[k]; } return tw ? ts / tw : 0; };
+const rankT = c => totalOf(c.groups) - (c.fail.length ? 100 : 0);
+function ranked() { return CMP.list.map((c, i) => ({ c, i, t: rankT(c) })).sort((a, b) => b.t - a.t); }
+// 当前结果的分数（只在精算结果上算，约 0.15 秒；结果换了才重算）
+function curScore() { if (CMP.preview != null && CMP.list[CMP.preview]) return CMP.list[CMP.preview]; if (!F || !F.grid || F.grid.RES !== 2) return null;
+  if (!F._score) F._score = SS.scoreStructure(F, SW); return F._score; }
+function renderScore() { const box = $('scoreBox'); if (!box) return; const s = curScore(); if (!s) { box.innerHTML = ''; return; }
+  let h = '<div class="pmSHead"><span>' + (CMP.preview != null ? L('综合评分 · 预览第 ' + (CMP.preview + 1) + ' 个方案', 'Score · previewing run ' + (CMP.preview + 1)) : L('综合评分', 'Score')) + '</span><b>' + Math.round(totalOf(s.groups)) + '</b><i>/ 100</i></div>';
+  if (s.fail.length) h += '<p class="pmWarn">' + L('有约 ' + s.fail[0].n + ' ha 的白块（走廊填满了一块地，不计分，但需要处理）', 'about ' + s.fail[0].n + ' ha of blank deck (a patch filled by corridor): not scored, but a fault') + '</p>';
+  if (s.warn && s.warn.length) h += '<p class="pmHint">' + L(s.warn[0].n + ' 个室太窄，换成了较窄的走廊', s.warn[0].n + ' cell(s) too thin got a narrower corridor') + '</p>';
+  for (const [k, z, e, dz, de] of SGROUPS) { const v = s.groups[k];
+    h += '<div class="pmSRow"><div class="pmSName"><b>' + L(z, e) + '</b><span>' + L(dz, de) + '</span></div><div class="pmSBar"><i style="width:' + (v == null ? 0 : Math.round(v)) + '%"></i></div><span class="pmSVal">' + (v == null ? '—' : Math.round(v)) + '</span>' +
+      '<label class="pmSW" title="' + L('权重', 'Weight') + '"><input type="range" min="0" max="50" step="5" value="' + SW[k] + '" data-g="' + k + '" aria-label="' + L(z + '权重', e + ' weight') + '"><em>' + SW[k] + '</em></label></div>'; }
+  box.innerHTML = h + '<p class="pmHint">' + L('右边的滑块是各组权重：总分 = 各组分数按权重加权平均。没有数据的组（—）不计入。', 'The sliders on the right are the weights: the score is the groups averaged by weight. A group without data (—) is left out.') + '</p>'; }
+$('scoreBox').addEventListener('input', e => { const k = e.target.dataset && e.target.dataset.g; if (!k) return; SW[k] = +e.target.value; e.target.nextElementSibling.textContent = e.target.value;
+  try { localStorage.setItem('structureStudio.scoreW', JSON.stringify(SW)); } catch (err) {} const s = curScore(); if (s) $('scoreBox').querySelector('.pmSHead b').textContent = Math.round(totalOf(s.groups)); renderCmp(); strip(); });
+let scoreT = null; function scoreSoon() { clearTimeout(scoreT); scoreT = setTimeout(() => { renderScore(); if (CMP.list.length && !CMP.running) { const c = CMP.list.find(c => c.cur); markCur(); renderCmp(); strip(); } }, 60); }
+// 缩略图 / 预览：用方案的轻量数据（室多边形、塔）画，配色跟着当前配色
+function sketchDraw(ctx, sk, X, k, base, farmImg) { const path = Q => { ctx.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); };
+  ctx.save(); ctx.beginPath(); for (const Q of SITE.footPolys) Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.clip(); // 只画红线以内
+  ctx.fillStyle = PAL.deck; ctx.fillRect(-1e5, -1e5, 2e5, 2e5);
+  if (farmImg) { ctx.save(); ctx.beginPath(); for (const Q of sk.cells) Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.clip(); ctx.drawImage(farmImg, 0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore(); }
+  else { ctx.fillStyle = PAL.farm; for (const Q of sk.cells) { path(Q); ctx.fill(); } } ctx.restore();
+  ctx.fillStyle = PAL.deck; for (const t of sk.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.2, (t[2] + 6) * k), 0, 7); ctx.fill(); }
+  ctx.strokeStyle = '#e0412f'; ctx.lineWidth = Math.max(.6, 1.4 * k * 3); ctx.setLineDash([]); for (const Q of SITE.footPolys) { path(Q); ctx.stroke(); } }
+function thumbOf(sk, px) { const c = document.createElement('canvas'); c.width = c.height = px; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, px, px);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const Q of SITE.footPolys) for (const p of Q) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  const s = (px - 8) / Math.max(x1 - x0, y1 - y0), ox = (px - (x1 - x0) * s) / 2, oy = (px - (y1 - y0) * s) / 2, X = p => [ox + (p[0] - x0) * s, oy + (y1 - p[1]) * s];
+  sketchDraw(x, sk, X, s * 0.25, false); return c.toDataURL(); }
+var cmpBase = null;
+function previewBase(sk) { const g = F.grid; if (!F._pvG) F._pvG = makePlanBase({ ground: 1, water: 1 }); const cv = document.createElement('canvas'); cv.width = F._pvG.width; cv.height = F._pvG.height; const x = cv.getContext('2d');
+  x.drawImage(F._pvG, 0, 0); const k = cv.width / g.W / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k];
+  // 室里填当前配色的地块渐变（和正常平面一致）；没有渐变的配色用纯色
+  const gi = PAL.grad && F._pb && F._pb.grad ? Object.entries(F._pb.grad).filter(([key]) => key.startsWith(SCHEME + '|')).map(e => e[1])[0] : null; sketchDraw(x, sk, X, k, true, gi); return cv; }
+function preview(i) { const c = CMP.list[i]; if (!c || CMP.running && CMP.show === 'full') return; if (c.cur || CMP.preview === i) { unpreview(); return; } CMP.preview = i; cmpBase = previewBase(c.sketch); renderScore(); renderCmp(); strip(); drawPlan(); }
+function unpreview() { if (CMP.preview == null) return; CMP.preview = null; cmpBase = null; renderScore(); renderCmp(); strip(); drawPlan(); }
+function markCur() { for (const c of CMP.list) c.cur = c.seed === P.seed && c.mode === P.mode; }
+// 底部缩略图条：所有方案，最高分标绿，正在预览的标蓝
+var stripEl = document.createElement('div'); stripEl.id = 'cmpStrip'; stripEl.hidden = true;
+var popEl = document.createElement('div'); popEl.id = 'cmpPop'; var stageEl = document.createElement('div'); stageEl.id = 'cmpStage'; stageEl.hidden = true;
+document.body.append(stripEl, popEl, stageEl);
+function strip() { if (!CMP || !stripEl) return; if (!CMP.list.length || mode !== '2d') { stripEl.hidden = true; return; } const top = ranked()[0];
+  stripEl.innerHTML = CMP.list.map((c, i) => '<button type="button" class="pmTh' + (top && top.i === i ? ' best' : '') + (CMP.preview === i ? ' view' : '') + (c.cur ? ' cur' : '') + '" data-i="' + i + '" title="' + L('种子 ', 'seed ') + c.seed + ' · ' + modeName(c.mode) + '">' +
+    '<img alt="" src="' + c.img + '"><span>' + Math.round(totalOf(c.groups)) + (c.cur ? L(' 当前', ' now') : c.round === 2 ? L(' 细', ' fine') : '') + '</span></button>').join('');
+  stripEl.hidden = false; const last = stripEl.lastElementChild; if (CMP.running && last) last.scrollIntoView({ block: 'nearest', inline: 'end' }); }
+stripEl.addEventListener('click', e => { const b = e.target.closest('.pmTh'); if (b) preview(+b.dataset.i); });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function popScore(c, best) { popEl.innerHTML = '<b>' + Math.round(totalOf(c.groups)) + '</b><span>' + (best ? L('新的最高分', 'Best so far') : L('第 ' + CMP.list.length + ' 个方案', 'Run ' + CMP.list.length)) + '</span>';
+  popEl.classList.toggle('best', !!best); popEl.classList.add('show'); await sleep(900); popEl.classList.remove('show'); await sleep(200); }
+function stage(txt) { stageEl.hidden = !txt; stageEl.innerHTML = txt || ''; }
+// 每个方案大约多久（车站 P2，浏览器里）：不展示 / 只看结果在后台线程算；完整过程用逐步生成演示（6 倍速，到第 09 步为止）
+const PER = { off: 4, result: 5.2, full: 14 }, MODEK = { frei: 1.6, slime: 1.2, vein: 1.1 };
+function estimate() { const ms = CMP.range === 'modes' ? MODES8.concat(Array(Math.max(0, CMP.N - 8)).fill(P.mode)) : Array(CMP.N).fill(P.mode);
+  const s = Math.round(ms.slice(0, CMP.N).reduce((a, m) => a + PER[CMP.show] * (MODEK[m] || 1), 0)), mi = Math.floor(s / 60), r = s % 60; return L('约 ' + (mi ? mi + ' 分 ' : '') + r + ' 秒', 'about ' + (mi ? mi + ' min ' : '') + r + ' s'); }
+function estText() { return L(CMP.N + ' 个方案，', CMP.N + ' runs, ') + estimate() + (CMP.show === 'full' ? L('。主视图依次播放每个方案的生成过程。', '. The map plays each run being generated.') : CMP.show === 'result' ? L('。在后台计算，每算完一个就在主视图上显示它的结果。', '. Computed in the background; each result is shown on the map as it lands.') : L('。在后台计算，不展示过程，最快。', '. Computed in the background without display: the fastest.')); }
+function renderCmp() { const box = $('cmpBox'); if (!box) return; const running = CMP.running;
+  let h = '<div class="pmCHead"><b>' + L('方案比较', 'Compare runs') + '</b>' + (running ? '<button type="button" class="pmLink" data-act="stop">' + L('停止', 'Stop') + '</button>' : '') + '</div>';
+  if (!running) {
+    h += '<p class="pmHint">' + (CMP.range === 'modes' ? L('第 1 轮 8 种生成模式各试一次（用当前种子），第 2 轮在相对得分最高的两种模式里换种子细调；按总分排序。前面各步的参数不变。', 'Round 1 tries each of the 8 generation modes once (current seed); round 2 fine-tunes the two modes that did best against the average, with new seeds. Ranked by score. Your settings in the earlier steps stay.')
+      : L('前面各步的参数和第 3 步的生成模式都不变，只换随机种子：比较同一套规律下网的不同排布，按总分排序。', 'Your settings and the generation mode stay; only the random seed changes: different layouts of the same rules, ranked by score.')) + '</p>';
+    h += '<div class="pmCCtl"><label>' + L('方案数', 'Runs') + '</label><input type="range" min="1" max="24" step="1" value="' + CMP.N + '" data-ctl="n" aria-label="' + L('方案数', 'Runs') + '"><output>' + CMP.N + '</output></div>';
+    h += '<div class="pmCCtl"><label>' + L('范围', 'Range') + '</label><div class="pmSeg"><button type="button" data-range="seed" class="' + (CMP.range === 'seed' ? 'on' : '') + '">' + L('只换种子', 'Seeds only') + '</button><button type="button" data-range="modes" class="' + (CMP.range === 'modes' ? 'on' : '') + '"' + (CMP.N < 10 ? ' disabled title="' + L('方案数至少 10 个（8 种模式 + 2 个细调）', 'At least 10 runs (8 modes + 2 fine-tunes)') + '"' : '') + '>' + L('所有模式', 'All modes') + '</button></div></div>';
+    h += '<div class="pmCCtl"><label>' + L('展示', 'Show') + '</label><div class="pmSeg">' + [['full', '完整过程', 'Whole process'], ['result', '只看结果', 'Results'], ['off', '不展示', 'No display']].map(([k, z, e]) => '<button type="button" data-show="' + k + '" class="' + (CMP.show === k ? 'on' : '') + '">' + L(z, e) + '</button>').join('') + '</div></div>';
+    h += '<p class="pmHint pmEst">' + (CMP.N > 1 ? estText() : L('方案数为 1 时就是当前这一个方案（上面拖种子换）；设为 2 个以上，自动试多个方案并打分比较。', 'With 1 run it is just the current one (drag the seed above); set 2 or more to try several runs automatically and compare their scores.')) + '</p>'; }
+  if (!running && !CMP.list.length) { if (CMP.N > 1) h += '<div class="pmActs"><button type="button" class="mini primary" data-act="run">' + L('开始比较', 'Start') + '</button></div>'; }
+  else if (CMP.list.length || running) {
+    if (running) h += '<div class="pmProg"><i style="width:' + Math.round(100 * CMP.i / CMP.n) + '%"></i></div><p class="pmHint">' + L('已完成 ' + CMP.i + ' / ' + CMP.n + ' 个方案' + (CMP.n1 && CMP.i >= CMP.n1 ? '（细调阶段）' : ''), CMP.i + ' of ' + CMP.n + ' runs done' + (CMP.n1 && CMP.i >= CMP.n1 ? ' (fine-tuning)' : '')) + '</p>';
+    if (CMP.stale && !running) h += '<p class="pmWarn">' + L('前面的参数改过了：这些比较结果是按原来的参数算的，请重新比较。', 'Settings changed since: these runs used the old settings; compare again.') + '</p>';
+    const rows = ranked(), cur = rows.find(r => r.c.cur), top = rows.slice(0, 3); if (cur && !top.includes(cur)) top.push(cur);
+    if (CMP.preview != null && !running) h += '<p class="pmHint pmPrev">' + L('主视图正在预览第 ' + (CMP.preview + 1) + ' 个方案；再点一次它的缩略图回到当前方案。', 'Previewing run ' + (CMP.preview + 1) + ' on the map; click its thumbnail again to go back.') + '</p>';
+    h += '<div class="pmCList">' + top.map(r => { const c = r.c, t = totalOf(c.groups), d = cur && !c.cur ? t - totalOf(cur.c.groups) : null;
+      return '<div class="pmCCard' + (c.cur ? ' cur' : '') + (CMP.preview === r.i ? ' view' : '') + '"><img alt="" src="' + c.img + '" data-pv="' + r.i + '"><div class="pmCInfo"><div class="pmCT"><b>' + Math.round(t) + '</b><span>' + (c.cur ? L('当前方案', 'This run') : L('第 ' + (rows.indexOf(r) + 1) + ' 名', 'No. ' + (rows.indexOf(r) + 1))) + (d != null ? ' · ' + (d >= 0 ? '+' : '') + d.toFixed(1) : '') + (c.round === 2 ? L(' · 细调', ' · fine') : '') + '</span></div>' +
+        '<div class="pmCG">' + SGROUPS.map(([k, z, e]) => '<span>' + L(z, e) + ' ' + (c.groups[k] == null ? '—' : Math.round(c.groups[k])) + '</span>').join('') + '</div>' +
+        '<div class="pmCS">' + L('种子 ', 'seed ') + c.seed + ' · ' + modeName(c.mode) + ' · ' + c.cells + L(' 室', ' cells') + '</div>' + (c.fail.length ? '<div class="pmWarn">' + L('有白块', 'blank deck') + '</div>' : '') +
+        (!c.cur && !running ? '<button type="button" class="pmLink" data-act="use" data-i="' + r.i + '">' + L('用这个方案', 'Use this run') + '</button>' : '') + '</div></div>'; }).join('') + '</div>';
+    if (!running) h += '<div class="pmActs">' + (CMP.N > 1 ? '<button type="button" class="mini" data-act="run">' + L('重新比较', 'Compare again') + '</button>' : '') + '<button type="button" class="mini" data-act="clear">' + L('清除结果', 'Clear') + '</button></div>'; }
+  box.innerHTML = h; }
+$('cmpBox').addEventListener('input', e => { if (e.target.dataset.ctl !== 'n') return; CMP.N = +e.target.value; e.target.nextElementSibling.textContent = CMP.N; if (CMP.N < 10 && CMP.range === 'modes') CMP.range = 'seed'; saveCmpSet();
+  const md = $('cmpBox').querySelector('[data-range="modes"]'); if (md) { md.disabled = CMP.N < 10; md.classList.toggle('on', CMP.range === 'modes'); $('cmpBox').querySelector('[data-range="seed"]').classList.toggle('on', CMP.range === 'seed'); }
+  const est = $('cmpBox').querySelector('.pmEst'); if (est) est.textContent = CMP.N > 1 ? estText() : L('方案数为 1 时就是当前这一个方案（上面拖种子换）；设为 2 个以上，自动试多个方案并打分比较。', 'With 1 run it is just the current one (drag the seed above); set 2 or more to try several runs automatically and compare their scores.');
+  const acts = $('cmpBox').querySelector('.pmActs'); if (!CMP.list.length && (CMP.N > 1) !== !!acts) renderCmp(); });
+$('cmpBox').addEventListener('change', e => { if (e.target.dataset.ctl === 'n') renderCmp(); });
+$('cmpBox').addEventListener('click', e => { const sh = e.target.closest('[data-show]'); if (sh) { CMP.show = sh.dataset.show; saveCmpSet(); renderCmp(); return; }
+  const rg = e.target.closest('[data-range]'); if (rg && !rg.disabled) { CMP.range = rg.dataset.range; saveCmpSet(); renderCmp(); return; }
+  const pv = e.target.closest('[data-pv]'); if (pv) { preview(+pv.dataset.pv); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act;
+  if (a === 'run') compareRuns(); else if (a === 'stop') CMP.stop = true; else if (a === 'use') useRun(CMP.list[+b.dataset.i]); else if (a === 'clear') { unpreview(); CMP.list = []; CMP.stale = false; renderCmp(); strip(); } });
+// 用某个方案：把种子（和生成模式）设成它，按正常流程重新生成
+function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').value = c.seed; $('v_seed').textContent = c.seed;
+  if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
+// 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
+let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
+  if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
+  const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
+  return { groups: m.score.groups, raw: m.score.raw, fail: m.score.fail, warn: m.score.warn, sketch: m.sketch, cells: m.cells }; }
+async function runHere(Pr) { await sleep(20); const Fx = SS.buildStructure(SITE, Pr, new Set()), s = SS.scoreStructure(Fx, SW); return { ...s, sketch: SS.runSketch(Fx), cells: Fx.cells.length }; }
+// 完整过程：用逐步生成演示播放这个方案（6 倍速，播到第 09 步），再给它打分
+async function runShown(Pr) { const sv = { seed: P.seed, mode: P.mode, v1: P.v1 }; P.seed = Pr.seed; P.mode = Pr.mode; P.v1 = Pr.v1;
+  try { await demoStart(Pr.mode, false); DEMO.guided = false; DEMO.speed = 6; DEMO.stopAt = dmT0[9] + DST[9].d - 0.02;
+    while (DEMO.on && (DEMO.playing || DEMO.stopAt != null) && !CMP.stop) await sleep(120);
+    const Fx = DEMO.FD; if (!Fx) return null; const s = SS.scoreStructure(Fx, SW); return { ...s, sketch: SS.runSketch(Fx), cells: Fx.cells.length }; }
+  finally { P.seed = sv.seed; P.mode = sv.mode; P.v1 = sv.v1; } }
+// 要试的方案：当前的放第一个；"只换种子"其余用不重复的随机种子（同一个起点每次一样）；"所有模式"第 1 轮 8 种模式、第 2 轮在相对得分前两名的模式里换种子
+function seedList(n, avoid) { let r = (P.seed * 9301 + 49297) % 233280 || 7; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647, out = [], seen = new Set(avoid);
+  for (let k = 0; out.length < n && k < n * 50; k++) { const s = 1 + Math.floor(rnd() * 200); if (seen.has(s)) continue; seen.add(s); out.push(s); } return out; }
+function refineModes() { const r1 = CMP.list.filter(c => c.round === 1); const mean = {}; for (const [k] of SGROUPS) { const v = r1.map(c => c.groups[k]).filter(x => x != null); mean[k] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+  const rel = c => { let tw = 0, ts = 0; for (const [k] of SGROUPS) { if (c.groups[k] == null || mean[k] == null) continue; tw += SW[k]; ts += SW[k] * (c.groups[k] - mean[k]); } return (tw ? ts / tw : 0) - (c.fail.length ? 100 : 0); };
+  return r1.slice().sort((a, b) => rel(b) - rel(a)).slice(0, 2).map(c => c.mode); }
+async function compareRuns() { if (CMP.running || CMP.N < 2 || !SITE || !F) return; if (DEMO.on) demoExit(); unpreview();
+  const N = CMP.N, modes = CMP.range === 'modes' && N >= 10; CMP.list = []; CMP.running = true; CMP.stop = false; CMP.stale = false; CMP.i = 0; CMP.n = N; CMP.n1 = modes ? 8 : 0;
+  let queue = modes ? [P.mode, ...MODES8.filter(m => m !== P.mode)].map(m => ({ seed: P.seed, mode: m, round: 1 })) : [{ seed: P.seed, mode: P.mode, round: 1 }, ...seedList(N - 1, [P.seed]).map(s => ({ seed: s, mode: P.mode, round: 1 }))];
+  renderCmp(); strip();
+  for (let i = 0; i < N; i++) {
+    if (modes && i === 8) { const best = refineModes(), seeds = seedList(N - 8, [P.seed]); queue = queue.concat(seeds.map((s, k) => ({ seed: s, mode: best[k % best.length], round: 2 }))); renderCmp(); }
+    if (CMP.stop || !queue[i]) break; const run = queue[i], Pr = { ...P, seed: run.seed, mode: run.mode, v1: run.mode === 'v1' ? 1 : 0, trace: 0 };
+    stage('<b>' + L('方案 ' + (i + 1) + ' / ' + N, 'Run ' + (i + 1) + ' of ' + N) + (run.round === 2 ? L(' · 细调', ' · fine') : '') + '</b><span>' + L('种子 ', 'seed ') + run.seed + ' · ' + modeName(run.mode) + '</span>');
+    let s = null; try { s = CMP.show === 'full' ? await runShown(Pr) : await runInWorker(Pr); } catch (err) { console.error(err); }
+    if (!s || CMP.stop) break;
+    const prevBest = ranked()[0], c = { seed: run.seed, mode: run.mode, round: run.round, groups: s.groups, raw: s.raw, fail: s.fail || [], warn: s.warn || [], sketch: s.sketch, cells: s.cells, cur: run.seed === P.seed && run.mode === P.mode };
+    c.img = thumbOf(c.sketch, 152); CMP.list.push(c); CMP.i = i + 1; renderCmp(); strip();
+    if (CMP.show === 'result' && mode === '2d') { CMP.preview = CMP.list.length - 1; cmpBase = c.cur ? null : previewBase(c.sketch); if (c.cur) CMP.preview = null; drawPlan(); }
+    if (CMP.show !== 'off') await popScore(c, !c.fail.length && (!prevBest || rankT(c) > prevBest.t)); }
+  if (DEMO.on) demoExit(); CMP.running = false; CMP.stop = false; CMP.preview = null; cmpBase = null; stage(''); markCur(); renderScore(); renderCmp(); strip(); if (mode === '2d') drawPlan(); }
+renderCmp();
 // 引导模式：每张步骤卡底部"下一步"——播放下一步的生成过程，停在这一步的结果上；此时调这张卡的参数，画面停在这一步实时更新
 const CARD_FIRST = [0, 3, 4, 7, 9], CARD_LAST = [2, 3, 6, 8, 9];
 function buildNextBtns() { const cards = [...document.querySelectorAll('.pmStep')];
