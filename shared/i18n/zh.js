@@ -145,6 +145,7 @@ export const zh = {
   'stat.ms': '耗时 ms',
   'ws.save': '保存工作空间',
   'ws.open': '打开…',
+  'ws.more': '更多',
   'ws.opened': '工作空间已打开。',
   'ws.openFailed': '无法打开：{msg}',
   'ws.storageFull': '浏览器存储已满，结果不会自动保存，请用“保存工作空间”导出。',

@@ -145,6 +145,7 @@ export const en = {
   'stat.ms': 'Time ms',
   'ws.save': 'Save workspace',
   'ws.open': 'Open…',
+  'ws.more': 'More',
   'ws.opened': 'Workspace opened.',
   'ws.openFailed': 'Could not open: {msg}',
   'ws.storageFull': 'Browser storage is full; results are not auto-saved. Use “Save workspace”.',
