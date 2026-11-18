@@ -1,0 +1,48 @@
+name: Intro clips (one-off)
+
+# One-off job, only on the intro-clips branch: download the three Mixkit opening clips
+# (Mixkit Stock Video Free License), cut short loops, compress them for the web, make posters,
+# and commit them to assets/intro/ on this branch. Not meant to be merged into main.
+on:
+  push:
+    branches: [intro-clips]
+    paths: ['.github/workflows/intro-clips.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  clips:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && ffmpeg -version | head -1
+      - name: Download, cut, compress
+        run: |
+          set -e
+          mkdir -p assets/intro src
+          for pair in london:4265 housing:4010 agriculture:824; do
+            key=${pair%%:*}; id=${pair##*:}
+            curl -sSfL -A "Mozilla/5.0" -o src/$key.mp4 "https://assets.mixkit.co/videos/$id/$id-720.mp4"
+            echo "== $key ($id): source $(stat -c%s src/$key.mp4) bytes"
+            ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate -of compact src/$key.mp4
+            dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 src/$key.mp4)
+            # an 8 s loop from 1 s in (or the whole clip if it is shorter)
+            len=$(python3 -c "print(min(8.0, max(2.0, float('$dur') - 1.2)))")
+            ss=$(python3 -c "print(1.0 if float('$dur') > 9.5 else 0.0)")
+            ffmpeg -v error -y -ss $ss -t $len -i src/$key.mp4 -an -vf "scale=1280:-2:flags=lanczos,fps=25,format=yuv420p" \
+              -c:v libx264 -preset slow -crf 27 -profile:v high -level 4.0 -movflags +faststart assets/intro/$key.mp4
+            # a smaller one for phones and slow connections
+            ffmpeg -v error -y -ss $ss -t $len -i src/$key.mp4 -an -vf "scale=854:-2:flags=lanczos,fps=25,format=yuv420p" \
+              -c:v libx264 -preset slow -crf 28 -profile:v main -level 3.1 -movflags +faststart assets/intro/$key-480.mp4
+            ffmpeg -v error -y -ss 0.2 -i assets/intro/$key.mp4 -frames:v 1 -vf "scale=960:-2:flags=lanczos" -c:v libwebp -quality 72 assets/intro/$key.webp
+            ls -la assets/intro/$key*
+          done
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/intro
+          git commit -m "assets/intro: compressed opening loops and posters (from Mixkit, free license)" || echo "nothing to commit"
+          git push
