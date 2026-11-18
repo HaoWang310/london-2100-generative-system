@@ -3,6 +3,13 @@
    Chinese shown when the UI language is set to zh. Terminology follows the
    original Chinese wording preserved in ui_english_dictionary.js. */
 export const CHINESE_UI = {
+  "Step 1: tap at least three points, then tap ① Preview site": "第 1 步：至少点三个点，然后点「① 预览场地」",
+  "Tap Draw site boundary to begin": "点「绘制场地边界」开始",
+  "Boundary confirmed: tap Enter site": "边界已确认：点「进入场地」",
+  "Site preview: drag the anchors (hold one to remove it, hold an edge to add one), then tap ② Confirm final boundary": "场地预览：拖动锚点（按住锚点删除，按住边添加锚点），然后点「② 确认最终边界」",
+  "Tap ② Confirm final boundary first, then tap Enter site.": "请先点「② 确认最终边界」，再点「进入场地」。",
+  "About this layer": "图层说明",
+  "Show or hide the display panel": "显示或隐藏显示面板",
   "Tensor-field street generation": "张量场生成街道",
   "Expand tensor-field street generation": "展开张量场生成街道",
   "Collapse tensor-field street generation": "收起张量场生成街道",

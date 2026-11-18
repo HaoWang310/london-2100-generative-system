@@ -2,6 +2,11 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.41.0: fingers on iPad and iPhone (touch screens only; a computer with a mouse sees and does exactly what it did).
+- Site boundary: drag an anchor with a finger; hold one still for a moment to remove it; hold an edge to add an anchor there. The step hints name the buttons (① Preview site, ② Confirm final boundary, Enter site) instead of Enter and double-click.
+- Layer notes: a small ⓘ beside each layer name shows its note (there is no hover on a touch screen).
+- Display panel: a "Display" button shows or hides it; hidden at first on phones and on an iPad held upright.
+
 Version 3.40.1: lighter on phones (touch screen, short side under 600 px — iPhones). There the map draws at most 2 device pixels per CSS pixel (iPhones are 3) and building shadows start off (the switch turns them on), because iOS reloads a tab that takes too much graphics memory. Computers and iPads: unchanged.
 
 Version 3.40.0: the 3D city fills in faster at a low, far-reaching camera.
