@@ -5,12 +5,15 @@
 // weather, building shadows, trees, street vehicles, local terrain tiles, flood
 // risk detail, the drainage network) and its own data (assets/), so a change
 // made there reaches the workspace. Only the wiring is here; it follows
-// google-map-live's index.html (initOSM, ensureCityBuildings, syncCityView,
+// google-map-live's scripts/app.js (initOSM, ensureCityBuildings, syncCityView,
 // updateFloodLayer, updateNetworkLayer, ensureOsmFocus70, ...).
 //
 // Never calls map.setStyle(): themes are paint-only, analysis layers keep their state.
 
 export const SOURCE_PATH = 'incubator/google-map-live/';
+
+// a phone (touch screen, short side under 600 CSS px) — as isPhone() in shared/ui; kept here so this file needs no imports
+const phone = () => { try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch { return false; } };
 
 /** Absolute URL of the incubator London map. Frozen releases (/releases/<id>/) read the live one. */
 export function londonMapBase(from = import.meta.url) {
@@ -91,7 +94,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   const firstSymbol = () => (map.getStyle()?.layers || []).find(l => l.type === 'symbol')?.id;
   const st = {
     theme: mods.themes.normaliseBasemapTheme(theme), tints: [],
-    lighting: 'day', weather: 'clear', labels: true, vehicles: false, shadows: true, trees: false, view3D: false,
+    lighting: 'day', weather: 'clear', labels: true, vehicles: false, shadows: !phone(), trees: false, view3D: false,   // phones: shadows start off (memory); the switch turns them on
     terrain: { on: false, opacity: 0.42, status: '' },
     flood: { on: false, opacity: 0.7, source: 'combined', mode: 'nearest', status: '' },
     network: { on: false, opacity: 0.9, threshold: 1, status: '' },

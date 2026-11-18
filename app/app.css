@@ -101,7 +101,12 @@
   .mod .name, .mod .sub, .mod .dot, .sidenav .eyebrow, .sidenav-foot, .brand-sub { display: none; }
 }
 @media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 48px 52vh auto 56px; grid-template-areas: "top" "stage" "insp" "time"; }
+  /* minmax(0, 1fr): the column may be narrower than the top bar's content (a plain 1fr may not, which made the page
+     ~436 px wide on a 375–430 px iPhone and cut the right edge off every screen) */
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px 52vh auto 56px; grid-template-areas: "top" "stage" "insp" "time"; }
+  .topbar { min-width: 0; overflow: hidden; gap: 12px; }
+  .version { display: none; }
+  .top-actions { margin-left: auto; }            /* the crumbs are hidden here: keep 2D / 3D and the language at the right */
   .sidenav { display: none; }
   .crumbs { display: none; }
 }
