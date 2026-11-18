@@ -505,7 +505,7 @@ function buildStructure(site, P, EXCL) {
       const V = insetPoly(c);
       if (!V) { if (P.debug) console.log('insetfail', i, fixedS[i], Math.round(polyArea(c)), siteFrac(c).toFixed(2)); if (Math.abs(polyArea(c)) > 2500 && siteFrac(c) > 0.3) killFor(i); return; }
       const wmin = minWidth(V.map(o => o.p)); if (wmin < P.minThick && siteFrac(c) > 0.5) { if (nearGate(c)) kill.add(i); else killFor(i); return; }
-      const bp = blendPoly(V); if (Math.abs(polyArea(bp)) < 400) return; cellPolys.push({ seed: i, raw: c, V, poly: bp }); });
+      cellPolys.push({ seed: i, raw: c, V }); }); // 折角平滑（较慢）等合并全部结束后再做，每个室只做一次
     // 防跨水：走廊（室之间的边）大半落在水里 → 删掉较小一侧的种子，让两室合并
     if (P.avoidWater) { const owner = new Map(); cellPolys.forEach(cp => { const c = cp.raw; for (let k = 0; k < c.length; k++) { const a = c[k], b = c[(k + 1) % c.length], key = Math.round(a[0] + b[0]) + ',' + Math.round(a[1] + b[1]); if (!owner.has(key)) owner.set(key, []); owner.get(key).push(cp); } });
       for (const [, cs] of owner) { if (cs.length !== 2) continue; const c = cs[0].raw; let a = null, b = null; for (let k = 0; k < c.length; k++) { const p = c[k], q = c[(k + 1) % c.length]; if (cs[1].raw.some(r => dist(r, p) < 1) && cs[1].raw.some(r => dist(r, q) < 1)) { a = p; b = q; } } if (!a) continue;
@@ -515,6 +515,7 @@ function buildStructure(site, P, EXCL) {
     if (TR) for (const i of kill) TR.killed.push({ pass, p: A(seeds[i]) });
     seeds = seeds.filter((_, i) => !kill.has(i)); fixedS = fixedS.filter((_, i) => !kill.has(i)); if (WT) WT = WT.filter((_, i) => !kill.has(i)); nRemoved += kill.size; vc = voronoi();
   }
+  cellPolys = cellPolys.map(cp => ({ ...cp, poly: blendPoly(cp.V) })).filter(cp => Math.abs(polyArea(cp.poly)) >= 400);
   // 兜底：仍内缩失败的室（多为场地边上的小室）用较窄的走廊再试，免得整块被走廊填满变成白块
   { const have = new Set(cellPolys.map(cp => cp.seed)); let nNarrow = 0;
     seeds.forEach((s, i) => { if (have.has(i)) return; const c = cellWorld(i); if (c.length < 3 || Math.abs(polyArea(c)) < 600 || siteFrac(c) < 0.3) return;
