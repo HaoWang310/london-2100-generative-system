@@ -21,7 +21,7 @@ const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。', lead1: '戴上 Quest，点一下就进入展厅。',
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 2.6 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 2.6 m。',
-    quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
+    quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', questIOS: 'iPhone 和 iPad 不支持 VR（Safari 没有 WebXR）。这一页的三维预览可以用手指看：单指旋转，双指缩放和平移。要进入 VR，戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',
     mood: '展厅氛围', moods: [['auto', '跟随光照'], ['night', '夜间'], ['violet', '紫光']], model: '模型', keys: '手柄',
     keyList: [['L', '左摇杆：走动'], ['R', '右摇杆：左右转身 · 上下抬头低头 · 按下回正'], ['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     exit: '退出 VR', exitAR: '退出 MR',
@@ -31,7 +31,7 @@ const T = {
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 2.6 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 2.6 m disc.',
-    quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
+    quest: 'Open on the Quest', questD: 'This device cannot enter VR. Put on the Meta Quest and open this link in its browser:', questIOS: 'iPhone and iPad cannot enter VR (Safari has no WebXR). The 3D preview on this page works with fingers: one turns it, two zoom and move it. To enter VR, put on the Meta Quest and open this link in its browser:', copy: 'Copy link', copied: 'Copied',
     mood: 'Gallery mood', moods: [['auto', 'Follow light'], ['night', 'Night'], ['violet', 'Violet']], model: 'Model', keys: 'Controllers',
     keyList: [['L', 'Left stick: walk'], ['R', 'Right stick: turn · look up / down · click: level'], ['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     exit: 'Exit VR', exitAR: 'Exit MR',
@@ -46,6 +46,9 @@ const LAND = [0.925, 0.918, 0.898], OFF = [0.30, 0.34, 0.37], PLINTH = [0.16, 0.
 const ROADC = { 1: [0.10, 0.10, 0.11], 2: [0.36, 0.36, 0.39], fixed: [0.62, 0.62, 0.64], bridge: [0.04, 0.52, 1.0], outline: [0.08, 0.08, 0.09] };
 const DRAINC = [0.04, 0.45, 0.95], DRAINA = [0, 0.16, 0.42, 0.72, 0.92];   // ≥ 1 · 10 · 100 · 1000 km² upstream
 export const STRIDE = 12;   // pos 3 · side 2 · normal 3 · colour 3 · kind 1
+
+// v0.53 · iPhone / iPad (an iPad may say it is a Mac; it has touch points then)
+const IOS = typeof navigator !== 'undefined' && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 
 /** Heights on the site grid, bilinear, in metres above the lowest land (0 where there is no terrain). */
 export function heightSampler(S){
@@ -258,7 +261,7 @@ export function open(api, lang = 'zh', opt = {}){
 <aside class="side" aria-label="${L.eyebrow}">
   <div><div class="eyebrow">${L.eyebrow}</div><h1>${L.h1}</h1><p class="lead">${hallOn ? L.lead1 : L.lead}</p></div>
   <div class="modes xrBtns"></div>
-  <div class="card noxr" hidden><b>${L.quest}</b><span class="lead" style="margin:0">${L.questD}</span><span class="url"></span><button class="btn copy" type="button">${L.copy}</button></div>
+  <div class="card noxr" hidden><b>${L.quest}</b><span class="lead" style="margin:0">${IOS ? L.questIOS : L.questD}</span><span class="url"></span><button class="btn copy" type="button">${L.copy}</button></div>
   <div class="hallGrp" hidden><div class="eyebrow" style="margin-bottom:8px">${L.mood}</div><div class="chips mood" role="group" aria-label="${L.mood}">${L.moods.map(([k, t]) => `<button type="button" data-mood="${k}">${t}</button>`).join('')}</div></div>
   <div class="modelGrp"><div class="eyebrow" style="margin-bottom:4px">${L.model}</div><div class="rows">
     <button class="tog" type="button" data-k="flood">${L.flood}</button><button class="tog" type="button" data-k="drain">${L.drain}</button>
@@ -497,6 +500,20 @@ export function open(api, lang = 'zh', opt = {}){
     if (drag.b === 2 || e.shiftKey){ const r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw); cam.tx = drag.c.tx + r[0]; cam.tz = drag.c.tz + r[2]; }
     else { cam.yaw = drag.c.yaw - dx * 4; cam.pitch = Math.max(0.08, Math.min(1.52, drag.c.pitch + dy * 3)); } });
   cv.addEventListener('pointerup', () => { drag = null; }); cv.addEventListener('contextmenu', e => e.preventDefault());
+  // v0.53 · fingers (iPad, iPhone; pointerType 'touch' only — the mouse is as before): one finger turns (above), two fingers
+  // pinch to zoom and, on the map, move it (the mouse's wheel and right-drag)
+  const FINGERS = new Map(); let pinch = null;
+  const two = () => { const [a, b] = [...FINGERS.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; FINGERS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (FINGERS.size === 2){ drag = null; const P = two(); pinch = { ...P, dist: pv === 'hall' ? hcam.dist : cam.dist, c: { ...cam } }; } });
+  cv.addEventListener('pointermove', e => { const f = FINGERS.get(e.pointerId); if (!f) return; f.x = e.clientX; f.y = e.clientY; if (!pinch || FINGERS.size < 2) return;
+    const P = two(), k = pinch.d / P.d;
+    if (pv === 'hall'){ hcam.dist = Math.max(1.8, Math.min(6, pinch.dist * k)); return; }
+    cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, pinch.dist * k));
+    const dx = (P.x - pinch.x) / cv.clientWidth, dy = (P.y - pinch.y) / cv.clientHeight, r = rotY([-dx * cam.dist * 1.6, 0, -dy * cam.dist * 1.6], cam.yaw);
+    cam.tx = pinch.c.tx + r[0]; cam.tz = pinch.c.tz + r[2]; });
+  const fingerUp = e => { if (!FINGERS.delete(e.pointerId)) return; if (FINGERS.size < 2) pinch = null; if (!FINGERS.size) drag = null; };
+  cv.addEventListener('pointerup', fingerUp); cv.addEventListener('pointercancel', fingerUp);
   cv.addEventListener('wheel', e => { e.preventDefault(); if (pv === 'hall'){ hcam.dist = Math.max(1.8, Math.min(6, hcam.dist * Math.exp(e.deltaY * 0.001))); return; } cam.dist = Math.max(0.12, Math.min(api.stream ? 2e4 : 5, cam.dist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
   function frame(t){ raf = requestAnimationFrame(frame); panelTick(t); if (xrSession) return; follow(t);
     const dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr); if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
