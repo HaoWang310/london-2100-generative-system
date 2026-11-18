@@ -11,10 +11,17 @@
 <body>
 <div id="msg">载入场景… · Loading the scene…</div>
 <div id="drop">松开以载入场景文件 · Drop a scene file</div>
+<script>
+// v0.53 · one way in: without ?scene= this page is the hall with the London map on the table and its control panel (map.html, all of Greater
+// London to begin with); ?scene=… keeps the still scenes (Hydro Lab and the others) here
+(() => { const q = new URLSearchParams(location.search); if (q.get('scene')) return;
+  if (!q.get('at')) q.set('at', '51.4975,-0.1357,10.9');
+  location.replace('map.html?' + q.toString() + location.hash); })();
+</script>
 <script type="module">
-import { open } from './src/xr_view.js?v=0.53';
+import { open } from './src/xr_view.js?v=0.54';
 import { apiFromScene } from './src/scene.js';
-import { streamApi } from './src/stream.js?v=0.52';
+import { streamApi } from './src/stream.js?v=0.54';
 import { envFromList } from './src/app_state.js?v=0.20';
 // language: ?lang=, else the app's own choice (shared/i18n keeps it as l2100.lang), else Chinese
 const q = new URLSearchParams(location.search), saved = (() => { try { return localStorage.getItem('l2100.lang'); } catch (e){ return null; } })();

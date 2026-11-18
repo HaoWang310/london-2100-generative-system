@@ -282,6 +282,8 @@ export function createHall(gl, opt = {}){
   else add(disc(mapR + 0.02, tableH - 0.002, 64, [0.84, 0.84, 0.83]), {});   // v0.34: light, like the model's base (was dark)
   const ring = (r, y, n) => { const p = []; for (let k = 0; k < n; k++){ const a = k / n * Math.PI * 2; p.push([r * Math.cos(a), y, r * Math.sin(a)]); } return p; };
   glowLines.push(tube(ring(R2 - 0.004, tableH + 0.026, 160), 0.005, 6, true), tube(ring(foot + 0.02, 0.004, 160), 0.012, 4, true));
+  // v0.53: a brighter ring on the rim, shown while a controller points at the table (it can be clicked)
+  add(tube(ring(R2 + 0.01, tableH + 0.03, 192), 0.014, 6, true), { unlit: true, glow: { day: 1.6, night: 1.8, violet: 1.8 }, tint: 'glow', onlyHot: true });
 
   // the vortex canopy over the table, its glowing rims, and the cables it hangs from
   add(surface(canopyPoint, 160, 36, [1, 1, 1]), { map: tex(canopyMapC(), true), emi: tex(canopyEmiC(), true), glow: { day: 0.55, night: 0.8, violet: 1.4 }, tint: { day: [1, 1, 1], night: [0.62, 0.89, 1.0], violet: [0.78, 0.49, 1.0] } });
@@ -339,7 +341,7 @@ export function createHall(gl, opt = {}){
   benchModel
     .catch(e => console.warn('hall: bench model', e));
 
-  let hot = -1;   // the screen being pointed at glows brighter
+  let hot = -1, tableHot = false;   // the screen being pointed at glows brighter; so does the table's rim
   const tintOf = (p, mood) => p.tint === 'glow' ? GLOW[mood] : p.tint === 'sky' ? MOOD[mood].sky : p.tint === 'white' ? [1, 1, 1] : p.tint ? p.tint[mood] : [0, 0, 0];
   function draw(P, V, M, mood = 'day'){
     const md = MOOD[mood] || MOOD.day; mood = MOOD[mood] ? mood : 'day';
@@ -349,7 +351,7 @@ export function createHall(gl, opt = {}){
     const L = [0.2, 1, 0.15], ll = Math.hypot(...L); gl.uniform3f(u.uLight, L[0] / ll, L[1] / ll, L[2] / ll);
     gl.uniform3fv(u.uLightCol, md.light); gl.uniform1f(u.uAmb, md.amb); gl.uniform1f(u.uDif, md.dif); gl.uniform1f(u.uPool, md.pool); gl.uniform1f(u.uPoolR, R2 + 0.3);
     gl.uniform1i(u.uMap, 0); gl.uniform1i(u.uEmi, 1);
-    for (const p of parts){
+    for (const p of parts){ if (p.onlyHot && !tableHot) continue;
       const map = p.map || null, emi = p.emiSelf ? p.map : p.emi || null;
       gl.uniform1f(u.uHasMap, map ? 1 : 0); gl.uniform1f(u.uHasEmi, emi ? 1 : 0); gl.uniform1f(u.uUnlit, p.unlit ? 1 : 0);
       gl.uniform1f(u.uEmiI, (p.glow ? p.glow[mood] : 0) + (p.screen != null && p.screen === hot ? 0.55 : 0)); gl.uniform3fv(u.uEmiCol, tintOf(p, mood));
@@ -358,6 +360,6 @@ export function createHall(gl, opt = {}){
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindVertexArray(null); }
   let gone = false;
   function dispose(){ gone = true; for (const t of textures) gl.deleteTexture(t); for (const b of buffers) gl.deleteBuffer(b); for (const p of parts) gl.deleteVertexArray(p.vao); gl.deleteProgram(prog.p); parts.length = 0; }
-  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, screens, boardTexture: k => detailTex[k] || boardTex[k], setHot(k){ hot = k == null ? -1 : k; },
+  return { tableTop: tableH, tableR: R2, mapR, standAt: R2 + 0.55, draw, dispose, screens, boardTexture: k => detailTex[k] || boardTex[k], setHot(k){ hot = k == null ? -1 : k; }, setTableHot(on){ tableHot = !!on; },
     /** where you may walk: outside the table, inside the screens */ walkR: [R2 + 0.2, SCREEN.R - 0.45], clearColour: mood => (MOOD[mood] || MOOD.day).clear, triangles: () => parts.reduce((s, p) => s + p.n / 3, 0) };
 }

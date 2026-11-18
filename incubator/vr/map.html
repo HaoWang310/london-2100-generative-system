@@ -29,9 +29,9 @@
 <div id="err"></div>
 <script type="module">
 import { findMap } from './src/map_bridge.js?v=0.20';
-import { openFromMap } from './src/from_map.js?v=0.52';
-import { open } from './src/xr_view.js?v=0.53';
-import { streamApi } from './src/stream.js?v=0.52';
+import { openFromMap } from './src/from_map.js?v=0.54';
+import { open } from './src/xr_view.js?v=0.54';
+import { streamApi } from './src/stream.js?v=0.54';
 import { mapPainter } from './src/map_painter.js?v=0.36';
 import { appPanel } from './src/app_panel.js?v=0.24';
 import { appEnv } from './src/app_state.js?v=0.20';
@@ -54,6 +54,8 @@ async function waitForMap(ms = 45000){
 }
 
 const CAPTURE = q.get('mode') === 'capture';
+// v0.53: all of Greater London on the table (about 72 km across); zoom in for the 3D buildings
+const LONDON = { lat: 51.4975, lng: -0.1357, zoom: 10.9 };
 async function goVR(at){
   btn.disabled = true; show('');
   try {
@@ -65,7 +67,9 @@ async function goVR(at){
       // the ground in the app's own look (theme, labels, layers that are on); falls back to the plain OSM paint
       coverText.textContent = zh ? '准备 app 地图样式…' : 'Preparing the map style…';
       let painter = null; try { painter = await mapPainter(m, frame); } catch (e){ console.warn('map style', e); }
-      const api = streamApi(at.lat, at.lng, { tiles: q.get('tiles') || undefined, painter });
+      // v0.53: how much the table shows follows the zoom asked for: zoom 15–15.5 ≈ 3 km (the street view, as before), about 10.9 ≈ 72 km (all of Greater London)
+      const span = at.zoom < 14 ? Math.min(120000, 3000 * 2 ** (15.5 - at.zoom)) : 3000, wide = span > 20000;
+      const api = streamApi(at.lat, at.lng, { tiles: q.get('tiles') || undefined, painter, span });
       // the app's own control panel in VR: presses click the app's buttons; then the ground is drawn again in the new look
       let view = null;
       const panel = appPanel(frame, { lang: lang(), title: zh ? '伦敦地图' : 'London map',
@@ -75,7 +79,7 @@ async function goVR(at){
         onChange: async () => { if (!painter) return; await painter.restyle(); view?.repaintTiles?.(); } });
       // lighting, weather, shadows, trees and vehicles follow the app's own buttons and switches
       const env = await appEnv(frame, m);
-      view = open(api, lang(), { panel, deskPanel, env, hall: q.get('hall') || 'auto', closeLabel: zh ? '地图' : 'Map', title: 'London 2100 · OSM · ' + at.lat.toFixed(4) + ', ' + at.lng.toFixed(4) + (zh ? ' · 移动加载' : ' · streaming'),
+      view = open(api, lang(), { panel, deskPanel, env, hall: q.get('hall') || 'auto', closeLabel: zh ? '地图' : 'Map', title: 'London 2100 · ' + (wide ? (zh ? '大伦敦' : 'Greater London') : 'OSM · ' + at.lat.toFixed(4) + ', ' + at.lng.toFixed(4)) + (zh ? ' · 移动加载' : ' · streaming'),
         onClose: async (info) => { cover.hidden = true; painter?.dispose();   // the map opens where you were looking in VR
           const p = info?.focus ? { ...api.stream.toLatLng(info.focus[0], info.focus[1]), zoom: at.zoom || 15.5 } : at; remember(p);
           try { const m = await waitForMap(8000); m.jumpTo({ center: [p.lng, p.lat], zoom: p.zoom }); } catch (e){} } });
@@ -108,7 +112,7 @@ addEventListener('storage', e => { if (e.key === 'l2100.lang') follow(e.newValue
 setInterval(() => { if (shownLang && document.querySelector('#tsXR') && lang() !== shownLang) follow(lang()); }, 1500);
 btn.onclick = () => goVR(null);   // from the map: the place the map shows now
 if (q.get('map') === '1') cover.hidden = true;
-else goVR(parseAt(q.get('at')) || parseAt(storedAt) || { lat: 51.50733, lng: -0.12768, zoom: 15.5 });
+else goVR(parseAt(q.get('at')) || parseAt(storedAt) || LONDON);
 </script>
 </body>
 </html>
