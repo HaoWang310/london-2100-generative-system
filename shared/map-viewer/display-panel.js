@@ -44,7 +44,7 @@ const CSS = `
 .dp-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .dp-lstatus { font-size: 10.5px; color: var(--text-3); margin-top: 4px; } .dp-lstatus.err { color: var(--error); }
 .dp-src { font-size: 10.5px; color: var(--text-3); margin-top: 8px; line-height: 1.4; }
-.dp-rz { position: absolute; z-index: 2; } .dp-rz-x { left: -1px; top: 18px; bottom: 18px; width: 10px; cursor: ew-resize; }
+.dp-rz { position: absolute; z-index: 2; touch-action: none; } .dp-rz-x { left: -1px; top: 18px; bottom: 18px; width: 10px; cursor: ew-resize; }
 .dp-rz-y { bottom: -1px; left: 18px; right: 18px; height: 10px; cursor: ns-resize; }
 .dp-rz::after { content: ""; position: absolute; border-radius: 3px; background: var(--text-3); opacity: 0; transition: opacity .15s; }
 .dp-rz-x::after { left: 3px; top: 50%; width: 4px; height: 40px; margin-top: -20px; } .dp-rz-y::after { top: 3px; left: 50%; height: 4px; width: 40px; margin-left: -20px; }
@@ -59,7 +59,11 @@ body.dp-resizing, body.dp-resizing * { user-select: none !important; }
 .dp.docked.collapsed:hover .dp-head b { color: var(--text); }
 .dp.docked.collapsed .dp-head .btn { width: 26px; height: 26px; }
 .dp.docked.collapsed .dp-rz { display: none; }
-@media (max-width: 720px) { .dp { width: calc(100% - 24px) !important; max-height: 55%; } .dp-rz { display: none; } }
+/* a finger (iPad, iPhone): wider edges, the grips always shown */
+@media (pointer: coarse) { .dp-rz-x { width: 22px; left: -8px; } .dp-rz-x::after { left: 9px; opacity: .45; }
+  .dp-rz-y { height: 22px; bottom: -8px; } .dp-rz-y::after { top: 9px; opacity: .45; } }
+/* a phone: full width, so only the bottom edge (the height) is dragged; a set height may use the whole map */
+@media (max-width: 720px) { .dp { width: calc(100% - 24px) !important; max-height: 55%; } .dp.sized-h { max-height: calc(100% - 24px); } .dp-rz-x { display: none; } }
 `;
 
 const LIGHTING = ['dawn', 'day', 'dusk', 'night', 'live'];
@@ -75,6 +79,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   const apply = () => {
     panel.style.width = saved.w ? `${saved.w}px` : '';
     panel.style.height = saved.h ? `${saved.h}px` : '';
+    panel.classList.toggle('sized-h', Boolean(saved.h));
   };
   const store = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* private mode */ } };
   apply();
@@ -87,15 +92,26 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
       if (e.button !== 0) return; e.preventDefault(); e.stopPropagation();
       const r0 = panel.getBoundingClientRect(), hr = host.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY;
       el.setPointerCapture(e.pointerId); el.classList.add('on'); document.body.classList.add('dp-resizing');
+      let moved = false;
       const mv = ev => {
+        if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+        moved = true;
         if (ax === 'x') saved.w = Math.round(Math.max(240, Math.min(hr.width - 24, 640, r0.width - (ev.clientX - x0))));
         else saved.h = Math.round(Math.max(160, Math.min(hr.height - 24, r0.height + ev.clientY - y0)));
         apply();
       };
-      const up = () => { el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.classList.remove('on'); document.body.classList.remove('dp-resizing'); store(); };
+      const up = ev => {
+        el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        el.classList.remove('on'); document.body.classList.remove('dp-resizing');
+        if (moved) { store(); lastUp = 0; return; }
+        // a finger has no dependable double-click: two taps within 350 ms go back to the default size (a mouse uses dblclick)
+        if (ev.type === 'pointerup' && ev.pointerType !== 'mouse' && ev.timeStamp - lastUp < 350) { reset(); lastUp = 0; } else lastUp = ev.timeStamp;
+      };
       el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     });
-    el.addEventListener('dblclick', () => { if (ax === 'x') delete saved.w; else delete saved.h; apply(); store(); });
+    let lastUp = 0;
+    const reset = () => { if (ax === 'x') delete saved.w; else delete saved.h; apply(); store(); };
+    el.addEventListener('dblclick', reset);
     return el;
   };
 

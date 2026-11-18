@@ -17,6 +17,7 @@ import { h, renderParams, renderStats, toast, download, mountLangSwitch, isTouch
 import { createIntro } from './intro.js';
 import { createCatalogue } from './catalogue.js';
 import { createAppView } from './appview.js';
+import { mountResizers } from './resize.js';
 import { watchForUpdates, fetchReleases, latestUrl, releaseUrl, versionLabel, describeBuild, BUILD } from './updates.js';
 
 const $ = id => document.getElementById(id);
@@ -573,6 +574,7 @@ async function boot() {
   // A saved workspace may stand on a level that is hidden now: open it at the London map.
   if (scaleOf(store.current().level)?.hidden) store.goTo(0);
   render();
+  mountResizers($('app'));
 
   // Screens: '' = opening video, #catalogue = catalogue, #workspace = this app.
   // The workspace stays mounted underneath, so its map loads while the
