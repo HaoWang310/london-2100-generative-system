@@ -115,3 +115,13 @@ test('a site without main attractors still builds in every mode', () => {
   assert.equal(site2.cores.length, 0);
   for (const mode of ['v0', 'v1', 'v2', 'radial', 'dual', 'frei', 'vein', 'slime']) { const Fx = SS.buildStructure(site2, { ...P, mode }, new Set()); assert.ok(Fx.cells.length >= 20, mode + ' ' + Fx.cells.length); assert.ok(Fx.towers.every(t => t[4]), 'no big tower without a main attractor'); }
 });
+
+// 跨路：走廊压在张量场路面上的段做成架空，净空按顶标高；柱子不立在路面上
+test('street crossings are elevated with enough clearance; no column on a road surface', () => {
+  assert.ok(F.nRoad > 50 && F.roadL > 500, 'street spans found ' + F.nRoad);
+  assert.equal(SS.roadSpan(3.6).ok, false); assert.ok(SS.roadSpan(7.2).ok && SS.roadSpan(7.2).clear >= 5); assert.equal(SS.roadSpan(10.8).floors, 1);
+  const g = F.grid; for (const c of F.columns) { const x = Math.floor((c[0] - g.xmin) / g.RES), y = Math.floor((g.ymax - c[1]) / g.RES); if (c[2] != null) assert.equal(site.roadM[y * g.W + x], 0, 'column on a road'); }
+  const M = SS.meshes(F, P); let low = 0; const S = M.corridor.side;
+  for (let i = 0; i < S.length; i += 3) { const x = Math.floor((S[i] - g.xmin) / g.RES), y = Math.floor((g.ymax - S[i + 1]) / g.RES); if (site.roadM[y * g.W + x] && site.landM[y * g.W + x] && !site.waterM[y * g.W + x] && S[i + 2] > 0.01 && S[i + 2] < 5 - 0.01) low++; }
+  assert.ok(low / (S.length / 3) < 0.02, 'corridor geometry between the street and 5 m: ' + low);
+});
