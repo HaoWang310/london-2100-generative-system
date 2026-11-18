@@ -13,7 +13,7 @@ import { createWorkspaceStore, SCALE_ORDER } from '../shared/state/index.js';
 import { childInput, createBundle, validateBundle, defaultParams } from '../shared/schemas/index.js';
 import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-viewer/index.js';
 import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared/i18n/index.js';
-import { h, renderParams, renderStats, toast, download, mountLangSwitch } from '../shared/ui/index.js';
+import { h, renderParams, renderStats, toast, download, mountLangSwitch, isPhone } from '../shared/ui/index.js';
 import { createIntro } from './intro.js';
 import { createCatalogue } from './catalogue.js';
 import { createAppView } from './appview.js';
@@ -594,6 +594,8 @@ async function boot() {
   $('brandHome').addEventListener('keydown', e => { if (e.key === 'Enter') toCatalogue(); });
   $('brandHome').dataset.i18nTitle = 'cat.back';
 
+  let mapStart = null;
+  const startMap = () => mapStart || (mapStart = startWorkspaceMap());
   const route = async () => {
     const screen = location.hash.replace('#', '') || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
     if (screen.startsWith('app/')) {
@@ -608,31 +610,37 @@ async function boot() {
     if (appview.openId) { appview.setOrigin(catalogue.coverOf(appview.openId)); appview.close(); }
     if (screen === 'intro') { catalogue.hide(); intro.show(); }
     else if (screen === 'catalogue') { if (intro.open) intro.enter(); else intro.hide(); catalogue.show(); }
-    else { intro.hide(); catalogue.hide(); setTimeout(() => viewer?.resize(), 60); }
+    else { intro.hide(); catalogue.hide(); startMap(); setTimeout(() => viewer?.resize(), 60); }
   };
   window.addEventListener('hashchange', route);
   route();
   document.documentElement.dataset.ready = '1';   // tells the safety net in index.html we started
   applyI18n(document);
 
-  viewer = await createMapViewer($('map'), {
-    theme: 'dark',
-    onSelect: id => {
-      const e = store.current();
-      if (activeTool || !e?.result?.children?.some(c => c.id === id)) return;
-      store.select(e.level, e.inputId, e.selectedChildId === id ? null : id);
-      render();
-    },
-    onEnter: id => { if (!activeTool) enterNext(id); },
-    onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); },
-    onView3D: on => { view3D = on; $('view2d').setAttribute('aria-pressed', String(!on)); $('view3d').setAttribute('aria-pressed', String(on)); }
-  });
-  $('mapLoading').classList.add('done');
-  const cur = store.current();
-  viewer.fit(cur.input?.boundary || cur.result?.boundary, { animate: false });
-  if (!cur.result) await runEntry(cur, { animate: false });
-  if (!cur.input && store.current().result) viewer.fit(store.current().result.boundary, { animate: false });
-  render();
+  // The workspace map. Computers and iPads make it at once, underneath the opening video and catalogue, so it is ready
+  // when the workspace opens. Phones make it the first time the workspace opens: an iPhone then keeps one 3D map in
+  // memory, not two when an app with its own map is opened from the catalogue (iOS reloads a tab that takes too much).
+  async function startWorkspaceMap() {
+    viewer = await createMapViewer($('map'), {
+      theme: 'dark',
+      onSelect: id => {
+        const e = store.current();
+        if (activeTool || !e?.result?.children?.some(c => c.id === id)) return;
+        store.select(e.level, e.inputId, e.selectedChildId === id ? null : id);
+        render();
+      },
+      onEnter: id => { if (!activeTool) enterNext(id); },
+      onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); },
+      onView3D: on => { view3D = on; $('view2d').setAttribute('aria-pressed', String(!on)); $('view3d').setAttribute('aria-pressed', String(on)); }
+    });
+    $('mapLoading').classList.add('done');
+    const cur = store.current();
+    viewer.fit(cur.input?.boundary || cur.result?.boundary, { animate: false });
+    if (!cur.result) await runEntry(cur, { animate: false });
+    if (!cur.input && store.current().result) viewer.fit(store.current().result.boundary, { animate: false });
+    render();
+  }
+  if (!isPhone()) await startMap();
 
   if (store.persistWarning === 'storage-full') toast(t('ws.storageFull'), { kind: 'error' });
   if (BUILD.releasePath) toast(t('ver.viewingOld', { v: BUILD.version }), { action: t('ver.backToLatest'), onAction: () => (location.href = latestUrl()), timeout: 0 });

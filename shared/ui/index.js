@@ -104,3 +104,11 @@ export function mountLangSwitch(container) {
   _onLangChange(sync);
   return container;
 }
+
+/**
+ * A phone: a touch screen whose short side is under 600 CSS px (iPhones; iPads start at 744). Used to go lighter on
+ * memory there (iOS reloads a tab that takes too much). Computers and iPads answer false and keep everything as it is.
+ */
+export function isPhone() {
+  try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch { return false; }
+}

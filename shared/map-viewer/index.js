@@ -22,6 +22,7 @@ import { PROVIDERS, DEFAULT_PROVIDER } from './providers.js';
 import { loadLondonMap } from './london-map.js';
 import { mountDisplayPanel } from './display-panel.js';
 import { t } from '../i18n/index.js';
+import { isPhone } from '../ui/index.js';
 
 // Same version and loading method as google-map-live (verified in production).
 const MAPLIBRE_VERSION = '6.13.0';
@@ -77,7 +78,9 @@ async function createMapLibreViewer(el, opts) {
     center: [-0.1278, 51.5074],
     zoom: 8.2,
     attributionControl: { compact: true },
-    maxPitch: 75
+    maxPitch: 75,
+    // phones: draw at most 2 device pixels per CSS pixel (an iPhone is 3) — under half the graphics memory, hardly visible
+    ...(isPhone() ? { pixelRatio: Math.min(window.devicePixelRatio || 1, 2) } : {})
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
