@@ -340,13 +340,15 @@ function buildStructure(site, P, EXCL) {
   const minWidth = Pp => { let best = 1e9; for (let i = 0; i < Pp.length; i++) { const a = Pp[i], b = Pp[(i + 1) % Pp.length], L = dist(a, b); if (L < 1) continue; const nn = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L]; let m = 0; for (const q of Pp) m = Math.max(m, Math.abs(dot(sub(q, a), nn))); best = Math.min(best, m); } return best; };
   const siteFrac = c => { let n = 0, k = 0; const bb = [1e9, 1e9, -1e9, -1e9]; for (const p of c) { bb[0] = Math.min(bb[0], p[0]); bb[1] = Math.min(bb[1], p[1]); bb[2] = Math.max(bb[2], p[0]); bb[3] = Math.max(bb[3], p[1]); }
     for (let x = bb[0]; x <= bb[2]; x += 12) for (let y = bb[1]; y <= bb[3]; y += 12) { const q = [x, y]; if (!inPoly(q, c)) continue; n++; if (inSite(q)) k++; } return n ? k / n : 0; };
+  // 入口主线贴着场地边的那一小段两侧的成对种子也允许合并（否则会夹出细条室）
+  const nearGate = c => { if (!gates.length) return false; let x = 0, y = 0; for (const p of c) { x += p[0]; y += p[1]; } const m = [x / c.length, y / c.length]; return gates.some(g => dist(m, g.p) < 220); };
   let nRemoved = 0, nWaterCut = 0, cellPolys = [];
   for (let pass = 0; pass < 5; pass++) {
     cellPolys = []; const kill = new Set();
     seeds.forEach((s, i) => { const c = cellWorld(i); if (c.length < 3 || Math.abs(polyArea(c)) < 300) return;
       const V = insetPoly(c);
       if (!V) { if (P.debug) console.log('insetfail', i, fixedS[i], Math.round(polyArea(c)), siteFrac(c).toFixed(2)); if (!fixedS[i] && Math.abs(polyArea(c)) > 2500) kill.add(i); return; }
-      const wmin = minWidth(V.map(o => o.p)); if (wmin < P.minThick && !fixedS[i] && siteFrac(c) > 0.5) { kill.add(i); return; }
+      const wmin = minWidth(V.map(o => o.p)); if (wmin < P.minThick && (!fixedS[i] || nearGate(c)) && siteFrac(c) > 0.5) { kill.add(i); return; }
       const bp = blendPoly(V); if (Math.abs(polyArea(bp)) < 400) return; cellPolys.push({ seed: i, raw: c, V, poly: bp }); });
     // 防跨水：走廊（室之间的边）大半落在水里 → 删掉较小一侧的种子，让两室合并
     if (P.avoidWater) { const owner = new Map(); cellPolys.forEach(cp => { const c = cp.raw; for (let k = 0; k < c.length; k++) { const a = c[k], b = c[(k + 1) % c.length], key = Math.round(a[0] + b[0]) + ',' + Math.round(a[1] + b[1]); if (!owner.has(key)) owner.set(key, []); owner.get(key).push(cp); } });
@@ -416,6 +418,7 @@ function buildStructure(site, P, EXCL) {
   let bldM = new Uint8Array(NN);
   if (!P.quick) for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
     if (EXCL && EXCL.has(CL.lab[i])) continue;
+    if (rings.length) { const wx = xmin + (i % W + .5) * RES, wy = ymax - (((i / W) | 0) + .5) * RES; if (rings.some(g => (wx - g.c[0]) ** 2 + (wy - g.c[1]) ** 2 < g.r * g.r)) continue; } // 环形广场岛：只留种植塔，不排建筑
     if (((sa[i] % P.segL) + P.segL) % P.segL < P.gap) continue; const x = i % W, y = (i / W) | 0; if (nearJ(x + .5, y + .5)) continue; bldM[i] = 1; }
   bldM = morph(morph(bldM, W, H, 2, true), W, H, 2, false);
   const BL = label4(bldM, W, H); const keep = new Uint8Array(BL.n + 1); for (let k = 1; k <= BL.n; k++) keep[k] = BL.sizes[k] > 260 / (RES * RES) ? 1 : 0;
