@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.42.0: on phones (a touch screen whose short side is under 600 px) the control panel is a sheet along the bottom. It starts folded (title only) so the map fills the screen; tap its handle to open it halfway or fold it, drag the handle to any height (it settles folded, half or nearly full); the − / + button folds and opens it too. The Display button and panel sit at the top right there. Computers and iPads: the floating panel as before.
+
 Version 3.41.0: fingers on iPad and iPhone (touch screens only; a computer with a mouse sees and does exactly what it did).
 - Site boundary: drag an anchor with a finger; hold one still for a moment to remove it; hold an edge to add an anchor there. The step hints name the buttons (① Preview site, ② Confirm final boundary, Enter site) instead of Enter and double-click.
 - Layer notes: a small ⓘ beside each layer name shows its note (there is no hover on a touch screen).
