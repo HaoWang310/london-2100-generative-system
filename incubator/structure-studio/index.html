@@ -729,7 +729,9 @@ $('geoBtn').onclick = () => { const o = SNAP.origin, bng = p => [+(p[0] + o[0]).
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; const x = cv.getContext('2d'); x.drawImage(TSV && tsBase ? tsBase : planBase, 0, 0);
   { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: $('c_prim').checked }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
-async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } INTRO = true; SNAP = obj; SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
+async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } INTRO = true; SNAP = obj;
+  P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; $('runMode').value = 'v0'; // 每次开场（载入场地）都从 1 · 全局拉伸 演示；其余参数照保存的
+  SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   siteText();
   focus = null; solve(false); }
 $('loadBtn').onclick = () => $('snapFile').click();
