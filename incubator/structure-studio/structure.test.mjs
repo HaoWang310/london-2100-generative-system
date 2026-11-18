@@ -28,8 +28,10 @@ test('the structure is continuous over water and rail, cut only at the site outl
   assert.ok(F.columns.length > 0);
   const share = F.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.1 && share < 0.35, 'share ' + share);
 });
-test('no buildings within the setback of water or the rail', () => {
-  const g = F.grid, ns = new Uint8Array(g.W * g.H); for (let i = 0; i < ns.length; i++) ns[i] = site.landM[i] && !site.waterM[i] ? 0 : 1;
+test('buildings are off for now; when switched on they keep the setback from water and rail', () => {
+  assert.equal(F.grid.bldM.reduce((a, v) => a + v, 0), 0, 'no buildings by default');
+  const FB = SS.buildStructure(site, { ...P, buildings: 1 }, new Set()); assert.ok(FB.stats.bld > 50, 'engine can still place buildings');
+  const g = FB.grid, ns = new Uint8Array(g.W * g.H); for (let i = 0; i < ns.length; i++) ns[i] = site.landM[i] && !site.waterM[i] ? 0 : 1;
   const d = SS.util.edt(ns, g.W, g.H); let bad = 0; for (let i = 0; i < ns.length; i++) if (g.bldM[i] && d[i] * g.RES < P.setback - 2) bad++;
   assert.equal(bad, 0);
 });
