@@ -170,7 +170,10 @@ function buildStructure(site, P, EXCL) {
   // 次节点（街区中心）：影响范围内局部加密，中心处间距减到约 (1 − 0.35·强度)
   const secK = p => { let k = 1; for (const a of secs) { const R = Math.max(220, a.reach * 1.6), d = dist(p, a.p); if (d < R) { const t = 1 - d / R; k = Math.min(k, 1 - 0.35 * a.s * t * t * (3 - 2 * t)); } } return k; };
   const spacing = p => (P.sCore + (P.sOut - P.sCore) * coreT(p)) * (secs.length ? secK(p) : 1);
-  const V1 = P.logic === 'v1' || +P.v1 >= 0.5;
+  // 生成模式：v0 全局拉伸 · v1 局部场流线行 · v2 各向异性分格 · radial 放射蛛网 · dual 双向流线格网 · frei Frei Otto 湿毛线 · vein 叶脉生长 · slime 黏菌
+  const MODE = P.mode || (P.logic === 'v1' || +P.v1 >= 0.5 ? 'v1' : 'v0');
+  const V1 = MODE === 'v1' || MODE === 'dual';           // 流线行布点
+  const WORLD = MODE !== 'v0' && MODE !== 'radial';       // 直接在场地坐标里布点（不经过压缩空间）
   const FAST = !!P.fast; // 拖动预览：曲线光顺用较粗的点距、较少轮数（松手后的精算不受影响）
   const TR = P.trace ? { cand: [], killed: [], seedRow: [] } : null; // 演示用：记录每一步的中间结果（平时不记）
   // v1 系统关联：次级走廊宽度随离核心的距离渐变（核心处 wCore，外围 wS）
@@ -221,16 +224,16 @@ function buildStructure(site, P, EXCL) {
 
   // 3 拉扯：v0 = 压缩空间 G 生成均匀绳网 → 沿全场主方向拉长；v1 = 直接在场地里沿局部张量场排流线行布点（格网随场连续变形）
   const t0 = unit(rot(site.t0, P.rotF)), n0 = [-t0[1], t0[0]], aS = 1 + 1.4 * P.pull, ctr = cores[0];
-  const A = V1 ? (q => q) : (q => { const d = sub(q, ctr); return add(ctr, add(mul(t0, dot(d, t0) * aS), mul(n0, dot(d, n0)))); });
-  const Ai = V1 ? (q => q) : (q => { const d = sub(q, ctr); return add(ctr, add(mul(t0, dot(d, t0) / aS), mul(n0, dot(d, n0)))); });
+  const A = WORLD ? (q => q) : (q => { const d = sub(q, ctr); return add(ctr, add(mul(t0, dot(d, t0) * aS), mul(n0, dot(d, n0)))); });
+  const Ai = WORLD ? (q => q) : (q => { const d = sub(q, ctr); return add(ctr, add(mul(t0, dot(d, t0) / aS), mul(n0, dot(d, n0)))); });
   const SG = strands.map(S => resample(S.map(Ai), 6));
   const corners = [[lx0, ly0], [lx1, ly0], [lx1, ly1], [lx0, ly1]].map(Ai); let gx0 = 1e9, gy0 = 1e9, gx1 = -1e9, gy1 = -1e9; for (const p of corners) { gx0 = Math.min(gx0, p[0]); gy0 = Math.min(gy0, p[1]); gx1 = Math.max(gx1, p[0]); gy1 = Math.max(gy1, p[1]); }
-  const spG = u => V1 ? spacing(u) : spacing(A(u)) / Math.sqrt(aS);
+  const spG = u => WORLD ? spacing(u) : spacing(A(u)) / Math.sqrt(aS);
   const PH = new Map(), PC = 30; SG.forEach((S, k) => S.forEach((q, i) => { if (i === S.length - 1) return; const key = Math.floor(q[0] / PC) + ',' + Math.floor(q[1] / PC); if (!PH.has(key)) PH.set(key, []); PH.get(key).push([k, i]); }));
   const primNearG = q => { const gx = Math.floor(q[0] / PC), gy = Math.floor(q[1] / PC); let best = 1e9, bt = [1, 0];
     for (let a = -4; a <= 4; a++) for (let b = -4; b <= 4; b++) { const l = PH.get((gx + a) + ',' + (gy + b)); if (l) for (const [k, i] of l) { const S = SG[k], d = segDist(q, S[i], S[i + 1]); if (d < best) { best = d; bt = unit(sub(S[i + 1], S[i])); } } }
     return { d: best, t: bt }; };
-  let seeds = [], fixedS = [];
+  let seeds = [], fixedS = [], WT = null, MET = null; const NET = [];
   if (V1) {
     // 行距（垂直场）= 间距 / √aS，行内种子距（顺场）= 间距 × √aS：格子沿局部场拉长，长宽比 = aS
     const hA = p => spacing(p) / Math.sqrt(aS), aL = p => spacing(p) * Math.sqrt(aS);
@@ -263,11 +266,120 @@ function buildStructure(site, P, EXCL) {
     let guard = 0;
     while (queue.length && rows.length < 900 && guard++ < 60000) { const q = queue.shift(); if (!inB(q)) continue; const h = hA(q); if (nearRow(q, h, -1) < h * 0.9 || primNearG(q).d < h * 0.5) continue;
       const R = trace(q); if (R.length < 3 || arclen(R).pop() < aL(q) * 0.8) continue; hashRow(R, rows.length); rows.push({ pts: R }); pushCands(R); }
+    // 双向流线格网：再沿垂直方向追一组流线（间距 aL），行与它们的交点作种子 → 规整的弯曲四边形格子
+    let minorHit = null;
+    if (MODE === 'dual') { const MH = new Map(), mrows = [], perp = p => { const f = rowField(p); return [-f[1], f[0]]; };
+      const nearM = (q, r) => { const R_ = Math.ceil(r / RHs), gx = Math.floor(q[0] / RHs), gy = Math.floor(q[1] / RHs); let m = 1e9; for (let a = -R_; a <= R_; a++) for (let b = -R_; b <= R_; b++) { const l = MH.get((gx + a) + ',' + (gy + b)); if (l) for (const p of l) m = Math.min(m, dist(p, q)); } return m; };
+      const traceM = q0 => { const halves = []; for (const sg of [1, -1]) { let p = q0, d = mul(perp(q0), sg); const pts = [];
+          for (let it = 0; it < 700; it++) { let fd = perp(p); if (dot(fd, d) < 0) fd = mul(fd, -1); d = unit(add(mul(d, 0.6), mul(fd, 0.4))); const np = add(p, mul(d, 6)); if (!inB(np) || nearM(np, aL(np)) < aL(np) * 0.55) break; p = np; pts.push(p); }
+          halves.push(pts); } return [...halves[1].slice().reverse(), q0, ...halves[0]]; };
+      const mq = [cores[0] || [(lx0 + lx1) / 2, (ly0 + ly1) / 2]]; let g2 = 0;
+      while (mq.length && mrows.length < 600 && g2++ < 40000) { const q = mq.shift(); if (!inB(q) || nearM(q, aL(q)) < aL(q) * 0.9) continue; const R = traceM(q); if (R.length < 3) continue; mrows.push(R);
+        for (const v of R) { const k = Math.floor(v[0] / RHs) + ',' + Math.floor(v[1] / RHs); if (!MH.has(k)) MH.set(k, []); MH.get(k).push(v); }
+        const R2 = resample(R, 1); for (let k = 0; k < R2.length; k += Math.max(1, Math.round(aL(R2[k]) / 1.2))) { const p = R2[k], tg = unit(sub(R2[Math.min(k + 1, R2.length - 1)], R2[Math.max(0, k - 1)])), nn = [-tg[1], tg[0]]; mq.push(add(p, mul(nn, aL(p))), sub(p, mul(nn, aL(p)))); } }
+      minorHit = q => nearM(q, 12) < 3.5; NET.push(...mrows.map(R => resample(R, 12))); }
     // 行内布点：顺场间距 aL，随机起点 + 轻微横向抖动；水里不布点
-    for (const r of rows) { if (r.paired) continue; const R = resample(r.pts, 3), s = arclen(R), L = s[s.length - 1]; let t = U(0, aL(R[0])), i = 0;
+    if (MODE === 'dual') for (const r of rows) { if (r.paired) continue; const R = resample(r.pts, 2); let last = -1e9;
+      for (let k = 0; k < R.length; k++) { const q = R[k]; if (!minorHit(q) || k - last < 6) continue; last = k; if (!(inSite(q) && inWater(q)) && primNearG(q).d > hA(q) * 0.7) { seeds.push(q); fixedS.push(false); if (TR) TR.seedRow.push(rows.indexOf(r)); } } }
+    else for (const r of rows) { if (r.paired) continue; const R = resample(r.pts, 3), s = arclen(R), L = s[s.length - 1]; let t = U(0, aL(R[0])), i = 0;
       while (t < L) { while (i < R.length - 2 && s[i + 1] < t) i++; const p = R[i], tg = unit(sub(R[i + 1], R[Math.max(0, i - 1)])), nn = [-tg[1], tg[0]], q = add(p, mul(nn, U(-0.08, 0.08) * hA(p)));
         if (!(inSite(q) && inWater(q)) && primNearG(q).d > hA(q) * 0.7) { seeds.push(q); fixedS.push(false); if (TR) TR.seedRow.push(rows.indexOf(r)); } t += aL(p) * U(0.92, 1.08); } }
     if (TR) TR.rows = rows.map(r => ({ paired: !!r.paired, pts: resample(r.pts, 12) }));
+    gx0 = lx0; gy0 = ly0; gx1 = lx1; gy1 = ly1;
+  } else if (WORLD) {
+    // v2 / frei / vein / slime：主线两侧成对布点（同 v1），其余按模式生成
+    const hA = p => spacing(p) / Math.sqrt(aS), aL = p => spacing(p) * Math.sqrt(aS), inB = q => q[0] > lx0 - 120 && q[0] < lx1 + 120 && q[1] > ly0 - 120 && q[1] < ly1 + 120;
+    strands.forEach(S => { const S6 = resample(S, 6), s = arclen(S6), L = s[s.length - 1]; let t = U(0, 30), i = 0;
+      while (t < L) { while (i < S6.length - 2 && s[i + 1] < t) i++; const p = S6[i], tg = unit(sub(S6[i + 1], S6[Math.max(0, i - 1)])), nn = [-tg[1], tg[0]], h = hA(p) / 2;
+        for (const sg of [1, -1]) { const q = add(p, mul(nn, h * sg)); if (inB(q) && primNearG(q).d > h * 0.8) { seeds.push(q); fixedS.push(true); if (TR) TR.seedRow.push(-1); } } t += aL(p); } });
+    const nPair = seeds.length;
+    const SH2 = new Map(), SC2 = 40, put = (q, i) => { const k = Math.floor(q[0] / SC2) + ',' + Math.floor(q[1] / SC2); if (!SH2.has(k)) SH2.set(k, []); SH2.get(k).push(i); };
+    const near2 = (q, r, fn) => { const R_ = Math.ceil(r / SC2), gx = Math.floor(q[0] / SC2), gy = Math.floor(q[1] / SC2); for (let a = -R_; a <= R_; a++) for (let b = -R_; b <= R_; b++) { const l = SH2.get((gx + a) + ',' + (gy + b)); if (l) for (const j of l) if (fn(j)) return true; } return false; };
+    seeds.forEach(put);
+    const mt = p => { const f = field(p); return [f, [-f[1], f[0]]]; };
+    const mdist = (a, b) => { const [t, n] = mt(mul(add(a, b), 0.5)), d = sub(b, a); return Math.sqrt(dot(d, t) ** 2 / aS + dot(d, n) ** 2 * aS); };
+    if (MODE === 'v2') {
+      // 各向异性分格：间距按当地张量场度量（顺场 × √aS、垂直 ÷ √aS），分格时两点的平分线也用这个度量
+      const aD = Math.pow(aS, P.v2a != null ? P.v2a : 2), mdD = (a, b) => { const [t, n] = mt(mul(add(a, b), 0.5)), d = sub(b, a); return Math.sqrt(dot(d, t) ** 2 / aD + dot(d, n) ** 2 * aD); };
+      for (let it = 0; it < 16000; it++) { const q = [U(lx0 - 110, lx1 + 110), U(ly0 - 110, ly1 + 110)]; if (inSite(q) && inWater(q)) continue; const sp = spacing(q);
+        if (primNearG(q).d < hA(q) * 0.72) continue; if (near2(q, sp * Math.sqrt(aD), j => mdD(seeds[j], q) < sp * 0.92)) continue; seeds.push(q); fixedS.push(false); put(q, seeds.length - 1); if (TR) TR.seedRow.push(0); }
+      // 分格用普通平分线（保证室之间严丝合缝）；拉长来自按场度量的布点
+      const aB = Math.pow(aS, P.v2b != null ? P.v2b : 0); if (aB > 1.001) MET = (m, d) => { const [t, n] = mt(m); return add(mul(t, dot(d, t) / aB), mul(n, dot(d, n) * aB)); };
+    } else {
+      // 网络型（frei / vein / slime）：先在 8 m 栅格上模拟出一张网，网的孔洞 = 室；孔洞中心作种子、面积作权重（加权 Voronoi）
+      // 模拟结果只取决于下面这些参数，按场地缓存（改走廊宽度、退线等不必重算）；模拟用独立的随机数，缓存与否结果一致
+      const netKey = JSON.stringify([MODE, P.seed, P.sCore, P.sOut, P.coreR, P.pull, primKey, strands.length]); site.netCache = site.netCache || new Map();
+      const cachedNet = TR ? null : site.netCache.get(netKey);
+      if (cachedNet) { WT = seeds.map(q => (0.5 * spacing(q)) ** 2 * 0.5); for (const [q, w] of cachedNet.holes) { if (primNearG(q).d < hA(q) * 0.5) continue; seeds.push(q.slice()); fixedS.push(false); WT.push(w); } NET.push(...cachedNet.net); }
+      else {
+      const rnd2 = mulberry32(P.seed * 7919 + MODE.length * 131), U = (a, b) => a + (b - a) * rnd2(), rnd = rnd2;
+      const R8 = 8, gx0_ = lx0 - 60, gy1_ = ly1 + 60, GW = Math.ceil((lx1 - lx0 + 120) / R8), GH = Math.ceil((ly1 - ly0 + 120) / R8);
+      const gp = (x, y) => [gx0_ + (x + .5) * R8, gy1_ - (y + .5) * R8], gi = p => { const x = Math.floor((p[0] - gx0_) / R8), y = Math.floor((gy1_ - p[1]) / R8); return x >= 0 && y >= 0 && x < GW && y < GH ? y * GW + x : -1; };
+      const inG = new Uint8Array(GW * GH); for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (inSite(gp(x, y))) inG[y * GW + x] = 1;
+      const net = new Uint8Array(GW * GH), stampLine = (a, b) => { const n = Math.ceil(dist(a, b) / (R8 * 0.5)) + 1; for (let k = 0; k <= n; k++) { const i = gi(add(a, mul(sub(b, a), k / n))); if (i >= 0) net[i] = 1; } };
+      const bluePts = f => { const out = []; const H3 = new Map(), C3 = 40; for (let it = 0; it < 9000; it++) { const q = [U(lx0, lx1), U(ly0, ly1)]; if (!inSite(q) || inWater(q)) continue; const r = f(q), R_ = Math.ceil(r / C3), gx = Math.floor(q[0] / C3), gy = Math.floor(q[1] / C3); let ok = true;
+          for (let a = -R_; a <= R_ && ok; a++) for (let b = -R_; b <= R_ && ok; b++) { const l = H3.get((gx + a) + ',' + (gy + b)); if (l) for (const p of l) if (dist(p, q) < r) { ok = false; break; } }
+          if (ok) { out.push(q); const k = gx + ',' + gy; if (!H3.has(k)) H3.set(k, []); H3.get(k).push(q); } } return out; };
+      for (const S of strands) for (let k = 1; k < S.length; k++) stampLine(S[k - 1], S[k]);
+      if (MODE === 'frei') {
+        // Frei Otto 湿毛线：场地边上两两连线（多 6% 长度），线与线相互吸引并拢，长度约束拉住；主线作为不动的线参与吸引
+        const B = site.footPolys.slice().sort((a, b) => Math.abs(polyArea(b)) - Math.abs(polyArea(a)))[0], Bc = [...B, B[0]], cum = [0]; for (let k = 1; k < Bc.length; k++) cum.push(cum[k - 1] + dist(Bc[k], Bc[k - 1]));
+        const bpt = u => { u = ((u % cum[cum.length - 1]) + cum[cum.length - 1]) % cum[cum.length - 1]; let k = 1; while (cum[k] < u) k++; const f = (u - cum[k - 1]) / (cum[k] - cum[k - 1] || 1); return add(Bc[k - 1], mul(sub(Bc[k], Bc[k - 1]), f)); };
+        const diam = Math.hypot(lx1 - lx0, ly1 - ly0), meanSp = (P.sCore + P.sOut) / 2, nT = Math.round(clamp(cum[cum.length - 1] / (meanSp * 0.5), 30, 140)), TH = [];
+        let guard = 0; while (TH.length < nT && guard++ < 4000) { const a = bpt(U(0, cum[cum.length - 1])), b = bpt(U(0, cum[cum.length - 1])); if (dist(a, b) < 0.35 * diam) continue; const n = 44, T = [], L0 = dist(a, b) * 1.06 / (n - 1);
+          for (let k = 0; k < n; k++) { const q = add(a, mul(sub(b, a), k / (n - 1))); T.push(k && k < n - 1 ? add(q, [U(-6, 6), U(-6, 6)]) : q); } TH.push({ T, L0 }); }
+        const fixedPts = []; for (const S of strands) for (const q of resample(S, 12)) if (inSite(q)) fixedPts.push(q);
+        for (let it = 0; it < 60; it++) { const HH = new Map(), C4 = 30, all = []; TH.forEach((t, ti) => t.T.forEach((q, k) => all.push([q, ti, k]))); fixedPts.forEach(q => all.push([q, -1, 0]));
+          all.forEach((e, idx) => { const k = Math.floor(e[0][0] / C4) * 65536 + Math.floor(e[0][1] / C4); let l = HH.get(k); if (!l) HH.set(k, l = []); l.push(idx); });
+          const mv = TH.map(t => t.T.map(() => [0, 0, 0]));
+          for (const [q, ti, k] of all) { if (ti < 0 || k === 0 || k === TH[ti].T.length - 1) continue; const r = 0.27 * spacing(q), R_ = Math.ceil(r / C4), gx = Math.floor(q[0] / C4), gy = Math.floor(q[1] / C4), m = mv[ti][k];
+            for (let a = -R_; a <= R_; a++) for (let b = -R_; b <= R_; b++) { const l = HH.get((gx + a) * 65536 + (gy + b)); if (l) for (const j of l) { const [p, tj] = all[j]; if (tj === ti) continue; const d = dist(p, q); if (d < r) { const w = tj < 0 ? 2 : 1; m[0] += (p[0] - q[0]) * w; m[1] += (p[1] - q[1]) * w; m[2] += w; } } } }
+          TH.forEach((t, ti) => { for (let k = 1; k < t.T.length - 1; k++) { const m = mv[ti][k]; if (m[2]) t.T[k] = add(t.T[k], mul([m[0], m[1]], 0.35 / m[2])); }
+            for (let pass = 0; pass < 6; pass++) for (let k = 0; k < t.T.length - 1; k++) { const a = t.T[k], b = t.T[k + 1], d = dist(a, b); if (d <= t.L0) continue; const c = mul(sub(b, a), (d - t.L0) / d * 0.5); if (k > 0) t.T[k] = add(a, c); if (k + 1 < t.T.length - 1) t.T[k + 1] = sub(b, c); } }); }
+        for (const t of TH) { for (let k = 1; k < t.T.length; k++) stampLine(t.T[k - 1], t.T[k]); NET.push(t.T.filter((_, k) => k % 2 === 0)); }
+      } else if (MODE === 'vein') {
+        // 叶脉生长（空间殖民）：从核心、次节点和主线出发，向养分点生长；末梢相互靠近处闭合成环
+        const aux = bluePts(q => 0.42 * spacing(q)); let alive = aux.map(() => true);
+        const VN = [], par = [], VH = new Map(), C5 = 40, addV = (p, pa) => { VN.push(p); par.push(pa); const k = Math.floor(p[0] / C5) + ',' + Math.floor(p[1] / C5); if (!VH.has(k)) VH.set(k, []); VH.get(k).push(VN.length - 1); };
+        for (const c of cores) addV(c.slice(), -1); for (const a of secs) addV(a.p.slice(), -1); for (const S of strands) { let prev = -1; for (const q of resample(S, 24)) if (inSite(q)) { addV(q, prev); prev = VN.length - 1; } }
+        const nearestV = (q, rmax) => { let best = -1, bd = rmax; const R_ = Math.ceil(rmax / C5), gx = Math.floor(q[0] / C5), gy = Math.floor(q[1] / C5); for (let a = -R_; a <= R_; a++) for (let b = -R_; b <= R_; b++) { const l = VH.get((gx + a) + ',' + (gy + b)); if (l) for (const j of l) { const d = dist(VN[j], q); if (d < bd) { bd = d; best = j; } } } return [best, bd]; };
+        for (let it = 0; it < 420; it++) { const grow = new Map(); let any = false;
+          aux.forEach((a, k) => { if (!alive[k]) return; const sp = spacing(a), [j, d] = nearestV(a, 2.4 * sp); if (j < 0) return; if (d < 0.42 * sp) { alive[k] = false; return; } any = true; const v = unit(sub(a, VN[j])); const g = grow.get(j) || [0, 0]; grow.set(j, [g[0] + v[0], g[1] + v[1]]); });
+          if (!any) break; for (const [j, g] of grow) { const v = unit(g); addV(add(VN[j], mul(v, 10)), j); } }
+        const deg = new Int32Array(VN.length); par.forEach(pa => { if (pa >= 0) deg[pa]++; });
+        const segs = []; par.forEach((pa, k) => { if (pa >= 0) segs.push([VN[pa], VN[k]]); });
+        const leaves = VN.map((_, k) => k).filter(k => deg[k] === 0 && par[k] >= 0);
+        for (let a = 0; a < leaves.length; a++) { const p = VN[leaves[a]]; let best = -1, bd = 0.9 * spacing(p); for (let b = a + 1; b < leaves.length; b++) { const d = dist(p, VN[leaves[b]]); if (d < bd) { bd = d; best = b; } } if (best >= 0) segs.push([p, VN[leaves[best]]]); }
+        for (const [a, b] of segs) stampLine(a, b); NET.push(...segs);
+      } else {
+        // 黏菌：智能体在场地里觅食，痕迹相互加强；食物 = 核心、次节点、入口、主线与地块中心
+        const food = new Float32Array(GW * GH), addF = (p, v) => { const i = gi(p); if (i >= 0) food[i] = Math.max(food[i], v); };
+        for (const c of cores) addF(c, 14); for (const a of secs) addF(a.p, 9); for (const a of gates) addF(a.p, 9); for (const S of strands) for (const q of resample(S, 40)) addF(q, 3); for (const q of bluePts(q => 1.3 * spacing(q))) addF(q, 4);
+        let trail = new Float32Array(GW * GH); const nAg = Math.min(26000, Math.round(inG.reduce((a, b) => a + b, 0) * 0.7)); const ax = new Float32Array(nAg), ay = new Float32Array(nAg), aa = new Float32Array(nAg);
+        for (let k = 0; k < nAg; k++) { let x, y; do { x = U(0, GW); y = U(0, GH); } while (!inG[(y | 0) * GW + (x | 0)]); ax[k] = x; ay[k] = y; aa[k] = U(0, 2 * Math.PI); }
+        const SA = Math.PI / 4, RA = Math.PI * 40 / 180, SD = 4, sense = (k, a) => { const x = (ax[k] + Math.cos(a) * SD) | 0, y = (ay[k] + Math.sin(a) * SD) | 0; if (x < 0 || y < 0 || x >= GW || y >= GH || !inG[y * GW + x]) return -1e9; return trail[y * GW + x]; };
+        const tmp = new Float32Array(GW * GH);
+        for (let it = 0; it < 170; it++) {
+          for (let k = 0; k < nAg; k++) { const F = sense(k, aa[k]), Lf = sense(k, aa[k] + SA), Rt = sense(k, aa[k] - SA); if (Lf > F && Lf > Rt) aa[k] += RA; else if (Rt > F && Rt > Lf) aa[k] -= RA; aa[k] += (rnd() - 0.5) * 0.5;
+            const nx = ax[k] + Math.cos(aa[k]), ny = ay[k] + Math.sin(aa[k]); if (nx < 0 || ny < 0 || nx >= GW || ny >= GH || !inG[(ny | 0) * GW + (nx | 0)]) { aa[k] += Math.PI; continue; } ax[k] = nx; ay[k] = ny; trail[(ny | 0) * GW + (nx | 0)] += 0.6; }
+          for (let i = 0; i < GW * GH; i++) trail[i] += food[i] * 3;
+          for (let y = 0; y < GH; y++) { const o = y * GW; for (let x = 0; x < GW; x++) tmp[o + x] = (trail[o + Math.max(0, x - 1)] + trail[o + x] + trail[o + Math.min(GW - 1, x + 1)]) / 3; }
+          for (let y = 0; y < GH; y++) { const o = y * GW, u = Math.max(0, y - 1) * GW, d = Math.min(GH - 1, y + 1) * GW; for (let x = 0; x < GW; x++) trail[o + x] = (tmp[u + x] + tmp[o + x] + tmp[d + x]) / 3 * 0.92; } }
+        const vals = []; for (let i = 0; i < GW * GH; i++) if (inG[i]) vals.push(trail[i]); vals.sort((a, b) => a - b); const thr = vals[Math.floor(vals.length * 0.8)] || 0;
+        for (let i = 0; i < GW * GH; i++) if (inG[i] && trail[i] > thr) net[i] = 1;
+        const NL = label4(net, GW, GH); for (let i = 0; i < GW * GH; i++) if (net[i] && NL.sizes[NL.lab[i]] < 15) net[i] = 0;
+        if (TR) { const pts = []; for (let i = 0; i < GW * GH; i += 3) if (net[i]) pts.push(gp(i % GW, (i / GW) | 0)); TR.netPts = pts; }
+      }
+      // 孔洞 → 种子（中心）+ 权重（面积）；碰到栅格外框的大孔（场地外）不算
+      const holes = new Uint8Array(GW * GH); for (let i = 0; i < GW * GH; i++) holes[i] = net[i] ? 0 : 1;
+      const HL = label4(holes, GW, GH), sx = new Float64Array(HL.n + 1), sy = new Float64Array(HL.n + 1), inside = new Float64Array(HL.n + 1), edge = new Uint8Array(HL.n + 1);
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = y * GW + x, k = HL.lab[i]; if (!k) continue; const p = gp(x, y); sx[k] += p[0]; sy[k] += p[1]; if (inG[i]) inside[k]++; if (x === 0 || y === 0 || x === GW - 1 || y === GH - 1) edge[k] = 1; }
+      WT = seeds.map(q => (0.5 * spacing(q)) ** 2 * 0.5); const holesOut = [];
+      for (let k = 1; k <= HL.n; k++) { const n = HL.sizes[k]; if (n < 6 || inside[k] < n * 0.3) continue; if (edge[k] && n > GW * GH * 0.2) continue; const q = [sx[k] / n, sy[k] / n], w = n * R8 * R8 / Math.PI * 0.6; holesOut.push([q, w]); if (primNearG(q).d < hA(q) * 0.5) continue;
+        seeds.push(q); fixedS.push(false); WT.push(w); if (TR) TR.seedRow.push(0); }
+      if (!TR) { site.netCache.set(netKey, { holes: holesOut, net: NET.slice() }); if (site.netCache.size > 12) site.netCache.delete(site.netCache.keys().next().value); }
+      }
+    }
     gx0 = lx0; gy0 = ly0; gx1 = lx1; gy1 = ly1;
   } else {
   const inBox = q => q[0] > gx0 - 80 && q[0] < gx1 + 80 && q[1] > gy0 - 80 && q[1] < gy1 + 80;
@@ -281,17 +393,27 @@ function buildStructure(site, P, EXCL) {
   const okSeed = q => { const sp = spG(q); if (primNearG(q).d < sp * 0.72) return false; const w = A(q); if (inSite(w) && inWater(w)) return false; const R = Math.ceil(sp / SC) + 1, gx = Math.floor(q[0] / SC), gy = Math.floor(q[1] / SC);
     for (let a = -R; a <= R; a++) for (let b = -R; b <= R; b++) { const l = SH.get((gx + a) + ',' + (gy + b)); if (l) for (const j of l) if (dist(seeds[j], q) < sp * 0.9) return false; } return true; };
   for (let it = 0; it < 14000; it++) { const q = [U(gx0 - 70, gx1 + 70), U(gy0 - 70, gy1 + 70)]; if (!nearSite(q)) continue; if (okSeed(q)) { seeds.push(q); fixedS.push(false); addSeedHash(q, seeds.length - 1); } }
+  if (MODE === 'radial') for (const g of rings) {
+    // 放射蛛网：核心周围一圈圈同心环种子（环距逐圈放大），往外过渡到普通网
+    const Rw = clamp(0.9 * P.coreR, 260, 650), keep = seeds.map(q => dist(A(q), g.c) > Rw); seeds = seeds.filter((_, i) => keep[i]); fixedS = fixedS.filter((_, i) => keep[i]);
+    let r0 = 2.3 * g.r, gap = Math.max(0.9 * spacing(g.c), 60), k = 0;
+    while (r0 + gap / 2 < Rw) { const rm = r0 + gap / 2, n = Math.max(8, Math.round(2 * Math.PI * rm / (gap * 1.1))); for (let j = 0; j < n; j++) { const a = 2 * Math.PI * (j + (k % 2) * 0.5) / n; seeds.push(Ai(add(g.c, [rm * Math.cos(a), rm * Math.sin(a)]))); fixedS.push(true); }
+      r0 += gap; gap *= 1.22; k++; } }
 
   }
   for (const g of rings) { const R2 = 2 * g.r, n = Math.max(6, Math.round(2 * Math.PI * R2 / (1.3 * spacing(g.c)))), a0 = Math.atan2(field(g.c)[1], field(g.c)[0]);
-    const keep = seeds.map(q => dist(A(q), g.c) > R2 * 1.15); seeds = seeds.filter((_, i) => keep[i]); fixedS = fixedS.filter((_, i) => keep[i]); if (TR) TR.seedRow = TR.seedRow.filter((_, i) => keep[i]);
-    seeds.push(Ai(g.c)); fixedS.push(true); if (TR) TR.seedRow.push(-1);
-    for (let k = 0; k < n; k++) { const a = a0 + 2 * Math.PI * (k + 0.5) / n; seeds.push(Ai(add(g.c, [R2 * Math.cos(a), R2 * Math.sin(a)]))); fixedS.push(true); if (TR) TR.seedRow.push(-1); } }
-  if (TR) { TR.seedsG = seeds.map(q => q.slice()); TR.seedsW = seeds.map(A); TR.fixedS = fixedS.slice(); TR.v0 = V1 ? null : { ctr, t0, aS }; }
+    const keep = seeds.map(q => dist(A(q), g.c) > R2 * 1.15); seeds = seeds.filter((_, i) => keep[i]); fixedS = fixedS.filter((_, i) => keep[i]); if (WT) WT = WT.filter((_, i) => keep[i]); if (TR) TR.seedRow = TR.seedRow.filter((_, i) => keep[i]);
+    seeds.push(Ai(g.c)); fixedS.push(true); if (WT) WT.push((0.8 * g.r) ** 2); if (TR) TR.seedRow.push(-1);
+    for (let k = 0; k < n; k++) { const a = a0 + 2 * Math.PI * (k + 0.5) / n; seeds.push(Ai(add(g.c, [R2 * Math.cos(a), R2 * Math.sin(a)]))); fixedS.push(true); if (WT) WT.push((0.8 * g.r) ** 2); if (TR) TR.seedRow.push(-1); } }
+  if (TR) { TR.seedsG = seeds.map(q => q.slice()); TR.seedsW = seeds.map(A); TR.fixedS = fixedS.slice(); TR.v0 = WORLD ? null : { ctr, t0, aS }; TR.mode = MODE; TR.net = NET.map(L => L.map(q => q.slice())); }
   // 4 Voronoi（G）→ 拉回场地
   const BIG = [[gx0 - 3000, gy0 - 3000], [gx1 + 3000, gy0 - 3000], [gx1 + 3000, gy1 + 3000], [gx0 - 3000, gy1 + 3000]];
+  // 分格：普通 Voronoi；v2 = 平分线按当地张量场度量（各向异性）；网络型 = 加权（功率）Voronoi，权重 = 孔洞面积
+  const maxW = WT ? Math.max(...WT) : 0, reachK = MET ? Math.sqrt(aS) * 1.3 : 1;
   const voronoi = () => seeds.map((si, i) => { const order = seeds.map((sj, j) => [dist(si, sj), j]).filter(x => x[1] !== i).sort((a, b) => a[0] - b[0]); let c = BIG;
-    for (const [dd, j] of order) { let rmax = 0; for (const p of c) rmax = Math.max(rmax, dist(p, si)); if (dd > 2 * rmax) break; const sj = seeds[j]; c = clipHalfPlane(c, mul(add(si, sj), 0.5), sub(sj, si)); if (c.length < 3) break; }
+    for (const [dd, j] of order) { let rmax = 0; for (const p of c) rmax = Math.max(rmax, dist(p, si)); if (dd > 2 * rmax * reachK + (WT ? 2 * Math.sqrt(maxW) : 0)) break; const sj = seeds[j], d = sub(sj, si);
+      let m = mul(add(si, sj), 0.5); if (WT) m = add(m, mul(d, (WT[i] - WT[j]) / (2 * dot(d, d))));
+      c = clipHalfPlane(c, m, MET ? MET(m, d) : d); if (c.length < 3) break; }
     return c; });
   let vc = voronoi();
   const cellWorld = i => vc[i].length < 3 ? [] : vc[i].map(A);
@@ -360,7 +482,7 @@ function buildStructure(site, P, EXCL) {
         if (inS >= 3 && inW / inS > 0.4) { const cand = cs.filter(x => !fixedS[x.seed]).sort((x, y) => Math.abs(polyArea(x.raw)) - Math.abs(polyArea(y.raw))); if (cand.length) { kill.add(cand[0].seed); nWaterCut++; } } } }
     if (!kill.size || pass === 4) break;
     if (TR) for (const i of kill) TR.killed.push({ pass, p: A(seeds[i]) });
-    seeds = seeds.filter((_, i) => !kill.has(i)); fixedS = fixedS.filter((_, i) => !kill.has(i)); nRemoved += kill.size; vc = voronoi();
+    seeds = seeds.filter((_, i) => !kill.has(i)); fixedS = fixedS.filter((_, i) => !kill.has(i)); if (WT) WT = WT.filter((_, i) => !kill.has(i)); nRemoved += kill.size; vc = voronoi();
   }
 
   // 6 走廊中心线（Voronoi 边 ∩ 场地）
@@ -455,7 +577,7 @@ function buildStructure(site, P, EXCL) {
   let totL = 0; for (const f of fibres) totL += arclen(f.P).slice(-1)[0];
   // 校验：走廊中心线压在道路上（< 8 m）的比例（只计场内）、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
-  return { rings, gatePlates, entryStrands, secs, gates, trace: TR, nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
+  return { mode: MODE, rings, gatePlates, entryStrands, secs, gates, trace: TR, nTail: GP.nTail, nRemoved, nCtrl, chains, strands, nodeP, fixed, edges, fibres, inner, merged, nSplit, nWeb, towers, mergeAng, FA, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, coreP, cores, site, cellPolys, nWaterCut, nBridge, bridgeL, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, logic: V1 ? 'v1' : 'v0', strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, merged: merged.size, split: nSplit, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
