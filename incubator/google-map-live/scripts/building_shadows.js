@@ -116,7 +116,8 @@ export function createBuildingShadowLayer(map,maplibregl,{
   const qs=(()=>{try{return new URLSearchParams(location.search);}catch(error){return new URLSearchParams();}})();
   // ?perf=1 on this page, or on the page around it (the map opened from the catalogue sits in a frame)
   // anywhere in the address, before or after the # (…/#workspace?perf=1 works too)
-  const PERF=(()=>{const has=h=>/[?&#]perf=1(?![0-9])/.test(h||'');try{return has(location.href)||(window.top!==window&&has(window.top.location.href));}catch(error){return has(location.href);}})();
+  // …or switched on in the main site's version menu (kept on this device)
+  const PERF=(()=>{const has=h=>/[?&#]perf=1(?![0-9])/.test(h||'');try{if(localStorage.getItem('london2100.perf')==='1')return true;}catch(error){}try{return has(location.href)||(window.top!==window&&has(window.top.location.href));}catch(error){return has(location.href);}})();
   const NEAR=Math.max(300,Number(qs.get('shadowR'))||1800);
   let list=null,stale=true,staleSince=0,waitTimer=null;
   const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0,loadMs:null,loading:false,loadStart:0};

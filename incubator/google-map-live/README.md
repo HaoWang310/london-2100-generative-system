@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.43.4: the timing box can be switched on without the address bar (a home-screen app on iPad has none): in the main site's version menu, or by tapping this map's version line five times. It stays on for that device until switched off.
+
 Version 3.43.3: `perf=1` is found anywhere in the address, also after the # (for example `…/#workspace?perf=1` on the main site).
 
 Version 3.43.2: with `?perf=1` the timing box appears as soon as the page code runs (map library loaded, map style, first full picture, first settle), before the map has finished loading; the shadow lines join it later.
