@@ -105,7 +105,7 @@
 @media (max-width: 760px) {
   /* minmax(0, 1fr): the column may be narrower than the top bar's content (a plain 1fr may not, which made the page
      ~436 px wide on a 375–430 px iPhone and cut the right edge off every screen) */
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) auto 56px; grid-template-areas: "top" "stage" "insp" "time"; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) minmax(0, 1fr) 56px;   /* the parameters fill the rest and scroll inside */ grid-template-areas: "top" "stage" "insp" "time"; }
   .topbar { min-width: 0; overflow: hidden; gap: 12px; }
   .version { display: none; }
   .top-actions { margin-left: auto; }            /* the crumbs are hidden here: keep 2D / 3D and the language at the right */
@@ -149,4 +149,37 @@ body.ws-resizing iframe { pointer-events: none; }
 @media (max-width: 760px) {
   .ws-rz-nav, .ws-rz-insp { display: none; }
   .ws-rz-stage { display: block; }
+}
+
+/* ---- phones: the scales above the parameters (main.js renderPhoneScales) ---- */
+.phone-scales { display: none; }
+@media (max-width: 760px) {
+  .app { grid-template-rows: 48px var(--stage-h, 52dvh) minmax(0, 1fr) 56px; }
+  .inspector { padding: 0 16px 20px; overscroll-behavior: contain; }
+  /* sticks at the top while the parameters scroll; the top 18 px leave room for the map / parameters drag line */
+  .phone-scales { display: flex; gap: 6px; position: sticky; top: 0; z-index: 3; margin: 0 -16px 14px; padding: 18px 12px 10px;
+    overflow-x: auto; scrollbar-width: none; background: var(--surface-1); border-bottom: 1px solid var(--hairline);
+    -webkit-overflow-scrolling: touch; scroll-padding: 0 12px; }
+  .phone-scales::-webkit-scrollbar { display: none; }
+  .ps-chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border-radius: 999px;
+    border: 1px solid var(--hairline-strong); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 13px;
+    white-space: nowrap; cursor: pointer; }
+  .ps-chip .num { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 11px; color: var(--text-3); }
+  .ps-chip[aria-current="true"] { background: var(--text); color: var(--bg, #000); border-color: var(--text); }
+  .ps-chip[aria-current="true"] .num { color: inherit; opacity: .6; }
+  .ps-chip:disabled { opacity: .4; cursor: default; }
+  .ps-more { margin-left: auto; padding: 0 14px; font-size: 16px; letter-spacing: .05em; }
+  .phone-menu { position: fixed; z-index: 50; min-width: 180px; padding: 6px; border-radius: 14px; background: rgba(28,28,31,.98);
+    border: 1px solid var(--hairline-strong); box-shadow: 0 12px 32px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+  .phone-menu button { height: 44px; padding: 0 14px; text-align: left; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; font-size: 14px; }
+  .phone-menu button:active { background: var(--surface-2); }
+  .phone-menu-ver { padding: 8px 14px 6px; border-top: 1px solid var(--hairline); margin-top: 4px; font: 11px/1.4 var(--mono, ui-monospace, monospace); color: var(--text-3); }
+  /* narrow phones (iPhone SE, small Android): the time bar's labels shrink */
+  .timeline { gap: 10px; padding: 0 12px; }
+}
+/* short phones (iPhone SE, small Android): a little less map by default, so the parameters keep room */
+@media (max-width: 760px) and (max-height: 700px) { .app { grid-template-rows: 48px var(--stage-h, 46dvh) minmax(0, 1fr) 56px; } }
+@media (max-width: 380px) {
+  .ps-chip { padding: 0 11px; font-size: 12.5px; }
+  .timeline { font-size: 12px; }
 }
