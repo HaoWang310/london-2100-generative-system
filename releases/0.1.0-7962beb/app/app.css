@@ -1,0 +1,185 @@
+.app {
+  display: grid;
+  grid-template-columns: var(--nav-w, 232px) minmax(0, 1fr) var(--insp-w, 312px);   /* the edges can be dragged (resize.js) */
+  grid-template-rows: 48px 1fr 56px;
+  grid-template-areas: "top top top" "nav stage insp" "nav time insp";
+  height: 100vh; height: 100dvh;
+}
+
+/* ---- top bar ---- */
+.topbar { grid-area: top; display: flex; align-items: center; gap: 18px; padding: 0 12px 0 16px;
+  background: rgba(0,0,0,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--hairline); z-index: 5; }
+.brand { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.brand { cursor: pointer; border-radius: 6px; }
+.brand-mark { width: 10px; height: 10px; border-radius: 3px; background: var(--text); align-self: center; }
+.brand-name { font-weight: 600; letter-spacing: -.01em; }
+.brand-sub { color: var(--text-3); font-size: 12px; }
+.crumbs { display: flex; align-items: center; gap: 2px; min-width: 0; flex: 1; overflow: hidden; }
+.crumbs button { border: 0; background: none; color: var(--text-2); padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.crumbs button:hover { background: var(--surface-2); color: var(--text); }
+.crumbs button[aria-current="page"] { color: var(--text); font-weight: 600; }
+.crumbs .sep { color: var(--text-3); }
+.top-actions { display: flex; align-items: center; gap: 6px; }
+.version { font-family: var(--mono); font-size: 11px; }
+.version.has-update::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 4px; }
+
+/* ---- left nav ---- */
+.sidenav { grid-area: nav; background: var(--surface-1); border-right: 1px solid var(--hairline);
+  display: flex; flex-direction: column; padding: 12px 8px; overflow-y: auto; }
+.pad { padding: 10px 8px 6px; }
+.modlist { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
+.mod { width: 100%; display: grid; grid-template-columns: 26px 1fr 8px; align-items: center; gap: 8px;
+  padding: 8px; border-radius: 8px; border: 0; background: none; color: var(--text-2); text-align: left; cursor: pointer; }
+.mod:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.mod:disabled { opacity: .35; cursor: default; }
+.mod[aria-current="true"] { background: var(--surface-3); color: var(--text); }
+.mod .num { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+.mod[aria-current="true"] .num { color: var(--accent); }
+.mod .name { display: block; }
+.mod .sub { display: block; font-size: 11px; color: var(--text-3); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); }
+.dot.done { background: var(--ok); } .dot.running { background: var(--warn); } .dot.stale { background: var(--warn); box-shadow: 0 0 0 2px rgba(214,178,110,.25); }
+.dot.error { background: var(--error); }
+.sidenav-foot { margin-top: auto; display: flex; gap: 4px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.sidenav-foot .btn { flex: 1; font-size: 12px; }
+
+/* ---- stage ---- */
+.stage { grid-area: stage; position: relative; overflow: hidden; background: #0b0b0c; }
+/* MapLibre's own stylesheet arrives later and sets .maplibregl-map { position: relative }, which
+   collapsed the map to zero height; the extra class keeps this rule ahead of it. */
+.map, .stage .map.maplibregl-map { position: absolute; inset: 0; }
+.map-hint, .map-badge { position: absolute; left: 50%; transform: translateX(-50%); padding: 7px 12px; border-radius: 999px;
+  background: rgba(28,28,30,.88); backdrop-filter: blur(16px); border: 1px solid var(--hairline-strong); font-size: 12px; color: var(--text-2);
+  pointer-events: none; white-space: nowrap; }
+.map-hint { top: 14px; }
+.map-badge { bottom: 14px; color: var(--warn); }
+.maplibregl-ctrl-group { background: rgba(28,28,30,.9) !important; border: 1px solid var(--hairline-strong); }
+.maplibregl-ctrl-group button + button { border-top-color: var(--hairline) !important; }
+.maplibregl-ctrl-group button span { filter: invert(1); }
+.maplibregl-ctrl-scale { background: rgba(0,0,0,.6); color: var(--text-2); border-color: var(--text-3); }
+.maplibregl-ctrl-attrib { background: rgba(0,0,0,.55) !important; color: var(--text-3); }
+.maplibregl-ctrl-attrib a { color: var(--text-2); }
+
+/* ---- inspector ---- */
+.inspector { grid-area: insp; background: var(--surface-1); border-left: 1px solid var(--hairline); overflow-y: auto; padding: 18px 18px 24px; }
+.insp-head h1 { font-size: 20px; line-height: 1.2; letter-spacing: -.015em; margin: 4px 0 6px; font-weight: 600; }
+.insp-head p { margin: 0; font-size: 12px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--hairline-strong); color: var(--text-2); }
+.badge.warn { color: var(--warn); border-color: rgba(214,178,110,.35); }
+.insp-actions { display: grid; gap: 8px; margin: 16px 0 6px; }
+.insp-actions .row { display: flex; gap: 8px; }
+.insp-actions .row .btn { flex: 1; }
+.insp-section { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--hairline); }
+.insp-section .eyebrow { margin-bottom: 6px; }
+.small { font-size: 11px; margin: 8px 0 0; }
+.legend { display: grid; gap: 6px; }
+.legend-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-2); }
+.legend-row i { width: 22px; height: 0; border-top-style: solid; border-radius: 2px; }
+
+/* ---- timeline ---- */
+.timeline { grid-area: time; display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  background: var(--surface-1); border-top: 1px solid var(--hairline); }
+.play { width: 32px; padding: 0; font-size: 14px; }
+.tl-track { flex: 1; }
+.tl-track input { width: 100%; accent-color: var(--accent); }
+.tl-label { color: var(--text-2); min-width: 72px; text-align: right; }
+.tl-status { color: var(--text-3); font-size: 12px; min-width: 120px; text-align: right; }
+
+/* ---- version popover ---- */
+.popover { position: fixed; top: 52px; right: 12px; width: 300px; max-height: 60vh; overflow: auto; z-index: 40;
+  background: rgba(28,28,30,.96); backdrop-filter: blur(24px); border: 1px solid var(--hairline-strong); border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6); padding: 12px; }
+.popover h3 { margin: 0 0 2px; font-size: 13px; }
+.popover .rel { display: flex; justify-content: space-between; gap: 8px; padding: 8px; border-radius: 8px; color: var(--text-2); text-decoration: none; }
+.popover .rel:hover { background: var(--surface-3); color: var(--text); }
+.popover .rel.current { color: var(--text); }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: var(--nav-w, 64px) minmax(0, 1fr) var(--insp-w, 280px); }
+  .brand-sub { display: none; }
+}
+/* a narrow module list (by default below 1100 px, or dragged narrow): the numbers only */
+.app.nav-compact .mod { grid-template-columns: 1fr; justify-items: center; }
+.app.nav-compact :is(.mod .name, .mod .sub, .mod .dot, .sidenav .eyebrow, .sidenav-foot) { display: none; }
+@media (max-width: 760px) {
+  /* minmax(0, 1fr): the column may be narrower than the top bar's content (a plain 1fr may not, which made the page
+     ~436 px wide on a 375–430 px iPhone and cut the right edge off every screen) */
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) minmax(0, 1fr) 56px;   /* the parameters fill the rest and scroll inside */ grid-template-areas: "top" "stage" "insp" "time"; }
+  .topbar { min-width: 0; overflow: hidden; gap: 12px; }
+  .version { display: none; }
+  .top-actions { margin-left: auto; }            /* the crumbs are hidden here: keep 2D / 3D and the language at the right */
+  .sidenav { display: none; }
+  .crumbs { display: none; }
+}
+
+/* map loading indicator (shimmer bar) */
+.map-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px;
+  color: var(--text-3); font-size: 12px; pointer-events: none; transition: opacity .4s; }
+.map-loading.done { opacity: 0; }
+.map-loading em { font-style: normal; }
+.map-loading span { width: 140px; height: 2px; border-radius: 2px; overflow: hidden; background: var(--surface-2); position: relative; }
+.map-loading span::after { content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, var(--text-2), transparent); animation: l2100-shimmer 1.2s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes l2100-shimmer { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* ---- column edges to drag (resize.js): mouse, pen and finger ---- */
+.app { position: relative; }
+.ws-rz { position: absolute; z-index: 7; touch-action: none; }
+.ws-rz::after { content: ""; position: absolute; border-radius: 3px; background: var(--text-3); opacity: 0; transition: opacity .15s; }
+.ws-rz-nav, .ws-rz-insp { top: 48px; bottom: 0; width: 12px; cursor: ew-resize; }
+.ws-rz-nav { left: calc(var(--rz-nav-x, 232px) - 6px); }
+.ws-rz-insp { left: calc(var(--rz-insp-x, 0px) - 6px); }
+.ws-rz-nav::after, .ws-rz-insp::after { left: 4px; top: 50%; width: 4px; height: 44px; margin-top: -22px; }
+.ws-rz-stage { display: none; left: 0; right: 0; height: 22px; top: calc(var(--rz-stage-y, 50vh) - 11px); cursor: ns-resize; }
+.ws-rz-stage::after { top: 9px; left: 50%; width: 44px; height: 4px; margin-left: -22px; }
+.ws-rz:hover::after, .ws-rz.on::after { opacity: 1; background: var(--text); }
+body.ws-resizing { user-select: none; -webkit-user-select: none; }
+body.ws-resizing-x, body.ws-resizing-x * { cursor: ew-resize !important; }
+body.ws-resizing-y, body.ws-resizing-y * { cursor: ns-resize !important; }
+body.ws-resizing iframe { pointer-events: none; }
+@media (pointer: coarse) {                 /* a finger: a wider edge, and the grip always shown */
+  .ws-rz-nav, .ws-rz-insp { width: 24px; }
+  .ws-rz-nav { left: calc(var(--rz-nav-x, 232px) - 12px); }
+  .ws-rz-insp { left: calc(var(--rz-insp-x, 0px) - 12px); }
+  .ws-rz-nav::after, .ws-rz-insp::after { left: 10px; opacity: .45; }
+  .ws-rz-stage { height: 32px; top: calc(var(--rz-stage-y, 50vh) - 16px); }
+  .ws-rz-stage::after { top: 14px; opacity: .45; }
+}
+@media (max-width: 760px) {
+  .ws-rz-nav, .ws-rz-insp { display: none; }
+  .ws-rz-stage { display: block; }
+}
+
+/* ---- phones: the scales above the parameters (main.js renderPhoneScales) ---- */
+.phone-scales { display: none; }
+@media (max-width: 760px) {
+  .app { grid-template-rows: 48px var(--stage-h, 52dvh) minmax(0, 1fr) 56px; }
+  .inspector { padding: 0 16px 20px; overscroll-behavior: contain; }
+  /* sticks at the top while the parameters scroll; the top 18 px leave room for the map / parameters drag line */
+  .phone-scales { display: flex; gap: 6px; position: sticky; top: 0; z-index: 3; margin: 0 -16px 14px; padding: 18px 12px 10px;
+    overflow-x: auto; scrollbar-width: none; background: var(--surface-1); border-bottom: 1px solid var(--hairline);
+    -webkit-overflow-scrolling: touch; scroll-padding: 0 12px; }
+  .phone-scales::-webkit-scrollbar { display: none; }
+  .ps-chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border-radius: 999px;
+    border: 1px solid var(--hairline-strong); background: var(--surface-2); color: var(--text-2); font: inherit; font-size: 13px;
+    white-space: nowrap; cursor: pointer; }
+  .ps-chip .num { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 11px; color: var(--text-3); }
+  .ps-chip[aria-current="true"] { background: var(--text); color: var(--bg, #000); border-color: var(--text); }
+  .ps-chip[aria-current="true"] .num { color: inherit; opacity: .6; }
+  .ps-chip:disabled { opacity: .4; cursor: default; }
+  .ps-more { margin-left: auto; padding: 0 14px; font-size: 16px; letter-spacing: .05em; }
+  .phone-menu { position: fixed; z-index: 50; min-width: 180px; padding: 6px; border-radius: 14px; background: rgba(28,28,31,.98);
+    border: 1px solid var(--hairline-strong); box-shadow: 0 12px 32px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+  .phone-menu button { height: 44px; padding: 0 14px; text-align: left; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; font-size: 14px; }
+  .phone-menu button:active { background: var(--surface-2); }
+  .phone-menu-ver { padding: 8px 14px 6px; border-top: 1px solid var(--hairline); margin-top: 4px; font: 11px/1.4 var(--mono, ui-monospace, monospace); color: var(--text-3); }
+  /* narrow phones (iPhone SE, small Android): the time bar's labels shrink */
+  .timeline { gap: 10px; padding: 0 12px; }
+}
+/* short phones (iPhone SE, small Android): a little less map by default, so the parameters keep room */
+@media (max-width: 760px) and (max-height: 700px) { .app { grid-template-rows: 48px var(--stage-h, 46dvh) minmax(0, 1fr) 56px; } }
+@media (max-width: 380px) {
+  .ps-chip { padding: 0 11px; font-size: 12.5px; }
+  .timeline { font-size: 12px; }
+}
