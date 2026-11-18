@@ -30,15 +30,16 @@
 
 ## 输出
 
-- **GeoJSON**（EPSG:27700）：`cell`（室，多边形）、`corridor centreline`（走廊中心线，带 `primary`、`width_m`、`deck_m`）、`planting tower`（点，带半径和高度）。
-- **OBJ**：走廊顶面与侧面、建筑顶面与侧面（Y 向上）。
-- **JSON**：参数、塔、节点、边（中心线）、室（名称、形态、面积、形心、建筑数、是否景观）。
+- **GeoJSON**（EPSG:27700）：`cell`（室，多边形）、`corridor centreline`（走廊中心线，带 `primary`、`width_m`、`deck_m`）、`planting tower`（点，带 `kind`（主吸引点 / 次吸引点 / 重要路口）、半径和高度）。
+- **OBJ**：走廊顶面与侧面（含跨路、跨水段的架空和端墙，Y 向上）。建筑暂时不排，所以没有建筑层；农田是地面上的平面，用 GeoJSON 的 `cell` 更轻。
+- **JSON**：参数、生成模式、跨越统计（跨水 / 铁路、跨街道的段数、长度、桥下净空、跨过去的种植层数）、柱子、塔（位置、半径、高度、来源）、节点、边（中心线、是否主线）、室（名称、形态、面积、长宽比、形心）。
 
 ## 引擎接口（`engine/structure.js`，浏览器里是 `window.SS`）
 
 ```js
 const site = SS.prepareSite(snapshot);          // 场地栅格（2 m）、张量场采样、核心、主干路距离
 const F = SS.buildStructure(site, params, excl); // 走廊网、室多边形 cellPolys、塔、统计、栅格
-const M = SS.meshes(F, params);                  // 三维网格 { corridor, farm, bld }
+const M = SS.meshes(F, params);                  // 三维网格 { corridor, farm, bld }（bld 暂时为空）
+const R = SS.roadSpan(deckZ);                    // 跨街道的做法：{ T 桥身厚, floors 跨过去的种植层数, clear 桥下净空, ok 是否 ≥ 5 m }
 const img = SS.planImage(F);                     // 平面底图 RGBA
 ```
