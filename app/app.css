@@ -1,7 +1,7 @@
 .app {
   display: grid;
   grid-template-columns: var(--nav-w, 232px) minmax(0, 1fr) var(--insp-w, 312px);   /* the edges can be dragged (resize.js) */
-  grid-template-rows: 48px 1fr 56px;
+  grid-template-rows: 48px 1fr var(--tl-h, 56px);
   grid-template-areas: "top top top" "nav stage insp" "nav time insp";
   height: 100vh; height: 100dvh;
 }
@@ -78,6 +78,9 @@
 .legend-row i { width: 22px; height: 0; border-top-style: solid; border-radius: 2px; }
 
 /* ---- timeline ---- */
+/* shown only where it does something: 01's years, or a scale that grows roads (main.js renderTimeline) */
+.app.no-timeline { --tl-h: 0px; }
+.app.no-timeline .timeline { display: none; }
 .timeline { grid-area: time; display: flex; align-items: center; gap: 12px; padding: 0 16px;
   background: var(--surface-1); border-top: 1px solid var(--hairline); }
 .play { width: 32px; padding: 0; font-size: 14px; }
@@ -105,7 +108,7 @@
 @media (max-width: 760px) {
   /* minmax(0, 1fr): the column may be narrower than the top bar's content (a plain 1fr may not, which made the page
      ~436 px wide on a 375–430 px iPhone and cut the right edge off every screen) */
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) minmax(0, 1fr) 56px;   /* the parameters fill the rest and scroll inside */ grid-template-areas: "top" "stage" "insp" "time"; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) minmax(0, 1fr) var(--tl-h, 56px);   /* the parameters fill the rest and scroll inside */ grid-template-areas: "top" "stage" "insp" "time"; }
   .topbar { min-width: 0; overflow: hidden; gap: 12px; }
   .version { display: none; }
   .top-actions { margin-left: auto; }            /* the crumbs are hidden here: keep 2D / 3D and the language at the right */
@@ -154,7 +157,7 @@ body.ws-resizing iframe { pointer-events: none; }
 /* ---- phones: the scales above the parameters (main.js renderPhoneScales) ---- */
 .phone-scales { display: none; }
 @media (max-width: 760px) {
-  .app { grid-template-rows: 48px var(--stage-h, 52dvh) minmax(0, 1fr) 56px; }
+  .app { grid-template-rows: 48px var(--stage-h, 52dvh) minmax(0, 1fr) var(--tl-h, 56px); }
   .inspector { padding: 0 16px 20px; overscroll-behavior: contain; }
   /* sticks at the top while the parameters scroll; the top 18 px leave room for the map / parameters drag line */
   .phone-scales { display: flex; gap: 6px; position: sticky; top: 0; z-index: 3; margin: 0 -16px 14px; padding: 18px 12px 10px;
@@ -178,7 +181,7 @@ body.ws-resizing iframe { pointer-events: none; }
   .timeline { gap: 10px; padding: 0 12px; }
 }
 /* short phones (iPhone SE, small Android): a little less map by default, so the parameters keep room */
-@media (max-width: 760px) and (max-height: 700px) { .app { grid-template-rows: 48px var(--stage-h, 46dvh) minmax(0, 1fr) 56px; } }
+@media (max-width: 760px) and (max-height: 700px) { .app { grid-template-rows: 48px var(--stage-h, 46dvh) minmax(0, 1fr) var(--tl-h, 56px); } }
 @media (max-width: 380px) {
   .ps-chip { padding: 0 11px; font-size: 12.5px; }
   .timeline { font-size: 12px; }

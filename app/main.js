@@ -288,11 +288,25 @@ function renderPlayButton() {
 
 // ------------------------------------------------------------------ rendering
 
+// The time bar is shown only where it does something: in 01 (the years 2025-2100) or on a scale whose result grows
+// roads (its replay). 00 London map draws the study circle only, so there it is hidden and the map gets the row.
+function renderTimeline(scene) {
+  const show = activeTool === 'growth' || Boolean(scene?.roads?.some(r => !r.static));
+  const app = $('app');
+  if (app.classList.contains('no-timeline') !== !show) {
+    if (!show) stop();
+    app.classList.toggle('no-timeline', !show);
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));   // the map and the canvases take the row
+  }
+}
+
 function render() {
   renderChrome();
   const entry = store.current();
+  const scene = entry ? sceneFor(entry) : null;
+  renderTimeline(scene);
   if (entry && viewer) {
-    viewer.setScene(sceneFor(entry));
+    viewer.setScene(scene);
     viewer.setProgress(activeTool === 'growth' ? 1 : progress);
     viewer.setPanelDocked?.(activeTool === 'growth');      // in 01 the map display panel hugs the map's right edge
   }
