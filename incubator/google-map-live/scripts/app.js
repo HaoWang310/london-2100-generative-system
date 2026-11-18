@@ -1,11 +1,11 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.41.0-english';
-import {createPlaceSearch} from './place_search.js?v=3.41.0-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.41.0-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.41.0-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.41.0-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.41.0-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.42.0-english';
+import {createPlaceSearch} from './place_search.js?v=3.42.0-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.42.0-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.42.0-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.42.0-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.42.0-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,7 +26,7 @@ try {
   }
 }
 
-const APP_VERSION='3.41.0-english';
+const APP_VERSION='3.42.0-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1979,7 +1979,8 @@ function goToPlace(place,button){
   searchMarker.getElement().setAttribute('aria-label',place.name);
   for(const item of $('placeSearchResults').children)item.setAttribute('aria-pressed',String(item===button));
   setSearchStatus('Located: '+place.name);
-  if(window.innerWidth<=600){
+  if(IS_PHONE)setSheet('folded');
+  else if(window.innerWidth<=600){
     $('panel').classList.add('collapsed');$('collapse').textContent='+';
   }
 }
@@ -2231,7 +2232,7 @@ function initOSM(){
     ensureOverviewLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.41.0-english')
+    import('./tensor_site_ui.js?v=3.42.0-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2850,7 +2851,45 @@ window.addEventListener('resize',()=>{
   }
 });
 
+/* v3.42.0 · phones: the control panel is a sheet along the bottom (body.phoneUi). Its handle shows the map or the panel:
+   tap it to open or fold the sheet, drag it to any height (it settles folded, half or nearly full). Folded is the
+   panel's own 'collapsed' state (title only), so the − / + button and everything that folds the panel still apply.
+   Computers and iPads: the floating panel as before. */
+const SHEET_FULL=()=>Math.max(200,window.innerHeight-64),SHEET_HALF=()=>Math.round(window.innerHeight*0.52);
+function setSheet(state){
+  if(!IS_PHONE)return;
+  const folded=state==='folded';
+  panel.classList.toggle('collapsed',folded);$('collapse').textContent=folded?'+':'−';
+  $('collapse').setAttribute('aria-label',folded?'Expand control panel':'Collapse control panel');
+  panel.style.height=folded?'':(state==='full'?SHEET_FULL():SHEET_HALF())+'px';
+  panel.dataset.sheet=state;
+}
+if(IS_PHONE){
+  document.body.classList.add('phoneUi');
+  const handle=document.createElement('button');
+  handle.type='button';handle.className='sheetHandle';handle.setAttribute('aria-label','Show or hide the control panel');
+  panel.prepend(handle);
+  let drag=null;
+  handle.addEventListener('pointerdown',event=>{
+    drag={id:event.pointerId,y:event.clientY,h:panel.getBoundingClientRect().height,moved:false};handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener('pointermove',event=>{
+    if(!drag||event.pointerId!==drag.id)return;const dy=event.clientY-drag.y;if(!drag.moved&&Math.abs(dy)<6)return;
+    if(!drag.moved){drag.moved=true;panel.classList.remove('collapsed');panel.classList.add('sheetDragging');}
+    panel.style.height=Math.max(72,Math.min(SHEET_FULL(),drag.h-dy))+'px';
+  });
+  const end=event=>{
+    if(!drag||event.pointerId!==drag.id)return;const d=drag;drag=null;panel.classList.remove('sheetDragging');
+    if(!d.moved){setSheet(panel.classList.contains('collapsed')?'half':'folded');return;}
+    const h=panel.getBoundingClientRect().height;
+    setSheet(h<SHEET_HALF()*0.55?'folded':h<(SHEET_HALF()+SHEET_FULL())/2?'half':'full');
+  };
+  handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  setSheet('folded');   // the map first
+  window.addEventListener('resize',()=>{if(panel.dataset.sheet&&panel.dataset.sheet!=='folded')setSheet(panel.dataset.sheet);});
+}
 $('collapse').onclick=()=>{
+  if(IS_PHONE){setSheet(panel.classList.contains('collapsed')?'half':'folded');return;}
   const collapsing=!panel.classList.contains('collapsed');
   if(collapsing){
     panelExpandedWidth=panel.getBoundingClientRect().width;
