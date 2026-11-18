@@ -1,6 +1,6 @@
 .app {
   display: grid;
-  grid-template-columns: 232px 1fr 312px;
+  grid-template-columns: var(--nav-w, 232px) minmax(0, 1fr) var(--insp-w, 312px);   /* the edges can be dragged (resize.js) */
   grid-template-rows: 48px 1fr 56px;
   grid-template-areas: "top top top" "nav stage insp" "nav time insp";
   height: 100vh; height: 100dvh;
@@ -96,14 +96,16 @@
 .popover .rel.current { color: var(--text); }
 
 @media (max-width: 1100px) {
-  .app { grid-template-columns: 64px 1fr 280px; }
-  .mod { grid-template-columns: 1fr; justify-items: center; }
-  .mod .name, .mod .sub, .mod .dot, .sidenav .eyebrow, .sidenav-foot, .brand-sub { display: none; }
+  .app { grid-template-columns: var(--nav-w, 64px) minmax(0, 1fr) var(--insp-w, 280px); }
+  .brand-sub { display: none; }
 }
+/* a narrow module list (by default below 1100 px, or dragged narrow): the numbers only */
+.app.nav-compact .mod { grid-template-columns: 1fr; justify-items: center; }
+.app.nav-compact :is(.mod .name, .mod .sub, .mod .dot, .sidenav .eyebrow, .sidenav-foot) { display: none; }
 @media (max-width: 760px) {
   /* minmax(0, 1fr): the column may be narrower than the top bar's content (a plain 1fr may not, which made the page
      ~436 px wide on a 375–430 px iPhone and cut the right edge off every screen) */
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px 52vh auto 56px; grid-template-areas: "top" "stage" "insp" "time"; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px var(--stage-h, 52vh) auto 56px; grid-template-areas: "top" "stage" "insp" "time"; }
   .topbar { min-width: 0; overflow: hidden; gap: 12px; }
   .version { display: none; }
   .top-actions { margin-left: auto; }            /* the crumbs are hidden here: keep 2D / 3D and the language at the right */
@@ -120,3 +122,31 @@
 .map-loading span::after { content: ""; position: absolute; inset: 0; width: 40%;
   background: linear-gradient(90deg, transparent, var(--text-2), transparent); animation: l2100-shimmer 1.2s cubic-bezier(.4,0,.2,1) infinite; }
 @keyframes l2100-shimmer { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* ---- column edges to drag (resize.js): mouse, pen and finger ---- */
+.app { position: relative; }
+.ws-rz { position: absolute; z-index: 7; touch-action: none; }
+.ws-rz::after { content: ""; position: absolute; border-radius: 3px; background: var(--text-3); opacity: 0; transition: opacity .15s; }
+.ws-rz-nav, .ws-rz-insp { top: 48px; bottom: 0; width: 12px; cursor: ew-resize; }
+.ws-rz-nav { left: calc(var(--rz-nav-x, 232px) - 6px); }
+.ws-rz-insp { left: calc(var(--rz-insp-x, 0px) - 6px); }
+.ws-rz-nav::after, .ws-rz-insp::after { left: 4px; top: 50%; width: 4px; height: 44px; margin-top: -22px; }
+.ws-rz-stage { display: none; left: 0; right: 0; height: 22px; top: calc(var(--rz-stage-y, 50vh) - 11px); cursor: ns-resize; }
+.ws-rz-stage::after { top: 9px; left: 50%; width: 44px; height: 4px; margin-left: -22px; }
+.ws-rz:hover::after, .ws-rz.on::after { opacity: 1; background: var(--text); }
+body.ws-resizing { user-select: none; -webkit-user-select: none; }
+body.ws-resizing-x, body.ws-resizing-x * { cursor: ew-resize !important; }
+body.ws-resizing-y, body.ws-resizing-y * { cursor: ns-resize !important; }
+body.ws-resizing iframe { pointer-events: none; }
+@media (pointer: coarse) {                 /* a finger: a wider edge, and the grip always shown */
+  .ws-rz-nav, .ws-rz-insp { width: 24px; }
+  .ws-rz-nav { left: calc(var(--rz-nav-x, 232px) - 12px); }
+  .ws-rz-insp { left: calc(var(--rz-insp-x, 0px) - 12px); }
+  .ws-rz-nav::after, .ws-rz-insp::after { left: 10px; opacity: .45; }
+  .ws-rz-stage { height: 32px; top: calc(var(--rz-stage-y, 50vh) - 16px); }
+  .ws-rz-stage::after { top: 14px; opacity: .45; }
+}
+@media (max-width: 760px) {
+  .ws-rz-nav, .ws-rz-insp { display: none; }
+  .ws-rz-stage { display: block; }
+}
