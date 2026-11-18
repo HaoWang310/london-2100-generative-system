@@ -194,7 +194,8 @@ function buildStructure(site, P, EXCL) {
   if (!strands) {
   strands = [];
   cores.forEach((c, ci) => { for (let k = 0; k < P.nPrim; k++) {
-    const ang = (k - (P.nPrim - 1) / 2) * P.primAng, d0 = rot(primField(c), ang), nn = [-d0[1], d0[0]]; let best = null;
+    const step = P.nPrim >= 3 ? 180 / P.nPrim : P.primAng; // 3 条起在 180° 里均匀分布
+    const ang = (k - (P.nPrim - 1) / 2) * step, d0 = rot(primField(c), ang), nn = [-d0[1], d0[0]]; let best = null;
     for (let o = -P.primShift; o <= P.primShift; o += 10) { const seed = add(c, mul(nn, o)); if (!inSite(seed)) continue; const S = trace(seed, ang), ds = [];
       for (let i = 0; i < S.length; i += 3) if (inSite(S[i])) ds.push(Math.min(roadDist(S[i]), 80)); if (ds.length < 20) continue;
       ds.sort((a, b) => a - b); let sc = ds[Math.floor(ds.length * 0.15)] + 0.4 * ds.reduce((s, v) => s + v, 0) / ds.length - 0.05 * Math.abs(o);

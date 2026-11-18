@@ -256,7 +256,7 @@ body.cards-on #cardBar{display:flex}
         </div></div></li>
       <li class="pmStep" data-k="2"><button type="button" class="pmHead"><span class="pmNum">2</span><span>离路主线</span><span class="pmFlag" id="sum2"></span></button>
         <div class="pmBody"><p class="pmNote">主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。</p><div class="card pmCard">
-<div class="row"><label for="nPrim">每个核心的主线</label><input type="range" id="nPrim" min="1" max="4" step="1" value="1"><output id="v_nPrim">1</output></div>
+<div class="row"><label for="nPrim">每个核心的主线</label><input type="range" id="nPrim" min="1" max="6" step="1" value="1"><output id="v_nPrim">1</output></div>
 <div class="row"><label for="primAng">主线夹角</label><input type="range" id="primAng" min="10" max="70" step="2" value="30"><output id="v_primAng">30°</output></div>
 <div class="row"><label for="primStraight">主线顺直度</label><input type="range" id="primStraight" min="0" max="2" step="0.1" value="0.6"><output id="v_primStraight">0.6</output></div>
 <div class="row"><label for="offRoad">贴路 / 离路</label><input type="range" id="offRoad" min="0" max="1" step="1" value="1"><output id="v_offRoad">离路</output></div>
@@ -350,7 +350,7 @@ function setLang(lang, quiet) {
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
   translateStatic(); for (const k in FMT) { const o = $('v_' + k); if (o && P[k] != null) o.textContent = FMT[k](P[k]); }
   if (!quiet && F) { writeTexts(); buildCards(); focusCell(focus); siteText(); drawPlan(); }
-  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); buildNextBtns(); }
+  if (!quiet) { refreshSel(); saveHint(); buildSwatches(); buildNextBtns(); syncPrimAng(); }
 }
 window.setInterfaceLanguage = setLang;
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') setLang(e.data.lang); });
@@ -677,6 +677,8 @@ function scheduleSolve() { clearTimeout(pending); clearTimeout(fine); $('busy').
 $('scaleBtn').onclick = () => { if (!SITE) return; const d1 = SITE.d1, d2 = SITE.d2, set = (k, v) => { const el = $(k); el.value = v; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); };
   set('sCore', Math.round(0.66 * d2 / 5) * 5); set('sOut', Math.round(0.69 * d1 / 10) * 10); set('coreR', Math.round(1.85 * d1 / 25) * 25); P.primShift = Math.round(0.37 * d1 / 10) * 10; if ($('primShift')) set('primShift', P.primShift);
   $('busy').style.display = 'block'; setTimeout(() => solve(false), 30); };
+function syncPrimAng() { const auto = +P.nPrim >= 3, el = $('primAng'); el.disabled = auto; el.closest('.row').style.opacity = auto ? .45 : ''; $('v_primAng').textContent = auto ? L(`自动 ${Math.round(180 / P.nPrim)}°`, `auto ${Math.round(180 / P.nPrim)}°`) : FMT.primAng(P.primAng); }
+$('nPrim').addEventListener('input', () => setTimeout(syncPrimAng, 0));
 for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => drawPlan(); $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
@@ -747,7 +749,7 @@ const setSess = o => { try { localStorage.setItem(SESS_KEY, JSON.stringify(Objec
 let CUR = 'builtin', LIST = [], IDB_OK = true, BUILTIN = null, saveT = null;
 const curMeta = () => LIST.find(m => m.id === CUR);
 function applyP(p) { Object.assign(P, P0); if (p) for (const k in P0) if (p[k] != null && typeof p[k] === typeof P0[k]) P[k] = p[k];
-  for (const k in FMT) { const el = $(k); el.value = P[k]; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); } $('avoidWater').checked = !!P.avoidWater; }
+  for (const k in FMT) { const el = $(k); el.value = P[k]; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); } $('avoidWater').checked = !!P.avoidWater; syncPrimAng(); }
 function savePSoon() { clearTimeout(saveT); saveT = setTimeout(() => { const p = JSON.parse(JSON.stringify(P));
   if (CUR === 'builtin') setSess({ builtinP: p }); else { const m = curMeta(); if (m) { m.P = p; STORE.putMeta(m).catch(() => {}); } } }, 500); }
 function hashSnap(snap) { const t = JSON.stringify([snap.origin, snap.pieces.length, snap.roads.map(r => r.pts)]); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + t.length.toString(36); }
@@ -1039,6 +1041,7 @@ $('dmSpeed').onchange = e => { DEMO.speed = +e.target.value; $('runSpeed').value
 [...$('dmLogic').children].forEach(b => b.onclick = async () => { if (!DEMO.on || +b.dataset.v === (DEMO.v1 ? 1 : 0)) return; DEMO.playing = false; await demoPrepare(+b.dataset.v); [...$('dmLogic').children].forEach(x => x.classList.toggle('on', x === b)); if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.playing = true; dmPlayBtn(); });
 addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape') demoExit(); else if (!DEMO.full) return; else if (e.key === ' ') { e.preventDefault(); $('dmPlay').click(); } else if (e.key === 'ArrowRight') $('dmNext').click(); else if (e.key === 'ArrowLeft') $('dmPrev').click(); });
 addEventListener('resize', () => { if (DEMO.on && mode === '2d') dmFit(); });
+syncPrimAng();
 try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
 boot();
 </script>
