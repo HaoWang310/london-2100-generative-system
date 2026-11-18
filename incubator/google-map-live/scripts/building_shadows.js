@@ -203,6 +203,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
   let hudEl=null;
   function hud(){
     if(!PERF||typeof document==='undefined')return;
+    if(!hudEl)hudEl=document.getElementById('perfShadow');   // the map page's own timing box, when there is one
     if(!hudEl){hudEl=document.createElement('div');hudEl.style.cssText='position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.78);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre';document.body.appendChild(hudEl);}
     const f=v=>v==null?'—':(v/1000).toFixed(2)+' s',ms=v=>Math.round(v)+' ms';
     hudEl.textContent='buildings load  '+(stats.loading?'loading…':f(stats.loadMs))+'\nshadow read     '+ms(stats.readMs)+'  ×'+stats.reads+'\nshadow build    '+ms(stats.buildMs)+'  ×'+stats.rebuilds+'\nbuildings       '+stats.buildings+'  (within '+(stats.reach||NEAR)+' m)\ntriangles       '+stats.triangles+'\nshadows         '+(!enabled?'off':!sun?'no sun yet':shadowOffset(sun.azimuth,sun.altitude)?'on':'sun too low')+'\npixel ratio     '+(window.devicePixelRatio||1);
