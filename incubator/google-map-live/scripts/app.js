@@ -1,11 +1,11 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.40.1-english';
-import {createPlaceSearch} from './place_search.js?v=3.40.1-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.40.1-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.40.1-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.40.1-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.40.1-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.41.0-english';
+import {createPlaceSearch} from './place_search.js?v=3.41.0-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.41.0-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.41.0-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.41.0-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.41.0-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,7 +26,7 @@ try {
   }
 }
 
-const APP_VERSION='3.40.1-english';
+const APP_VERSION='3.41.0-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -91,6 +91,9 @@ let buildingShadows=null;
 // draws at most 2 device pixels per CSS pixel and building shadows start off (the switch turns them on): iOS reloads
 // a tab that takes too much graphics memory. Computers and iPads: as before.
 const IS_PHONE=(()=>{try{return matchMedia('(pointer: coarse)').matches&&Math.min(screen.width,screen.height)<600;}catch(error){return false;}})();
+// v3.41.0 · a touch screen (iPad, iPhone): ⓘ buttons for the layer notes (no hover there) and a button that shows or
+// hides the display panel (hidden at first on phones and on an iPad held upright). Computers with a mouse: unchanged.
+const TOUCH_UI=(()=>{try{return matchMedia('(pointer: coarse)').matches;}catch(error){return false;}})();
 let buildingShadowsWanted=!IS_PHONE;
 if(IS_PHONE&&document.getElementById('buildingShadowToggle'))document.getElementById('buildingShadowToggle').checked=false;   // ($ is defined further down)
 let buildingShadowsActive=null;
@@ -2228,7 +2231,7 @@ function initOSM(){
     ensureOverviewLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.40.1-english')
+    import('./tensor_site_ui.js?v=3.41.0-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2755,6 +2758,31 @@ for(const title of document.querySelectorAll('.layerItem .layerName')){
   });
   title.addEventListener('mouseleave',hideLayerHint);
   title.addEventListener('mousedown',hideLayerHint);
+  if(TOUCH_UI){
+    const info=document.createElement('button');
+    info.type='button';info.className='layerInfo';info.textContent='ⓘ';info.setAttribute('aria-label','About this layer');
+    info.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();   // inside the row's label: do not switch the layer
+      if(layerHintTarget===title&&layerHintTooltip.classList.contains('visible')){hideLayerHint();return;}
+      hideLayerHint();layerHintTarget=title;
+      layerHintTooltip.textContent=note.textContent.replace(/\s+/g,' ').trim();
+      layerHintTooltip.setAttribute('aria-hidden','false');layerHintTooltip.classList.add('visible');
+      requestAnimationFrame(()=>positionLayerHint(title));
+    });
+    (title.querySelector('strong')||title).append(info);
+  }
+}
+if(TOUCH_UI){
+  document.addEventListener('pointerdown',event=>{if(!event.target.closest?.('.layerInfo'))hideLayerHint();},true);
+  // the display panel, shown and hidden by a button of its own
+  document.body.classList.add('touchUi');
+  if(IS_PHONE||(window.innerWidth<window.innerHeight&&window.innerWidth<900))document.body.classList.add('dpHidden');
+  const dpToggle=document.createElement('button');
+  dpToggle.type='button';dpToggle.id='dpToggle';dpToggle.className='dpToggle';dpToggle.textContent='Display';
+  dpToggle.setAttribute('aria-label','Show or hide the display panel');dpToggle.setAttribute('aria-controls','displayPanel');
+  const syncDp=()=>dpToggle.setAttribute('aria-expanded',String(!document.body.classList.contains('dpHidden')));
+  dpToggle.addEventListener('click',()=>{document.body.classList.toggle('dpHidden');syncDp();});
+  syncDp();$('displayPanel')?.before(dpToggle);
 }
 
 window.addEventListener('scroll',hideLayerHint,true);

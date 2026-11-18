@@ -9,7 +9,7 @@
  * site's OSM streets, rail, water, buildings and the OS Terrain 50 elevation. Tensor Studio reads the EA
  * flood risk itself. Esc, or its "back to the London map" button, returns here with the red boundary kept.
  */
-import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.40.1-english';
+import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.41.0-english';
 
 const SEL_SOURCE='site-selection-source';
 const SEL_FILL='site-selection-fill';
@@ -44,6 +44,8 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
   let vertices=[],polygon=null,dragIndex=-1,dragStart=null,dragMoved=false,dragPanWasEnabled=true;
   let areaTimer=null,areaInside=false,areaLngLat=null,areaPopup=null;
   const canvasContainer=map.getCanvasContainer();
+  // v3.41.0 · touch screens (iPad, iPhone): hints name the buttons instead of Enter / double-click; anchors move by finger
+  const TOUCH=(()=>{try{return matchMedia('(pointer: coarse)').matches;}catch(error){return false;}})();
   const status=(message,error=false)=>{const el=$('siteSelectionStep');if(el){el.textContent=message;el.style.color=error?'#ff6b6b':'';}if(error)say?.(message,true);};
 
   function ensureLayers(){
@@ -79,7 +81,11 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
     const clear=$('siteClear');if(clear)clear.disabled=!vertices.length;
     const draw=$('siteDraw');if(draw)draw.disabled=open;
     const stage=$('siteSelectionStep');
-    if(stage&&!stage.dataset.hold)stage.textContent=drawing?'Step 1: select at least three points and press Enter to preview':
+    if(stage&&!stage.dataset.hold)stage.textContent=TOUCH?(drawing?'Step 1: tap at least three points, then tap ① Preview site':
+      !editing?'Tap Draw site boundary to begin':
+      confirmed&&!dirty?'Boundary confirmed: tap Enter site':
+      'Site preview: drag the anchors (hold one to remove it, hold an edge to add one), then tap ② Confirm final boundary'):
+      drawing?'Step 1: select at least three points and press Enter to preview':
       !editing?'Click Draw site boundary to begin':
       confirmed&&!dirty?'Boundary confirmed: double-click inside the red outline or click Enter site':
       'Site preview: adjust or retain boundary, then press Enter to confirm';
@@ -152,7 +158,7 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
     const at=[event.lngLat.lng,event.lngLat.lat],inside=Boolean(polygon?.[0]?.length>=4&&pointInRingLngLat(at,polygon[0]));
     const atHandle=editing&&(findAnchorAtPoint(event.point)!==null||Boolean(nearestEdgeAtPoint(event.point)));
     if(inside&&confirmed&&!dirty&&!atHandle){enterSite();return;}
-    if(inside&&!confirmed&&!atHandle){status('Press Enter to confirm the boundary first, then double-click inside to enter the site.');return;}
+    if(inside&&!confirmed&&!atHandle){status(TOUCH?'Tap ② Confirm final boundary first, then tap Enter site.':'Press Enter to confirm the boundary first, then double-click inside to enter the site.');return;}
     if(!editing)return;
     const ai=findAnchorAtPoint(event.point);
     if(ai!==null){if(vertices.length<=3){status('Polygon requires at least three anchors; no further anchors can be deleted.',true);return;}vertices.splice(ai,1);dirty=true;confirmed=false;syncPolygon();setButtons();return;}
@@ -190,6 +196,38 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
   window.addEventListener('mouseup',onMouseUpWindow);
   map.on('mousemove',onMapMouseMove);
 
+  /* v3.41.0 · fingers: drag an anchor (30 px reach); hold one still for 0.6 s to remove it; hold an edge to add an anchor
+     there (the mouse's double-clicks). MapLibre pans the map with touch events, so these listen to touch events too, in the
+     capture phase, and keep a touch on an anchor or edge from panning. Mouse use is untouched. */
+  let hold=null;
+  const touchPoint=t=>{const rect=map.getCanvas().getBoundingClientRect();return {x:t.clientX-rect.left,y:t.clientY-rect.top};};
+  const anchorNear=(point,r)=>{if(!editing||!vertices.length)return null;let best=null,bd=r;for(let i=0;i<vertices.length;i++){const q=map.project(vertices[i]),d=Math.hypot(q.x-point.x,q.y-point.y);if(d<=bd){bd=d;best=i;}}return best;};
+  const endHold=()=>{if(hold){clearTimeout(hold.timer);hold=null;}};
+  const endTouchDrag=()=>{endHold();if(dragIndex<0)return;dragIndex=-1;dragStart=null;dragMoved=false;if(dragPanWasEnabled&&!map.dragPan.isEnabled())map.dragPan.enable();setButtons();};
+  const onTouchStart=event=>{
+    if(!editing||open||event.touches.length!==1)return;
+    const point=touchPoint(event.touches[0]),i=anchorNear(point,30),edge=i===null?nearestEdgeAtPoint(point):null;if(i===null&&!edge)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();hideAreaPopup();
+    dragPanWasEnabled=map.dragPan.isEnabled();if(dragPanWasEnabled)map.dragPan.disable();
+    if(i!==null){dragIndex=i;dragStart=point;dragMoved=false;}
+    hold={start:point,timer:setTimeout(()=>{const h=hold;hold=null;if(!h||dragMoved)return;
+      if(i!==null){if(vertices.length<=3){status('Polygon requires at least three anchors; no further anchors can be deleted.',true);return;}
+        dragIndex=-1;vertices.splice(i,1);}
+      else{const ll=map.unproject([edge.x,edge.y]);vertices.splice(edge.insertIndex,0,[ll.lng,ll.lat]);}
+      dirty=true;confirmed=false;syncPolygon();setButtons();},600)};
+  };
+  const onTouchMove=event=>{
+    if(hold&&!dragMoved){const p=touchPoint(event.touches[0]);if(Math.hypot(p.x-hold.start.x,p.y-hold.start.y)>8&&dragIndex<0)endHold();}
+    if(dragIndex<0||!editing)return;event.preventDefault();const point=touchPoint(event.touches[0]);
+    if(!dragMoved){if(Math.hypot(point.x-dragStart.x,point.y-dragStart.y)<8)return;dragMoved=true;endHold();dirty=true;confirmed=false;setButtons();}
+    const ll=map.unproject([point.x,point.y]);vertices[dragIndex]=[ll.lng,ll.lat];syncPolygon();
+  };
+  if(TOUCH){
+    canvasContainer.addEventListener('touchstart',onTouchStart,{capture:true,passive:false});
+    window.addEventListener('touchmove',onTouchMove,{passive:false});
+    window.addEventListener('touchend',endTouchDrag);window.addEventListener('touchcancel',endTouchDrag);
+  }
+
   const keydown=event=>{
     const tag=event.target?.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||open)return;
     if(event.key==='Enter'&&!event.repeat&&((drawing&&vertices.length>=3)||editing)){event.preventDefault();finishAndConfirm();return;}
@@ -213,6 +251,7 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
       canvasContainer.removeEventListener('mousedown',onMouseDownCapture,true);
       canvasContainer.removeEventListener('mouseleave',onCanvasLeave);
       window.removeEventListener('mousemove',onMouseMoveWindow);window.removeEventListener('mouseup',onMouseUpWindow);
+      if(TOUCH){canvasContainer.removeEventListener('touchstart',onTouchStart,{capture:true});window.removeEventListener('touchmove',onTouchMove);window.removeEventListener('touchend',endTouchDrag);window.removeEventListener('touchcancel',endTouchDrag);}
       map.off('mousemove',onMapMouseMove);document.removeEventListener('keydown',keydown);
       for(const id of [SEL_DISTANCE,SEL_POINTS,SEL_LINE,SEL_FILL])if(map.getLayer(id))map.removeLayer(id);
       if(map.getSource(SEL_SOURCE))map.removeSource(SEL_SOURCE);
