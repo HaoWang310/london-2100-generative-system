@@ -525,10 +525,6 @@ async function toggleVersionMenu() {
   btn.setAttribute('aria-expanded', 'true');
   menu.hidden = false;
   menu.replaceChildren(h('h3', {}, t('ver.title')), h('p', { class: 'muted small' }, t('ver.current', { v: describeBuild(BUILD) })));
-  // the maps' timing box (same as ?perf=1 in the address; for a home-screen app there is no address bar). Kept per device.
-  const perfOn = (() => { try { return localStorage.getItem('london2100.perf') === '1'; } catch { return false; } })();
-  menu.append(h('button', { class: 'rel', type: 'button', onclick: () => { try { perfOn ? localStorage.removeItem('london2100.perf') : localStorage.setItem('london2100.perf', '1'); } catch { /* private mode */ } location.reload(); } },
-    h('span', {}, t(perfOn ? 'ver.perfOn' : 'ver.perfOff'))), h('p', { class: 'muted small', style: 'margin:2px 8px 8px' }, t('ver.perfHint')));
   const releases = await fetchReleases();
   if (BUILD.releasePath) menu.append(h('a', { class: 'rel current', href: latestUrl() }, t('ver.backToLatest'), h('span', {}, '→')));
   if (!releases.length) { menu.append(h('p', { class: 'muted small' }, t('ver.none'))); return; }
@@ -601,7 +597,7 @@ async function boot() {
   let mapStart = null;
   const startMap = () => mapStart || (mapStart = startWorkspaceMap());
   const route = async () => {
-    // options after the screen name (…#workspace?perf=1) are for the pages, not part of the name
+    // options after the screen name (…#workspace?shadowR=2400) are for the pages, not part of the name
     const screen = location.hash.replace('#', '').split('?')[0] || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
     if (screen.startsWith('app/')) {
       // An incubator app, popped out over the catalogue.
