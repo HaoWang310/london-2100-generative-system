@@ -1,23 +1,30 @@
 // Opening screen: three video panels — London 2100 / Housing / Agriculture.
 //
 // Footage: Mixkit, "Mixkit Stock Video Free License" (commercial and personal
-// use, no attribution required). Files are streamed from Mixkit's CDN; to use
-// your own footage, put an .mp4 in assets/intro/ and change `src` below —
-// nothing else needs to change. See docs/CREDITS.md.
+// use, no attribution required). Short loops cut from the clips and compressed for
+// the web live in assets/intro/ (1280 px and an 854 px version for phones, with a
+// small poster each); Mixkit's own file is only a fallback if ours fails. To use your
+// own footage, replace the files in assets/intro/. See docs/CREDITS.md.
 
 import { t, onLangChange } from '../shared/i18n/index.js';
+import { isPhone } from '../shared/ui/index.js';
 
-const MIXKIT = id => ({
-  src: `https://assets.mixkit.co/videos/${id}/${id}-720.mp4`,
-  poster: `https://assets.mixkit.co/videos/${id}/${id}-thumb-720-0.jpg`,
-  page: `https://mixkit.co/free-stock-video/${id}/`
-});
+const MIXKIT = id => `https://assets.mixkit.co/videos/${id}/${id}-720.mp4`;
+const CLIP = (key, id) => ({ key, src: `./assets/intro/${key}.mp4`, small: `./assets/intro/${key}-480.mp4`, poster: `./assets/intro/${key}.webp`,
+  fallback: MIXKIT(id), page: `https://mixkit.co/free-stock-video/${id}/` });
 
 export const INTRO_PANELS = [
-  { key: 'london', ...MIXKIT(4265) },      // Buildings in the City of London (time-lapse zoom out)
-  { key: 'housing', ...MIXKIT(4010) },     // Buildings under construction, aerial view (London)
-  { key: 'agriculture', ...MIXKIT(824) }   // Aerial view of a greenhouse field
+  CLIP('london', 4265),        // Buildings in the City of London (time-lapse zoom out)
+  CLIP('housing', 4010),       // Buildings under construction, aerial view (London)
+  CLIP('agriculture', 824)     // Aerial view of a greenhouse field
 ];
+
+// Touch screens (iPad, iPhone): the three loops load one after another — the first plays
+// as soon as it can, then the next starts loading — instead of all three sharing the
+// connection at once. Phones and slow or data-saving connections take the smaller files.
+// Computers: all three load and play together, as before.
+const TOUCH = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } })();
+const SMALL = (() => { try { const c = navigator.connection; return isPhone() || !!(c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || ''))); } catch { return false; } })();
 
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -34,12 +41,13 @@ export function createIntro(root, { onEnter } = {}) {
 
     const video = document.createElement('video');
     video.muted = true; video.loop = true; video.playsInline = true;
-    video.preload = i === 0 ? 'auto' : 'metadata';
+    video.preload = i === 0 ? 'auto' : TOUCH ? 'none' : 'metadata';
     video.poster = p.poster;
     video.setAttribute('aria-hidden', 'true');
-    video.src = p.src;
+    video.src = SMALL ? p.small : p.src;
     video.addEventListener('playing', () => panel.classList.add('is-playing'), { once: true });
-    video.addEventListener('error', () => panel.classList.add('is-failed'), { once: true });
+    // our file failed: try Mixkit's once, then give up (the panel keeps its poster and gradient)
+    video.addEventListener('error', () => { if (!video.dataset.fallback){ video.dataset.fallback = '1'; video.src = p.fallback; if (open) video.play().catch(() => {}); return; } panel.classList.add('is-failed'); });
     videos.push(video);
 
     const label = document.createElement('h2');
@@ -64,7 +72,12 @@ export function createIntro(root, { onEnter } = {}) {
 
   const play = () => {
     if (reducedMotion()) return;
-    videos.forEach(v => v.play().catch(() => { /* autoplay blocked: poster stays */ }));
+    if (!TOUCH) { videos.forEach(v => v.play().catch(() => { /* autoplay blocked: poster stays */ })); return; }
+    // one after another: the next starts when this one can play through (or gives up)
+    const chain = k => { const v = videos[k]; if (!v || !open) return; let went = false; const next = () => { if (!went) { went = true; chain(k + 1); } };
+      v.preload = 'auto'; v.play().catch(next);
+      if (v.readyState >= 4) next(); else { v.addEventListener('canplaythrough', next, { once: true }); v.addEventListener('error', next, { once: true }); setTimeout(next, 6000); } };
+    chain(0);
   };
   const pause = () => videos.forEach(v => v.pause());
 
