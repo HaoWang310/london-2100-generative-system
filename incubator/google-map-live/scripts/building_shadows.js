@@ -115,7 +115,8 @@ export function createBuildingShadowLayer(map,maplibregl,{
      - ?perf=1 shows how long the building tiles took and what each shadow rebuild cost (any device) */
   const qs=(()=>{try{return new URLSearchParams(location.search);}catch(error){return new URLSearchParams();}})();
   // ?perf=1 on this page, or on the page around it (the map opened from the catalogue sits in a frame)
-  const PERF=qs.get('perf')==='1'||(()=>{try{return window.top!==window&&new URLSearchParams(window.top.location.search).get('perf')==='1';}catch(error){return false;}})();
+  // anywhere in the address, before or after the # (…/#workspace?perf=1 works too)
+  const PERF=(()=>{const has=h=>/[?&#]perf=1(?![0-9])/.test(h||'');try{return has(location.href)||(window.top!==window&&has(window.top.location.href));}catch(error){return has(location.href);}})();
   const NEAR=Math.max(300,Number(qs.get('shadowR'))||1800);
   let list=null,stale=true,staleSince=0,waitTimer=null;
   const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0,loadMs:null,loading:false,loadStart:0};
