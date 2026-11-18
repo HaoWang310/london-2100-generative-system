@@ -15,7 +15,7 @@
 
 import { defaultEnv } from './app_state.js?v=0.20';
 import { writeCars } from './features.js?v=0.20';
-import { createHall } from './hall.js?v=0.48';
+import { createHall } from './hall.js?v=0.54';
 
 const T = {
   zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
@@ -26,8 +26,8 @@ const T = {
     keyList: [['L', '左摇杆：走动'], ['R', '右摇杆：左右转身 · 上下抬头低头 · 按下回正'], ['A', '洪水风险'], ['B', '桌面 ↔ 1:1 漫游'], ['X', '{x}'], ['Y', '放回桌上'], ['L3', '打开 / 收起面板']], settings: '地图设置', hideSet: '收起设置', showSet: '设置',
     exit: '退出 VR', exitAR: '退出 MR',
     hint: '拖动旋转 · 滚轮缩放 · 右键平移', streets: n => n + ' 条道路', grow: '道路还在生长：等它结束或按「显示结果」，三维会自动更新。', https: 'WebXR 需要 HTTPS（GitHub Pages 可以）。',
-    hud: ['左摇杆：走动 · 右摇杆：左右转身 · 上下抬头低头（按下回正）', '指着屏幕按扳机：放大看 · 握住地图 + 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'],
-    hudPlain: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '左摇杆按下 / 点「面板」：打开控制面板'] },
+    hud: ['左摇杆：走动 · 右摇杆：左右转身 · 上下抬头低头（按下回正）', '指着屏幕按扳机：放大看 · 握住地图 + 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '指着桌子按扳机 →「面板」：地图控制面板 · 左摇杆按下：快速开关'],
+    hudPlain: ['左摇杆：在展厅里走动 · 指着屏幕按扳机：放大看', '握持键：拖动地图 · 右摇杆：旋转 · 缩放', 'A 洪水风险 · B 桌面 ↔ 1:1 漫游', 'X {x} · Y 地图复位', '指着桌子按扳机 →「面板」：地图控制面板 · 左摇杆按下：快速开关'] },
   en: { title: '3D · VR / MR', enterAR: 'Enter MR', enterVR: 'Enter VR', noXR: 'This browser has no WebXR. Open this page in the Meta Quest browser.', close: 'Close', flood: 'Flood risk', drain: 'Drainage', outline: 'Boundaries', buildings: 'Buildings', existing: 'Existing streets', exag: 'Height ×', walk: 'Walk 1:1',
     sub: 'Multi-scale generative city', crumb: 'London map', here: 'VR / MR', back: 'Back to map', eyebrow: 'Headset', h1: 'Put London in the room', lead: 'Pick one; a single click takes you in.', lead1: 'Put on the Quest; one click takes you into the gallery.',
     vrT: 'VR · Gallery', vrD: 'The map stands on a table in a fluid gallery: a 2.6 m disc among the project boards.', vrDplain: 'The 3D model in a dark room.', rec: 'Best', arT: 'MR · Passthrough', arD: 'The same gallery in MR mode: the table, benches and screens around you, a 2.6 m disc.',
@@ -36,8 +36,8 @@ const T = {
     keyList: [['L', 'Left stick: walk'], ['R', 'Right stick: turn · look up / down · click: level'], ['A', 'Flood risk'], ['B', 'Table ↔ walk 1:1'], ['X', '{x}'], ['Y', 'Back on the table'], ['L3', 'Show / hide the panel']], settings: 'Map settings', hideSet: 'Hide settings', showSet: 'Settings',
     exit: 'Exit VR', exitAR: 'Exit MR',
     hint: 'drag to turn · wheel to zoom · right-drag to pan', streets: n => n + ' streets', grow: 'Streets are still growing: wait or press "Show result"; the 3D view follows.', https: 'WebXR needs HTTPS (GitHub Pages is fine).',
-    hud: ['Left stick: walk · right stick: turn · look up and down (click: level)', 'Point + trigger: open a screen · hold the map + right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'],
-    hudPlain: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Left stick click / “Panel”: the controls'] }
+    hud: ['Left stick: walk · right stick: turn · look up and down (click: level)', 'Point + trigger: open a screen · hold the map + right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Point at the table + trigger → “Panel”: the map controls · left stick click: quick toggle'],
+    hudPlain: ['Left stick: walk the hall · point + trigger: open a screen', 'Grip: slide the map · right stick: turn · scale', 'A flood risk · B table ↔ walk 1:1', 'X {x} · Y reset the map', 'Point at the table + trigger → “Panel”: the map controls · left stick click: quick toggle'] }
 };
 
 // ---------------------------------------------------------------- geometry (pure, testable in node)
@@ -644,6 +644,7 @@ export function open(api, lang = 'zh', opt = {}){
         getViewerPose: r => { const p = r === ref ? raw : frame.getViewerPose(r); return p && { transform: tf(p.transform), views: p.views.map(v => ({ __orig: v, eye: v.eye, projectionMatrix: v.projectionMatrix, transform: tf(v.transform) })) }; },
         getPose: (sp, r) => { const p = frame.getPose(sp, r); return p && { transform: tf(p.transform) }; } }; };
     window.__vrPitch = () => pitch;
+    window.__vrUi = () => ({ tableHit: tableHit.size, tableBtn, panel: pm.mode, chips: chips.map(c => c.w), pc: pm.c && pm.c.map(v => +v.toFixed(2)) });   // for testing
     const turnHall = a => { const o = [head[0], 0, head[2]], rp = p => { if (!p) return; const r = rotY([p[0] - o[0], 0, p[2] - o[2]], a); p[0] = o[0] + r[0]; p[2] = o[2] + r[2]; };
       rp(hallPose.c); hallPose.yaw += a; hallPose.m = M4.trs(hallPose.c, hallPose.yaw, 1); rp(M.pos); rp(M.anchor); M.yaw += a;
       if (pm.mode === 'world') rp(pm.c); if (detail?.pose){ rp(detail.pose.c); detail.pose.x = rotY(detail.pose.x, a); detail.pose.z = rotY(detail.pose.z, a); }
@@ -675,6 +676,12 @@ export function open(api, lang = 'zh', opt = {}){
     const poseOf = (frame, s) => { const sp = s.gripSpace || s.targetRaySpace; const p = sp && frame.getPose(sp, ref); if (!p) return null; const m = p.transform.matrix; return { p: [m[12], m[13], m[14]], yaw: yawOf(-m[8], -m[10]), m }; };
     const rayHit = new Map(), rayLen = new Map(), barHit = new Map();   // input source → panel item under its ray · distance to the panel · point on the drag bar
     const chipHit = new Map(); let chips = [];
+    // v0.53 · clicking the table: a short pull of the trigger on the disc (a longer one still drags the map) shows 「面板」 over the rim;
+    // 「面板」 opens the map's control panel just above the rim on your side, a little to the right, turned to you
+    const tableHit = new Map(); let tableBtn = false, tableTap = null;
+    const rimNear = (inward, up, right = 0) => { const cx = hallPose.c[0], cz = hallPose.c[2], dx = head[0] - cx, dz_ = head[2] - cz, l = Math.hypot(dx, dz_) || 1, ux = dx / l, uz = dz_ / l, r = H.tableR + inward;
+      return [cx + ux * r + uz * right, hallPose.c[1] + H.tableTop + up, cz + uz * r - ux * right]; };   // right: to your right as you face the table
+    const panelAtTable = () => { if (!panel) return; pm.w = 0.62; const sy = pm.w * panel.aspect(); pm.c = rimNear(0.25, 0.15 + sy / 2, 0.55); pm.mode = 'world'; pm.prev = 'world'; panelOn = true; };
     const screenHit = new Map(); let detail = null;   // the screen under each ray · the screen opened large in front of you   // the little 「面板」 / 「收起」 buttons: input source → the one under its ray
     hidePanel();   // each session starts with the panel put away
     // the panel: on the left hand, or placed anywhere in the room (drag its bar); pm.w = width in metres
@@ -683,12 +690,17 @@ export function open(api, lang = 'zh', opt = {}){
       if (select && chipHit.has(src)){ chipHit.get(src).act(); return; }
       if (select && screenHit.has(src)){ const k = screenHit.get(src).k; detail = detail && detail.k === k ? null : { k, pose: null }; return; }
       if (select && detail && !rayLen.has(src)){ detail = null; return; }
+      if (select && tableHit.has(src)) tableTap = { src, t: performance.now(), pos: M.pos.slice(), yaw: M.yaw, s: M.s };
       // drag the panel by its bar (trigger, grip or pinch), or by its face with the grip
       const g = barHit.get(src) || (!select && rayLen.has(src) && rayHit.has(src) ? src.__panelLocal : null);
       if (pm.mode !== 'off' && g){ pm.grab = { src, t0: g.t, lu: g.lx, lv: g.ly }; return; }
       if (select && pm.mode !== 'off' && rayHit.get(src) != null){ panel.press(rayHit.get(src)); return; }
       grabs.set(src, true); base = 'pending'; },
-      rem = e => { if (pm.grab && pm.grab.src === e.inputSource){ pm.grab = null; return; } if (grabs.delete(e.inputSource)) base = 'pending'; };
+      rem = e => { if (pm.grab && pm.grab.src === e.inputSource){ pm.grab = null; return; }
+        if (tableTap && tableTap.src === e.inputSource){ const q = tableTap; tableTap = null;   // a short, still pull: a click on the table (toggles 「面板」; with the panel open, puts it away)
+          if (performance.now() - q.t < 350 && Math.hypot(M.pos[0] - q.pos[0], M.pos[2] - q.pos[2]) < 0.02 && Math.abs(M.yaw - q.yaw) < 0.03 && Math.abs(M.s / q.s - 1) < 0.03){
+            if (grabs.delete(e.inputSource)) base = 'pending'; M.pos = q.pos; M.yaw = q.yaw; M.s = q.s;
+            if (pm.mode !== 'off'){ hidePanel(); tableBtn = false; } else tableBtn = !tableBtn; return; } } if (grabs.delete(e.inputSource)) base = 'pending'; };
     let panelPose = null, panelTex = null, panelVer = -1, barTex = null;
     session.addEventListener('selectstart', e => add(e, true)); session.addEventListener('squeezestart', e => add(e, false)); session.addEventListener('selectend', rem); session.addEventListener('squeezeend', rem);
     session.addEventListener('end', () => { xrSession = null; root.classList.remove('immersive'); exitB.remove(); status(); });
@@ -795,14 +807,21 @@ export function open(api, lang = 'zh', opt = {}){
       // the chips: 「面板」 under the help card while the panel is away, 「收起」 beside the panel's drag bar
       chips = []; chipHit.clear();
       if (panel && !pm.grab){
-        if (pm.mode === 'off' && lpp && panel){ const c = [lpp.p[0], lpp.p[1] + 0.058, lpp.p[2]];   // v0.52: only where there is a panel to open
-           chips.push({ c, ...facing(c), w: 0.11, h: 0.0275, tex: chipTex.show, onHand: true, act: showPanel }); }
+        // v0.53: no 「面板」 on the hand any more; it comes up over the table's rim, on your side, when you click the table
+        if (pm.mode === 'off' && tableBtn && hallShown()){ const c = rimNear(-0.12, 0.3); chips.push({ c, ...facing(c), w: 0.2, h: 0.05, tex: chipTex.show, act: () => { tableBtn = false; panelAtTable(); } }); }
         else if (panelPose){ const { c, x, y, barY } = panelPose, k = 0.13 / 2 + 0.05, cc = [0, 1, 2].map(j => c[j] + y[j] * barY + x[j] * k); chips.push({ c: cc, ...facing(cc), w: 0.07, h: 0.0175, tex: chipTex.hide, onHand: pm.mode === 'hand', act: hidePanel }); }
         for (const ch of chips) for (const s of session.inputSources){ if ((ch.onHand && s === leftS) || !s.targetRaySpace) continue; const r = rayOf(s); if (!r) continue;
           const { c, x, y, z } = ch, den = r.d[0] * z[0] + r.d[1] * z[1] + r.d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
           const tt = ((c[0] - r.o[0]) * z[0] + (c[1] - r.o[1]) * z[1] + (c[2] - r.o[2]) * z[2]) / den; if (tt <= 0 || tt > 6) continue;
           const q = [0, 1, 2].map(j => r.o[j] + r.d[j] * tt - c[j]), lx = q[0] * x[0] + q[1] * x[1] + q[2] * x[2], ly = q[0] * y[0] + q[1] * y[1] + q[2] * y[2];
           if (Math.abs(lx) <= ch.w / 2 && Math.abs(ly) <= ch.h / 2 * 1.4){ chipHit.set(s, ch); ch.hot = true; rayLen.set(s, tt); rayHit.delete(s); barHit.delete(s); } } }
+      // v0.53 · the table: a ray that meets nothing else may land on the map's disc; the rim lights up, a click shows 「面板」
+      tableHit.clear();
+      if (hallShown() && panel){ const cy = hallPose.c[1] + H.tableTop;
+        for (const s of session.inputSources){ if (rayLen.has(s) || !s.targetRaySpace || (pm.mode === 'hand' && s === leftS)) continue; const r = rayOf(s); if (!r || r.d[1] > -1e-3) continue;
+          const tt = (cy - r.o[1]) / r.d[1]; if (tt <= 0 || tt > 8) continue;
+          if (Math.hypot(r.o[0] + r.d[0] * tt - hallPose.c[0], r.o[2] + r.d[2] * tt - hallPose.c[2]) <= H.tableR + 0.05){ tableHit.set(s, { t: tt }); rayLen.set(s, tt); } } }
+      H?.setTableHot?.(tableHit.size > 0 && !tableBtn);
       // the hall's screens: rays that meet nothing else may point at one (hall space: undo the hall's turn)
       screenHit.clear(); let hotK = null;
       if (hallShown()){ const c = hallPose.c, cs = Math.cos(hallPose.yaw), sn = Math.sin(hallPose.yaw), toL = v => [v[0] * cs - v[2] * sn, v[1], v[0] * sn + v[2] * cs];

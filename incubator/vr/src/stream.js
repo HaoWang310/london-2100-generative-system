@@ -81,6 +81,7 @@ const area = r => { let s = 0; for (let i = 0, n = r.length; i < n; i++){ const 
 
 /** A viewer handle for xr_view: no fixed model, only the tile stream. */
 export function streamApi(lat, lon, opt = {}){
-  return { D: { landMask: null, fixed: { streets: [], bridges: [] } }, nx: 3, ny: 3, cell: 1500, ENV: null, FR: null, DR: null,
+  // opt.span: metres across the table at the start (v0.53; 3 km by default, about 72 km for the whole of Greater London)
+  return { D: { landMask: null, fixed: { streets: [], bridges: [] } }, nx: 3, ny: 3, cell: (opt.span || 3000) / 2, ENV: null, FR: null, DR: null,
     stream: osmStream(lat, lon, opt), view: { exag: 1 }, outlines: [], streets: () => [], lines: () => [], finished: () => true };
 }
