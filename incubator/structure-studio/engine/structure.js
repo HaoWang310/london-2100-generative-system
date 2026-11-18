@@ -437,11 +437,9 @@ function buildStructure(site, P, EXCL) {
     const n = Pp.length, sg = polyArea(Pp) > 0 ? 1 : -1, lines = [];
     for (let i = 0; i < n; i++) { const a = Pp[i], b = Pp[(i + 1) % n], L = dist(a, b); if (L < 1e-6) continue; const t = mul(sub(b, a), 1 / L), nn = mul([-t[1], t[0]], sg);
       const prim = isPrimEdge(a, b), h = (prim ? P.wP : wSecAt(mul(add(a, b), 0.5))) / 2 * wk; lines.push({ p: add(a, mul(nn, h)), t, kind: prim ? 'prim' : 'sec' }); }
-    const out = [];
-    for (let i = 0; i < lines.length; i++) { const A_ = lines[(i + lines.length - 1) % lines.length], B = lines[i], den = A_.t[0] * B.t[1] - A_.t[1] * B.t[0];
-      if (Math.abs(den) < 0.15) { out.push({ p: B.p }); continue; }
-      const dp = sub(B.p, A_.p), s = (dp[0] * B.t[1] - dp[1] * B.t[0]) / den; out.push({ p: add(A_.p, mul(A_.t, s)) }); }
-    const kept = out.filter(o => inPoly(o.p, Pp)); if (kept.length < 3) return null;
+    // 室是凸多边形：内缩 = 依次用每条边内移后的半平面去裁（精确；短边自然消失，不会裁掉一角留下尖刺）
+    let Q = Pp.slice(); for (const L of lines) { const nIn = [-L.t[1] * sg, L.t[0] * sg]; Q = clipHalfPlane(Q, L.p, mul(nIn, -1)); if (Q.length < 3) return null; }
+    const kept = Q.map(p => ({ p }));
     const ps = kept.map(o => o.p); if (polyArea(ps) * sg <= 0 || Math.abs(polyArea(ps)) < 600) return null;
     return kept;
   }
