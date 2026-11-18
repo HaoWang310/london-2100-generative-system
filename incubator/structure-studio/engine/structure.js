@@ -199,7 +199,9 @@ function buildStructure(site, P, EXCL) {
       for (let i = 0; i < S.length; i += 3) if (inSite(S[i])) ds.push(Math.min(roadDist(S[i]), 80)); if (ds.length < 20) continue;
       ds.sort((a, b) => a - b); let sc = ds[Math.floor(ds.length * 0.15)] + 0.4 * ds.reduce((s, v) => s + v, 0) / ds.length - 0.05 * Math.abs(o);
       if (P.offRoad < 0.5) sc = -sc; // 贴路：取离主干路最近的
-      if (strands.some(T => { let m = 1e9; for (let i = 0; i < S.length; i += 6) for (let j = 0; j < T.length; j += 6) m = Math.min(m, dist(S[i], T[j])); return m < P.sCore * 0.8; })) sc -= 1000;
+      // 重叠：核心附近（同一核心的主线本来就在这里交汇）不算；其余部分有超过 15% 的点贴近已有主线才算重叠
+      const nearCore = q => cores.some(k => dist(q, k) < Math.max(220, P.sCore * 2.2));
+      if (strands.some(T => { let n = 0, close = 0; for (let i = 0; i < S.length; i += 4) { if (nearCore(S[i]) || !inSite(S[i])) continue; n++; let m = 1e9; for (let j = 0; j < T.length; j += 3) m = Math.min(m, dist(S[i], T[j])); if (m < P.sCore * 0.8) close++; } return n > 0 && close / n > 0.15; })) sc -= 1000;
       if (TR) TR.cand.push({ core: ci, k, o, sc, S: S.filter((_, i) => i % 5 === 0) });
       if (!best || sc > best.sc) best = { sc, S }; }
     if (best && best.sc > -900) strands.push(best.S); } });
