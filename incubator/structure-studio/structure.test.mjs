@@ -42,7 +42,7 @@ test('cell outlines are smooth: no turn sharper than 45° between 2 m steps', ()
 
 // v1 · 局部场格网：同一套检查也要通过
 test('v1 field lattice: sensible cells, structure inside the site, smooth outlines, street scale measured', () => {
-  const F1 = SS.buildStructure(site, { ...P, v1: 1 }, new Set());
+  const F1 = SS.buildStructure(site, { ...P, mode: 'v1' }, new Set());
   assert.ok(F1.cells.length >= 40 && F1.cells.length <= 160, 'cells ' + F1.cells.length);
   const g = F1.grid; let bad = 0; for (let i = 0; i < g.W * g.H; i++) if (g.corr[i] && !site.siteM[i]) bad++; assert.equal(bad, 0);
   const share = F1.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.1 && share < 0.4, 'share ' + share);
@@ -70,4 +70,15 @@ test('attractors: roundabout at main nodes, towers at secondary nodes, entry lin
 test('roundabout plaza island holds only the tower, no buildings', () => {
   const g = F.grid; let n = 0; for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const wx = g.xmin + (i % g.W + .5) * g.RES, wy = g.ymax - (((i / g.W) | 0) + .5) * g.RES; if (F.rings.some(r => Math.hypot(wx - r.c[0], wy - r.c[1]) < r.r)) n++; }
   assert.equal(n, 0);
+});
+
+// 八种生成模式都能跑通：室数合理、结构只在场地内、走廊占比合理
+test('all eight generation modes build a sensible structure', () => {
+  for (const mode of ['v0', 'v1', 'v2', 'radial', 'dual', 'frei', 'vein', 'slime']) {
+    const Fm = SS.buildStructure(site, { ...P, mode }, new Set());
+    assert.equal(Fm.mode, mode);
+    assert.ok(Fm.cells.length >= 25 && Fm.cells.length <= 220, mode + ' cells ' + Fm.cells.length);
+    const g = Fm.grid; let bad = 0; for (let i = 0; i < g.W * g.H; i++) if (g.corr[i] && !site.siteM[i]) bad++; assert.equal(bad, 0, mode);
+    const share = Fm.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.08 && share < 0.4, mode + ' share ' + share);
+  }
 });
