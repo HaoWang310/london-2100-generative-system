@@ -107,12 +107,27 @@ export function createBuildingShadowLayer(map,maplibregl,{
   let rebuildTimer=null,lastBuild=0;
   let gl=null,prog=null,comp=null,buf=null,quad=null,tex=null,fb=null,texW=0,texH=0;
   let vaoApi=null,vaoMesh=null,vaoQuad=null;
+  /* v3.43.0 · lighter on slower devices (iPad), the same shadows:
+     - the building list is read from the tiles only when the tiles or the view changed, and then once the map has
+       settled ('idle'), not again for every tile that arrives (at most every 2.5 s while a long load goes on);
+       a new sun position reuses the list it has
+     - only buildings near the view centre (at least 1800 m, ?shadowR=…; wider when zoomed out): far shadows are too small to see
+     - ?perf=1 shows how long the building tiles took and what each shadow rebuild cost (any device) */
+  const qs=(()=>{try{return new URLSearchParams(location.search);}catch(error){return new URLSearchParams();}})();
+  const NEAR=Math.max(300,Number(qs.get('shadowR'))||1800);
+  let list=null,stale=true,staleSince=0,waitTimer=null;
+  const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0,loadMs:null,loading:false,loadStart:0};
+  const merc=(lng,lat)=>[(lng+180)/360,(180-(180/Math.PI)*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360)))/360];
 
   function readBuildings(){
     let features=[];
     try{features=map.querySourceFeatures(sourceId,{sourceLayer});}catch(error){return [];}
     const c=map.getCenter();
     origin=maplibregl.MercatorCoordinate.fromLngLat(c);
+    // reach: NEAR metres, more when zoomed out (≈ 900 screen pixels), so a wide view never shows a ring where shadows stop
+    let reach=NEAR;try{const z=map.getZoom();if(Number.isFinite(z))reach=Math.max(NEAR,40075016.686*Math.cos(c.lat*Math.PI/180)/(512*2**z)*900);}catch(error){}
+    stats.reach=Math.round(reach);
+    const k=origin.meterInMercatorCoordinateUnits(),r2=(reach*k)**2;
     const out=[];
     for(const f of features){
       const p=f.properties||{};
@@ -123,10 +138,12 @@ export function createBuildingShadowLayer(map,maplibregl,{
       for(const poly of polys){
         const outer=poly[0];
         if(!outer||outer.length<4)continue;
+        const m0=merc(outer[0][0],outer[0][1]),dx=m0[0]-origin.x,dy=m0[1]-origin.y;
+        if(dx*dx+dy*dy>r2)continue;   // too far to see its shadow
         const ring=[];
         for(let i=0;i<outer.length-1;i++){
-          const m=maplibregl.MercatorCoordinate.fromLngLat(outer[i]);
-          ring.push([m.x-origin.x,m.y-origin.y]);
+          const m=merc(outer[i][0],outer[i][1]);
+          ring.push([m[0]-origin.x,m[1]-origin.y]);
         }
         out.push({ring,height});
       }
@@ -136,7 +153,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
     for(const e of extra){
       if(!e||!e.ring||e.ring.length<3)continue;
       out.push({
-        ring:e.ring.map(p=>{const m=maplibregl.MercatorCoordinate.fromLngLat(p);return [m.x-origin.x,m.y-origin.y];}),
+        ring:e.ring.map(p=>{const m=merc(p[0],p[1]);return [m[0]-origin.x,m[1]-origin.y];}),
         height:e.height
       });
     }
@@ -150,18 +167,43 @@ export function createBuildingShadowLayer(map,maplibregl,{
     if(!enabled||!sun||strength<=0.005){mesh=new Float32Array(0);upload();return;}
     const off=shadowOffset(sun.azimuth,sun.altitude);
     if(!off){mesh=new Float32Array(0);upload();return;}
-    const buildings=readBuildings();
+    if(stale||!list){
+      const t0=performance.now();
+      list=readBuildings();stale=false;staleSince=0;
+      stats.reads++;stats.readMs=performance.now()-t0;
+      if(waitTimer){clearTimeout(waitTimer);waitTimer=null;}
+    }
     if(!origin){mesh=new Float32Array(0);upload();return;}
+    const t1=performance.now();
     const k=origin.meterInMercatorCoordinateUnits();
-    mesh=buildShadowTriangles(buildings,{x:off.x*k,y:off.y*k});
+    mesh=buildShadowTriangles(list,{x:off.x*k,y:off.y*k});
+    stats.rebuilds++;stats.buildMs=performance.now()-t1;stats.buildings=list.length;stats.triangles=mesh.length/6;
     upload();
     map.triggerRepaint();
+    hud();
   }
   function schedule(delay=200){
     dirty=true;
     if(rebuildTimer)return;
     const since=performance.now()-lastBuild;
     rebuildTimer=setTimeout(rebuild,Math.max(delay,150-since));
+  }
+  // the tiles or the view changed: read the buildings again once the map settles
+  function invalidate(){
+    stale=true;dirty=true;
+    if(!staleSince)staleSince=performance.now();
+    if(!waitTimer)waitTimer=setTimeout(()=>{waitTimer=null;if(stale)schedule(0);},2500);   // a long load: do not wait for ever
+  }
+  function onIdle(){
+    if(stats.loading){stats.loading=false;stats.loadMs=performance.now()-stats.loadStart;hud();}
+    if(stale)schedule(0);
+  }
+  let hudEl=null;
+  function hud(){
+    if(qs.get('perf')!=='1'||typeof document==='undefined')return;
+    if(!hudEl){hudEl=document.createElement('div');hudEl.style.cssText='position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.78);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre';document.body.appendChild(hudEl);}
+    const f=v=>v==null?'—':(v/1000).toFixed(2)+' s',ms=v=>Math.round(v)+' ms';
+    hudEl.textContent='buildings load  '+(stats.loading?'loading…':f(stats.loadMs))+'\nshadow read     '+ms(stats.readMs)+'  ×'+stats.reads+'\nshadow build    '+ms(stats.buildMs)+'  ×'+stats.rebuilds+'\nbuildings       '+stats.buildings+'  (within '+(stats.reach||NEAR)+' m)\ntriangles       '+stats.triangles+'\npixel ratio     '+(window.devicePixelRatio||1);
   }
   function upload(){
     if(!gl||!buf)return;
@@ -303,10 +345,13 @@ export function createBuildingShadowLayer(map,maplibregl,{
       try{map.addLayer(layer,beforeId());}catch(error){console.warn('Building shadows unavailable',error);}
     }
   }
-  const onData=e=>{if(e.sourceId===sourceId&&e.isSourceLoaded)schedule(250);};
-  const onMoveEnd=()=>schedule(120);
+  const onData=e=>{if(e.sourceId===sourceId&&e.isSourceLoaded)invalidate();};
+  const onMoveEnd=()=>invalidate();
+  const onLoading=e=>{if(e.sourceId===sourceId&&!stats.loading){stats.loading=true;stats.loadStart=performance.now();hud();}};
   map.on('sourcedata',onData);
   map.on('moveend',onMoveEnd);
+  map.on('idle',onIdle);
+  map.on('dataloading',onLoading);
   ensure();
 
   return {
@@ -326,7 +371,8 @@ export function createBuildingShadowLayer(map,maplibregl,{
       if(enabled){ensure();schedule(0);}
       map.triggerRepaint();
     },
-    refresh(){ensure();schedule(0);},
+    refresh(){ensure();stale=true;schedule(0);},
+    get stats(){return {...stats};},
     get enabled(){return enabled;},
     get triangleCount(){return mesh.length/6;}
   };
