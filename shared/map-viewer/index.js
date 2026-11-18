@@ -69,8 +69,28 @@ const fc = features => ({ type: 'FeatureCollection', features });
 
 // ---------------------------------------------------------------- MapLibre
 
+// ---------------------------------------------------------------- timing box
+// The maps' timing box (version menu switch, kept per device, or perf=1 in the address): bottom left, from the start, so
+// it is clear it is on even before the 3D city loads. The London map's shadow layer writes its lines into #perfShadow.
+const PERF = (() => { try { if (localStorage.getItem('london2100.perf') === '1') return true; } catch { /* private mode */ } return /[?&#]perf=1(?![0-9])/.test(location.href); })();
+const perfLines = {};
+function perfSet(key, text) {
+  if (!PERF || typeof document === 'undefined') return;
+  let box = document.getElementById('perfHud');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'perfHud';
+    box.style.cssText = 'position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.82);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre;max-width:calc(100vw - 16px)';
+    const a = document.createElement('div'); a.id = 'perfMap'; const b = document.createElement('div'); b.id = 'perfShadow'; b.textContent = '3D buildings    switch to 3D and zoom in'; box.append(a, b); document.body.appendChild(box);
+  }
+  perfLines[key] = text; document.getElementById('perfMap').textContent = Object.values(perfLines).join('\n');
+}
+const perfAt = () => (performance.now() / 1000).toFixed(2) + ' s';
+
 async function createMapLibreViewer(el, opts) {
+  perfSet('head', 'workspace map · times from opening the page');
+  perfSet('lib', 'map library     loading…');
   const maplibregl = await loadMapLibre(opts.timeoutMs ?? 8000);
+  perfSet('lib', 'map library     ' + perfAt());
   const provider = PROVIDERS[opts.provider || DEFAULT_PROVIDER];
   const map = new maplibregl.Map({
     container: el,
@@ -84,6 +104,11 @@ async function createMapLibreViewer(el, opts) {
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  if (PERF) {
+    map.once('style.load', () => perfSet('style', 'map style       ' + perfAt()));
+    map.once('load', () => perfSet('ready', 'map ready       ' + perfAt()));
+    map.once('idle', () => perfSet('idle', 'map settled     ' + perfAt()));
+  }
 
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('basemap style timeout')), opts.timeoutMs ?? 8000);
