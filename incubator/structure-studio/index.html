@@ -461,14 +461,20 @@ const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o
 function buildSwatches() { const g = $('swGrid'); g.textContent = '';
   for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
     b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('i'); i.style.background = gradCss(sc); const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en);
-    b.append(i, t); b.onclick = () => applyScheme(sc.id); g.appendChild(b); } }
+    b.append(i, t); b.onclick = () => { clearTimeout(prewarm.t); applyScheme(sc.id); };
+    b.onpointerenter = () => { clearTimeout(prewarm.t); prewarm.t = setTimeout(() => prewarm(sc.id), 90); }; b.onpointerleave = () => clearTimeout(prewarm.t); g.appendChild(b); } }
+// 鼠标停在色卡上时先在后台画好那套配色的底图，点下去就是现成的
+function prewarm(id) { if (!F || !F.grid || F.grid.RES !== 2 || DEMO.on || id === SCHEME) return; const sc = SCHEMES.find(x => x.id === id); if (!sc) return;
+  if (F._pbFull && F._pbFull.has([id, $('c_ctx').checked, $('c_plots').checked].join('|'))) return;
+  const sv = JSON.parse(JSON.stringify(PAL)), sid = SCHEME, pb = planBase; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o))); SCHEME = id;
+  try { makePlanBase(); } finally { for (const k in PAL) delete PAL[k]; Object.assign(PAL, sv); SCHEME = sid; planBase = pb; } }
 function applyScheme(id, quiet) { const sc = SCHEMES.find(x => x.id === id) || SCHEMES[0]; SCHEME = sc.id; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o)));
   try { localStorage.setItem(SCHEME_KEY, sc.id); } catch (e) {}
   $('lgFarm').style.background = gradCss(sc); $('lgWater').style.background = PAL.water; $('lgRed').style.borderTopColor = PAL.red; $('lgTower').style.borderColor = PAL.red; $('lgTower').style.background = PAL.tower; $('lgBld').style.background = rgb(PAL.bld);
   const mid = PAL.grad ? PAL.grad[Math.floor(PAL.grad.length / 2)][1] : null;
   if (typeof MAT !== 'undefined') { if (mid) MAT.farm.color.setHex(hex3(mid)); else MAT.farm.color.set(PAL.farm); MAT.water.color.set(PAL.water); MAT.deck.color.set(PAL.deck); MAT.towW.color.set(PAL.tower); MAT.bld.color.setHex(hex3(PAL.bld)); MAT.bldS.color.setHex(hex3(PAL.bld.map(v => v * .8 | 0))); }
   buildSwatches(); tsBase = null;
-  if (!quiet && F) { $('busy').style.display = 'block'; setTimeout(() => { makePlanBase(); buildCards(); focusCell(focus); drawPlan(); $('busy').style.display = 'none'; }, 20); } }
+  if (!quiet && F) { cancelAnimationFrame(applyScheme.raf); applyScheme.raf = requestAnimationFrame(() => { makePlanBase(); drawPlan(); setTimeout(() => { buildCards(); focusCell(focus); }, 0); }); } }
 let hoverId = 0;
 function setHover(id) { if (id === hoverId) return; hoverId = id; if (mode === '2d') drawPlan(); }
 function cpIds() { if (F._cpId) return F._cpId; const g = F.grid;
@@ -523,6 +529,8 @@ function drawContext(ctx, path, mPx) { const C = SNAP && SNAP.context; if (!C ||
   ctx.fillStyle = '#26262b'; ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1; for (const poly of C.bld || []) { ctx.beginPath(); for (const r of poly) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); ctx.stroke(); }
   ctx.restore(); }
 function makePlanBase(only) { // only：演示用，只画某几层（透明底），不改 planBase
+  const fk = only ? null : [SCHEME, $('c_ctx').checked, $('c_plots').checked].join('|'), FC = F._pbFull || (F._pbFull = new Map());
+  if (fk && FC.has(fk)) { planBase = FC.get(fk); FC.delete(fk); FC.set(fk, planBase); return; } // 最近用过的配色：直接取整张底图
   const Lf = only || { ground: 1, farm: 1, bld: 1, water: 1, deck: 1, towers: 1 }; const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - g.xmin) / g.RES * SC, (g.ymax - p[1]) / g.RES * SC], mPx = SC / g.RES;
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
@@ -533,33 +541,38 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   ctx.fillStyle = '#141414'; for (const P of F.site.footPolys) { path(ctx, P, true); ctx.fill(); }
   landPath(ctx); ctx.fillStyle = PAL.land; ctx.fill('evenodd');
     cs._gc = { k: gk, cv: gc }; } ctx.drawImage(cs._gc.cv, 0, 0); }
+  // 与配色无关的蒙版按结构缓存（F 换了就重算）；换配色时只做上色和叠图，不重描几何、不重算阴影
+  const PB = F._pb || (F._pb = { grad: {}, bld: {}, tn: {} }), mkC = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; return c; };
+  const tint = (mask, col) => { const c = mkC(), x = c.getContext('2d'); x.drawImage(mask, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height); return c; };
+  if (!PB.cellM || PB.cellM.width !== cv.width) { // 室 ∩ 土地（白）、退线带（淡黑）
+    const cm = mkC(), cx = cm.getContext('2d'); cx.fillStyle = '#fff'; cx.beginPath(); for (const cp of F.cellPolys) path(cx, cp.poly, true, false); cx.fill();
+    const lm = mkC(), lx = lm.getContext('2d'); landPath(lx); lx.fillStyle = '#fff'; lx.fill('evenodd'); cx.globalCompositeOperation = 'destination-in'; cx.drawImage(lm, 0, 0); PB.cellM = cm;
+    const sb = mkC(), sx = sb.getContext('2d'); sx.lineWidth = 2 * P.setback * mPx; sx.strokeStyle = 'rgba(0,0,0,.07)'; for (const cp of F.cellPolys) { path(sx, cp.poly, true); sx.save(); sx.clip(); sx.stroke(); sx.restore(); }
+    sx.globalCompositeOperation = 'destination-in'; sx.drawImage(cm, 0, 0); PB.sbM = sb; PB.sbW = P.setback; }
   if (Lf.farm) {
-  // 农田：纯色低饱和绿；退线带（建筑落位带）只压一层很淡的暗色
-  ctx.save(); landPath(ctx); ctx.clip('evenodd');
-  for (const cp of F.cellPolys) { path(ctx, cp.poly, true); ctx.fillStyle = PAL.farm; ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth = 2 * P.setback * mPx; ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.stroke(); ctx.restore(); }
-  ctx.restore();
-  // 可选：地块渐变（离核心近亮、远暗，表达疏密）与顺张量场的流线肌理（ZHA / AADRL 式），都裁在室内
-  if (PAL.grad || PAL.hatch) { ctx.save(); ctx.beginPath(); for (const cp of F.cellPolys) path(ctx, cp.poly, true, false); ctx.clip(); landPath(ctx); ctx.clip('evenodd');
-    if (PAL.grad) { const q = 2, w = Math.ceil(g.W / q), h = Math.ceil(g.H / q), im = new ImageData(w, h), cs = SITE.cores, R = P.coreR * 1.6, st = PAL.grad;
+  // 农田：纯色低饱和绿 + 退线带淡暗色；可选：地块渐变（离核心近亮、远暗）与顺张量场的流线肌理（ZHA / AADRL 式），都裁在室内
+  const fl = mkC(), fx = fl.getContext('2d'); fx.fillStyle = PAL.farm; fx.fillRect(0, 0, fl.width, fl.height); fx.drawImage(PB.sbM, 0, 0);
+  if (PAL.grad) { const gk = SCHEME + '|' + JSON.stringify(PAL.grad) + '|' + P.coreR; if (!PB.grad[gk]) { const q = 2, w = Math.ceil(g.W / q), h = Math.ceil(g.H / q), im = new ImageData(w, h), cs = SITE.cores, R = P.coreR * 1.6, st = PAL.grad;
       if (!F._gd || F._gd.R !== R) { const dd = new Float32Array(w * h); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const x = g.xmin + (i + .5) * q * g.RES, y = g.ymax - (j + .5) * q * g.RES; let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(x - c[0], y - c[1])); dd[j * w + i] = d; } F._gd = { R, dd }; }
-      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const d = F._gd.dd[j * w + i];
-        let t = Math.min(1, d / R); t = t * t * (3 - 2 * t); let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; }
-        const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0, o = (j * w + i) * 4; for (let c = 0; c < 3; c++) im.data[o + c] = a[1][c] + (b[1][c] - a[1][c]) * u; im.data[o + 3] = 255; }
-      const tc = document.createElement('canvas'); tc.width = w; tc.height = h; tc.getContext('2d').putImageData(im, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(tc, 0, 0, cv.width, cv.height); }
-    if (PAL.hatch) { const Hh = PAL.hatch, key = Hh.step + '/' + Hh.len; ctx.strokeStyle = Hh.col; ctx.lineWidth = Hh.w; ctx.lineCap = ctx.lineJoin = 'round';
+      const LUT = new Uint8ClampedArray(256 * 3); for (let n = 0; n < 256; n++) { const t = n / 255; let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; }
+        const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0; for (let c = 0; c < 3; c++) LUT[n * 3 + c] = a[1][c] + (b[1][c] - a[1][c]) * u; }
+      const D = im.data; for (let n = 0; n < w * h; n++) { let t = Math.min(1, F._gd.dd[n] / R); t = t * t * (3 - 2 * t); const l = (t * 255 + .5 | 0) * 3, o = n * 4; D[o] = LUT[l]; D[o + 1] = LUT[l + 1]; D[o + 2] = LUT[l + 2]; D[o + 3] = 255; }
+      const tc = document.createElement('canvas'); tc.width = w; tc.height = h; tc.getContext('2d').putImageData(im, 0, 0); PB.grad[gk] = tc; }
+    fx.imageSmoothingEnabled = true; fx.drawImage(PB.grad[gk], 0, 0, fl.width, fl.height); }
+  if (PAL.hatch) { const Hh = PAL.hatch, key = Hh.step + '/' + Hh.len;
       // 流线先画成白色蒙版缓存（几何与配色无关），换色时只给蒙版上色：切换配色不必重描几万条线
       if (!SITE._hatch || SITE._hatch.key !== key + '/' + Hh.w) { const mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height; const mx = mk.getContext('2d');
         mx.strokeStyle = '#fff'; mx.lineWidth = Hh.w; mx.lineCap = mx.lineJoin = 'round'; mx.beginPath(); for (const pts of hatchLines(Hh.step, Hh.len)) path(mx, pts, false, false); mx.stroke(); SITE._hatch = { key: key + '/' + Hh.w, mk }; }
       const m = /rgba?\(([^)]+)\)/.exec(Hh.col), v = m ? m[1].split(',').map(Number) : [255, 255, 255, 1], mk = SITE._hatch.mk, tk = Hh.col + '|' + SITE._hatch.key; if (!SITE._hatchT || SITE._hatchT.k !== tk) { const tn = document.createElement('canvas'); tn.width = mk.width; tn.height = mk.height; const tx = tn.getContext('2d');
       tx.drawImage(mk, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = `rgb(${v[0]},${v[1]},${v[2]})`; tx.fillRect(0, 0, tn.width, tn.height); SITE._hatchT = { k: tk, cv: tn }; } const tn = SITE._hatchT.cv;
-      ctx.globalAlpha = v.length > 3 ? v[3] : 1; ctx.drawImage(tn, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
-    ctx.restore(); }
+      fx.globalAlpha = v.length > 3 ? v[3] : 1; fx.drawImage(tn, 0, 0, fl.width, fl.height); fx.globalAlpha = 1; }
+  fx.globalCompositeOperation = 'destination-in'; fx.drawImage(PB.cellM, 0, 0); ctx.drawImage(fl, 0, 0);
   }
   if (Lf.bld) {
-  // 建筑（栅格，平滑放大）
-  const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), f = 1 - .3 * h, B = PAL.bld; bi.data[i * 4] = B[0] * f; bi.data[i * 4 + 1] = B[1] * f; bi.data[i * 4 + 2] = B[2] * f; bi.data[i * 4 + 3] = 255; }
-  const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(bc, 0, 0, cv.width, cv.height); ctx.restore();
+  // 建筑（栅格，平滑放大）：按建筑颜色缓存
+  const bk = PAL.bld.join(','); if (!PB.bld[bk]) { const bi = new ImageData(g.W, g.H); for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const h = Math.min(1, g.hgt[i] / 60), f = 1 - .3 * h, B = PAL.bld; bi.data[i * 4] = B[0] * f; bi.data[i * 4 + 1] = B[1] * f; bi.data[i * 4 + 2] = B[2] * f; bi.data[i * 4 + 3] = 255; }
+    const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); PB.bld = { [bk]: bc }; }
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(PB.bld[bk], 0, 0, cv.width, cv.height); ctx.restore();
   }
   if (Lf.water) { const wk = [PAL.water, PAL.stream, PAL.road, $('c_plots').checked, cv.width].join('|'), cs = F.site; if (!cs._wc || cs._wc.k !== wk) { const wc = document.createElement('canvas'); wc.width = cv.width; wc.height = cv.height; const ctx = wc.getContext('2d');
   ctx.fillStyle = PAL.water; ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); ctx.stroke(); }
@@ -567,22 +580,25 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = `rgba(${PAL.road},${r.grade === 'main' ? .55 : r.grade === 'through' ? .42 : .3})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
     cs._wc = { k: wk, cv: wc }; } ctx.drawImage(cs._wc.cv, 0, 0); }
   if (Lf.deck) {
-  // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开
-  const ov = document.createElement('canvas'); ov.width = cv.width; ov.height = cv.height; const oc = ov.getContext('2d');
-  oc.fillStyle = PAL.deck; for (const Pp of F.site.footPolys) { path(oc, Pp, true); oc.fill(); }
+  // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开。蒙版、阴影、桥段按结构缓存，换色只上色
+  if (!PB.deckM || PB.deckM.width !== cv.width) {
+  const ov = mkC(), oc = ov.getContext('2d');
+  oc.fillStyle = '#fff'; for (const Pp of F.site.footPolys) { path(oc, Pp, true); oc.fill(); }
   oc.globalCompositeOperation = 'destination-out'; for (const cp of F.cellPolys) { path(oc, cp.poly, true); oc.fill(); }
   oc.globalCompositeOperation = 'source-over';   for (const g of F.gatePlates || []) { const q = X(g.c); oc.save(); oc.beginPath(); for (const Pp of F.site.footPolys) path(oc, Pp, true, false); oc.clip(); oc.beginPath(); oc.arc(q[0], q[1], g.r * mPx, 0, 7); oc.fill(); oc.restore(); }
   for (const t of F.towers) { const q = X(t); oc.beginPath(); oc.arc(q[0], q[1], (t[2] + 6) * mPx, 0, 7); oc.fill(); }
-  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 5; ctx.drawImage(ov, 0, 0); ctx.restore();
+  const sh = mkC(), shx = sh.getContext('2d'), OFF = cv.width + 100; shx.shadowColor = 'rgba(0,0,0,.55)'; shx.shadowBlur = 8; shx.shadowOffsetX = 4 + OFF; shx.shadowOffsetY = 5; shx.drawImage(ov, -OFF, 0);
   // 桥段：结构下方是水面 / 铁路处，压一层淡蓝灰，读得出是跨越
-  const br = document.createElement('canvas'); br.width = cv.width; br.height = cv.height; const bx = br.getContext('2d'); bx.drawImage(ov, 0, 0); bx.globalCompositeOperation = 'source-in'; bx.fillStyle = PAL.bridge; bx.fillRect(0, 0, br.width, br.height);
+  const br = mkC(), bx = br.getContext('2d'); bx.drawImage(ov, 0, 0);
   bx.globalCompositeOperation = 'destination-out'; landPath(bx); bx.fill('evenodd'); bx.globalCompositeOperation = 'source-over';
-  const wm = document.createElement('canvas'); wm.width = cv.width; wm.height = cv.height; const wx = wm.getContext('2d'); landPath(wx); wx.fillStyle = '#fff'; wx.fill('evenodd'); wx.globalCompositeOperation = 'destination-out'; for (const w of SNAP.water) { wx.beginPath(); for (const r of w) if (r.length > 2) path(wx, r, true, false); wx.fill('evenodd'); }
-  bx.globalCompositeOperation = 'destination-out'; bx.drawImage(wm, 0, 0); ctx.globalAlpha = 0.55; ctx.drawImage(br, 0, 0); ctx.globalAlpha = 1;
+  const wm = mkC(), wx = wm.getContext('2d'); landPath(wx); wx.fillStyle = '#fff'; wx.fill('evenodd'); wx.globalCompositeOperation = 'destination-out'; for (const w of SNAP.water) { wx.beginPath(); for (const r of w) if (r.length > 2) path(wx, r, true, false); wx.fill('evenodd'); }
+  bx.globalCompositeOperation = 'destination-out'; bx.drawImage(wm, 0, 0); PB.deckM = ov; PB.deckSh = sh; PB.brM = br; }
+  const tk = (n, c) => { if (!PB.tn[n + c]) { const ks = Object.keys(PB.tn); if (ks.length > 3) delete PB.tn[ks[0]]; PB.tn[n + c] = tint(PB[n], c); } return PB.tn[n + c]; };
+  ctx.drawImage(PB.deckSh, 0, 0); ctx.drawImage(tk('deckM', PAL.deck), 0, 0); ctx.globalAlpha = 0.55; ctx.drawImage(tk('brM', PAL.bridge), 0, 0); ctx.globalAlpha = 1;
   }
   if (Lf.towers)   for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fillStyle = PAL.tower; ctx.fill(); }
   if (only) return cv;
-  planBase = cv; }
+  planBase = cv; FC.set(fk, cv); while (FC.size > 4) FC.delete(FC.keys().next().value); }
 function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
 function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr) { cv.width = w * pr; cv.height = h * pr; }
