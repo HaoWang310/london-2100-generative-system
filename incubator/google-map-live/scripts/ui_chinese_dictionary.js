@@ -3,6 +3,7 @@
    Chinese shown when the UI language is set to zh. Terminology follows the
    original Chinese wording preserved in ui_english_dictionary.js. */
 export const CHINESE_UI = {
+  "On a phone: drag the panel down to see more of the map and tap the corners, then open it again for ① Preview site. Drawing is easier on an iPad or a computer.": "在手机上：把面板往下拉，露出更多地图，再点红线的各个角；然后拉开面板点「① 预览场地」。在 iPad 或电脑上画更方便。",
   "Show or hide the control panel": "显示或隐藏控制面板",
   "Step 1: tap at least three points, then tap ① Preview site": "第 1 步：至少点三个点，然后点「① 预览场地」",
   "Tap Draw site boundary to begin": "点「绘制场地边界」开始",

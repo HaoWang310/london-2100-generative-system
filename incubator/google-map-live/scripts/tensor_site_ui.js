@@ -9,7 +9,7 @@
  * site's OSM streets, rail, water, buildings and the OS Terrain 50 elevation. Tensor Studio reads the EA
  * flood risk itself. Esc, or its "back to the London map" button, returns here with the red boundary kept.
  */
-import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.42.0-english';
+import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.42.1-english';
 
 const SEL_SOURCE='site-selection-source';
 const SEL_FILL='site-selection-fill';
@@ -91,7 +91,14 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
       'Site preview: adjust or retain boundary, then press Enter to confirm';
   }
 
+  // v3.42.1 · phones (short side under 600 px): the first time a boundary is drawn, a word on how (once per device)
+  const PHONE=TOUCH&&Math.min(screen.width,screen.height)<600;
+  function phoneTip(){
+    if(!PHONE)return;try{if(localStorage.getItem('googleMapLive.phoneDrawTip'))return;localStorage.setItem('googleMapLive.phoneDrawTip','1');}catch(error){}
+    say?.('On a phone: drag the panel down to see more of the map and tap the corners, then open it again for ① Preview site. Drawing is easier on an iPad or a computer.');
+  }
   function startDrawing(){
+    phoneTip();
     closeTensorStudio();open=false;
     vertices=[];polygon=null;drawing=true;editing=false;dirty=false;confirmed=false;dragIndex=-1;
     map.doubleClickZoom.disable();map.getCanvas().style.cursor='crosshair';

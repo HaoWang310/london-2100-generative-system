@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.42.1: on a phone, the first time a site boundary is drawn, the status line says how (drag the panel down, tap the corners, open it again for ① Preview site) and that drawing is easier on an iPad or a computer. Once per device.
+
 Version 3.42.0: on phones (a touch screen whose short side is under 600 px) the control panel is a sheet along the bottom. It starts folded (title only) so the map fills the screen; tap its handle to open it halfway or fold it, drag the handle to any height (it settles folded, half or nearly full); the − / + button folds and opens it too. The Display button and panel sit at the top right there. Computers and iPads: the floating panel as before.
 
 Version 3.41.0: fingers on iPad and iPhone (touch screens only; a computer with a mouse sees and does exactly what it did).
