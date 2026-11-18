@@ -1,0 +1,11 @@
+/* Touch screens (iPhone, iPad): controls a finger can hit — about 44 pt, Apple's minimum.
+   Only (pointer: coarse) devices: computers with a mouse or trackpad are not affected.
+   Loaded last, so it wins over the same selectors in theme.css and the screens' own styles. */
+@media (pointer: coarse) {
+  .seg button { height: 38px; }                 /* 2D / 3D and the language switches (with the group's frame: 44 px) */
+  .lang-seg button { min-width: 48px; }
+  .btn { height: 40px; }                        /* back to the catalogue, workspace buttons */
+  .cat-filters button { height: 40px; padding: 0 14px; }
+  .cat-top .home { min-height: 44px; }
+  .brand { min-height: 44px; align-items: center; }
+}
