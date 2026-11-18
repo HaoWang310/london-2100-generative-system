@@ -66,3 +66,8 @@ test('attractors: roundabout at main nodes, towers at secondary nodes, entry lin
   const g = F2.grid, q = [Math.floor((609 - g.xmin) / g.RES), Math.floor((g.ymax - 864) / g.RES)]; let n = 0; for (let y = q[1] - 6; y <= q[1] + 6; y++) for (let x = q[0] - 6; x <= q[0] + 6; x++) if (g.corr[y * g.W + x]) n++;
   assert.ok(n > 40, 'entry plate is structure');
 });
+
+test('roundabout plaza island holds only the tower, no buildings', () => {
+  const g = F.grid; let n = 0; for (let i = 0; i < g.W * g.H; i++) if (g.bldM[i]) { const wx = g.xmin + (i % g.W + .5) * g.RES, wy = g.ymax - (((i / g.W) | 0) + .5) * g.RES; if (F.rings.some(r => Math.hypot(wx - r.c[0], wy - r.c[1]) < r.r)) n++; }
+  assert.equal(n, 0);
+});

@@ -477,6 +477,8 @@ function drawVec(ctx, X, k, o) {
   const path = (Q, close) => { ctx.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); if (close) ctx.closePath(); };
   ctx.save(); ctx.lineJoin = ctx.lineCap = 'round';
   if (o.cells) { ctx.strokeStyle = PAL.edge; ctx.lineWidth = .75 * k; for (const cp of F.cellPolys) { path(cp.poly, true); ctx.stroke(); } }
+  if (o.cells && (F.gatePlates || []).length) { ctx.save(); ctx.beginPath(); for (const Q of F.site.footPolys) Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.clip(); ctx.fillStyle = PAL.deck; // 入口板盖住室边线
+    for (const g of F.gatePlates) { const q = X(g.c), r = Math.abs(X([g.c[0] + g.r, g.c[1]])[0] - q[0]); ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.fill(); } ctx.restore(); }
   if (o.prim) { ctx.save(); ctx.beginPath(); for (const Q of F.site.footPolys) Q.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.clip(); ctx.strokeStyle = PAL.red; ctx.globalAlpha = .9; ctx.lineWidth = 1.1 * k; ctx.setLineDash([6 * k, 4 * k]); for (const S of F.strands) { path(S); ctx.stroke(); } ctx.setLineDash([]); ctx.globalAlpha = 1;  ctx.restore(); }
   if (o.cells) { ctx.strokeStyle = PAL.red; ctx.lineWidth = 1.3 * k; for (const t of F.towers) { const q = X(t), r = Math.max(4 * k, (t[2] + 6) * Math.abs(X([t[0] + 1, t[1]])[0] - q[0])); ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 1.8 * k, 0, 7); ctx.fillStyle = PAL.red; ctx.fill(); } }
   if ((o.hover || o.focus) && F.cellPolys.length) { const ids = cpIds();
