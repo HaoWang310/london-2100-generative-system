@@ -114,6 +114,8 @@ export function createBuildingShadowLayer(map,maplibregl,{
      - only buildings near the view centre (at least 1800 m, ?shadowR=…; wider when zoomed out): far shadows are too small to see
      - ?perf=1 shows how long the building tiles took and what each shadow rebuild cost (any device) */
   const qs=(()=>{try{return new URLSearchParams(location.search);}catch(error){return new URLSearchParams();}})();
+  // ?perf=1 on this page, or on the page around it (the map opened from the catalogue sits in a frame)
+  const PERF=qs.get('perf')==='1'||(()=>{try{return window.top!==window&&new URLSearchParams(window.top.location.search).get('perf')==='1';}catch(error){return false;}})();
   const NEAR=Math.max(300,Number(qs.get('shadowR'))||1800);
   let list=null,stale=true,staleSince=0,waitTimer=null;
   const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0,loadMs:null,loading:false,loadStart:0};
@@ -200,10 +202,10 @@ export function createBuildingShadowLayer(map,maplibregl,{
   }
   let hudEl=null;
   function hud(){
-    if(qs.get('perf')!=='1'||typeof document==='undefined')return;
+    if(!PERF||typeof document==='undefined')return;
     if(!hudEl){hudEl=document.createElement('div');hudEl.style.cssText='position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.78);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre';document.body.appendChild(hudEl);}
     const f=v=>v==null?'—':(v/1000).toFixed(2)+' s',ms=v=>Math.round(v)+' ms';
-    hudEl.textContent='buildings load  '+(stats.loading?'loading…':f(stats.loadMs))+'\nshadow read     '+ms(stats.readMs)+'  ×'+stats.reads+'\nshadow build    '+ms(stats.buildMs)+'  ×'+stats.rebuilds+'\nbuildings       '+stats.buildings+'  (within '+(stats.reach||NEAR)+' m)\ntriangles       '+stats.triangles+'\npixel ratio     '+(window.devicePixelRatio||1);
+    hudEl.textContent='buildings load  '+(stats.loading?'loading…':f(stats.loadMs))+'\nshadow read     '+ms(stats.readMs)+'  ×'+stats.reads+'\nshadow build    '+ms(stats.buildMs)+'  ×'+stats.rebuilds+'\nbuildings       '+stats.buildings+'  (within '+(stats.reach||NEAR)+' m)\ntriangles       '+stats.triangles+'\nshadows         '+(!enabled?'off':!sun?'no sun yet':shadowOffset(sun.azimuth,sun.altitude)?'on':'sun too low')+'\npixel ratio     '+(window.devicePixelRatio||1);
   }
   function upload(){
     if(!gl||!buf)return;
@@ -353,6 +355,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
   map.on('idle',onIdle);
   map.on('dataloading',onLoading);
   ensure();
+  hud();   // ?perf=1: the box is there from the start
 
   return {
     setSun(next){
@@ -369,7 +372,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
     setEnabled(on){
       enabled=Boolean(on);
       if(enabled){ensure();schedule(0);}
-      map.triggerRepaint();
+      map.triggerRepaint();hud();
     },
     refresh(){ensure();stale=true;schedule(0);},
     get stats(){return {...stats};},
