@@ -133,3 +133,10 @@ test('main-road spacing stays sensible without main roads', () => {
   const b = JSON.parse(JSON.stringify(a)); b.roads = b.roads.filter(r => r.grade === 'local'); const sb = SS.prepareSite(b); assert.ok(sb.d1 <= 3.5 * sb.d2, 'd1 ' + sb.d1);
   assert.ok(Math.abs(site.d1 - 378) < 5, 'P2 unchanged ' + site.d1);
 });
+
+// 页面脚本能解析（防止改动时把半行代码注释掉、括号不配对）
+test('index.html inline script parses', () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]); assert.ok(scripts.length >= 1);
+  for (const src of scripts) assert.doesNotThrow(() => new Function(src));
+});
