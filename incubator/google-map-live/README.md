@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.43.3: `perf=1` is found anywhere in the address, also after the # (for example `…/#workspace?perf=1` on the main site).
+
 Version 3.43.2: with `?perf=1` the timing box appears as soon as the page code runs (map library loaded, map style, first full picture, first settle), before the map has finished loading; the shadow lines join it later.
 
 Version 3.43.1: the `?perf=1` box shows from the start (also when shadows are off or the sun is too low), and `?perf=1` on the main site works for the map opened from the catalogue too.
