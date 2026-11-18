@@ -264,7 +264,7 @@ export function open(api, lang = 'zh', opt = {}){
     <button class="tog" type="button" data-k="flood">${L.flood}</button><button class="tog" type="button" data-k="drain">${L.drain}</button>
     <button class="tog on" type="button" data-k="fixed">${fixedLabel}</button>
     <label class="exagRow"><span>${L.exag}</span><input type="range" min="1" max="${VW.exagMax || 8}" step="0.5" value="${st.exag}"><b>${st.exag}</b></label></div></div>
-  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.filter(([k]) => !(k === 'X' && !xLabel) && !(k === 'A' && !api.FR) && !((k === 'L' || k === 'R') && !hallOn)).map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
+  <div style="margin-top:auto"><div class="eyebrow" style="margin-bottom:8px">${L.keys}</div><div class="keys">${L.keyList.filter(([k]) => !(k === 'X' && !xLabel) && !(k === 'A' && !api.FR) && !((k === 'L' || k === 'R') && !hallOn) && !(k === 'L3' && !opt.panel)).map(([k, t]) => `<i>${k}</i><span>${t.replace('{x}', xLabel)}</span>`).join('')}</div></div>
 </aside>
 <main class="stage"><canvas class="view"></canvas>
   <button class="btn showSet" type="button" hidden>${L.showSet}</button></main>
@@ -553,7 +553,7 @@ export function open(api, lang = 'zh', opt = {}){
   function hudTexture(){ const c = document.createElement('canvas'); c.width = 1024; c.height = 470; const g = c.getContext('2d');
     g.fillStyle = 'rgba(28,28,30,0.86)'; const r = 40; g.beginPath(); g.roundRect ? g.roundRect(0, 0, 1024, 470, r) : g.rect(0, 0, 1024, 470); g.fill();
     g.fillStyle = '#f5f5f7'; g.font = '600 44px -apple-system,"PingFang SC",sans-serif'; g.fillText((opt.title || 'Tensor Studio') .split(' · ').slice(-2).join(' · ') + (snap.lines.length ? ' · ' + L.streets(snap.lines.length) : ''), 44, 76);
-    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; (hallOn ? L.hud : L.hudPlain).map(s => xLabel ? s.replace('{x}', xLabel) : s.replace(/X \{x\} · /, '')).map(s => api.FR ? s : s.replace(/^A [^·]+ · /, '')).forEach((s, i) => g.fillText(s, 44, 140 + i * 52));
+    g.font = '34px -apple-system,"PingFang SC",sans-serif'; g.fillStyle = 'rgba(235,235,245,0.78)'; (hallOn ? L.hud : L.hudPlain).map(s => xLabel ? s.replace('{x}', xLabel) : s.replace(/X \{x\} · /, '')).map(s => api.FR ? s : s.replace(/^A [^·]+ · /, '')).filter(s => panel || !/面板|Panel|controls/.test(s)).forEach((s, i) => g.fillText(s, 44, 140 + i * 52));
     if (api.stream){ g.fillStyle = streamInfo().failed ? '#ff9f8a' : '#8fd18a'; g.font = '30px -apple-system,"PingFang SC",sans-serif'; g.fillText(streamLine().slice(0, 52), 44, 438); }
     const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
@@ -778,7 +778,8 @@ export function open(api, lang = 'zh', opt = {}){
       // the chips: 「面板」 under the help card while the panel is away, 「收起」 beside the panel's drag bar
       chips = []; chipHit.clear();
       if (panel && !pm.grab){
-        if (pm.mode === 'off' && lpp){ const c = [lpp.p[0], lpp.p[1] + 0.058, lpp.p[2]]; chips.push({ c, ...facing(c), w: 0.11, h: 0.0275, tex: chipTex.show, onHand: true, act: showPanel }); }
+        if (pm.mode === 'off' && lpp && panel){ const c = [lpp.p[0], lpp.p[1] + 0.058, lpp.p[2]];   // v0.52: only where there is a panel to open
+           chips.push({ c, ...facing(c), w: 0.11, h: 0.0275, tex: chipTex.show, onHand: true, act: showPanel }); }
         else if (panelPose){ const { c, x, y, barY } = panelPose, k = 0.13 / 2 + 0.05, cc = [0, 1, 2].map(j => c[j] + y[j] * barY + x[j] * k); chips.push({ c: cc, ...facing(cc), w: 0.07, h: 0.0175, tex: chipTex.hide, onHand: pm.mode === 'hand', act: hidePanel }); }
         for (const ch of chips) for (const s of session.inputSources){ if ((ch.onHand && s === leftS) || !s.targetRaySpace) continue; const r = rayOf(s); if (!r) continue;
           const { c, x, y, z } = ch, den = r.d[0] * z[0] + r.d[1] * z[1] + r.d[2] * z[2]; if (Math.abs(den) < 1e-4) continue;
