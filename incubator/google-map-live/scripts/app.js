@@ -1,11 +1,11 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.43.4-english';
-import {createPlaceSearch} from './place_search.js?v=3.43.4-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.43.4-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.43.4-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.43.4-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.43.4-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.43.5-english';
+import {createPlaceSearch} from './place_search.js?v=3.43.5-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.43.5-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.43.5-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.43.5-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.43.5-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,12 +26,9 @@ try {
   }
 }
 
-const APP_VERSION='3.43.4-english';
+const APP_VERSION='3.43.5-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
-// v3.43.4 · tap the version line five times: the timing box on or off (kept on this device; same as the main site's switch)
-{let taps=0,tapTimer=null;document.getElementById('appVersionLabel').addEventListener('click',()=>{taps++;clearTimeout(tapTimer);tapTimer=setTimeout(()=>{taps=0;},1500);
-  if(taps>=5){taps=0;try{localStorage.getItem('london2100.perf')==='1'?localStorage.removeItem('london2100.perf'):localStorage.setItem('london2100.perf','1');}catch(error){}location.reload();}});}
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
 const CITY_BUILDINGS_DRIVER_LAYER='osm-city-buildings-tile-driver';
 const CITY_BUILDINGS_LAYER='osm-city-buildings-3d';
@@ -97,23 +94,6 @@ const IS_PHONE=(()=>{try{return matchMedia('(pointer: coarse)').matches&&Math.mi
 // v3.41.0 · a touch screen (iPad, iPhone): ⓘ buttons for the layer notes (no hover there) and a button that shows or
 // hides the display panel (hidden at first on phones and on an iPad held upright). Computers with a mouse: unchanged.
 const TOUCH_UI=(()=>{try{return matchMedia('(pointer: coarse)').matches;}catch(error){return false;}})();
-// v3.43.2 · ?perf=1 (on this page, or on the main site around it): a small timing box at the bottom left from the first
-// moment — how long the map style, the first full picture and the first settle took; the shadow layer adds its own lines
-const PERF=(()=>{const has=h=>/[?&#]perf=1(?![0-9])/.test(h||'');try{if(localStorage.getItem('london2100.perf')==='1')return true;}catch(error){}try{return has(location.href)||(window.top!==window&&has(window.top.location.href));}catch(error){return has(location.href);}})();   // before or after the #
-const perfLines={};
-function perfSet(key,text){
-  if(!PERF)return;
-  let box=document.getElementById('perfHud');
-  if(!box){box=document.createElement('div');box.id='perfHud';
-    box.style.cssText='position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.82);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre;max-width:calc(100vw - 16px)';
-    const a=document.createElement('div');a.id='perfMap';const b=document.createElement('div');b.id='perfShadow';box.append(a,b);document.body.appendChild(box);}
-  perfLines[key]=text;
-  document.getElementById('perfMap').textContent=Object.values(perfLines).join('\n');
-}
-const perfSince=()=>((performance.now())/1000).toFixed(2)+' s';
-perfSet('v','v'+APP_VERSION+' · times from opening the page');
-perfSet('lib','map library     '+perfSince());
-perfSet('map','map             waiting…');
 let buildingShadowsWanted=!IS_PHONE;
 if(IS_PHONE&&document.getElementById('buildingShadowToggle'))document.getElementById('buildingShadowToggle').checked=false;   // ($ is defined further down)
 let buildingShadowsActive=null;
@@ -2234,11 +2214,6 @@ function initOSM(){
       syncTerrainView();
     }
   });
-  if(PERF){
-    osmMap.once('style.load',()=>perfSet('style','map style       '+perfSince()));
-    osmMap.once('load',()=>perfSet('map','map ready       '+perfSince()));
-    osmMap.once('idle',()=>perfSet('idle','map settled     '+perfSince()));
-  }
   osmMap.on('load',()=>{
     if(startupWatchdog){clearTimeout(startupWatchdog);startupWatchdog=null;}
     clearTimeout(recoveryTimer);
@@ -2257,7 +2232,7 @@ function initOSM(){
     ensureOverviewLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.43.4-english')
+    import('./tensor_site_ui.js?v=3.43.5-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
