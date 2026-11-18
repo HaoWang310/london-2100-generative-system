@@ -69,6 +69,15 @@ const fc = features => ({ type: 'FeatureCollection', features });
 
 // ---------------------------------------------------------------- MapLibre
 
+// Phones: MapLibre opens its compact credits unfolded, a full-width strip over the scale bar; fold them to the ⓘ
+// (a tap opens them again).
+function foldAttribution(el = document) {
+  try {
+    if (!matchMedia('(max-width: 760px)').matches) return;
+    for (const a of el.querySelectorAll('.maplibregl-ctrl-attrib.maplibregl-compact')) { a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open'); }
+  } catch { /* nothing to fold */ }
+}
+
 async function createMapLibreViewer(el, opts) {
   const maplibregl = await loadMapLibre(opts.timeoutMs ?? 8000);
   const provider = PROVIDERS[opts.provider || DEFAULT_PROVIDER];
@@ -87,7 +96,7 @@ async function createMapLibreViewer(el, opts) {
 
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('basemap style timeout')), opts.timeoutMs ?? 8000);
-    map.once('load', () => { clearTimeout(timer); resolve(); });
+    map.once('load', () => { clearTimeout(timer); resolve(); foldAttribution(); });
     map.once('error', e => { if (!map.isStyleLoaded()) { clearTimeout(timer); reject(e.error || new Error('style error')); } });
   });
 

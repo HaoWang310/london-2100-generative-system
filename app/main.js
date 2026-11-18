@@ -360,6 +360,8 @@ function renderChrome() {
       h('span', { class: 'dot' }))));
   }
 
+  renderPhoneScales();
+
   if (activeTool === 'growth') renderGrowthInspector();
   else if (activeTool) renderToolInspector(); else renderScaleInspector(entry);
 
@@ -491,6 +493,37 @@ function renderLegend(scene) {
 }
 
 // ------------------------------------------------------------------ workspace files
+
+// ---------------------------------------------------------------- phones: the scales above the parameters
+// Below 760 px the module list is hidden. Its entries (00 London, 01 growth, the tools) come here as a row of chips
+// that scrolls sideways and stays at the top of the parameters; ⋯ holds save, open and the build.
+function renderPhoneScales() {
+  const row = $('phoneScales');
+  row.setAttribute('aria-label', t('nav.scales'));
+  const mods = [...$('scaleList').querySelectorAll('.mod'), ...$('toolList').querySelectorAll('.mod')];
+  row.replaceChildren(...mods.map(m => h('button', {
+    type: 'button', class: 'ps-chip', disabled: m.disabled, 'aria-current': m.getAttribute('aria-current'),
+    onclick: () => m.click()
+  }, h('span', { class: 'num' }, m.querySelector('.num')?.textContent || ''), m.querySelector('.name')?.textContent || '')),
+  h('button', { type: 'button', class: 'ps-chip ps-more', 'aria-haspopup': 'true', title: t('ws.more'), onclick: e => { e.stopPropagation(); togglePhoneMenu(e.currentTarget); } }, '⋯'));
+  // keep the current scale in view
+  requestAnimationFrame(() => row.querySelector('.ps-chip[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+}
+function togglePhoneMenu(btn) {
+  let menu = $('phoneMenu');
+  if (menu) { menu.remove(); return; }
+  const close = () => { menu?.remove(); document.removeEventListener('pointerdown', outside, true); };
+  const outside = e => { if (!e.target.closest('#phoneMenu, .ps-more')) close(); };
+  menu = h('div', { id: 'phoneMenu', class: 'phone-menu', role: 'menu' },
+    h('button', { type: 'button', role: 'menuitem', onclick: () => { close(); exportWorkspace(); } }, t('ws.save')),
+    h('button', { type: 'button', role: 'menuitem', onclick: () => { close(); $('importWorkspace').click(); } }, t('ws.open')),
+    h('div', { class: 'phone-menu-ver' }, $('versionButton').textContent));
+  document.body.append(menu);
+  const r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, Math.min(innerWidth - mw - 8, r.right - mw))}px`;
+  menu.style.top = `${r.bottom + 6 + mh < innerHeight ? r.bottom + 6 : Math.max(8, r.top - mh - 6)}px`;
+  document.addEventListener('pointerdown', outside, true);
+}
 
 function exportWorkspace() {
   download(`london2100_workspace_${new Date().toISOString().slice(0, 10)}.json`, {
