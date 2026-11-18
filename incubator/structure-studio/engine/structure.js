@@ -153,6 +153,9 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
   const dMainG = edt(rasterRoads(snap.roads.filter(r => r.grade === 'main')), W, H), dAllG = edt(rasterRoads(snap.roads), W, H);
   let sMain = 0, sAll = 0, nR = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i]) { sMain += Math.min(dMainG[i] * RES, 400); sAll += Math.min(dAllG[i] * RES, 200); nR++; }
   const d1 = nR ? 4 * sMain / nR : 300, d2 = nR ? 4 * sAll / nR : 115;
+  // 张量场道路的路面（按每条路的宽度）：走廊跨过路面的地方三维里要架空、留出净空
+  const roadF = new Float32Array(NN); for (const r of snap.roads) { const rr = (r.width || 6.5) / 2 / RES; for (const q of resample(r.pts, RES).map(toPix)) stampDisk(roadF, W, H, q[0], q[1], rr); }
+  const roadM = new Uint8Array(NN); for (let i = 0; i < NN; i++) roadM[i] = roadF[i] > 0.5 && siteM[i] ? 1 : 0;
   const roadDistAll = p => { const q = toPix(p), x = Math.floor(q[0]), y = Math.floor(q[1]); return x >= 0 && y >= 0 && x < W && y < H ? dAllG[y * W + x] * RES : 1e9; };
   // 重要路口（来自张量场路网）：场地内主干 × 主干、主干 × 贯通相交处；十字优先，主干越多越优先 → 小种植塔的候选
   const hubs = []; { const dseg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
@@ -160,10 +163,13 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
       for (const r of snap.roads) { if (r.grade !== 'main' && r.grade !== 'through') continue; let hit = false; for (let i = 1; i < r.pts.length && !hit; i++) hit = dseg(p, r.pts[i - 1], r.pts[i]) < 4; if (hit) r.grade === 'main' ? nm++ : nt++; }
       if (nm >= 2 || (nm >= 1 && nt >= 1)) hubs.push({ p, type: j.type, rank: (j.type === 'X' ? 10 : 0) + nm * 2 + nt }); }
     hubs.sort((a, b) => b.rank - a.rank); }
-  return { hubs, coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores, landHa: landA * RES * RES / 1e4 };
+  return { roadM, hubs, coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores, landHa: landA * RES * RES / 1e4 };
 }
 
 // ---------------------------------------------------------------- 主生成
+// 跨路：桥下净空至少 CLR；顶标高够高时带整层种植跨过去（层高 3.6 m），否则只留 1.2 m 桥面
+const CLR = 5.0;
+function roadSpan(deckZ) { const n = Math.floor((deckZ - CLR) / 3.6), T = n >= 1 ? 3.6 * n : 1.2; return { T, floors: Math.max(0, n), clear: deckZ - T, ok: deckZ - T >= CLR }; }
 function buildStructure(site, P, EXCL) {
   if (P.wP < P.wS) P = { ...P, wP: P.wS }; // 主线走廊不比次级走廊窄
   const rnd = mulberry32(P.seed * 977 + 31), U = (a, b) => a + (b - a) * rnd();
@@ -528,8 +534,15 @@ function buildStructure(site, P, EXCL) {
     for (const q of pp) { const xa = Math.max(0, Math.floor(q[0] - Bd)), xb = Math.min(W - 1, Math.ceil(q[0] + Bd)), ya = Math.max(0, Math.floor(q[1] - Bd)), yb = Math.min(H - 1, Math.ceil(q[1] + Bd));
       for (let y = ya; y <= yb; y++) { const dy = y + .5 - q[1], row = y * W; for (let x = xa; x <= xb; x++) { const dx = x + .5 - q[0], d = Math.sqrt(dx * dx + dy * dy); if (d < dB[row + x]) dB[row + x] = d; } } } });
   // 跨水 / 跨铁路段：走廊落在非陆地（水面、铁路缝、洞）上的部分，三维里做成架空桥面，下面每隔 P.colStep 放一对柱子
-  const solid = i => landM[i] && !waterM[i], columns = []; let bridgeL = 0, nBridge = 0;
-  for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return !(x >= 0 && y >= 0 && x < W && y < H) || !siteM[y * W + x] ? 2 : solid(y * W + x) ? 1 : 0; });
+  const solid = i => landM[i] && !waterM[i], columns = [], roadM = site.roadM || new Uint8Array(NN), RS = roadSpan(P.deckZ); let bridgeL = 0, nBridge = 0, roadL = 0, nRoad = 0;
+  const onRoadP = q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return x >= 0 && y >= 0 && x < W && y < H && roadM[y * W + x] === 1; };
+  for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return !(x >= 0 && y >= 0 && x < W && y < H) || !siteM[y * W + x] ? 2 : !solid(y * W + x) ? 0 : roadM[y * W + x] ? 3 : 1; });
+    // 跨路段：中心线落在路面上的连续段；柱子立在走廊两侧（长段按柱距加，落在路面上的柱子不放）
+    { let k = 0; while (k < Q.length) { if (on[k] !== 3) { k++; continue; } let e = k; while (e < Q.length && on[e] === 3) e++; const L = (e - k) * 2;
+      if (L >= 4) { nRoad++; roadL += L; const w = (f.prim ? P.wP : wSecAt(Q[Math.floor((k + e) / 2)])) / 2 - 2, n = Math.max(1, Math.round(L / P.colStep)), at = []; // 两端的实心体就是桥墩：只有比柱距长的段才在中间加柱
+        for (let c = 1; c < n; c++) at.push(k + Math.round(c * (e - k) / n));
+        for (const idx of at) { const i2 = Math.min(Q.length - 2, Math.max(0, idx)), t = unit(sub(Q[i2 + 1], Q[i2])), nn = [-t[1], t[0]]; for (const sg of [1, -1]) { const q = add(Q[idx], mul(nn, w * sg)); if (!onRoadP(q)) columns.push([q[0], q[1], RS.clear]); } } }
+      k = e; } }
     let k = 0; while (k < Q.length) { if (on[k] !== 0) { k++; continue; } let e = k; while (e < Q.length && on[e] === 0) e++; const L = (e - k) * 2;
       if (L >= 6) { nBridge++; bridgeL += L; const w = (f.prim ? P.wP : wSecAt(Q[Math.floor((k + e) / 2)])) / 2 - 2, n = Math.max(1, Math.round(L / P.colStep));
         for (let c = 0; c < n; c++) { const idx = Math.min(Q.length - 2, k + Math.round((c + 0.5) * (e - k) / n)), t = unit(sub(Q[idx + 1], Q[idx])), nn = [-t[1], t[0]]; columns.push(add(Q[idx], mul(nn, w)), sub(Q[idx], mul(nn, w))); } }
@@ -598,7 +611,7 @@ function buildStructure(site, P, EXCL) {
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
   return { mode: MODE, rings, gatePlates, entryStrands, secs, gates, trace: TR, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
-    cells, cores, site, cellPolys, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
+    cells, cores, site, cellPolys, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
 
 
@@ -642,7 +655,14 @@ function meshes(F, P) {
   const deckZ = P.deckZ;
   const corrZ = (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; };
   const solidAt = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1), k = j * W + i; return F.site.landM[k] && !F.site.waterM[k]; };
-  const corridor = ms(F, g.corrF, 2.0, corrZ, (z, x, y) => !solidAt(x, y) ? z - 1.2 : z > deckZ + 0.1 ? z - deckZ : 0); // 跨水 / 跨铁路段：1.2 m 厚的架空桥面
+  // 架空段比路面每边多伸出 3 m：端墙落在路缘外，桥下整条路面都是净空（不会在路缘上斜着伸进路面）
+  const roadM0 = F.site.roadM || new Uint8Array(NN), dR = edt(roadM0, W, H), roadM = new Uint8Array(NN); for (let i = 0; i < NN; i++) roadM[i] = dR[i] * RES <= 3 ? 1 : 0;
+  const RS = roadSpan(deckZ), onRoad = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1); return roadM[j * W + i] === 1; };
+  // 跨水 / 跨铁路段：1.2 m 厚的架空桥面；跨路段：按顶标高留出净空（见 roadSpan），带整层种植或只留桥面
+  const corridor = ms(F, g.corrF, 2.0, corrZ, (z, x, y) => !solidAt(x, y) ? z - 1.2 : onRoad(x, y) ? z - RS.T : z > deckZ + 0.1 ? z - deckZ : 0);
+  // 实心段在路面 / 水面边上的端墙：走廊足迹 ∩ 落地处 的轮廓侧面（否则从桥下能看进实心体里面）
+  { const sm = new Float32Array(NN); for (let i = 0; i < NN; i++) sm[i] = F.site.landM[i] && !F.site.waterM[i] && !roadM[i] ? 1 : 0; const sb = blur(sm, W, H, 0.7), body = new Float32Array(NN); for (let i = 0; i < NN; i++) body[i] = g.corrF[i] * sb[i];
+    const walls = ms(F, body, 2.0, (x, y) => corrZ(x, y) - 0.02, () => 0).side, cs = new Float32Array(corridor.side.length + walls.length); cs.set(corridor.side); cs.set(walls, corridor.side.length); corridor.side = cs; }
   const fs = new Float32Array(NN); for (let i = 0; i < NN; i++) fs[i] = g.farm[i] ? 1 : 0; // 三维里农田整片铺（条纹只在平面图上）
   const farm = ms(F, blur(fs, W, H, 0.6), 4.0, () => 0.25, z => z - 0.2);
   const bS = new Float32Array(NN); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let m = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const xx = x + a, yy = y + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) m = Math.max(m, g.hgt[yy * W + xx]); } bS[y * W + x] = m; }
@@ -652,6 +672,6 @@ function meshes(F, P) {
   return { corridor, farm, bld };
 }
 
-const API = { prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+const API = { roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
