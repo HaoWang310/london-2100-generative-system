@@ -597,7 +597,8 @@ async function boot() {
   let mapStart = null;
   const startMap = () => mapStart || (mapStart = startWorkspaceMap());
   const route = async () => {
-    const screen = location.hash.replace('#', '') || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
+    // options after the screen name (…#workspace?perf=1) are for the pages, not part of the name
+    const screen = location.hash.replace('#', '').split('?')[0] || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
     if (screen.startsWith('app/')) {
       // An incubator app, popped out over the catalogue.
       const item = await catalogue.item(screen.slice(4));
