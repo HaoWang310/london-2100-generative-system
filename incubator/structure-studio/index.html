@@ -266,7 +266,7 @@ body.cards-on #cardBar{display:flex}
       <li class="pmStep" data-k="3"><button type="button" class="pmHead"><span class="pmNum">3</span><span>拉扯</span><span class="pmFlag" id="sum3"></span></button>
         <div class="pmBody"><p class="pmNote">主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。</p><div class="card pmCard">
 <div class="row"><label for="mode">生成模式</label><select id="mode" class="sel" style="max-width:62%"><option value="v0">1 · 全局拉伸</option><option value="v1">2 · 局部场流线行</option><option value="v2">3 · 各向异性分格</option><option value="radial">4 · 放射蛛网（核心）</option><option value="dual">5 · 双向流线格网</option><option value="frei">6 · Frei Otto 湿毛线</option><option value="vein">7 · 叶脉生长 + 闭环</option><option value="slime">8 · 黏菌 / 智能体</option></select></div>
-<div class="row"><label for="pull">拉扯强度</label><input type="range" id="pull" min="0" max="1" step="0.05" value="0.5"><output id="v_pull">0.50</output></div>
+<div class="row"><label for="pull">拉扯强度</label><input type="range" id="pull" min="0" max="2" step="0.05" value="0.5"><output id="v_pull">0.50</output></div>
         </div><p class="pmOut" id="strHint"></p></div></li>
       <li class="pmStep" data-k="4"><button type="button" class="pmHead"><span class="pmNum">4</span><span>走廊与节点</span><span class="pmFlag" id="sum4"></span></button>
         <div class="pmBody"><p class="pmNote">每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。</p><div class="card pmCard">
@@ -658,7 +658,7 @@ function writeTexts() {
   $('s_len').textContent = (st.totL / 1000).toFixed(2); $('s_area').textContent = (st.farmA / 1e4).toFixed(1) + ' / ' + (st.corrA / 1e4).toFixed(1);
   $('scaleHint').textContent = L(`从路网测得：主路间距 d1 ≈ ${st.d1.toFixed(0)} m、次路间距 d2 ≈ ${st.d2.toFixed(0)} m。按钮按 P2 的比例换算：核心间距 0.66·d2、外围间距 0.69·d1、过渡范围 1.85·d1、主线平移 0.37·d1。走廊压在道路上 ${(st.onRoad * 100).toFixed(0)}%。`, `Measured from the streets: main spacing d1 ≈ ${st.d1.toFixed(0)} m, second spacing d2 ≈ ${st.d2.toFixed(0)} m. The button scales by P2's ratios: core spacing 0.66·d2, outer 0.69·d1, falloff 1.85·d1, primary shift 0.37·d1. Corridors on streets: ${(st.onRoad * 100).toFixed(0)}%.`);
   { const H = {
-    v0: [`1 · 全局拉伸：在压缩空间里布点，再沿全场一个主方向拉长 ${x} 倍。0 = 各向均匀的绳网；1 = 室被拉成顺主线的透镜 / 水滴，尖端指向节点。`, `1 · Global stretch: seeds laid in a compressed space, then the whole net stretched ×${x} along one main direction.`],
+    v0: [`1 · 全局拉伸：在压缩空间里布点，再沿全场一个主方向拉长 ${x} 倍。0 = 各向均匀的绳网；1 = 室被拉成顺主线的透镜 / 水滴，尖端指向节点；2 = 接近平行的长带。`, `1 · Global stretch: seeds laid in a compressed space, then the whole net stretched ×${x} along one main direction. 0 = an even net; 1 = lenses / teardrops along the primaries; 2 = near-parallel strips.`],
     v1: [`2 · 局部场流线行：沿局部张量场排等距流线行（行距 = 间距 / √${x}），行内按 间距 × √${x} 布点，格子顺当地的场拉长、随场弯曲；核心处次级走廊 ${P.wCore} m 渐变到外围 ${P.wS} m。`, `2 · Field rows: evenly spaced streamline rows along the local field, seeds along each row; cells bend with the field.`],
     v2: [`3 · 各向异性分格：按当地张量场的度量撒点（顺场间距更长、垂直更短，强度 = 拉扯的平方），再普通分格：室顺着当地的场拉长、随场弯曲，室之间严丝合缝，不会因为太窄被合并。`, `3 · Anisotropic cells: seeds spaced by the local tensor-field metric (longer along the field, stretch squared), then an ordinary Voronoi: cells stretch along the local field and bend with it, tile without gaps and are not squeezed thin.`],
     radial: [`4 · 放射蛛网：核心周围一圈圈同心环（环距逐圈放大，范围约 0.9 × 核心过渡范围），往外过渡到 1 号（全局拉伸）的网。拉扯只作用于外圈。`, `4 · Radial web: concentric rings around each core (gap growing outward, out to about 0.9 × the core falloff), then the mode-1 (global stretch) net beyond. Stretch acts on the outer net only.`],
@@ -666,7 +666,11 @@ function writeTexts() {
     frei: [`6 · Frei Otto 湿毛线：场地边上两两连线（多 6% 长度），线与线相互吸引并拢，主线作为不动的线；孔洞 = 室（加权分格）。孔洞大小自然分化。计算较慢（约 3–5 秒）。`, `6 · Frei Otto wool threads: threads strung across the site (6% slack) attract and bundle, the primaries held fixed; the holes become cells (weighted Voronoi). Slower (about 3–5 s).`],
     vein: [`7 · 叶脉生长：从核心、次节点和主线出发向养分点生长，末梢相互靠近处闭合成环；叶脉之间的孔洞 = 室。`, `7 · Leaf venation: veins grow from the cores, secondary nodes and primaries towards nutrient points; nearby tips join into loops; the gaps become cells.`],
     slime: [`8 · 黏菌：智能体在场地里觅食（食物 = 核心、次节点、入口、主线、地块中心），痕迹相互加强成网；孔洞 = 室。结果随种子变化较大。`, `8 · Slime mould: agents forage across the site (food = cores, secondary nodes, entrances, primaries, plot centres); reinforced trails form the net; the holes become cells. Varies strongly with the seed.`] }[P.mode] || [];
-    $('strHint').textContent = L(H[0] || '', H[1] || ''); }
+    // 拉扯提示：1.5 以上模式 1 / 4 接近平行长带；模式 2 / 3 超过 1 基本不再变化（车站 P2 实测）
+    const W = (P.mode === 'v0' || P.mode === 'radial') && P.pull > 1.5 ? [' ⚠ 拉扯超过 1.5：室已接近平行长带，最窄的室中间农田很少（2.0 时约 14 m）。', ' ⚠ Pull above 1.5: cells become near-parallel strips; the narrowest leave little farmland (about 14 m at 2.0).']
+      : (P.mode === 'v1' || P.mode === 'v2') && P.pull > 1 ? [' 这个模式拉扯超过 1 后变化很小（室被相邻的行夹住，拉不长）。', ' In this mode pull above 1 changes little (neighbouring rows keep the cells from stretching further).']
+      : ['frei', 'vein', 'slime'].includes(P.mode) && P.pull > 1 ? [' 这个模式按网的孔洞分格，拉扯影响不大。', ' This mode cuts cells from the holes of a net; pull has little effect.'] : ['', ''];
+    $('strHint').textContent = L((H[0] || '') + W[0], (H[1] || '') + W[1]); }
   $('hud_s').textContent = L(`${SNAP.site} · ${SITE.landHa.toFixed(0)} ha · 拉扯 ${P.pull.toFixed(2)} · ${st.cells} 室 · 合并 ${F.nRemoved}（跨水 ${F.nWaterCut}）· 跨水 / 跨铁路 ${F.nBridge} 段 ${(F.bridgeL / 1000).toFixed(2)} km · ${st.bld} 栋 · ${F.towers.length} 塔 · 种子 ${P.seed}`,
     `${SNAP.site} · ${SITE.landHa.toFixed(0)} ha · pull ${P.pull.toFixed(2)} · ${st.cells} cells · merged ${F.nRemoved} (water ${F.nWaterCut}) · ${F.nBridge} spans over water / rail, ${(F.bridgeL / 1000).toFixed(2)} km · ${st.bld} buildings · ${F.towers.length} towers · seed ${P.seed}`);
   $('v_nCore').textContent = L(`主 ${F.cores.length} · 次 ${(F.secs || []).length} · 边界 ${(F.gates || []).length}`, `main ${F.cores.length} · sec ${(F.secs || []).length} · edge ${(F.gates || []).length}`);
