@@ -152,16 +152,22 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
   const rasterRoads = list => { const M = new Uint8Array(NN); for (const r of list) for (const q of resample(r.pts, RES * 0.5).map(toPix)) { const x = Math.floor(q[0]), y = Math.floor(q[1]); if (x >= 0 && y >= 0 && x < W && y < H) M[y * W + x] = 1; } return M; };
   const dMainG = edt(rasterRoads(snap.roads.filter(r => r.grade === 'main')), W, H), dAllG = edt(rasterRoads(snap.roads), W, H);
   let sMain = 0, sAll = 0, nR = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i]) { sMain += Math.min(dMainG[i] * RES, 400); sAll += Math.min(dAllG[i] * RES, 200); nR++; }
-  const d1 = nR ? 4 * sMain / nR : 300, d2 = nR ? 4 * sAll / nR : 115;
+  let d1 = nR ? 4 * sMain / nR : 300; const d2 = nR ? 4 * sAll / nR : 115;
+  // 场地里没有主干路（或主干路离得太远、距离大多被截到 400 m）时，"主路间距"测不准 → 先用主干 + 贯通路，再不行按 P2 的比例 2.6 × 次路间距；并限制在 1.6–3.5 × d2
+  { let far = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i] && dMainG[i] * RES >= 399) far++;
+    if (!nR || far / nR > 0.3) { const dT = edt(rasterRoads(snap.roads.filter(r => r.grade === 'main' || r.grade === 'through')), W, H); let sT = 0, fT = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i]) { sT += Math.min(dT[i] * RES, 400); if (dT[i] * RES >= 399) fT++; }
+      d1 = nR && fT / nR <= 0.3 ? 4 * sT / nR : 2.6 * d2; }
+    d1 = clamp(d1, 1.6 * d2, 3.5 * d2); }
   // 张量场道路的路面（按每条路的宽度）：走廊跨过路面的地方三维里要架空、留出净空
   const roadF = new Float32Array(NN); for (const r of snap.roads) { const rr = (r.width || 6.5) / 2 / RES; for (const q of resample(r.pts, RES).map(toPix)) stampDisk(roadF, W, H, q[0], q[1], rr); }
   const roadM = new Uint8Array(NN); for (let i = 0; i < NN; i++) roadM[i] = roadF[i] > 0.5 && siteM[i] ? 1 : 0;
   const roadDistAll = p => { const q = toPix(p), x = Math.floor(q[0]), y = Math.floor(q[1]); return x >= 0 && y >= 0 && x < W && y < H ? dAllG[y * W + x] * RES : 1e9; };
   // 重要路口（来自张量场路网）：场地内主干 × 主干、主干 × 贯通相交处；十字优先，主干越多越优先 → 小种植塔的候选
-  const hubs = []; { const dseg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  const hubs = [], hubsT = []; { const dseg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
     for (const j of snap.junctions || []) { if (j.type === 'joint' || j.type === 'dead end') continue; const p = [j.x, j.y]; if (!inSite(p)) continue; let nm = 0, nt = 0;
       for (const r of snap.roads) { if (r.grade !== 'main' && r.grade !== 'through') continue; let hit = false; for (let i = 1; i < r.pts.length && !hit; i++) hit = dseg(p, r.pts[i - 1], r.pts[i]) < 4; if (hit) r.grade === 'main' ? nm++ : nt++; }
-      if (nm >= 2 || (nm >= 1 && nt >= 1)) hubs.push({ p, type: j.type, rank: (j.type === 'X' ? 10 : 0) + nm * 2 + nt }); }
+      if (nm >= 2 || (nm >= 1 && nt >= 1)) hubs.push({ p, type: j.type, rank: (j.type === 'X' ? 10 : 0) + nm * 2 + nt }); else if (nt >= 2) hubsT.push({ p, type: j.type, rank: (j.type === 'X' ? 10 : 0) + nt }); }
+    if (!hubs.length) hubs.push(...hubsT); // 场地里没有主干路：贯通 × 贯通 的路口顶上
     hubs.sort((a, b) => b.rank - a.rank); }
   return { roadM, hubs, coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores, landHa: landA * RES * RES / 1e4 };
 }
@@ -354,7 +360,10 @@ function buildStructure(site, P, EXCL) {
         // 叶脉生长（空间殖民）：从核心、次节点和主线出发，向养分点生长；末梢相互靠近处闭合成环
         const aux = bluePts(q => 0.42 * spacing(q)); let alive = aux.map(() => true);
         const VN = [], par = [], VH = new Map(), C5 = 40, addV = (p, pa) => { VN.push(p); par.push(pa); const k = Math.floor(p[0] / C5) + ',' + Math.floor(p[1] / C5); if (!VH.has(k)) VH.set(k, []); VH.get(k).push(VN.length - 1); };
-        for (const c of cores) addV(c.slice(), -1); for (const a of secs) addV(a.p.slice(), -1); for (const S of strands) { let prev = -1; for (const q of resample(S, 24)) if (inSite(q)) { addV(q, prev); prev = VN.length - 1; } }
+        for (const c of cores) addV(c.slice(), -1); for (const a of secs) addV(a.p.slice(), -1);
+        // 没有主吸引点：也从张量场的重要路口长出来
+        if (!cores.length) for (const h of (site.hubs || []).slice(0, 24)) addV(h.p.slice(), -1);
+        for (const S of strands) { let prev = -1; for (const q of resample(S, 24)) if (inSite(q)) { addV(q, prev); prev = VN.length - 1; } }
         const nearestV = (q, rmax) => { let best = -1, bd = rmax; const R_ = Math.ceil(rmax / C5), gx = Math.floor(q[0] / C5), gy = Math.floor(q[1] / C5); for (let a = -R_; a <= R_; a++) for (let b = -R_; b <= R_; b++) { const l = VH.get((gx + a) + ',' + (gy + b)); if (l) for (const j of l) { const d = dist(VN[j], q); if (d < bd) { bd = d; best = j; } } } return [best, bd]; };
         for (let it = 0; it < 420; it++) { const grow = new Map(); let any = false;
           aux.forEach((a, k) => { if (!alive[k]) return; const sp = spacing(a), [j, d] = nearestV(a, 2.4 * sp); if (j < 0) return; if (d < 0.42 * sp) { alive[k] = false; return; } any = true; const v = unit(sub(a, VN[j])); const g = grow.get(j) || [0, 0]; grow.set(j, [g[0] + v[0], g[1] + v[1]]); });
@@ -367,7 +376,7 @@ function buildStructure(site, P, EXCL) {
       } else {
         // 黏菌：智能体在场地里觅食，痕迹相互加强；食物 = 核心、次节点、入口、主线与地块中心
         const food = new Float32Array(GW * GH), addF = (p, v) => { const i = gi(p); if (i >= 0) food[i] = Math.max(food[i], v); };
-        for (const c of cores) addF(c, 14); for (const a of secs) addF(a.p, 9); for (const a of gates) addF(a.p, 9); for (const S of strands) for (const q of resample(S, 40)) addF(q, 3); for (const q of bluePts(q => 1.3 * spacing(q))) addF(q, 4);
+        for (const c of cores) addF(c, 14); for (const a of secs) addF(a.p, 9); if (!cores.length) for (const h of (site.hubs || []).slice(0, 24)) addF(h.p, 9); for (const a of gates) addF(a.p, 9); for (const S of strands) for (const q of resample(S, 40)) addF(q, 3); for (const q of bluePts(q => 1.3 * spacing(q))) addF(q, 4);
         let trail = new Float32Array(GW * GH); const nAg = Math.min(26000, Math.round(inG.reduce((a, b) => a + b, 0) * 0.7)); const ax = new Float32Array(nAg), ay = new Float32Array(nAg), aa = new Float32Array(nAg);
         for (let k = 0; k < nAg; k++) { let x, y; do { x = U(0, GW); y = U(0, GH); } while (!inG[(y | 0) * GW + (x | 0)]); ax[k] = x; ay[k] = y; aa[k] = U(0, 2 * Math.PI); }
         const SA = Math.PI / 4, RA = Math.PI * 40 / 180, SD = 4, sense = (k, a) => { const x = (ax[k] + Math.cos(a) * SD) | 0, y = (ay[k] + Math.sin(a) * SD) | 0; if (x < 0 || y < 0 || x >= GW || y >= GH || !inG[y * GW + x]) return -1e9; return trail[y * GW + x]; };
@@ -388,7 +397,12 @@ function buildStructure(site, P, EXCL) {
       const HL = label4(holes, GW, GH), sx = new Float64Array(HL.n + 1), sy = new Float64Array(HL.n + 1), inside = new Float64Array(HL.n + 1), edge = new Uint8Array(HL.n + 1);
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = y * GW + x, k = HL.lab[i]; if (!k) continue; const p = gp(x, y); sx[k] += p[0]; sy[k] += p[1]; if (inG[i]) inside[k]++; if (x === 0 || y === 0 || x === GW - 1 || y === GH - 1) edge[k] = 1; }
       WT = seeds.map(q => (0.5 * spacing(q)) ** 2 * 0.5); const holesOut = [];
-      for (let k = 1; k <= HL.n; k++) { const n = HL.sizes[k]; if (n < 6 || inside[k] < n * 0.3) continue; if (edge[k] && n > GW * GH * 0.2) continue; const q = [sx[k] / n, sy[k] / n], w = n * R8 * R8 / Math.PI * 0.6; holesOut.push([q, w]); if (primNearG(q).d < hA(q) * 0.5) continue;
+      // 失控的大孔洞（只在没有主吸引点时：没有主线和广场把空隙组织起来，场地内部分超过场地 12%）不只放一个大权重种子，而是在孔洞里按间距撒普通种子，免得一个室占几百公顷；正常的大孔（网的形态）不动
+      let nInG = 0; for (let i = 0; i < GW * GH; i++) nInG += inG[i]; const bigPix = new Map(); for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = y * GW + x, k = HL.lab[i]; if (!k || !inG[i]) continue; const n = HL.sizes[k]; if (n < 6) continue; if (cores.length || inside[k] <= 0.12 * nInG) continue; if (!bigPix.has(k)) bigPix.set(k, []); bigPix.get(k).push(i); }
+      for (let k = 1; k <= HL.n; k++) { const n = HL.sizes[k]; if (n < 6) continue; const q = [sx[k] / n, sy[k] / n], w = n * R8 * R8 / Math.PI * 0.6; if (!bigPix.has(k) && (inside[k] < n * 0.3 || (edge[k] && n > GW * GH * 0.2))) continue;
+        if (bigPix.has(k)) { const L = bigPix.get(k), acc = []; for (let t = L.length - 1; t > 0; t--) { const j = Math.floor(rnd() * (t + 1)); [L[t], L[j]] = [L[j], L[t]]; }
+          for (const i of L) { const p = gp(i % GW, (i / GW) | 0); if (inWater(p) || primNearG(p).d < hA(p) * 0.5) continue; const sp2 = spacing(p); if (acc.some(r => dist(r, p) < 1.2 * sp2) || seeds.some(r => dist(r, p) < 0.9 * sp2)) continue; acc.push(p); const w2 = (0.5 * sp2) ** 2 * 0.5; holesOut.push([p, w2]); seeds.push(p); fixedS.push(false); WT.push(w2); if (TR) TR.seedRow.push(0); }
+          continue; } holesOut.push([q, w]); if (primNearG(q).d < hA(q) * 0.5) continue;
         seeds.push(q); fixedS.push(false); WT.push(w); if (TR) TR.seedRow.push(0); }
       // 兜底：网太稀、孔洞太少（比如没有主吸引点、也就没有主线把场地切开，空隙连成一片通到场地外被丢掉）→ 按疏密场补普通种子
       // 只补空当：离已有种子都超过 1.3 个间距的地方才补（大孔通到场地外被丢掉的那片、网太稀的地方），不冲淡网本身的形态
