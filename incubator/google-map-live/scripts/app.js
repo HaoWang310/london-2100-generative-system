@@ -1,11 +1,11 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.40.0-english';
-import {createPlaceSearch} from './place_search.js?v=3.40.0-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.40.0-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.40.0-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.40.0-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.40.0-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.40.1-english';
+import {createPlaceSearch} from './place_search.js?v=3.40.1-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.40.1-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.40.1-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.40.1-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.40.1-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,7 +26,7 @@ try {
   }
 }
 
-const APP_VERSION='3.40.0-english';
+const APP_VERSION='3.40.1-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -87,7 +87,12 @@ let atmosphere=null;
 let atmosphereTints=[];
 // Ground shadows of the 3D buildings (scripts/building_shadows.js).
 let buildingShadows=null;
-let buildingShadowsWanted=true;
+// v3.40.1 · a phone: a touch screen whose short side is under 600 CSS px (iPhones; iPads start at 744). There the map
+// draws at most 2 device pixels per CSS pixel and building shadows start off (the switch turns them on): iOS reloads
+// a tab that takes too much graphics memory. Computers and iPads: as before.
+const IS_PHONE=(()=>{try{return matchMedia('(pointer: coarse)').matches&&Math.min(screen.width,screen.height)<600;}catch(error){return false;}})();
+let buildingShadowsWanted=!IS_PHONE;
+if(IS_PHONE&&document.getElementById('buildingShadowToggle'))document.getElementById('buildingShadowToggle').checked=false;   // ($ is defined further down)
 let buildingShadowsActive=null;
 // Procedural trees in green spaces (scripts/urban_trees.js); display only.
 let urbanTrees=null;
@@ -2144,6 +2149,7 @@ function initOSM(){
   };
 
   osmMap=new maplibregl.Map({
+    ...(IS_PHONE?{pixelRatio:Math.min(window.devicePixelRatio||1,2)}:{}),
     container:'osmMap',
     style:OSM_PRIMARY_STYLE,
     center:[CENTER.lng,CENTER.lat],
@@ -2222,7 +2228,7 @@ function initOSM(){
     ensureOverviewLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.40.0-english')
+    import('./tensor_site_ui.js?v=3.40.1-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
