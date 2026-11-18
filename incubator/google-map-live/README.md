@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.40.1: lighter on phones (touch screen, short side under 600 px — iPhones). There the map draws at most 2 device pixels per CSS pixel (iPhones are 3) and building shadows start off (the switch turns them on), because iOS reloads a tab that takes too much graphics memory. Computers and iPads: unchanged.
+
 Version 3.40.0: the 3D city fills in faster at a low, far-reaching camera.
 - The building layer now reads the same dated OpenFreeMap tile address as the basemap (it used `planet/latest/…`), so each shared tile downloads once.
 - Near buildings stay on the detailed z14 tiles; the far part of the view uses z13 tiles (generalised buildings, a quarter as many tiles). The number of tile levels follows the camera zoom so the far edge never drops below z13 (the old blank far band).
