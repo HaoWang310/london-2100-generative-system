@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.43.1: the `?perf=1` box shows from the start (also when shadows are off or the sun is too low), and `?perf=1` on the main site works for the map opened from the catalogue too.
+
 Version 3.43.0: the 3D city fills in faster on slower devices (iPad), with the same shadows. The building shadows used to read every loaded building again for every tile that arrived and every time the map stopped moving, out to the horizon, on the page's main thread — while the buildings were still loading. Now the building list is read once the map has settled (at most every 2.5 s during a long load), a new sun position reuses it, and only buildings near the view centre cast shadows (at least 1800 m, wider when zoomed out; `?shadowR=`); far shadows are too small to see. In a simulated load of 30 tiles the building list is read 3 times instead of 12, and about a quarter of the shadow triangles are drawn. `?perf=1` shows the building tile load time and the cost of each shadow rebuild (any device; the workspace map too).
 
 Version 3.42.1: on a phone, the first time a site boundary is drawn, the status line says how (drag the panel down, tap the corners, open it again for ① Preview site) and that drawing is easier on an iPad or a computer. Once per device.
