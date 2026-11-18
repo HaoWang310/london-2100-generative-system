@@ -2586,8 +2586,8 @@ function drawKey(){ const k = $('key'), sw = (c, w, dash) => '<i style="border-t
 /* ------------------------------------------------------------------ interaction */
 let drag = null;
 let adrag = null;
-function attrAt(mx, my){ let best = null, bd = 14; ATTR.forEach((a, i) => { const d = Math.hypot(X(a.x) - mx, Y(a.y) - my); if (d < bd){ bd = d; best = i; } }); return best; }
-cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const r = cv.getBoundingClientRect(), i = attrAt(e.clientX - r.left, e.clientY - r.top); cv.setPointerCapture(e.pointerId);
+function attrAt(mx, my, r = 14){ let best = null, bd = r; ATTR.forEach((a, i) => { const d = Math.hypot(X(a.x) - mx, Y(a.y) - my); if (d < bd){ bd = d; best = i; } }); return best; }
+cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const r = cv.getBoundingClientRect(), i = attrAt(e.clientX - r.left, e.clientY - r.top, e.pointerType === 'touch' ? 28 : 14); cv.setPointerCapture(e.pointerId);
   if (i !== null){ adrag = { i, moved: false }; cv.style.cursor = 'grabbing'; return; } drag = [e.clientX, e.clientY, view.x, view.y]; });
 cv.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
   if (adrag){ const x = (mx - VW / 2) / view.s + view.x, y = (VH / 2 - my) / view.s + view.y, a = ATTR[adrag.i];
@@ -2604,10 +2604,39 @@ function toHand(){ if (AMODE !== 'hand'){ AMODE = 'hand'; $('aMode').value = 'ha
 function addAttr(x, y, kind){ if (kind === 'edge'){ let best = null; for (const p of D.pieces){ const q = nearestOnRing(p.outer, x, y); if (!best || q.d < best.d) best = q; } if (!best) return false; x = best.x; y = best.y; }
   else if (!inLandNoHoles(x, y)) return false;
   toHand(); ATTR.push({ x, y, kind }); attrChanged(); return true; }
-cv.addEventListener('dblclick', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; if (attrAt(mx, my) !== null) return;
+cv.addEventListener('dblclick', e => { e.preventDefault(); if (!e.__tap && performance.now() - TAP_ADDED < 600) return; const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; if (attrAt(mx, my) !== null) return;
   addAttr((mx - VW / 2) / view.s + view.x, (VH / 2 - my) / view.s + view.y, e.altKey ? 'edge' : e.shiftKey ? 'sec' : 'main'); });
-cv.addEventListener('contextmenu', e => { const r = cv.getBoundingClientRect(), i = attrAt(e.clientX - r.left, e.clientY - r.top); if (i === null) return; e.preventDefault();
+cv.addEventListener('contextmenu', e => { if (TOUCH.size){ e.preventDefault(); return; } const r = cv.getBoundingClientRect(), i = attrAt(e.clientX - r.left, e.clientY - r.top); if (i === null) return; e.preventDefault();
   toHand(); ATTR.splice(i, 1); attrChanged(); });
+/* (v8.46) fingers (iPad, iPhone): the mouse's ways by touch. Only pointerType 'touch' — a mouse or pen works as before.
+ * one finger drags the view or an attractor (the handlers above, with a 28 px reach for a finger); two fingers pinch to zoom
+ * and move the view; two quick taps on the land add an attractor of the kind chosen under 'two taps add' (main / secondary /
+ * on the edge — the mouse's double-click, shift and alt); a finger held still on an attractor for 0.6 s removes it (right-click). */
+const TOUCH = new Map(); let pinch = null, hold = null, lastTap = null, TAP_ADDED = -1e9;
+cv.style.touchAction = 'none';   // fingers move the drawing, not the page
+const toWorld = (mx, my) => [(mx - VW / 2) / view.s + view.x, (VH / 2 - my) / view.s + view.y];
+function pinchState(){ const [a, b] = [...TOUCH.values()], r = cv.getBoundingClientRect(); return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top }; }
+const endHold = () => { if (hold){ clearTimeout(hold.t); hold = null; } };
+cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return;
+  TOUCH.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: e.timeStamp });   // event times: a busy page handles taps late
+  if (TOUCH.size === 2 && !adrag){ endHold(); drag = null; const P = pinchState(); pinch = { d0: P.d, s0: view.s, w: toWorld(P.mx, P.my) }; return; }
+  if (TOUCH.size === 1 && adrag){ const i = adrag.i;   // held still on an attractor: remove it
+    hold = { id: e.pointerId, t: setTimeout(() => { hold = null; if (!adrag || adrag.i !== i) return; adrag = null; drag = null; toHand(); ATTR.splice(i, 1); attrChanged(); }, 600) }; } });
+cv.addEventListener('pointermove', e => { const p = TOUCH.get(e.pointerId); if (!p) return; p.x = e.clientX; p.y = e.clientY;
+  if (hold && hold.id === e.pointerId && Math.hypot(p.x - p.x0, p.y - p.y0) > 10) endHold();
+  if (pinch && TOUCH.size >= 2){ const P = pinchState(); view.s = clamp(pinch.s0 * P.d / pinch.d0, 0.05, 8); view.x = pinch.w[0] - (P.mx - VW / 2) / view.s; view.y = pinch.w[1] - (VH / 2 - P.my) / view.s; } });
+function touchUp(e){ const p = TOUCH.get(e.pointerId); if (!p) return; TOUCH.delete(e.pointerId); if (hold && hold.id === e.pointerId) endHold();
+  const wasPinch = !!pinch; if (TOUCH.size < 2) pinch = null; if (wasPinch){ drag = null; lastTap = null; return; }
+  if (e.type !== 'pointerup' || TOUCH.size || Math.hypot(p.x - p.x0, p.y - p.y0) > 10 || e.timeStamp - p.t0 > 500) return;
+  const now = e.timeStamp;
+  if (lastTap && now - lastTap.t < 500 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30){ lastTap = null;
+    const r = cv.getBoundingClientRect(); if (attrAt(p.x - r.left, p.y - r.top, 28) !== null) return;
+    // as the mouse's double-click (shift: secondary, alt: on the edge), so the same rules apply (the process mode lets
+    // attractors be added from its step 6); a double-click the browser may also send for the taps is then ignored
+    const kind = ($('tapKind') || {}).value || 'main', ev = new MouseEvent('dblclick', { bubbles: true, cancelable: true, clientX: p.x, clientY: p.y, shiftKey: kind === 'sec', altKey: kind === 'edge' });
+    ev.__tap = true; TAP_ADDED = performance.now(); cv.dispatchEvent(ev); return; }
+  lastTap = { t: now, x: p.x, y: p.y }; }
+cv.addEventListener('pointerup', touchUp); cv.addEventListener('pointercancel', touchUp);
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, wx = (mx - VW / 2) / view.s + view.x, wy = (VH / 2 - my) / view.s + view.y, k = Math.exp(-e.deltaY * 0.0015);
   view.s = clamp(view.s * k, 0.05, 8); view.x = wx - (mx - VW / 2) / view.s; view.y = wy - (VH / 2 - my) / view.s; }, { passive: false });
 let tmr = null; const FIELD_IDS = ['wC', 'wWind', 'month', 'smooth', 'nMain', 'nSec', 'nEdge', 'pull', 'wSum', 'wWin', 'wG'], NET_IDS = ['d1', 'd2', 'thru', 'stag', 'wDens'];
