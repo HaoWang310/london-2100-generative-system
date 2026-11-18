@@ -111,16 +111,11 @@ export function createBuildingShadowLayer(map,maplibregl,{
      - the building list is read from the tiles only when the tiles or the view changed, and then once the map has
        settled ('idle'), not again for every tile that arrives (at most every 2.5 s while a long load goes on);
        a new sun position reuses the list it has
-     - only buildings near the view centre (at least 1800 m, ?shadowR=…; wider when zoomed out): far shadows are too small to see
-     - ?perf=1 shows how long the building tiles took and what each shadow rebuild cost (any device) */
+     - only buildings near the view centre (at least 1800 m, ?shadowR=…; wider when zoomed out): far shadows are too small to see */
   const qs=(()=>{try{return new URLSearchParams(location.search);}catch(error){return new URLSearchParams();}})();
-  // ?perf=1 on this page, or on the page around it (the map opened from the catalogue sits in a frame)
-  // anywhere in the address, before or after the # (…/#workspace?perf=1 works too)
-  // …or switched on in the main site's version menu (kept on this device)
-  const PERF=(()=>{const has=h=>/[?&#]perf=1(?![0-9])/.test(h||'');try{if(localStorage.getItem('london2100.perf')==='1')return true;}catch(error){}try{return has(location.href)||(window.top!==window&&has(window.top.location.href));}catch(error){return has(location.href);}})();
   const NEAR=Math.max(300,Number(qs.get('shadowR'))||1800);
   let list=null,stale=true,staleSince=0,waitTimer=null;
-  const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0,loadMs:null,loading:false,loadStart:0};
+  const stats={rebuilds:0,reads:0,readMs:0,buildMs:0,buildings:0,triangles:0};
   const merc=(lng,lat)=>[(lng+180)/360,(180-(180/Math.PI)*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360)))/360];
 
   function readBuildings(){
@@ -184,7 +179,6 @@ export function createBuildingShadowLayer(map,maplibregl,{
     stats.rebuilds++;stats.buildMs=performance.now()-t1;stats.buildings=list.length;stats.triangles=mesh.length/6;
     upload();
     map.triggerRepaint();
-    hud();
   }
   function schedule(delay=200){
     dirty=true;
@@ -199,16 +193,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
     if(!waitTimer)waitTimer=setTimeout(()=>{waitTimer=null;if(stale)schedule(0);},2500);   // a long load: do not wait for ever
   }
   function onIdle(){
-    if(stats.loading){stats.loading=false;stats.loadMs=performance.now()-stats.loadStart;hud();}
     if(stale)schedule(0);
-  }
-  let hudEl=null;
-  function hud(){
-    if(!PERF||typeof document==='undefined')return;
-    if(!hudEl)hudEl=document.getElementById('perfShadow');   // the map page's own timing box, when there is one
-    if(!hudEl){hudEl=document.createElement('div');hudEl.style.cssText='position:fixed;z-index:9999;left:8px;bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.78);color:#e8e8ec;font:11px/1.5 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre';document.body.appendChild(hudEl);}
-    const f=v=>v==null?'—':(v/1000).toFixed(2)+' s',ms=v=>Math.round(v)+' ms';
-    hudEl.textContent='buildings load  '+(stats.loading?'loading…':f(stats.loadMs))+'\nshadow read     '+ms(stats.readMs)+'  ×'+stats.reads+'\nshadow build    '+ms(stats.buildMs)+'  ×'+stats.rebuilds+'\nbuildings       '+stats.buildings+'  (within '+(stats.reach||NEAR)+' m)\ntriangles       '+stats.triangles+'\nshadows         '+(!enabled?'off':!sun?'no sun yet':shadowOffset(sun.azimuth,sun.altitude)?'on':'sun too low')+'\npixel ratio     '+(window.devicePixelRatio||1);
   }
   function upload(){
     if(!gl||!buf)return;
@@ -352,13 +337,10 @@ export function createBuildingShadowLayer(map,maplibregl,{
   }
   const onData=e=>{if(e.sourceId===sourceId&&e.isSourceLoaded)invalidate();};
   const onMoveEnd=()=>invalidate();
-  const onLoading=e=>{if(e.sourceId===sourceId&&!stats.loading){stats.loading=true;stats.loadStart=performance.now();hud();}};
   map.on('sourcedata',onData);
   map.on('moveend',onMoveEnd);
   map.on('idle',onIdle);
-  map.on('dataloading',onLoading);
   ensure();
-  hud();   // ?perf=1: the box is there from the start
 
   return {
     setSun(next){
@@ -375,7 +357,7 @@ export function createBuildingShadowLayer(map,maplibregl,{
     setEnabled(on){
       enabled=Boolean(on);
       if(enabled){ensure();schedule(0);}
-      map.triggerRepaint();hud();
+      map.triggerRepaint();
     },
     refresh(){ensure();stale=true;schedule(0);},
     get stats(){return {...stats};},
