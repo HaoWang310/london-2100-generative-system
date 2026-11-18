@@ -112,3 +112,8 @@ export function mountLangSwitch(container) {
 export function isPhone() {
   try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch { return false; }
 }
+
+/** A touch screen (iPad, iPhone, touch-first tablets): the main pointer is a finger. Computers with a mouse answer false. */
+export function isTouchScreen() {
+  try { return matchMedia('(pointer: coarse)').matches; } catch { return false; }
+}
