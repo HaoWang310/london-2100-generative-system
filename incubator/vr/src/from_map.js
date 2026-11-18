@@ -5,7 +5,7 @@
 //   3. the camera goes back exactly as it was, and the VR view opens over the map
 // Closing the view (or leaving the headset) returns to the map as it was. Call: openFromMap(map, 'zh' | 'en').
 
-import { open } from './xr_view.js?v=0.52';
+import { open } from './xr_view.js?v=0.53';
 import { buildingMesh, osmBuildingsIn } from './osm.js?v=0.20';
 import { localGrid } from './geo.js?v=0.52';
 
