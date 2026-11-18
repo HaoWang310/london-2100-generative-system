@@ -551,7 +551,8 @@ function buildStructure(site, P, EXCL) {
   innerP.forEach(p => { const k = Math.floor(p[0] / jc) + ',' + Math.floor(p[1] / jc); if (!junG.has(k)) junG.set(k, []); junG.get(k).push(p); });
   const nearJ = (x, y) => { const gx = Math.floor(x / jc), gy = Math.floor(y / jc); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = junG.get((gx + a) + ',' + (gy + b)); if (l) for (const p of l) if (Math.hypot(p[0] - x, p[1] - y) < 30 / RES) return true; } return false; };
   let bldM = new Uint8Array(NN);
-  if (!P.quick) for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
+  // 沿走廊建筑：P.buildings 打开时才排（界面暂时不排，之后单独做成一个功能）
+  if (!P.quick && P.buildings) for (let i = 0; i < NN; i++) { if (!cellsM[i]) continue; const d = dc[i] * RES; if (d <= P.setback || d >= P.setback + P.depth || dNS[i] * RES < P.setback) continue;
     if (EXCL && EXCL.has(CL.lab[i])) continue;
     if (rings.length) { const wx = xmin + (i % W + .5) * RES, wy = ymax - (((i / W) | 0) + .5) * RES; if (rings.some(g => (wx - g.c[0]) ** 2 + (wy - g.c[1]) ** 2 < g.r * g.r)) continue; } // 环形广场岛：只留种植塔，不排建筑
     if (((sa[i] % P.segL) + P.segL) % P.segL < P.gap) continue; const x = i % W, y = (i / W) | 0; if (nearJ(x + .5, y + .5)) continue; bldM[i] = 1; }
@@ -566,7 +567,7 @@ function buildStructure(site, P, EXCL) {
   const d0 = field(cen), nrm = [-d0[1], d0[0]];
   const farm = new Uint8Array(NN), stripe = new Uint8Array(NN); let farmA = 0, corrA = 0;
   for (let i = 0; i < NN; i++) { const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES; stripe[i] = ((((x - cen[0]) * nrm[0] + (y - cen[1]) * nrm[1]) % 9) + 9) % 9 < 6.5 ? 1 : 0;
-    if (cellsM[i] && dc[i] * RES >= P.setback && dNS[i] * RES >= 3 && !bldM[i]) { farm[i] = 1; farmA++; } if (corr[i]) corrA++; }
+    if (cellsM[i] && dc[i] * RES >= (P.buildings ? P.setback : 3) && dNS[i] * RES >= 3 && !bldM[i]) { farm[i] = 1; farmA++; } if (corr[i]) corrA++; }
 
   // 9 室信息（卡片）
   const cells = [];
