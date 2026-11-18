@@ -82,3 +82,13 @@ test('all eight generation modes build a sensible structure', () => {
     const share = Fm.stats.corrA / (site.landHa * 1e4); assert.ok(share > 0.08 && share < 0.4, mode + ' share ' + share);
   }
 });
+
+// 种植塔全部来自张量场：小塔落在重要路口附近、彼此至少隔一个主路间距；主线走廊不比次级窄
+test('planting towers come from the tensor field; primaries never narrower than secondaries', () => {
+  assert.ok(site.hubs.length > 0, 'important junctions found');
+  const hubs = F.towers.filter(t => t[4] === 'hub'); assert.ok(hubs.length >= 1, 'junction towers placed');
+  for (const t of hubs) assert.ok(site.hubs.some(h => Math.hypot(h.p[0] - t[0], h.p[1] - t[1]) <= site.d2 + 1), 'hub tower near an important junction');
+  for (let i = 0; i < F.towers.length; i++) for (let j = i + 1; j < F.towers.length; j++) { const a = F.towers[i], b = F.towers[j]; if (a[4] === 'hub' || b[4] === 'hub') assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= site.d1 - 1, 'towers spaced by d1'); }
+  const Fw = SS.buildStructure(site, { ...P, wS: 25, wP: 12 }, new Set()), Fe = SS.buildStructure(site, { ...P, wS: 25, wP: 25 }, new Set());
+  assert.equal(Fw.stats.corrA, Fe.stats.corrA, 'wP below wS is lifted to wS');
+});

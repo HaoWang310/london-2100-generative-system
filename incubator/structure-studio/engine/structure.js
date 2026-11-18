@@ -154,11 +154,18 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
   let sMain = 0, sAll = 0, nR = 0; for (let i = 0; i < NN; i++) if (siteM[i] && landM[i] && !waterM[i]) { sMain += Math.min(dMainG[i] * RES, 400); sAll += Math.min(dAllG[i] * RES, 200); nR++; }
   const d1 = nR ? 4 * sMain / nR : 300, d2 = nR ? 4 * sAll / nR : 115;
   const roadDistAll = p => { const q = toPix(p), x = Math.floor(q[0]), y = Math.floor(q[1]); return x >= 0 && y >= 0 && x < W && y < H ? dAllG[y * W + x] * RES : 1e9; };
-  return { coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
+  // 重要路口（来自张量场路网）：场地内主干 × 主干、主干 × 贯通相交处；十字优先，主干越多越优先 → 小种植塔的候选
+  const hubs = []; { const dseg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    for (const j of snap.junctions || []) { if (j.type === 'joint' || j.type === 'dead end') continue; const p = [j.x, j.y]; if (!inSite(p)) continue; let nm = 0, nt = 0;
+      for (const r of snap.roads) { if (r.grade !== 'main' && r.grade !== 'through') continue; let hit = false; for (let i = 1; i < r.pts.length && !hit; i++) hit = dseg(p, r.pts[i - 1], r.pts[i]) < 4; if (hit) r.grade === 'main' ? nm++ : nt++; }
+      if (nm >= 2 || (nm >= 1 && nt >= 1)) hubs.push({ p, type: j.type, rank: (j.type === 'X' ? 10 : 0) + nm * 2 + nt }); }
+    hubs.sort((a, b) => b.rank - a.rank); }
+  return { hubs, coreAtt, secs, gates, d1, d2, roadDistAll, snap, RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, footPolys, field, inSite, inWater, bdist, roadDist, mainRoads, t0: [Math.cos(a0), Math.sin(a0)], cen, bbox: [lx0, ly0, lx1, ly1], cores: cores.length ? cores : [cen], landHa: landA * RES * RES / 1e4 };
 }
 
 // ---------------------------------------------------------------- 主生成
 function buildStructure(site, P, EXCL) {
+  if (P.wP < P.wS) P = { ...P, wP: P.wS }; // 主线走廊不比次级走廊窄
   const rnd = mulberry32(P.seed * 977 + 31), U = (a, b) => a + (b - a) * rnd();
   const { RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, inSite, inWater, bdist, roadDist, cen } = site;
   const field = p => { const d = site.field(p); return d ? rot(d, P.rotF) : rot(site.t0, P.rotF); };
@@ -494,12 +501,15 @@ function buildStructure(site, P, EXCL) {
   const deg = nodeP.map(() => 0); for (const e of edges) { deg[e.a]++; deg[e.b]++; }
   const inner = nodeP.map((_, k) => k).filter(k => !fixed[k] && deg[k] >= 3);
 
-  // 种植塔：核心处大塔，其余靠核心的节点小塔
+  // 种植塔：全部来自张量场——主吸引点 = 大塔，次吸引点 = 中塔，重要路口 = 小塔
   const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
-  for (const k of inner.slice().sort((a, b) => Math.min(...cores.map(c => dist(nodeP[a], c))) - Math.min(...cores.map(c => dist(nodeP[b], c))))) { if (towers.length >= P.nTower) break; const p = nodeP[k]; if (bdist(p) < 50 || inWater(p)) continue; if (towers.every(t => dist(p, t) > 260)) towers.push([p[0], p[1], 12, 80]); }
-  // 次节点：最近的节点上放中型节点板 + 小种植塔（不受种植塔数量限制）
-  for (const a of secs) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], a.p); if (d < bd) { bd = d; best = nodeP[k]; } } const p = best && bd < 70 ? best : a.p; if (inWater(p) || towers.some((t, i) => i < cores.length && dist(p, t) < 60)) continue; for (let i = towers.length - 1; i >= cores.length; i--) if (towers[i][4] !== 'sec' && dist(p, towers[i]) < 200) towers.splice(i, 1); towers.push([p[0], p[1], 16, 90, 'sec']); }
-  { const keep = towers.filter(t => t[4] === 'sec'), rest = towers.filter(t => t[4] !== 'sec'); rest.length = Math.min(rest.length, Math.max(cores.length, P.nTower)); towers.length = 0; towers.push(...rest, ...keep); }
+  // 次节点：最近的节点上放中型节点板 + 中种植塔
+  for (const a of secs) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], a.p); if (d < bd) { bd = d; best = nodeP[k]; } } const p = best && bd < 70 ? best : a.p; if (inWater(p) || towers.some((t, i) => i < cores.length && dist(p, t) < 60)) continue; towers.push([p[0], p[1], 16, 90, 'sec']); }
+  // 小种植塔：数量不由控制条决定，来自张量场——重要路口（主干 × 主干 / 主干 × 贯通）正上方，吸附到一个次路间距内最近的可用走廊交汇点；塔与塔至少隔一个主路间距 d1
+  const hubSp = site.d1 || 380; let nHub = 0;
+  const hubR = site.d2 || 140; // 吸附半径 = 次路间距（一个街块）：结构离路，交汇点一般不正好压在路口上
+  for (const h of site.hubs || []) { const cand = inner.map(k => [dist(nodeP[k], h.p), nodeP[k]]).filter(c => c[0] <= hubR).sort((a, b) => a[0] - b[0]);
+    const hit = cand.find(([, p]) => bdist(p) >= 50 && !inWater(p) && towers.every(t => dist(p, t) >= hubSp)); if (!hit) continue; towers.push([hit[1][0], hit[1][1], 12, 80, 'hub']); nHub++; }
   // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
   const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
 
