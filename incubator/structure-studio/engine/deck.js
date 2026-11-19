@@ -248,7 +248,9 @@ function deckMesh(deck, levels, thick) {
   const side = new Float32Array(bd.length / 2 * 18); o = 0;
   for (let i = 0; i < bd.length; i += 2) { const a = bd[i], b = bd[i + 1], A = [V[3 * a], V[3 * a + 1], V[3 * a + 2]], B = [V[3 * b], V[3 * b + 1], V[3 * b + 2]], zA = Math.max(0, A[2] - TH), zB = Math.max(0, B[2] - TH);
     for (const p of [B, A, [A[0], A[1], zA], B, [A[0], A[1], zA], [B[0], B[1], zB]])   /* 侧面法线朝外 */ { side[o++] = p[0]; side[o++] = p[1]; side[o++] = p[2]; } }
-  return { top, side, lvl, quads: F.length, V, boundary: bd };
+  // 底面：顶面往下一个板厚（不低于地面），三角形反向，法线朝下。顶面 + 侧面 + 底面合成封闭的实体
+  const bottom = new Float32Array(top.length); for (let i = 0; i < top.length; i += 9) for (const [d, sx] of [[0, 0], [3, 6], [6, 3]]) { bottom[i + d] = top[i + sx]; bottom[i + d + 1] = top[i + sx + 1]; bottom[i + d + 2] = Math.max(0, top[i + sx + 2] - TH); }
+  return { top, side, bottom, lvl, quads: F.length, V, boundary: bd };
 }
 // 第 4 步的桥下柱按单层板顶标高立；多层结构里凡是会从坡道（或任何低于柱顶的板面）里穿出来的柱子去掉。
 // top = deckMesh().top（三角形顶点），cols = [[x, y, 柱顶标高?]...]，返回 { keep, cut }
