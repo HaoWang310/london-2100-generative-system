@@ -45,3 +45,15 @@ test('every face is counter-clockwise seen from above (normals up), control mesh
   const R = SS.deck.subdivide(DK, 1); let neg = 0, pos = 0; R.F.forEach(f => { const a = area(R.V, f); if (a < 0) neg -= a; else pos += a; }); assert.ok(neg < 0.002 * pos, 'flipped area after subdivision ' + neg.toFixed(1) + ' / ' + pos.toFixed(0));
   const m = SS.deck.deckMesh(DK, 1), t = m.top; let down = 0, upA = 0; for (let i = 0; i < t.length; i += 9) { const nz = (t[i + 3] - t[i]) * (t[i + 7] - t[i + 1]) - (t[i + 4] - t[i + 1]) * (t[i + 6] - t[i]); if (nz < 0) down -= nz / 2; else upA += nz / 2; } assert.ok(down < 0.001 * upA, 'area of triangles facing down: ' + down.toFixed(1) + ' / ' + upA.toFixed(0));
 });
+test('node plates do not overlap themselves or each other (close nodes are merged, walkway mouths set back)', () => {
+  assert.ok(s.merged > 10 && s.shortRuns > 10, 'close nodes are merged: ' + s.merged); assert.equal(s.badPlates, 0, 'plates whose outline still crosses itself');
+  const R = SS.deck.subdivide(DK, 1), V = R.V, cov = new Map(); let n = 0;
+  R.F.forEach((f, i) => { if (R.FT[i] !== 1 || f.some(v => Math.abs(V[3 * v + 2] - 7.2) > 0.01)) return; const xs = f.map(v => V[3 * v]), ys = f.map(v => V[3 * v + 1]);
+    for (let x = Math.ceil(Math.min(...xs) / 2); x <= Math.floor(Math.max(...xs) / 2); x++) for (let y = Math.ceil(Math.min(...ys) / 2); y <= Math.floor(Math.max(...ys) / 2); y++) { let sg = 0, ok = true; for (let k = 0; k < 4 && ok; k++) { const c = (xs[(k + 1) % 4] - xs[k]) * (y * 2 - ys[k]) - (ys[(k + 1) % 4] - ys[k]) * (x * 2 - xs[k]); if (Math.abs(c) < 1e-9) { ok = false; break; } if (sg === 0) sg = Math.sign(c); else if (Math.sign(c) !== sg) ok = false; } if (ok) { const key = x * 100003 + y; cov.set(key, (cov.get(key) || 0) + 1); n++; } } });
+  let over = 0; for (const c of cov.values()) if (c > 1) over++; assert.ok(over <= 0.0005 * n, 'overlapping samples at L1: ' + over + ' / ' + n);
+});
+test('columns that would poke through a ramp are removed, the rest stay', () => {
+  assert.ok(html.includes('SS.deck.columnsClear(M.corridor.top, F.columns'), 'the page filters columns in multi-level mode');
+  const m = SS.deck.deckMesh(DK, 1), r = SS.deck.columnsClear(m.top, F.columns, 7.0); assert.equal(r.keep.length + r.cut.length, F.columns.length); assert.ok(r.cut.length > 0 && r.cut.length < 0.3 * F.columns.length, 'cut ' + r.cut.length + ' / ' + F.columns.length);
+  assert.equal(SS.deck.columnsClear(m.top, r.keep, 7.0).cut.length, 0);
+});
