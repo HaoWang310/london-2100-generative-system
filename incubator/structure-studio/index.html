@@ -162,11 +162,11 @@ body.demo-on #panel,body.demo-on .displayPanel,body.demo-on #cardBar,body.demo-o
 .swChip.on{color:#f5f5f7}.swChip.on i{border:2px solid #f5f5f7}
 .swChip:focus-visible i{outline:2px solid #f5f5f7;outline-offset:2px}
 /* 三维配色卡：一张卡上能看出农田（底色渐变）、道路（彩色曲线）、结构（白块）各是什么颜色 */
-.swGrid.three{grid-template-columns:1fr;gap:10px}
+.swGrid.three{grid-template-columns:1fr 1fr;gap:10px 8px}
 .swGrid.three .swChip{align-items:stretch;text-align:left;gap:5px}
-.swGrid.three .swChip i{position:relative;height:40px;overflow:hidden}
+.swGrid.three .swChip i{position:relative;height:36px;overflow:hidden}
 .swGrid.three .swChip i svg{position:absolute;inset:0;width:100%;height:100%}
-.swGrid.three .swChip i b{position:absolute;right:7px;top:8px;bottom:8px;width:38px;border-radius:4px;background:#fafafa}
+.swGrid.three .swChip i b{position:absolute;right:6px;top:8px;bottom:8px;width:22px;border-radius:4px;background:#fff}
 .displayPanel .dpLegend i.lgLine{height:0;border:0;border-top:2px dashed #e0412f;border-radius:0;vertical-align:3px}
 .displayPanel .dpStats{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
 .displayPanel .dpStats b{display:block;font-size:14px;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums;color:#f5f5f7}
@@ -476,6 +476,9 @@ const MAT = {
   road3M: new THREE.MeshBasicMaterial({ color: 0xd6ff40, side: THREE.DoubleSide, toneMapped: false }),
   road3L: new THREE.MeshBasicMaterial({ color: 0x96ba34, side: THREE.DoubleSide, toneMapped: false }),
   wline3: new THREE.LineBasicMaterial({ color: 0x466ed2, toneMapped: false }),
+  // 道路的光晕：两条比路面更宽的半透明色带叠在路面下面（外圈淡、内圈浓），叠加混合
+  glow3a: new THREE.MeshBasicMaterial({ color: 0xffec50, side: THREE.DoubleSide, toneMapped: false, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }),
+  glow3b: new THREE.MeshBasicMaterial({ color: 0xffec50, side: THREE.DoubleSide, toneMapped: false, transparent: true, opacity: 0.26, blending: THREE.AdditiveBlending, depthWrite: false }),
   out3: new THREE.MeshBasicMaterial({ color: 0x050509, side: THREE.DoubleSide, toneMapped: false }),
   cbld3: new THREE.MeshBasicMaterial({ color: 0x11111a, side: THREE.DoubleSide, toneMapped: false }),
   cline3: new THREE.LineBasicMaterial({ color: 0x1c1c2a, toneMapped: false }),
@@ -584,12 +587,12 @@ function buildScene() {
   for (const w of SNAP.water) if (w[0] && w[0].length > 2) { G.site.add(flat(w[0], 0.1, MAT.water)); G.site.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(w[0].map(p => new THREE.Vector3(p[0], p[1], 0.16))), MAT.wline3)); }
   { const seg = []; for (const l of SNAP.streams || []) for (let i = 0; i + 1 < l.length; i++) seg.push(l[i][0], l[i][1], 0.14, l[i + 1][0], l[i + 1][1], 0.14);   // 河道：一条和水面勾边同色的线
     if (seg.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(seg), 3)); G.site.add(new THREE.LineSegments(g, MAT.wline3)); } }
-  // 路网：按路宽的一半画成路面（主干 / 贯通一层，支路一层），压在农田之上、结构之下
-  G.plots = new THREE.Group(); { const acc = { m: [], l: [] };
-    for (const r of SNAP.roads) { const hw = (r.width || 6.5) * 0.25, out = r.grade === 'local' ? acc.l : acc.m, z = r.grade === 'local' ? 0.34 : 0.4, Q = r.pts;
-      for (let i = 0; i + 1 < Q.length; i++) { const a = Q[i], b = Q[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); if (l < 1e-6) continue; const nx = -dy / l * hw, ny = dx / l * hw;
-        out.push(a[0] + nx, a[1] + ny, z, a[0] - nx, a[1] - ny, z, b[0] - nx, b[1] - ny, z, a[0] + nx, a[1] + ny, z, b[0] - nx, b[1] - ny, z, b[0] + nx, b[1] + ny, z); } }
-    for (const [k, mat] of [['l', MAT.road3L], ['m', MAT.road3M]]) if (acc[k].length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(acc[k]), 3)); G.plots.add(new THREE.Mesh(g, mat)); } }
+  // 路网：路面取路宽的七成（主干 / 贯通一层，支路一层），压在地块之上、结构之下；下面垫两层更宽的光晕
+  G.plots = new THREE.Group(); { const acc = { m: [], l: [], ga: [], gb: [] };
+    const band = (out, Q, hw, z) => { for (let i = 0; i + 1 < Q.length; i++) { const a = Q[i], b = Q[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); if (l < 1e-6) continue; const nx = -dy / l * hw, ny = dx / l * hw;
+        out.push(a[0] + nx, a[1] + ny, z, a[0] - nx, a[1] - ny, z, b[0] - nx, b[1] - ny, z, a[0] + nx, a[1] + ny, z, b[0] - nx, b[1] - ny, z, b[0] + nx, b[1] + ny, z); } };
+    for (const r of SNAP.roads) { const hw = (r.width || 6.5) * 0.35, loc = r.grade === 'local'; band(loc ? acc.l : acc.m, r.pts, hw, loc ? 0.36 : 0.42); band(acc.ga, r.pts, hw + 5.5, 0.29); band(acc.gb, r.pts, hw + 2.2, 0.32); }
+    for (const [k, mat, ord] of [['ga', MAT.glow3a, 1], ['gb', MAT.glow3b, 2], ['l', MAT.road3L, 3], ['m', MAT.road3M, 4]]) if (acc[k].length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(acc[k]), 3)); const m = new THREE.Mesh(g, mat); m.renderOrder = ord; G.plots.add(m); } }
   G.plots.visible = $('c_plots').checked;
   // 场地外的周边：一块暗底 + 周边建筑轮廓 + 周边道路，只作背景；跟着"周边环境"开关
   G.ctx3 = new THREE.Group(); { const C = SNAP.context || {}, w = SNAP.w || 2700, h = SNAP.h || 2700; G.ctx3.add(flat([[0, 0], [w, 0], [w, h], [0, h]], -0.3, MAT.out3));
@@ -639,14 +642,20 @@ const SCHEMES = [ // 渐变（核心亮 → 外围暗）+ 顺张量场流线
   { id: 'J', zh: '青', en: 'Teal', o: { grad: [[0, [212, 236, 232]], [0.45, [92, 146, 148]], [1, [22, 44, 50]]], water: '#132a33', stream: 'rgba(110,160,175,.75)' } },
   { id: 'L', zh: '灰到橙', en: 'Heat', o: { grad: [[0, [255, 104, 56]], [0.4, [150, 62, 46]], [1, [34, 34, 34]]], hatch: { col: 'rgba(255,255,255,.12)', w: 1, step: 9, len: 60 }, water: '#1f2328', red: '#ffffff' } },
 ];
-// 三维配色卡（AADRL 式）：结构白、道路一个强调色、农田一组暗色渐变、水面一层有颜色的暗色加亮边，各占一种颜色（水色和同一张卡的道路、农田错开）。只在三维视图下出现，和上面平面的 8 张各记各的
-const SCHEMES3 = [
-  { id: 'G', zh: '灰阶 · 青', en: 'Grey · cyan', grad: [[0, [74, 74, 80]], [0.5, [50, 50, 55]], [1, [34, 34, 38]]], road: [90, 220, 240], roadL: [52, 150, 172], ground: [16, 16, 18], water: [22, 48, 104], wline: [86, 140, 236], out: [6, 6, 7], cb: [19, 19, 22], cl: [30, 30, 34], side: [104, 104, 110] },
-  { id: 'H', zh: '蓝紫 · 黄绿', en: 'Indigo · acid', grad: [[0, [58, 96, 190]], [0.5, [52, 52, 140]], [1, [36, 26, 84]]], road: [214, 255, 64], roadL: [150, 186, 52], ground: [12, 12, 24], water: [14, 74, 88], wline: [70, 206, 214], out: [5, 5, 9], cb: [17, 17, 26], cl: [28, 28, 42], side: [96, 100, 128] },
-  { id: 'I', zh: '品红 · 青', en: 'Magenta · cyan', grad: [[0, [196, 56, 128]], [0.5, [120, 44, 150]], [1, [52, 30, 92]]], road: [96, 236, 236], roadL: [60, 160, 170], ground: [18, 10, 24], water: [20, 40, 118], wline: [96, 132, 246], out: [6, 5, 9], cb: [21, 17, 28], cl: [36, 28, 48], side: [102, 94, 128] },
-];
-const SCHEME3_KEY = 'structureStudio.scheme3'; let SCHEME3 = 'H';
-const scheme3 = () => SCHEMES3.find(x => x.id === SCHEME3) || SCHEMES3[1];
+// 三维配色卡（AADRL / ZHA 式）：结构白；道路是和地块互补的亮色、带一圈光晕；地块是高饱和的渐变（亮度压到 72%，让白色结构浮出来）；水面是饱和的深蓝加亮边。只在三维视图下出现，和上面平面的 8 张各记各的
+const SCHEME3_BASE = { ground: [16, 16, 30], out: [7, 7, 12], cb: [22, 22, 34], cl: [40, 40, 60], side: [70, 72, 96] };
+const SCHEMES3 = [   // grad = 地块渐变（核心 → 外围，亮度已压到 72%）；road = 道路线的颜色（提亮过）；glow = 道路光晕的颜色
+  { id: 'aurora', zh: '极光', en: 'Aurora', grad: [[0.0, [69, 175, 167]], [0.5, [51, 99, 183]], [1.0, [97, 54, 161]]], road: [255, 242, 141], glow: [255, 236, 80], water: [24, 34, 128], wline: [214, 232, 255] },
+  { id: 'heat', zh: '热场', en: 'Heat', grad: [[0.0, [183, 164, 69]], [0.5, [183, 95, 51]], [1.0, [161, 38, 105]]], road: [143, 245, 255], glow: [84, 240, 255], water: [64, 44, 176], wline: [232, 222, 255] },
+  { id: 'neon', zh: '霓虹', en: 'Neon', grad: [[0.0, [183, 66, 146]], [0.5, [112, 61, 183]], [1.0, [47, 83, 183]]], road: [253, 246, 151], glow: [252, 242, 96], water: [22, 26, 96], wline: [150, 236, 255] },
+  { id: 'acid', zh: '酸性', en: 'Acid', grad: [[0.0, [156, 183, 69]], [0.5, [54, 161, 110]], [1.0, [24, 110, 126]]], road: [255, 136, 201], glow: [255, 72, 172], water: [34, 62, 192], wline: [206, 226, 255] },
+  { id: 'coral', zh: '珊瑚', en: 'Coral', grad: [[0.0, [183, 128, 141]], [0.5, [183, 83, 83]], [1.0, [112, 54, 141]]], road: [149, 246, 245], glow: [92, 242, 240], water: [52, 72, 204], wline: [214, 226, 255] },
+  { id: 'glacier', zh: '冰川', en: 'Glacier', grad: [[0.0, [126, 168, 183]], [0.5, [69, 119, 183]], [1.0, [53, 69, 161]]], road: [255, 169, 128], glow: [255, 124, 60], water: [20, 30, 112], wline: [196, 222, 255] },
+  { id: 'spectrum', zh: '光谱', en: 'Spectrum', grad: [[0.0, [183, 171, 74]], [0.33, [69, 161, 110]], [0.67, [46, 132, 168]], [1.0, [89, 67, 161]]], road: [255, 136, 169], glow: [255, 72, 124], water: [32, 42, 152], wline: [214, 230, 255] },
+  { id: 'pearl', zh: '珠光', en: 'Pearl', grad: [[0.0, [183, 148, 161]], [0.5, [146, 112, 183]], [1.0, [89, 125, 183]]], road: [255, 130, 151], glow: [255, 64, 96], water: [40, 52, 172], wline: [226, 236, 255] },
+].map(o => Object.assign({}, SCHEME3_BASE, o));
+const SCHEME3_KEY = 'structureStudio.scheme3'; let SCHEME3 = 'aurora';
+const scheme3 = () => SCHEMES3.find(x => x.id === SCHEME3) || SCHEMES3[0];
 const grad3Css = sc => `linear-gradient(90deg,${sc.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})`;
 function gradAt(st, t) { let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; } const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0; return [a[1][0] + (b[1][0] - a[1][0]) * u, a[1][1] + (b[1][1] - a[1][1]) * u, a[1][2] + (b[1][2] - a[1][2]) * u]; }
 // 农田逐顶点上色（颜色按 sRGB 给，换算成线性再交给渲染器）
@@ -654,10 +663,10 @@ const lin3 = v => Math.pow(v / 255, 2.2), LIT3 = 0.6;
 function paintFarm3() { if (!G.farmMesh || !G.farmT) return; const st = scheme3().grad, at = G.farmMesh.geometry.getAttribute('color'), arr = at.array, t = G.farmT, lin = v => lin3(v) * LIT3;
   const LUT = new Float32Array(101 * 3); for (let i = 0; i <= 100; i++) { const c = gradAt(st, i / 100); LUT[3 * i] = lin(c[0]); LUT[3 * i + 1] = lin(c[1]); LUT[3 * i + 2] = lin(c[2]); }
   for (let i = 0; i < t.length; i++) { const k = 3 * Math.round(t[i] * 100); arr[3 * i] = LUT[k]; arr[3 * i + 1] = LUT[k + 1]; arr[3 * i + 2] = LUT[k + 2]; } at.needsUpdate = true; }
-function applyScheme3(id, quiet) { const sc = SCHEMES3.find(x => x.id === id) || SCHEMES3[1]; SCHEME3 = sc.id; try { localStorage.setItem(SCHEME3_KEY, sc.id); } catch (e) {}
+function applyScheme3(id, quiet) { const sc = SCHEMES3.find(x => x.id === id) || SCHEMES3[0]; SCHEME3 = sc.id; try { localStorage.setItem(SCHEME3_KEY, sc.id); } catch (e) {}
   // 颜色按屏幕上的 sRGB 值给。渲染器输出时会做一次 sRGB 编码，所以先换算成线性；受光照的材质（地面、水、板侧面）再乘 LIT，抵消灯光把暗色提亮
   if (typeof MAT !== 'undefined') { const set = (m, c, k = 1) => m.color.setRGB(lin3(c[0]) * k, lin3(c[1]) * k, lin3(c[2]) * k);
-    set(MAT.land, sc.ground, LIT3); set(MAT.water, sc.water, LIT3); set(MAT.deckEdge, sc.side, LIT3); set(MAT.road3M, sc.road); set(MAT.road3L, sc.roadL); set(MAT.wline3, sc.wline); set(MAT.out3, sc.out); set(MAT.cbld3, sc.cb); set(MAT.cline3, sc.cl); }
+    set(MAT.land, sc.ground, LIT3); set(MAT.water, sc.water, LIT3); set(MAT.deckEdge, sc.side, LIT3); set(MAT.road3M, sc.road); set(MAT.road3L, sc.road); set(MAT.glow3a, sc.glow); set(MAT.glow3b, sc.glow); set(MAT.wline3, sc.wline); set(MAT.out3, sc.out); set(MAT.cbld3, sc.cb); set(MAT.cline3, sc.cl); }
   paintFarm3(); if (!quiet) { buildSwatches(); syncLegend(); } }
 // 图例跟着当前视图：平面用平面的配色，三维用三维的
 function syncLegend() { const three = mode === '3d', sc2 = SCHEMES.find(x => x.id === SCHEME) || SCHEMES[0], sc3 = scheme3();
@@ -668,7 +677,7 @@ const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
 function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.toggle('three', three); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
   if (three) { for (const sc of SCHEMES3) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME3 ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME3); b.dataset.s3 = sc.id; b.title = L(sc.zh, sc.en);
-      const i = document.createElement('i'); i.style.background = grad3Css(sc); i.innerHTML = `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.road)}" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><b></b>`;
+      const i = document.createElement('i'); i.style.background = grad3Css(sc); i.innerHTML = `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.glow)}" stroke-opacity=".45" stroke-width="7" stroke-linecap="round" vector-effect="non-scaling-stroke"/><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.road)}" stroke-width="2.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><b></b>`;
       const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en); b.append(i, t); b.onclick = () => applyScheme3(sc.id); g.appendChild(b); } return; }
   for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
     b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('i'); i.style.background = gradCss(sc); const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en);
@@ -1497,7 +1506,7 @@ addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape')
 addEventListener('resize', () => { if (DEMO.on && mode === '2d') dmFit(); });
 syncPrimAng();
 try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
-try { SCHEME3 = localStorage.getItem(SCHEME3_KEY) || 'H'; } catch (e) {} applyScheme3(SCHEME3, true);
+try { SCHEME3 = localStorage.getItem(SCHEME3_KEY) || 'aurora'; } catch (e) {} applyScheme3(SCHEME3, true);
 boot();
 </script>
 </body>
