@@ -457,8 +457,8 @@ const cam = { az: -0.75, el: 0.62, dist: 3200, tx: 0, ty: 0, tz: 0, rot: false, 
 const VH = { back: [], fwd: [], t: 0 };   // 视图历史（Home / End）
 let camP, camO, vpAsp = 1, SHADE = 'render';
 const MAT = {
-  land: new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 1, side: THREE.DoubleSide }),
-  water: new THREE.MeshStandardMaterial({ color: 0x6e8796, roughness: .3, side: THREE.DoubleSide }),
+  land: new THREE.MeshStandardMaterial({ depthWrite: false, color: 0x1e1e1e, roughness: 1, side: THREE.DoubleSide }),
+  water: new THREE.MeshStandardMaterial({ depthWrite: false, color: 0x6e8796, roughness: .3, side: THREE.DoubleSide }),
   deck: new THREE.MeshStandardMaterial({ color: 0xf1f1ef, roughness: .55, side: THREE.DoubleSide }),
   deckLv: new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .55, side: THREE.DoubleSide }),
   deckEdge: new THREE.MeshStandardMaterial({ color: 0x5f7486, roughness: .7, side: THREE.DoubleSide }),
@@ -471,12 +471,12 @@ const MAT = {
   hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
   plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
   // 三维配色（见 SCHEMES3）：农田按离核心远近逐顶点着色；道路是有宽度的路面，用强调色、不受光照影响；水面勾边；场地外的周边压暗
-  farm3: new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 1, side: THREE.DoubleSide }),
-  wline3: new THREE.LineBasicMaterial({ color: 0x466ed2, toneMapped: false }),
+  farm3: new THREE.MeshStandardMaterial({ depthWrite: false, color: 0xffffff, vertexColors: true, roughness: 1, side: THREE.DoubleSide }),
+  wline3: new THREE.LineBasicMaterial({ depthWrite: false, color: 0x466ed2, toneMapped: false }),
   road3T: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }),   // 路网贴图
-  out3: new THREE.MeshBasicMaterial({ color: 0x050509, side: THREE.DoubleSide, toneMapped: false }),
-  cbld3: new THREE.MeshBasicMaterial({ color: 0x11111a, side: THREE.DoubleSide, toneMapped: false }),
-  cline3: new THREE.LineBasicMaterial({ color: 0x1c1c2a, toneMapped: false }),
+  out3: new THREE.MeshBasicMaterial({ depthWrite: false, color: 0x050509, side: THREE.DoubleSide, toneMapped: false }),
+  cbld3: new THREE.MeshBasicMaterial({ depthWrite: false, color: 0x11111a, side: THREE.DoubleSide, toneMapped: false }),
+  cline3: new THREE.LineBasicMaterial({ depthWrite: false, color: 0x1c1c2a, toneMapped: false }),
   roadM: new THREE.LineBasicMaterial({ color: 0xc9c2ee, transparent: true, opacity: .8 }),
 };
 function shapeOf(poly) { const s = new THREE.Shape(); poly.forEach((p, i) => i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])); return s; }
@@ -484,7 +484,7 @@ function flat(poly, z, mat) { const m = new THREE.Mesh(new THREE.ShapeGeometry(s
 function triMesh(arr, mat) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; return m; }
 function initGL() {
   const c = $('gl');
-  renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true });
+  renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });   // 对数深度：镜头拉远时深度不再变粗，地面各层不闪
   renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
@@ -527,7 +527,7 @@ function initGL() {
 // 把镜头状态交给 three.js：透视 / 平行两台相机共用一组状态，上方向直接取镜头坐标系（顶视图不翻转）
 function placeCam(s) { const B = NAV.basis(s), back = s.ortho ? s.dist + 8000 : s.dist; camera = s.ortho ? camO : camP;
   if (s.ortho) { const hh = NAV.halfH(s); camO.left = -hh * vpAsp; camO.right = hh * vpAsp; camO.top = hh; camO.bottom = -hh; camO.updateProjectionMatrix(); }
-  else { const nr = clamp(s.dist / 200, 0.5, 20); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }
+  else { const hz = Math.abs(s.tz + B.d[2] * back), nr = clamp(Math.min(s.dist / 40, 0.5 * Math.max(hz, 1)), 0.5, 300); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }   /* 近裁剪面跟着距离放大（最多 300 m），但不超过镜头离地高度的一半 */
   camera.position.set(s.tx + B.d[0] * back, s.ty + B.d[1] * back, s.tz + B.d[2] * back); camera.up.set(B.u[0], B.u[1], B.u[2]); camera.lookAt(s.tx, s.ty, s.tz); }
 const VIEW_ZH = { persp: '透视', top: '顶', front: '前', right: '右', back: '后', left: '左' }, VIEW_EN = { persp: 'Perspective', top: 'Top', front: 'Front', right: 'Right', back: 'Back', left: 'Left' };
 function flatView() { return cam.ortho && cam.view !== 'persp' && cam.view !== 'user'; }
@@ -575,6 +575,11 @@ function ensure3D() { if (!F || !sceneDirty) return; if (!M) M = SS.meshes(F, P)
   if (DKP.on && SS.deck) { try { if (!DECK || DECKF !== F) { DECK = SS.deck.buildDeck(F, DKP); DECKF = F; } const dm = SS.deck.deckMesh(DECK, F.grid.RES > 2 ? 1 : DKP.sub); M.corridor = { top: dm.top, side: dm.side, bottom: dm.bottom, lvl: dm.lvl }; } catch (e) { console.warn('deck', e); DECK = null; } } else DECK = null;
   buildScene(); sceneDirty = false; setHighlight(focus); deckTexts(); }
 function deckChanged(rebuild) { try { localStorage.setItem('structureStudio.deck', JSON.stringify(DKP)); } catch (e) {} if (rebuild) DECK = null; M = null; sceneDirty = true; deckTexts(); if (mode === '3d') { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } }
+// 地面各层都是平的、只差几厘米高：不再靠深度比谁在上面（远看时会分不清、互相闪），而是按固定顺序一层压一层画，
+// 这些层也不写深度，所以结构、建筑、塔总是画在地面之上。顺序和高度一致：周边底 → 周边建筑 → 周边道路 → 场地底色 → 水面 → 河道 → 水面勾边 → 农田 → 道路贴图
+const GROUND_ORDER = ['out3', 'cbld3', 'cline3', 'land', 'water', 'stream', 'wline3', 'farm3', 'road3T'];
+function groundOrder() { const k = m => { for (const [n, v] of Object.entries(MAT)) if (v === m) return n; return null; };
+  for (const g of [G.ctx3, G.site, G.farm, G.plots]) if (g) g.traverse(o => { if (!o.material) return; let n = k(o.material); if (n === 'wline3' && o.isLineSegments) n = 'stream'; const i = GROUND_ORDER.indexOf(n); if (i >= 0) o.renderOrder = i - GROUND_ORDER.length; }); }
 function buildScene() {
   for (const k in G) if (G[k]) scene.remove(G[k]);
   G.site = new THREE.Group();
@@ -608,9 +613,10 @@ function buildScene() {
   G.tower.visible = $('c_tower').checked;
   { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const cols = M.corridor && M.corridor.lvl ? SS.deck.columnsFit(M.corridor.top, F.columns, DECK && DECK.params ? DECK.params.thick : 1).cols : F.columns;   /* 多层走道结构下：柱顶接到正上方最低一层板（或坡道）的板底；上面没有板可托的、太矮的去掉 */
     const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, cols.length));
-    cols.forEach((c, i) => { tmp.position.set(c[0], c[1], -1); tmp.scale.set(0.9, 0.9, (c[2] != null ? c[2] : P.deckZ - 0.2) + 1); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); }
+    cols.forEach((c, i) => { tmp.position.set(c[0], c[1], 0); tmp.scale.set(0.9, 0.9, c[2] != null ? c[2] : P.deckZ - 0.2);   /* 柱脚从地面起：地面不写深度，埋到地下的部分会透出来 */ tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); }
   G.hi = null;
-  scene.add(G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
+  groundOrder();
+  scene.add(G.ctx3, G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
 }
 function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c || mode !== '3d') return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
 
