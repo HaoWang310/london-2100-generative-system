@@ -121,3 +121,14 @@ test('roads in 3D are one painted image, not per-segment bands (no spikes or bri
   const total = 1 - Math.pow(1 - R.alpha, R.halo.length); assert.ok(total > 0.3 && total < 0.65, 'glow at the road edge is visible but not solid: ' + total.toFixed(2));
 });
 test('the layer panel has no primary-line switch', () => { assert.ok(!html.includes('c_prim') && !html.includes('G.prim')); });
+test('zoomed out, the flat ground layers do not flicker: log depth, a near plane that follows distance, fixed ground draw order', () => {
+  assert.ok(html.includes('logarithmicDepthBuffer: true'));
+  assert.ok(html.includes('nr = clamp(Math.min(s.dist / 40, 0.5 * Math.max(hz, 1)), 0.5, 300)'), 'near plane grows with distance but stays under half the camera height');
+  const near = (dist, hz) => Math.min(300, Math.max(0.5, Math.min(dist / 40, 0.5 * Math.max(hz, 1))));
+  assert.equal(near(12000, 7000), 300); assert.ok(near(300, 4) <= 2); assert.ok(near(3200, 1800) > 20, 'default view gets a larger near plane than the old 16 m');
+  for (const n of ['land', 'water', 'farm3', 'wline3', 'out3', 'cbld3', 'cline3']) assert.ok(new RegExp('\\n  ' + n + ': new THREE\\.\\w+\\(\\{ depthWrite: false').test(html), n + ' does not write depth');
+  const order = Function('return ' + html.match(/const GROUND_ORDER = (\[[^\]]*\]);/)[1])();
+  assert.deepEqual(order, ['out3', 'cbld3', 'cline3', 'land', 'water', 'stream', 'wline3', 'farm3', 'road3T'], 'ground layers are drawn bottom to top, same order as their heights');
+  assert.ok(html.includes('groundOrder();\n  scene.add(G.ctx3, G.site'), 'order is applied and the surroundings are in the scene');
+  assert.ok(html.includes('tmp.position.set(c[0], c[1], 0)'), 'columns start at ground level');
+});
