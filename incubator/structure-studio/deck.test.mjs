@@ -120,3 +120,4 @@ test('roads in 3D are one painted image, not per-segment bands (no spikes or bri
   assert.ok(R.halo.length >= 12, 'enough passes for a smooth glow'); for (let i = 1; i < R.halo.length; i++) assert.ok(R.halo[i] < R.halo[i - 1], 'halo goes from wide to narrow');
   const total = 1 - Math.pow(1 - R.alpha, R.halo.length); assert.ok(total > 0.3 && total < 0.65, 'glow at the road edge is visible but not solid: ' + total.toFixed(2));
 });
+test('the layer panel has no primary-line switch', () => { assert.ok(!html.includes('c_prim') && !html.includes('G.prim')); });
