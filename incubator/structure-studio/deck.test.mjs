@@ -39,3 +39,9 @@ test('same input gives the same structure; parameters respond', () => {
   const wide = SS.deck.buildDeck(F, { r3: 320 }); assert.ok(wide.stats.l3nodes > s.l3nodes, 'bigger radius → more L3');
   const steep = SS.deck.buildDeck(F, { entrySlope: 4 }), gentle = SS.deck.buildDeck(F, { entrySlope: 7 }); assert.ok(steep.stats.entries >= gentle.stats.entries, 'steeper entries fit on more corridors');
 });
+test('every face is counter-clockwise seen from above (normals up), control mesh and subdivided', () => {
+  const area = (V, f) => { let a = 0; for (let k = 0; k < f.length; k++) { const p = 3 * f[k], q = 3 * f[(k + 1) % f.length]; a += V[p] * V[q + 1] - V[q] * V[p + 1]; } return a / 2; };
+  let cw = 0; DK.F.forEach(f => { if (area(DK.V, f) < -0.02) cw++; }); assert.equal(cw, 0, 'clockwise control faces');
+  const R = SS.deck.subdivide(DK, 1); let neg = 0, pos = 0; R.F.forEach(f => { const a = area(R.V, f); if (a < 0) neg -= a; else pos += a; }); assert.ok(neg < 0.002 * pos, 'flipped area after subdivision ' + neg.toFixed(1) + ' / ' + pos.toFixed(0));
+  const m = SS.deck.deckMesh(DK, 1), t = m.top; let down = 0, upA = 0; for (let i = 0; i < t.length; i += 9) { const nz = (t[i + 3] - t[i]) * (t[i + 7] - t[i + 1]) - (t[i + 4] - t[i + 1]) * (t[i + 6] - t[i]); if (nz < 0) down -= nz / 2; else upA += nz / 2; } assert.ok(down < 0.001 * upA, 'area of triangles facing down: ' + down.toFixed(1) + ' / ' + upA.toFixed(0));
+});
