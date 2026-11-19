@@ -125,7 +125,8 @@ label.lay input[type=checkbox]:checked::before{transform:translateX(14px)}
 .pmStep.running{border-color:#f5f5f7;box-shadow:0 0 0 1px #f5f5f7}
 .pmStep.running .pmFlag{color:#f5f5f7}
 .pmStep.done .pmNum{background:#3a3a3e;color:#f5f5f7}
-.nextRow{display:flex;padding:10px 0 2px}.nextRow .mini{flex:1;padding:8px 10px}
+.nextRow{display:flex;gap:8px;padding:10px 0 2px}.nextRow .mini{flex:1;padding:9px 10px}.nextRow .mini:disabled{opacity:.4;cursor:default}
+.pmStep.locked{opacity:.38}.pmStep.locked .pmHead{cursor:default}
 body.demo-run #demo{display:block}
 body.demo-run #dmParams,body.demo-run #dmBar{display:none}
 body.demo-run #hud,body.demo-run #tip{display:none!important}
@@ -785,8 +786,8 @@ function syncWidths(src) { P.wS = +$('wS').value; P.wP = +$('wP').value; if (P.w
 $('wS').addEventListener('input', () => syncWidths('wS')); $('wP').addEventListener('input', () => syncWidths('wP'));
 function syncPrimAng() { const auto = +P.nPrim >= 3, el = $('primAng'); el.disabled = auto; el.closest('.row').style.opacity = auto ? .45 : ''; $('v_primAng').textContent = auto ? L(`自动 ${Math.round(180 / P.nPrim)}°`, `auto ${Math.round(180 / P.nPrim)}°`) : FMT.primAng(P.primAng); }
 $('nPrim').addEventListener('input', () => setTimeout(syncPrimAng, 0));
-$('mode').onchange = e => { P.mode = e.target.value; P.v1 = P.mode === 'v1' ? 1 : 0; syncWCore(); if (DEMO.on && DEMO.guided && !DEMO.full) { clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 60); return; } if (DEMO.on) demoExit(); clearTimeout(fine); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 30); };
-for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
+$('mode').onchange = e => { guidedRollback(e.target); P.mode = e.target.value; P.v1 = P.mode === 'v1' ? 1 : 0; syncWCore(); if (DEMO.on && DEMO.guided && !DEMO.full) { clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 60); return; } if (DEMO.on) demoExit(); clearTimeout(fine); clearTimeout(pending); $('busy').style.display = 'block'; pending = setTimeout(() => solve(false), 30); };
+for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { guidedRollback($(k)); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
 for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
@@ -934,10 +935,10 @@ function setTsv(on) { TSV = on; $('c_ts').checked = on; $('tsFieldRow').hidden =
   if (mode === '2d' && F) drawPlan(); }
 $('c_ts').onchange = e => setTsv(e.target.checked);
 $('c_tsField').onchange = () => { tsBase = null; drawPlan(); };
-document.querySelectorAll('.pmHead').forEach((h, i) => h.onclick = () => { if (!guidedBack(i)) h.parentNode.classList.toggle('cur'); });
+document.querySelectorAll('.pmHead').forEach((h, i) => h.onclick = () => { if (autoRun()) return; if (guidedOn()) { const g = guidedCard(); if (i > g + 1) return; if (i === g + 1) { openCard(i); return; } } if (!guidedBack(i)) h.parentNode.classList.toggle('cur'); });
 // 演示 / 引导进行中点一张已经走过（或正在走）的步骤卡：画面退回到这一步的结果并停住，可以重新调这一步的参数，再点"下一步"往后走
 function guidedBack(i) { if (!DEMO.on || DEMO.full || !DEMO.L) return false; const ci = [-1, -1, 0, 1, 2, 2, 2, 3, 3, 4, 5][Math.max(0, DEMO.stage)];
-  if (i > ci) return false; const k = CARD_LAST[i]; DEMO.guided = true; DEMO.stopAt = null; DEMO.playing = false; DEMO.T = dmT0[k] + DST[k].d - 0.02; DEMO.stage = -1; dmPlayBtn();
+  if (i > ci) return false; const k = CARD_LAST[i]; GUI.open = null; GUI.seq++; DEMO.guided = true; DEMO.stopAt = null; DEMO.playing = false; DEMO.T = dmT0[k] + DST[k].d - 0.02; DEMO.stage = -1; dmPlayBtn(); document.querySelectorAll('.pmStep').forEach((c, k2) => c.classList.toggle('cur', k2 === i)); buildNextBtns();
   setTimeout(() => { $('runHint').textContent = L('已退回到这一步：调整参数，画面停在这一步更新；调好后点卡片底部的“下一步”。', 'Back at this step: adjust its settings and the picture updates here; then press “Next” at the bottom of the card.'); }, 50); return true; }
 $('pmAll').onclick = () => { const st = [...document.querySelectorAll('.pmStep')], open = !st.every(x => x.classList.contains('cur')); st.forEach(x => x.classList.toggle('cur', open)); $('pmAll').textContent = open ? L('全部收起', 'Collapse all') : L('全部展开', 'Expand all'); };
 $('tsCollapse').onclick = () => { const c = $('panel').classList.toggle('collapsed'); document.body.classList.toggle('panel-collapsed', c); $('tsCollapse').textContent = c ? '+' : '–'; if (mode === '2d' && F) { fitPlan(); drawPlan(); } };
@@ -1121,14 +1122,15 @@ function dmEnterStage(k) { DEMO.stage = k; const s = DST[k];
   if (k === DST.length - 1) { if (mode !== '3d') setMode('3d'); } else if (mode !== '2d') { setMode('2d'); dmFit(); }
   // 左侧步骤卡跟着走：00–01 场地，02 → 1，03 → 2，04–06 → 3，07–08 → 4，09–10 → 5
   const ci = [-1, -1, 0, 1, 2, 2, 2, 3, 3, 4, 5][k], cards = [...document.querySelectorAll('.pmStep')];
-  cards.forEach((c, i) => { c.classList.toggle('running', i === ci); c.classList.toggle('done', ci >= 0 && i < ci); if (i === ci) c.classList.add('cur'); else if (ci >= 0) c.classList.remove('cur'); });
-  if (ci >= 0 && !DEMO.full) cards[ci].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); buildNextBtns();
-  $('runHint').textContent = DEMO.guided && !DEMO.playing && k <= 1 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“生成这一步”，结构会一步步长出来。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : DEMO.guided && !DEMO.playing ? L('停在这一步：调整参数，画面在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Paused at this step: adjust its settings and the picture updates here; then press “Next” at the bottom of the card. Click an earlier step card to go back.') : L(`第 ${String(k).padStart(2, '0')} 步 · ${s.zh}`, `Step ${String(k).padStart(2, '0')} · ${s.en}`); }
+  const show = guidedOn() && GUI.open != null ? GUI.open : ci;
+  cards.forEach((c, i) => { c.classList.toggle('running', i === ci && DEMO.playing); c.classList.toggle('done', ci >= 0 && (i < ci || (i === ci && show > ci))); if (i === show) c.classList.add('cur'); else if (show >= 0) c.classList.remove('cur'); });
+  if (show >= 0 && !DEMO.full && cards[show]) cards[show].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); buildNextBtns();
+  $('runHint').textContent = DEMO.guided && !DEMO.playing && k <= 1 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“播放分析”看这一步怎么生成，或点“下一步”直接出结果。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : DEMO.guided && !DEMO.playing ? L('停在这一步：调整参数，画面在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Paused at this step: adjust its settings and the picture updates here; then press “Next” at the bottom of the card. Click an earlier step card to go back.') : L(`第 ${String(k).padStart(2, '0')} 步 · ${s.zh}`, `Step ${String(k).padStart(2, '0')} · ${s.en}`); }
 function dmParamsTick(k) { const u = dmC01(dmProg(k) / 0.6), e = 1 - (1 - u) ** 3; for (const r of DEMO.prRows || []) { const v = r.v * e; r.b.textContent = (r.dec ? v.toFixed(r.dec) : Math.round(v).toLocaleString()) + r.unit; } }
 function dmPlayBtn() { $('dmPlay').textContent = DEMO.playing ? '❚❚' : '▶'; $('runPause').textContent = DEMO.playing ? L('暂停', 'Pause') : L('继续', 'Resume'); }
 // 每次开始演示只留最新的一个动画循环（连续开始时旧循环会叠加：时间走两倍、读到还没准备好的图层）
 function demoLoop(ts, id) { if (!DEMO.on || id !== DEMO.lid) return; if (!DEMO.L) { requestAnimationFrame(t => demoLoop(t, id)); return; } const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
-  let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“生成这一步”，结构会一步步长出来。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
+  let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“播放分析”看这一步怎么生成，或点“下一步”直接出结果。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
   try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(t => demoLoop(t, id)); }
 async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = $('runNow').disabled = false;
   await demoPrepare(v1 != null ? v1 : P.mode); // 演示统一跟着第 3 步的生成模式
@@ -1137,7 +1139,7 @@ async function demoStart(v1, full) { if (!SITE || !F) return; if (DEMO.on) demoE
   if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); const lid = DEMO.lid = (DEMO.lid || 0) + 1; requestAnimationFrame(t => demoLoop(t, lid)); }
 function demoExit(keep3d) { if (!DEMO.on) return; DEMO.on = false; document.body.classList.remove('demo-on', 'demo-run'); $('runPause').disabled = $('runNow').disabled = true; $('runPause').textContent = L('暂停', 'Pause'); $('runHint').textContent = L('按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。', 'Builds automatically, step by step, from the site to 3D with the current sliders; the matching steps below open in turn.');
   document.querySelectorAll('.pmStep').forEach(c => c.classList.remove('running', 'done')); const sv = DEMO.saved; DEMO.saved = null; DEMO.L = null; DEMO.trail = DEMO.trail2 = DEMO.deckc = null;
-  const dirty = DEMO.dirty; DEMO.dirty = false; DEMO.guided = false; DEMO.stopAt = null;
+  const dirty = DEMO.dirty; DEMO.dirty = false; DEMO.guided = false; DEMO.stopAt = null; DEMO.playing = false; GUI.open = null; buildNextBtns();
   if (dirty) { F = DEMO.FD; M = null; sceneDirty = true; setMode(keep3d ? '3d' : '2d'); solve(false); return; }
   if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); buildCards(); buildNextBtns(); if (typeof scoreSoon === 'function') scoreSoon(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
 // ── 方案比较（与张量场工作室统一）：5 组自动打分（各 0–100，按权重加权），按设定的数量自动试多个方案，排序比较 ──
@@ -1278,27 +1280,43 @@ async function compareRuns() { if (CMP.running || CMP.N < 2 || !SITE || !F) retu
 renderCmp();
 // 引导模式：每张步骤卡底部"下一步"——播放下一步的生成过程，停在这一步的结果上；此时调这张卡的参数，画面停在这一步实时更新
 const CARD_FIRST = [0, 3, 4, 7, 9, 10], CARD_LAST = [2, 3, 6, 8, 9, 10];
-function buildNextBtns() { const cards = [...document.querySelectorAll('.pmStep')];
-  cards.forEach((c, i) => { let row = c.querySelector('.nextRow'); if (!row) { row = document.createElement('div'); row.className = 'nextRow'; const b = document.createElement('button'); b.type = 'button'; b.className = 'mini primary'; b.onclick = e => { e.stopPropagation(); guidedNext(i); }; row.appendChild(b); c.querySelector('.pmBody').appendChild(row); }
-    const nm = i < cards.length - 1 ? cards[i + 1].querySelector('.pmHead span:nth-child(2)').textContent : '', me = c.querySelector('.pmHead span:nth-child(2)').textContent;
-    row.firstChild.textContent = DEMO.on && DEMO.guided && !DEMO.full && guidedCard() < i ? L(`生成这一步：${me} ›`, `Generate: ${me} ›`) : i < cards.length - 1 ? L(`下一步：${nm} ›`, `Next: ${nm} ›`) : L('完成 · 转到三维 ›', 'Finish · go to 3D ›'); }); }
+// 步骤卡底部两个按钮：播放分析（播这一步的生成动画，播完停住）/ 下一步（不播，直接到这一步的结果并打开下一张卡）
+const GUI = { open: null, seq: 0 }, STAGE_CARD = [-1, -1, 0, 1, 2, 2, 2, 3, 3, 4, 5];
+const cardEnd = i => dmT0[CARD_LAST[i]] + DST[CARD_LAST[i]].d - 0.02, cardStart = i => dmT0[i === 0 ? 2 : CARD_FIRST[i]] + 1e-3;   // 第 1 张卡从“核心与疏密”开始播，不重播场地和张量场的开场
+function guidedOn() { return DEMO.on && DEMO.guided && !DEMO.full; } function autoRun() { return DEMO.on && !DEMO.guided; }
+function openCard(i) { const cards = [...document.querySelectorAll('.pmStep')]; if (!cards[i]) return; GUI.open = i; cards.forEach((c, k) => c.classList.toggle('cur', k === i)); cards[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' }); buildNextBtns(); }
+function buildNextBtns() { const cards = [...document.querySelectorAll('.pmStep')], gd = guidedOn(), auto = autoRun(), g = guidedCard(), pc = gd && DEMO.playing && DEMO.L ? STAGE_CARD[dmStage()] : -9;
+  cards.forEach((c, i) => { let row = c.querySelector('.nextRow'); if (!row) { row = document.createElement('div'); row.className = 'nextRow'; const a = document.createElement('button'), b = document.createElement('button'); a.type = b.type = 'button'; a.className = 'mini'; b.className = 'mini primary';
+      a.onclick = e => { e.stopPropagation(); guidedPlay(i); }; b.onclick = e => { e.stopPropagation(); guidedNext(i); }; row.append(a, b); c.querySelector('.pmBody').appendChild(row); }
+    const [a, b] = row.children, lock = gd && i > g + 1;
+    a.textContent = pc === i ? L('暂停', 'Pause') : gd && g === i && DEMO.T < cardEnd(i) - 0.05 ? L('继续播放', 'Resume') : g >= i ? L('重播分析', 'Replay analysis') : L('播放分析', 'Play analysis');
+    b.textContent = i < cards.length - 1 ? L('下一步', 'Next') : L('完成', 'Finish'); a.disabled = b.disabled = auto || lock; c.classList.toggle('locked', lock); }); }
 // 当前已经生成到第几张卡（-1 = 只有场地和张量场图底）
-function guidedCard() { return DEMO.on ? [-1, -1, 0, 1, 2, 2, 2, 3, 3, 4, 5][Math.max(0, DEMO.stage)] : 5; }
+function guidedCard() { return DEMO.on ? STAGE_CARD[dmStage()] : 5; }   // 只看演示时间，重算期间（DEMO.L 为空）也可用
 // 一开始不显示结果：只放场地和张量场图底（第 00–01 步），停住；第 1 张卡展开，使用者调好参数后一步步点出结果
 let INTRO = false;
 async function guidedIntro() { if (!SITE || !F) return; DEMO.guided = true; DEMO.reuse = true; await demoStart(undefined, false); DEMO.guided = true; DEMO.stopAt = dmT0[1] + DST[1].d - 0.02; DEMO.playing = true; dmPlayBtn();
   document.querySelectorAll('.pmStep').forEach((c, i) => c.classList.toggle('cur', i === 0)); buildNextBtns(); }
-async function guidedNext(i) {
-  const was = DEMO.on && !DEMO.full && DEMO.guided; DEMO.guided = true;
-  if (!DEMO.on || DEMO.full) await demoStart(undefined, false);
-  DEMO.guided = true;
-  if (was && guidedCard() < i) { const end = dmT0[CARD_LAST[i]] + DST[CARD_LAST[i]].d - 0.02; DEMO.stopAt = end; DEMO.playing = true; dmPlayBtn(); return; } // 这张卡还没生成：先生成这一步
-  if (i >= 4) { DEMO.stopAt = null; if (DEMO.T < dmT0[10]) DEMO.T = dmT0[10] + 1e-3; DEMO.playing = true; dmPlayBtn(); return; }
-  const j = i + 1, end = dmT0[CARD_LAST[j]] + DST[CARD_LAST[j]].d - 0.02; if (DEMO.T >= end) DEMO.T = dmT0[CARD_FIRST[j]] + 1e-3; // 已经过了就从这一步开头重播
-  DEMO.stopAt = end; DEMO.playing = true; dmPlayBtn(); }
-async function guidedRefresh() { if (!DEMO.on) return; const T = DEMO.T, pl = DEMO.playing, st = DEMO.stopAt; await demoPrepare(P.mode); DEMO.T = T; DEMO.stopAt = st; DEMO.playing = pl; DEMO.dirty = true; writeTexts(); DEMO.stage = -1; dmPlayBtn(); }
+// 播放分析：播第 i 张卡对应的那一段；正在播就暂停，停在半路就接着播，已经生成过就从头重播
+async function guidedPlay(i) { if (autoRun()) return;
+  if (!DEMO.on || DEMO.full) { DEMO.guided = true; DEMO.reuse = true; await demoStart(undefined, false); DEMO.guided = true; DEMO.playing = false; DEMO.T = cardStart(i); }
+  else if (DEMO.playing && STAGE_CARD[dmStage()] === i) { DEMO.playing = false; DEMO.stopAt = null; dmPlayBtn(); buildNextBtns(); return; }
+  if (i > guidedCard() + 1) return;
+  const mid = STAGE_CARD[dmStage()] === i && DEMO.T > cardStart(i) + 0.05 && DEMO.T < cardEnd(i) - 0.05;
+  GUI.seq++; if (!mid) DEMO.T = cardStart(i); GUI.open = null; DEMO.stage = -1; DEMO.stopAt = cardEnd(i); DEMO.playing = true; dmPlayBtn(); buildNextBtns(); }
+// 下一步：不播动画，直接到第 i 张卡的结果，打开下一张卡；最后一张 = 完成，进入可以自由查看的三维
+async function guidedNext(i) { if (autoRun()) return; const n = document.querySelectorAll('.pmStep').length, last = i >= n - 1;
+  if (!DEMO.on || DEMO.full) { if (DEMO.on) demoExit(last); if (last) setMode('3d'); else openCard(i + 1); return; }
+  if (i > guidedCard() + 1) return;
+  if (last) { GUI.open = null; demoExit(true); return; }
+  GUI.seq++; DEMO.playing = false; DEMO.stopAt = null; if (DEMO.T < cardEnd(i)) DEMO.T = cardEnd(i); GUI.open = i + 1; DEMO.stage = -1; dmPlayBtn(); openCard(i + 1);   // 立刻展开下一张卡、刷新按钮（重算还没好时画面稍后跟上）
+  setTimeout(() => { $('runHint').textContent = L('这一步的结果已经生成。下一张卡已打开：调好参数后点“播放分析”看生成过程，或点“下一步”直接出结果。点上面已完成的步骤卡可以退回去改。', 'This step is generated and the next card is open: set its parameters, then press “Play analysis” to watch it, or “Next” to get the result directly. Click a finished card to go back.'); }, 60); }
+// 在已经生成的步骤里改了参数：画面退回到这一步，后面的步骤作废（要重新点“下一步”）
+function guidedRollback(el) { const c = el && el.closest ? el.closest('.pmStep') : null; if (!c || !guidedOn()) return; const i = [...document.querySelectorAll('.pmStep')].indexOf(c);
+  if (i >= 0 && i < guidedCard()) { GUI.seq++; DEMO.T = cardEnd(i); DEMO.playing = false; DEMO.stopAt = null; GUI.open = null; DEMO.stage = -1; dmPlayBtn(); buildNextBtns(); } }
+async function guidedRefresh() { if (!DEMO.on) return; const T = DEMO.T, pl = DEMO.playing, st = DEMO.stopAt, sq = GUI.seq; await demoPrepare(P.mode); if (GUI.seq === sq) { DEMO.T = T; DEMO.stopAt = st; DEMO.playing = pl; } /* 重算期间使用者又点了按钮：以后点的为准 */ DEMO.dirty = true; writeTexts(); DEMO.stage = -1; dmPlayBtn(); }
 buildNextBtns();
-$('runBtn').onclick = () => { DEMO.guided = false; DEMO.stopAt = null; demoStart(undefined, false); };
+$('runBtn').onclick = () => { GUI.open = null; DEMO.guided = false; DEMO.stopAt = null; demoStart(undefined, false).then(buildNextBtns); buildNextBtns(); };
 $('runFull').onclick = () => { DEMO.guided = false; if (DEMO.on && !DEMO.full) { DEMO.full = true; document.body.classList.remove('demo-run'); document.body.classList.add('demo-on'); $('dmHead').style.left = ''; $('dmHead').style.top = ''; if (mode === '2d') dmFit(); } else demoStart(undefined, true); };
 $('runPause').onclick = () => { if (!DEMO.on) return; DEMO.playing = !DEMO.playing; dmPlayBtn(); };
 $('runNow').onclick = () => demoExit();
