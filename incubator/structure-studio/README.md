@@ -3,8 +3,7 @@
 在线：https://haowang310.github.io/london-2100-generative-system/incubator/structure-studio/
 
 在**张量场工作室生成的真实场地**上，生成一张架在街道之上的 **Linear Farm 种植工厂走廊网**：走廊 15–25 m 宽、层高 3.6 m（默认 2 层，顶标高 7.2 m），
-走廊围出的"室"里是农田；跨过张量场街道、水面和铁路的段架空，桥下按顶标高留出净空。种植塔全部来自张量场：主吸引点 = 大塔，次吸引点 = 中塔，
-重要路口（主干 × 主干、主干 × 贯通）= 小塔。沿走廊的建筑暂时不排，之后单独做成一个功能。默认打开车站 P2 示例（209 ha，张量场道路 149 条）。
+走廊围出的"室"里是农田；跨过张量场街道、水面和铁路的段架空，桥下按顶标高留出净空。种植塔只放在张量场的主吸引点上（每个核心一座大塔）。沿走廊的建筑暂时不排，之后单独做成一个功能。默认打开车站 P2 示例（209 ha，张量场道路 149 条）。
 
 Builds a network of planting-factory corridors (Linear Farm) over a site whose streets were grown in Tensor Studio. The corridors float
 above the streets (street, water and rail crossings are bridged with a clearance set by the deck level); the cells between them are farmland;

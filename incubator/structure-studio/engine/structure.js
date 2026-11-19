@@ -532,15 +532,9 @@ function buildStructure(site, P, EXCL) {
   const deg = nodeP.map(() => 0); for (const e of edges) { deg[e.a]++; deg[e.b]++; }
   const inner = nodeP.map((_, k) => k).filter(k => !fixed[k] && deg[k] >= 3);
 
-  // 种植塔：全部来自张量场——主吸引点 = 大塔，次吸引点 = 中塔，重要路口 = 小塔
+  // 种植塔：来自张量场的主吸引点，每个核心一座大塔
   const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
-  // 次节点：最近的节点上放中型节点板 + 中种植塔
-  for (const a of secs) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], a.p); if (d < bd) { bd = d; best = nodeP[k]; } } const p = best && bd < 70 ? best : a.p; if (inWater(p) || towers.some((t, i) => i < cores.length && dist(p, t) < 60)) continue; towers.push([p[0], p[1], 16, 90, 'sec']); }
-  // 小种植塔：数量不由控制条决定，来自张量场——重要路口（主干 × 主干 / 主干 × 贯通）正上方，吸附到一个次路间距内最近的可用走廊交汇点；塔与塔至少隔一个主路间距 d1
-  const hubSp = site.d1 || 380; let nHub = 0;
-  const hubR = site.d2 || 140; // 吸附半径 = 次路间距（一个街块）：结构离路，交汇点一般不正好压在路口上
-  for (const h of site.hubs || []) { const cand = inner.map(k => [dist(nodeP[k], h.p), nodeP[k]]).filter(c => c[0] <= hubR).sort((a, b) => a[0] - b[0]);
-    const hit = cand.find(([, p]) => bdist(p) >= 50 && !inWater(p) && towers.every(t => dist(p, t) >= hubSp)); if (!hit) continue; towers.push([hit[1][0], hit[1][1], 12, 80, 'hub']); nHub++; }
+  // 只有主吸引点放种植塔（每个核心一座大塔）。次吸引点仍然局部加密，重要路口仍然记录在 site.hubs 里，但都不再放塔。
   // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
   const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
 

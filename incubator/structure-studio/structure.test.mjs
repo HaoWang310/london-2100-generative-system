@@ -60,7 +60,7 @@ test('v1 field lattice: sensible cells, structure inside the site, smooth outlin
 test('attractors: roundabout at main nodes, towers at secondary nodes, entry line from an edge node', () => {
   const F0 = SS.buildStructure(site, P, new Set());
   for (const c of site.cores) assert.ok(F0.towers.some(t => Math.hypot(t[0] - c[0], t[1] - c[1]) < 1 && t[2] >= 20), 'big tower at plaza centre');
-  assert.equal(site.secs.length, 2); for (const a of site.secs) assert.ok(F0.towers.some(t => t[4] === 'sec' && Math.hypot(t[0] - a.p[0], t[1] - a.p[1]) < 80), 'small tower near sec node');
+  assert.equal(site.secs.length, 2); assert.equal(F0.towers.length, site.cores.length, 'only the main attractors carry a tower'); assert.ok(F0.towers.every(t => !t[4]), 'no secondary or junction towers');
   const s2 = JSON.parse(JSON.stringify(snap)); s2.attractors.push({ x: 609, y: 864, kind: 'edge', reach: 340, pull: 2.4 });
   const site2 = SS.prepareSite(s2), F2 = SS.buildStructure(site2, P, new Set());
   assert.equal(F2.entryStrands.length, 1); const E = F2.entryStrands[0], end = E[E.length - 1];
@@ -88,9 +88,7 @@ test('all eight generation modes build a sensible structure', () => {
 // 种植塔全部来自张量场：小塔落在重要路口附近、彼此至少隔一个主路间距；主线走廊不比次级窄
 test('planting towers come from the tensor field; primaries never narrower than secondaries', () => {
   assert.ok(site.hubs.length > 0, 'important junctions found');
-  const hubs = F.towers.filter(t => t[4] === 'hub'); assert.ok(hubs.length >= 1, 'junction towers placed');
-  for (const t of hubs) assert.ok(site.hubs.some(h => Math.hypot(h.p[0] - t[0], h.p[1] - t[1]) <= site.d2 + 1), 'hub tower near an important junction');
-  for (let i = 0; i < F.towers.length; i++) for (let j = i + 1; j < F.towers.length; j++) { const a = F.towers[i], b = F.towers[j]; if (a[4] === 'hub' || b[4] === 'hub') assert.ok(Math.hypot(a[0] - b[0], a[1] - b[1]) >= site.d1 - 1, 'towers spaced by d1'); }
+  assert.equal(F.towers.filter(t => t[4]).length, 0, 'junctions no longer carry towers');
   const Fw = SS.buildStructure(site, { ...P, wS: 25, wP: 12 }, new Set()), Fe = SS.buildStructure(site, { ...P, wS: 25, wP: 25 }, new Set());
   assert.equal(Fw.stats.corrA, Fe.stats.corrA, 'wP below wS is lifted to wS');
 });
