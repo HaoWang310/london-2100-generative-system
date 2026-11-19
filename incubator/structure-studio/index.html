@@ -455,6 +455,11 @@ function buildScene() {
   for (const w of SNAP.water) if (w[0] && w[0].length > 2) G.site.add(flat(w[0], 0.1, MAT.water));
   G.plots = new THREE.Group(); for (const r of SNAP.roads) { const pts = r.pts.map(p => new THREE.Vector3(p[0], p[1], 0.4)); G.plots.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), r.grade === 'main' ? MAT.roadM : MAT.plot)); } G.plots.visible = $('c_plots').checked;
   G.corr = new THREE.Group(); G.corr.add(triMesh(M.corridor.top, MAT.deck), triMesh(M.corridor.side, MAT.glass));
+  // 主线：红色细线贴在走廊顶面上方 0.8 m（塔旁跟着顶面抬升），只画红线以内；跟着图层面板的"主线"开关
+  { G.prim = new THREE.Group(); const zAt = SS.deckHeight(F, P.deckZ), mat = new THREE.LineBasicMaterial({ color: 0xe0412f, transparent: true, opacity: .95 });
+    for (const S of F.strands) { let run = []; const flush = () => { if (run.length > 1) G.prim.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(run), mat)); run = []; };
+      for (const p of S) { if (F.site.inSite(p)) run.push(new THREE.Vector3(p[0], p[1], zAt(p[0], p[1]) + 0.8)); else flush(); } flush(); }
+    G.prim.visible = $('c_prim').checked; }
   G.bld = new THREE.Group(); G.bld.add(triMesh(M.bld.top, MAT.bld), triMesh(M.bld.side, MAT.bldS)); G.bld.visible = $('c_bld').checked;
   G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
   G.tower = new THREE.Group(); const tmp = new THREE.Object3D(); const slabs = []; for (const t of F.towers) { const [x, y, r, h] = t; for (let z = 0, k = 0; z < h; z += 3.6, k++) slabs.push([x, y, r * (1 - 0.18 * z / h), z, Math.min(3.6, h - z), k % 2]); }
@@ -464,7 +469,7 @@ function buildScene() {
   { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, F.columns.length));
     F.columns.forEach((c, i) => { tmp.position.set(c[0], c[1], -1); tmp.scale.set(0.9, 0.9, (c[2] != null ? c[2] : P.deckZ - 0.2) + 1); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = F.columns.length; im.castShadow = true; G.tower.add(im); }
   G.hi = null;
-  scene.add(G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
+  scene.add(G.site, G.plots, G.corr, G.prim, G.bld, G.farm, G.tower);
 }
 function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c || mode !== '3d') return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
 
@@ -759,7 +764,7 @@ $('mode').onchange = e => { P.mode = e.target.value; P.v1 = P.mode === 'v1' ? 1 
 for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
 for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
-$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = () => drawPlan(); $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
+$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
 $('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } };
