@@ -417,6 +417,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/structure.js"></script>
 <script src="engine/deck.js"></script>
+<script src="engine/tower.js"></script>
 <script src="engine/nav.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -468,6 +469,10 @@ const MAT = {
   farm: new THREE.MeshStandardMaterial({ color: 0xe1e6cf, roughness: 1, side: THREE.DoubleSide }),
   towG: new THREE.MeshStandardMaterial({ color: 0xe1e6cf, roughness: .8 }),
   towW: new THREE.MeshStandardMaterial({ color: 0xeeefec, roughness: .5 }),
+  // 新种植塔：台座四层按走廊同层的明暗（顶面越高越亮），塔身略灰、外皮最白，隔着外皮的空隙能读出两层
+  pod: [[.70, .71, .75], [.84, .85, .88], [.98, .98, .98], [.98, .98, .98]].map(c => new THREE.MeshStandardMaterial({ color: new THREE.Color(c[0], c[1], c[2]), roughness: .6, side: THREE.DoubleSide })),
+  shell: new THREE.MeshStandardMaterial({ color: new THREE.Color(.78, .79, .82), roughness: .55, side: THREE.DoubleSide }),
+  skin: new THREE.MeshStandardMaterial({ color: new THREE.Color(.98, .98, .98), roughness: .45, side: THREE.DoubleSide }),
   hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
   plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
   // 三维配色（见 SCHEMES3）：农田按离核心远近逐顶点着色；道路是有宽度的路面，用强调色、不受光照影响；水面勾边；场地外的周边压暗
@@ -573,6 +578,7 @@ function deckTexts() { const o = $('deckOut'), f = $('sum6'); if (!o) return; if
     `${s.branches} corridor runs, ${s.nodes} node plates. ${s.entries} ground entries, ${s.r12} L1→L2 ramps, ${s.r23} L2→L3 ramps; level 3 on ${s.l3nodes} nodes / ${s.l3branches} runs, all ${s.edges3} of its edges have a ramp${s.grown ? ` (grown by ${s.grown} nodes to fit them)` : ''}. No entry: ${s.noEntryShort} runs too short, ${s.noEntryRoad} blocked by streets or water.`); }
 function ensure3D() { if (!F || !sceneDirty) return; if (!M) M = SS.meshes(F, P);
   if (DKP.on && SS.deck) { try { if (!DECK || DECKF !== F) { DECK = SS.deck.buildDeck(F, DKP); DECKF = F; } const dm = SS.deck.deckMesh(DECK, F.grid.RES > 2 ? 1 : DKP.sub); M.corridor = { top: dm.top, side: dm.side, bottom: dm.bottom, lvl: dm.lvl }; } catch (e) { console.warn('deck', e); DECK = null; } } else DECK = null;
+  M.corridor = clipCorr(M.corridor);
   buildScene(); sceneDirty = false; setHighlight(focus); deckTexts(); }
 function deckChanged(rebuild) { try { localStorage.setItem('structureStudio.deck', JSON.stringify(DKP)); } catch (e) {} if (rebuild) DECK = null; M = null; sceneDirty = true; deckTexts(); if (mode === '3d') { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } }
 // 地面各层都是平的、只差几厘米高：不再靠深度比谁在上面（远看时会分不清、互相闪），而是按固定顺序一层压一层画，
@@ -580,6 +586,28 @@ function deckChanged(rebuild) { try { localStorage.setItem('structureStudio.deck
 const GROUND_ORDER = ['out3', 'cbld3', 'cline3', 'land', 'water', 'stream', 'wline3', 'farm3', 'road3T'];
 function groundOrder() { const k = m => { for (const [n, v] of Object.entries(MAT)) if (v === m) return n; return null; };
   for (const g of [G.ctx3, G.site, G.farm, G.plots]) if (g) g.traverse(o => { if (!o.material) return; let n = k(o.material); if (n === 'wline3' && o.isLineSegments) n = 'stream'; const i = GROUND_ORDER.indexOf(n); if (i >= 0) o.renderOrder = i - GROUND_ORDER.length; }); }
+// 走廊伸进台座里的部分去掉（在某层台座轮廓内、又不高于那层台面）。先按三角形整块去掉；沿轮廓干净切开放在下一步做
+function clipCorr(c) { if (!SS.tower || !F || !F.towers.some(t => t[5])) return c; const sub = (arr, per, keep) => { const o = new Float32Array(keep.length * per); keep.forEach((k, i) => o.set(arr.subarray(k * per, k * per + per), i * per)); return o; };
+  const kt = SS.tower.keepOutside(c.top, F.towers), out = { top: sub(c.top, 9, kt), side: sub(c.side, 9, SS.tower.keepOutside(c.side, F.towers)) };
+  if (c.bottom) out.bottom = sub(c.bottom, 9, SS.tower.keepOutside(c.bottom, F.towers)); if (c.lvl) out.lvl = sub(c.lvl instanceof Float32Array ? c.lvl : Float32Array.from(c.lvl), 3, kt); return out; }
+// 种植塔模型（assets/tower-model.json）：打开页面时就去加载；到了以后，三维已经建好的话只重建塔
+let TOWER3 = null;
+const b64 = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
+fetch('assets/tower-model.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { const dec = m => ({ v: b64(m.v, Int16Array), i: b64(m.i, Uint16Array) });
+  TOWER3 = { tiers: j.tiers.map(t => ({ z: t.z, ...dec(t) })), towers: j.towers.map(t => ({ id: t.id, shell: dec(t.shell), skin: dec(t.skin) })) };
+  if (G.towerModel && F) buildTowerModel(); }).catch(e => console.warn('tower model', e));
+function towerMesh(m, f, zr, mat) { const n = m.v.length / 3, pos = new Float32Array(m.v.length);
+  for (let i = 0; i < n; i++) { const q = f(m.v[3 * i] / 100, m.v[3 * i + 1] / 100, m.v[3 * i + 2] / 100, zr); pos[3 * i] = q[0]; pos[3 * i + 1] = q[1]; pos[3 * i + 2] = q[2]; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(new THREE.BufferAttribute(m.i, 1)); g.computeVertexNormals();
+  const o = new THREE.Mesh(g, mat); o.castShadow = o.receiveShadow = true; return o; }
+// 每个核心一座：台座四层（顶面 7.2 / 11.8 / 16.4 / 21.0 m）+ 三片塔身和外皮；模型还没到时先用原来的圆塔
+function buildTowerModel() { const grp = G.towerModel; for (const o of grp.children.slice()) { grp.remove(o); if (o.geometry) o.geometry.dispose(); }
+  if (!TOWER3 || !SS.tower) { const tmp = new THREE.Object3D(), slabs = []; for (const t of F.towers) { const [x, y, r, h] = t; for (let z = 0, k = 0; z < h; z += 3.6, k++) slabs.push([x, y, r * (1 - 0.18 * z / h), z, Math.min(3.6, h - z), k % 2]); }
+    const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
+    for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; grp.add(im); }
+    return; }
+  for (const t of F.towers) { if (!t[5]) continue; TOWER3.tiers.forEach((m, k) => grp.add(towerMesh(m, SS.tower.xf(t, k), m.z, MAT.pod[k])));
+    for (const w of TOWER3.towers) { const f = SS.tower.xf(t, -1); grp.add(towerMesh(w.shell, f, null, MAT.shell), towerMesh(w.skin, f, null, MAT.skin)); } } }
 function buildScene() {
   for (const k in G) if (G[k]) scene.remove(G[k]);
   G.site = new THREE.Group();
@@ -607,9 +635,7 @@ function buildScene() {
   G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm3); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
   { const a = M.farm.top, n = a.length / 3, t = new Float32Array(n), cs = (SITE && SITE.cores) || [], R = P.coreR * 1.6; for (let i = 0; i < n; i++) { let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(a[3 * i] - c[0], a[3 * i + 1] - c[1])); t[i] = cs.length ? Math.min(1, d / R) : 0.5; }
     fm.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); G.farmT = t; G.farmMesh = fm; paintFarm3(); }
-  G.tower = new THREE.Group(); const tmp = new THREE.Object3D(); const slabs = []; for (const t of F.towers) { const [x, y, r, h] = t; for (let z = 0, k = 0; z < h; z += 3.6, k++) slabs.push([x, y, r * (1 - 0.18 * z / h), z, Math.min(3.6, h - z), k % 2]); }
-  const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
-  for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; G.tower.add(im); }
+  G.tower = new THREE.Group(); const tmp = new THREE.Object3D(); G.towerModel = new THREE.Group(); G.tower.add(G.towerModel); buildTowerModel();
   G.tower.visible = $('c_tower').checked;
   { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const cols = M.corridor && M.corridor.lvl ? SS.deck.columnsFit(M.corridor.top, F.columns, DECK && DECK.params ? DECK.params.thick : 1).cols : F.columns;   /* 多层走道结构下：柱顶接到正上方最低一层板（或坡道）的板底；上面没有板可托的、太矮的去掉 */
     const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, cols.length));
@@ -908,7 +934,7 @@ function writeTexts() {
       : L(`${n} 层种植（层高 3.6 m）。跨街道 ${nr} 段、共 ${km} km：只留 1.2 m 桥面，桥下净空 ${R.clear.toFixed(1)} m，种植在这一段断开。`, `${n} planting floors (3.6 m storeys). ${nr} street crossings (${km} km) keep only a 1.2 m deck with ${R.clear.toFixed(1)} m clear underneath; planting breaks there.`); }
   { const tw = F.towers || [], nb = tw.filter(t => !t[4]).length, ns = tw.filter(t => t[4] === 'sec').length, nh = tw.filter(t => t[4] === 'hub').length;
     $('v_tower').textContent = L(`${nb} 座`, `${nb}`);
-    $('towerHint').textContent = L(`种植塔只放在主吸引点上：每个核心一座，在环形广场中心，高 170 m。`, `Planting towers stand only on the main attractors: one per core, at the centre of the ring plaza, 170 m tall.`); }
+    $('towerHint').textContent = L(`种植塔只放在主吸引点上：每个核心一座，台座 4 层（顶面 7.2 / 11.8 / 16.4 / 21.0 m）上立三片壳。塔尖离地 ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}；场地小的一座按面积等比缩小。`, `Planting towers stand only on the main attractors: one per core, three shells on a four-tier podium (tops at 7.2 / 11.8 / 16.4 / 21.0 m). Tips at ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}; the tower on the smaller site is scaled down by area.`); }
   $('v_nCore').textContent = L(`主 ${F.cores.length} · 次 ${(F.secs || []).length} · 边界 ${(F.gates || []).length}`, `main ${F.cores.length} · sec ${(F.secs || []).length} · edge ${(F.gates || []).length}`);
   $('sum1').textContent = L(`${F.cores.length} 核心`, `${F.cores.length} cores`); $('sum2').textContent = L(`${F.strands.length} 条`, `${F.strands.length}`); $('sum3').textContent = L(`拉长 ×${x}`, `×${x}`);
   $('sum4').textContent = L(`${st.cells} 室 · 跨越 ${((F.bridgeL + (F.roadL || 0)) / 1000).toFixed(1)} km`, `${st.cells} cells · spans ${((F.bridgeL + (F.roadL || 0)) / 1000).toFixed(1)} km`); $('sum5').textContent = L(`种子 ${P.seed}`, `seed ${P.seed}`);
@@ -977,7 +1003,7 @@ $('rotBtn').onclick = e => { cam.rot = !cam.rot; e.target.classList.toggle('on',
 function dl(name, text, img) { $('dlbox').style.display = 'block'; $('dlname').textContent = name; $('dltext').style.display = img ? 'none' : 'block'; $('dlimg').style.display = img ? 'block' : 'none'; $('dlcopy').style.display = img ? 'none' : 'inline-block'; $('dlhint').textContent = img ? L('右键图片 → 另存为。', 'Right-click the image → Save as.') : L('复制后存为同名文件即可导入。', 'Copy, then save under this file name to import.');
   if (img) $('dlimg').src = img; else $('dltext').value = text; $('dlcopy').textContent = L('复制', 'Copy'); }
 $('dlclose').onclick = () => $('dlbox').style.display = 'none'; $('dlcopy').onclick = () => { try { navigator.clipboard.writeText($('dltext').value).then(() => $('dlcopy').textContent = L('已复制', 'Copied')); } catch (e) { $('dltext').select(); } };
-$('jsonBtn').onclick = () => dl('linear_farm_fibre.json', JSON.stringify({ params: P, towers: F.towers.map(t => ({ p: [+t[0].toFixed(2), +t[1].toFixed(2)], radius_m: t[2], height_m: t[3], kind: t[4] === 'sec' ? 'secondary attractor' : t[4] === 'hub' ? 'major junction' : 'main attractor' })), mode: F.mode, spans: { water_rail: { n: F.nBridge, length_m: Math.round(F.bridgeL) }, streets: { n: F.nRoad || 0, length_m: Math.round(F.roadL || 0), clearance_m: F.roadSpan ? +F.roadSpan.clear.toFixed(2) : null, planting_floors_across: F.roadSpan ? F.roadSpan.floors : 0 } }, columns: F.columns.map(c => c.slice(0, 2).map(v => +v.toFixed(2))), nodes: F.nodeP.map((p, k) => ({ id: k, p: p.map(v => +v.toFixed(2)), boundary: F.fixed[k] })), edges: F.fibres.map(f => ({ a: f.a, b: f.b, primary: !!f.prim, centerline: f.P.filter((_, i) => i % 4 === 0).map(p => p.map(v => +v.toFixed(2))) })), cells: F.cells.map(c => ({ name: cellName(c), kind: c.kind, area_m2: c.area, ratio: +c.ratio.toFixed(2), centroid: c.c.map(v => +v.toFixed(1)) })) }, null, 1));
+$('jsonBtn').onclick = () => dl('linear_farm_fibre.json', JSON.stringify({ params: P, towers: F.towers.map(t => ({ p: [+t[0].toFixed(2), +t[1].toFixed(2)], radius_m: t[2], height_m: t[3], scale: t[5], rotation_deg: t[6] != null ? +(t[6] * 180 / Math.PI).toFixed(1) : undefined, kind: t[4] === 'sec' ? 'secondary attractor' : t[4] === 'hub' ? 'major junction' : 'main attractor' })), mode: F.mode, spans: { water_rail: { n: F.nBridge, length_m: Math.round(F.bridgeL) }, streets: { n: F.nRoad || 0, length_m: Math.round(F.roadL || 0), clearance_m: F.roadSpan ? +F.roadSpan.clear.toFixed(2) : null, planting_floors_across: F.roadSpan ? F.roadSpan.floors : 0 } }, columns: F.columns.map(c => c.slice(0, 2).map(v => +v.toFixed(2))), nodes: F.nodeP.map((p, k) => ({ id: k, p: p.map(v => +v.toFixed(2)), boundary: F.fixed[k] })), edges: F.fibres.map(f => ({ a: f.a, b: f.b, primary: !!f.prim, centerline: f.P.filter((_, i) => i % 4 === 0).map(p => p.map(v => +v.toFixed(2))) })), cells: F.cells.map(c => ({ name: cellName(c), kind: c.kind, area_m2: c.area, ratio: +c.ratio.toFixed(2), centroid: c.c.map(v => +v.toFixed(1)) })) }, null, 1));
 $('objBtn').onclick = () => { let s = '# Linear Farm fibre network\n', off = 1; const put = (name, arr) => { s += 'o ' + name + '\n'; for (let i = 0; i < arr.length; i += 3) s += `v ${arr[i].toFixed(2)} ${arr[i + 2].toFixed(2)} ${(-arr[i + 1]).toFixed(2)}\n`; for (let i = 0; i < arr.length / 3; i += 3) s += `f ${off + i} ${off + i + 1} ${off + i + 2}\n`; off += arr.length / 3; };
   if (!M) M = SS.meshes(F, P); put('corridor_top', M.corridor.top); put('corridor_side', M.corridor.side); if (M.corridor.bottom) put('corridor_bottom', M.corridor.bottom); if (M.bld.top.length) { put('buildings_top', M.bld.top); put('buildings_side', M.bld.side); } dl('linear_farm_fibre.obj', s); };
 $('geoBtn').onclick = () => { const o = SNAP.origin || [0, 0], bng = p => [+(p[0] + o[0]).toFixed(2), +(p[1] + o[1]).toFixed(2)], feats = [];
