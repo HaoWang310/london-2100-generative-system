@@ -3,8 +3,10 @@
 // 输出：控制网格（四边面为主）→ Catmull–Clark 细分 → 一张连续曲面。规则见 docs/DESIGN.md「第 6 步」。
 (function (root) {
 'use strict';
-const LV = [0, 7.2, 10.8, 14.4];            // 地面、L1、L2、L3 顶面标高（层高 3.6 m，整体抬高一层）
-const DEF = { r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: 0.9, avoidEdge: true, merge: 3, near: 1 };
+// 板厚 1 m，上下两层之间的净高 3.6 m → 层到层 4.6 m。第一层板顶 7.2 m（板底 6.2 m，街道净空 ≥ 5 m）
+const THICK = 1, CLEAR = 3.6, STOREY = THICK + CLEAR, HEAD = 2.2;   // HEAD = 人能走的最小净高
+const LV = [0, 7.2, 7.2 + STOREY, 7.2 + 2 * STOREY];            // 地面、L1、L2、L3 顶面标高：7.2 / 11.8 / 16.4
+const DEF = { r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------------------------------------------------------- 走廊轮廓（室多边形）的线段索引
@@ -122,7 +124,7 @@ function buildDeck(F, opt) {
       const k = Math.min(pc.n, Math.ceil(40 / pc.seg)); for (let i = 0; i <= k; i++) { if (pc.a >= 0 && pc.fl[i] === 1) cut.add(pc.a); if (pc.b >= 0 && pc.fl[pc.n - i] === 1) cut.add(pc.b); } }
     for (const j of cut) in3[j] = false; }
   const nSeg = (len, pc) => Math.max(2, Math.round(len / pc.seg)), nPlat = pc => Math.max(1, Math.round(D.plat / pc.seg));
-  const mLvl = pc => nSeg(3.6 * D.rampSlope, pc), mEnt = pc => nSeg(7.2 * D.entrySlope, pc);
+  const mLvl = pc => nSeg(STOREY * D.rampSlope, pc), mEnt = pc => nSeg(LV[1] * D.entrySlope, pc);
   const mode = pc => { const za = pc.a >= 0 && in3[pc.a], zb = pc.b >= 0 && in3[pc.b]; if ((za || zb) && (pc.a < 0 || pc.b < 0) && pc.n < mLvl(pc) + nPlat(pc)) return 'full';   // 伸到红线的短段放不下坡：三层板直接做到红线
     return za && zb ? 'full' : za ? 'A' : zb ? 'B' : null; };
   let grown = 0;
@@ -165,17 +167,18 @@ function buildDeck(F, opt) {
       const px = pc.P[k0][0] * (1 - fr) + pc.P[k1][0] * fr, py = pc.P[k0][1] * (1 - fr) + pc.P[k1][1] * fr, ws = hwS(k0) * (1 - fr) + hwS(k1) * fr, wo = hwO(k0) * (1 - fr) + hwO(k1) * fr;
       const t = clamp((u - 0.3) / (m - 0.6), 0, 1), z = LV[lo] + rise * t, nx = pc.N[0] * sg, ny = pc.N[1] * sg;
       if (i === 0 && lo > 0) row.push([pv(pc, lo, ks[0], r.side), pv(pc, lo, ks[0], 1), -1]);
-      else if (i === us.length - 1) row.push([pv(pc, hi, ks[ks.length - 1], r.side), pv(pc, hi, ks[ks.length - 1], 1), tp ? pv(pc, hi, ks[ks.length - 1], oth) : -1]);
+      else if (i === us.length - 1) row.push([pv(pc, hi, ks[ks.length - 1], r.side), pv(pc, hi, ks[ks.length - 1], 1), -1]);
       else { const g = tp ? 0 : 0.22 * ws * Math.sin(Math.PI * u / m), wf = wo * Math.pow(u / m, 1.25);
-        row.push([vert('r' + ri + '_' + i + '_0', px + nx * ws, py + ny * ws, z), vert('r' + ri + '_' + i + '_1', px + nx * g, py + ny * g, z), tp ? vert('r' + ri + '_' + i + '_2', px - nx * wf, py - ny * wf, z) : -1]); } });
-    if (tp) for (let i = 0; i < us.length - 1; i++) { const q = dedupe([row[i][1], row[i][2] < 0 ? row[i][1] : row[i][2], row[i + 1][2], row[i + 1][1]]); if (q.length >= 3) add(q, hi); }
+        row.push([vert('r' + ri + '_' + i + '_0', px + nx * ws, py + ny * ws, z), vert('r' + ri + '_' + i + '_1', px + nx * g, py + ny * g, z), -1]); } });
     for (let i = 0; i < us.length - 1; i++) add([row[i][0], row[i][1], row[i + 1][1], row[i + 1][0]], hi);
     // 被坡打断的走道沿坡逐渐收窄成尖
-    const Jn = Math.max(1, Math.min(m, Math.round(0.6 * m))), mate = (a, lv) => ramps.some(q => q !== r && q.pc === pc && q.side === r.side && q.kind[a] === lv && Math.abs(q.ka - r.ka) < 1);
-    const taper = (lv, seq, tag) => { const E = [pv(pc, lv, seq[0], r.side)];
-      for (let j = 1; j <= Jn; j++) { const k = seq[j]; if (j === Jn) E.push(pv(pc, lv, k, 1)); else { const w = hwS(k) * Math.pow(1 - j / Jn, 1.25); E.push(vert(tag + ri + '_' + j, pc.P[k][0] + pc.N[0] * sg * w, pc.P[k][1] + pc.N[1] * sg * w, LV[lv])); } }
+    // 收尖的长度：收尖的板和坡道上下相叠，只叠到净高还够 HEAD 的地方为止（层间坡约为坡长的 30%），不留走不了人的夹角
+    const Jn = Math.max(1, Math.min(m, Math.floor(m * Math.min(0.6, Math.max(0, rise - D.thick - HEAD) / rise) + 1e-6))), mate = (a, lv) => ramps.some(q => q !== r && q.pc === pc && q.side === r.side && q.kind[a] === lv && Math.abs(q.ka - r.ka) < 1);
+    const taper = (lv, seq, tag, side = r.side, Jn_ = Jn) => { const Jn = Math.max(1, Math.min(seq.length - 1, Jn_)), sg = side === 0 ? 1 : -1, hw = k => side === 0 ? pc.hl[k] : pc.hr[k], E = [pv(pc, lv, seq[0], side)];
+      for (let j = 1; j <= Jn; j++) { const k = seq[j]; if (j === Jn) E.push(pv(pc, lv, k, 1)); else { const w = hw(k) * Math.pow(1 - j / Jn, 1.25); E.push(vert(tag + ri + '_' + j, pc.P[k][0] + pc.N[0] * sg * w, pc.P[k][1] + pc.N[1] * sg * w, LV[lv])); } }
       for (let j = 0; j < Jn; j++) { const q = dedupe([pv(pc, lv, seq[j], 1), E[j], E[j + 1], pv(pc, lv, seq[j + 1], 1)]); if (q.length >= 3) add(q, lv); } };
     if (!tp && !mate(0, hi)) taper(hi, ks, 'th');
+    if (tp) taper(hi, ks.slice().reverse(), 'tt', oth, m);     // 第三层板边：坡道一侧沿坡下去，另一侧的板留在第三层标高、沿坡长收成尖（水平的，不跟着坡倾斜，下面第二层净高不变）
     if (lo > 0 && !mate(1, lo)) taper(lo, ks.slice().reverse(), 'tl'); });
   // ---- 节点板：把相邻两条分支之间的走廊轮廓（第 5 步的过渡曲线）取成板边
   const inc = new Map(); for (const pc of PCS) { if (pc.a >= 0) { if (!inc.has(pc.a)) inc.set(pc.a, []); inc.get(pc.a).push([pc, 0]); } if (pc.b >= 0) { if (!inc.has(pc.b)) inc.set(pc.b, []); inc.get(pc.b).push([pc, 1]); } }
@@ -264,6 +267,6 @@ function columnsClear(top, cols, zTop, rad) {
   for (const c of cols) { const zt = c[2] != null ? c[2] : zTop; let hit = false; for (let k = 0; k < 9 && !hit; k++) { const a = k * Math.PI / 4, r = k === 8 ? 0 : R; if (zLow(c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r) < zt - 0.05) hit = true; } (hit ? cut : keep).push(c); }
   return { keep, cut };
 }
-const API = { LV, DEF, buildDeck, catmullClark, subdivide, deckMesh, columnsClear };
+const API = { LV, THICK, CLEAR, STOREY, HEAD, DEF, buildDeck, catmullClark, subdivide, deckMesh, columnsClear };
 if (typeof module !== 'undefined' && module.exports) module.exports = API; else { root.SS = root.SS || {}; root.SS.deck = API; }
 })(typeof self !== 'undefined' ? self : this);

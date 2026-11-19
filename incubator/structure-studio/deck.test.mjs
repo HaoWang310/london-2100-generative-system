@@ -16,7 +16,7 @@ test('step cards carry two buttons: play analysis and next', () => {
   for (const k of ['function guidedPlay(', 'function guidedNext(', 'function guidedRollback(', "L('播放分析', 'Play analysis')", "L('下一步', 'Next') : L('完成', 'Finish')", '.pmStep.locked']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('完成 · 转到三维'), 'old single-button label is gone');
 });
-test('levels: 3.6 m storeys lifted one storey', () => { assert.deepEqual(SS.deck.LV, [0, 7.2, 10.8, 14.4]); });
+test('levels: 1 m slabs with 3.6 m clear between them, first deck at 7.2 m', () => { assert.deepEqual(SS.deck.LV.map(v => +v.toFixed(3)), [0, 7.2, 11.8, 16.4]); assert.equal(SS.deck.DEF.thick, 1); assert.equal(SS.deck.CLEAR, 3.6); });
 test('level 3 only near the two main towers, and every edge of it has a ramp', () => {
   assert.ok(s.l3nodes > 10 && s.l3nodes < 0.35 * s.nodes, 'L3 nodes ' + s.l3nodes + ' / ' + s.nodes);
   assert.equal(s.r23, s.edges3, 'one L2→L3 ramp per L3 edge'); assert.equal(s.steep, 0, 'no shortened ramps (grow outward instead)');
@@ -28,7 +28,7 @@ test('ground entries exist and stay off streets and water', () => {
 });
 test('subdivided surface: finite, flat plates, edges on the step 5 outline', () => {
   const m = SS.deck.deckMesh(DK, 1); for (const v of m.top) assert.ok(Number.isFinite(v));
-  const V = m.V, n = V.length / 3; let flat = 0; for (let i = 0; i < n; i++) { const z = V[3 * i + 2]; assert.ok(z > -1e-6 && z < 14.4 + 1e-6, 'z in range ' + z); if (SS.deck.LV.some(l => Math.abs(z - l) < 0.02)) flat++; }
+  const V = m.V, n = V.length / 3; let flat = 0; for (let i = 0; i < n; i++) { const z = V[3 * i + 2]; assert.ok(z > -1e-6 && z < 16.4 + 1e-6, 'z in range ' + z); if (SS.deck.LV.some(l => Math.abs(z - l) < 0.02)) flat++; }
   assert.ok(flat / n > 0.8, 'plates are level: ' + (flat / n).toFixed(2));
   const d = []; for (let i = 0; i < m.boundary.length; i += 2) { const a = m.boundary[i]; d.push(DK.outline.dist([V[3 * a], V[3 * a + 1]], 30)); } d.sort((x, y) => x - y);
   assert.ok(d[Math.floor(d.length * 0.5)] < 0.5, 'median edge-to-outline distance ' + d[Math.floor(d.length * 0.5)].toFixed(2) + ' m');
@@ -71,7 +71,16 @@ test('no gaps: every step 5 corridor has deck above it (junctions stored as two 
 test('the deck is a closed solid: a bottom face one slab thickness below the top, facing down', () => {
   const m = SS.deck.deckMesh(DK, 1), t = m.top, b = m.bottom; assert.equal(b.length, t.length); assert.ok(html.includes('M.corridor.bottom'), 'the page draws the bottom face');
   let up = 0, dn = 0; for (let i = 0; i < b.length; i += 9) { const nz = (b[i + 3] - b[i]) * (b[i + 7] - b[i + 1]) - (b[i + 4] - b[i + 1]) * (b[i + 6] - b[i]); if (nz > 0) up += nz / 2; else dn -= nz / 2; }
-  assert.ok(up < 0.001 * dn, 'area of bottom triangles facing up: ' + up.toFixed(1) + ' / ' + dn.toFixed(0)); for (let i = 2; i < b.length; i += 3) assert.ok(b[i] >= 0 && b[i] <= 14.4 - 0.9 + 1e-6);
+  assert.ok(up < 0.001 * dn, 'area of bottom triangles facing up: ' + up.toFixed(1) + ' / ' + dn.toFixed(0)); for (let i = 2; i < b.length; i += 3) assert.ok(b[i] >= 0 && b[i] <= 16.4 - 1 + 1e-6);
   // every boundary edge is shared by a side quad: top edge at z, bottom edge at z - thickness
   assert.equal(m.side.length, m.boundary.length / 2 * 18);
+});
+test('no low wedge: where a tapered walkway overlaps a ramp the clear height is at least 2.2 m', () => {
+  // top triangles grouped on a 2 m grid; at each sample, vertical gaps between stacked surfaces (minus slab thickness) must be 0 (same surface) or >= HEAD
+  const m = SS.deck.deckMesh(DK, 1), t = m.top, G = new Map(), TH = SS.deck.DEF.thick, HEAD = SS.deck.HEAD; let low = 0, n = 0;
+  for (let i = 0; i < t.length; i += 9) { const x0 = Math.floor(Math.min(t[i], t[i + 3], t[i + 6]) / 4), x1 = Math.floor(Math.max(t[i], t[i + 3], t[i + 6]) / 4), y0 = Math.floor(Math.min(t[i + 1], t[i + 4], t[i + 7]) / 4), y1 = Math.floor(Math.max(t[i + 1], t[i + 4], t[i + 7]) / 4); for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) { const k = x * 100003 + y; if (!G.has(k)) G.set(k, []); G.get(k).push(i); } }
+  for (const r of DK.ramps) { if (r.kind[0] === 0) continue; for (let q = 1; q < 20; q++) { const x = r.a[0] + (r.b[0] - r.a[0]) * q / 20, y = r.a[1] + (r.b[1] - r.a[1]) * q / 20, zs = [];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const px = x + dx * 2.5, py = y + dy * 2.5; for (const i of G.get(Math.floor(px / 4) * 100003 + Math.floor(py / 4)) || []) { const ax = t[i], ay = t[i + 1], bx = t[i + 3], by = t[i + 4], cx = t[i + 6], cy = t[i + 7], d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy); if (Math.abs(d) < 1e-9) continue; const u = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / d, v = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / d, w = 1 - u - v; if (u < 0 || v < 0 || w < 0) continue; zs.push([dx, dy, u * t[i + 2] + v * t[i + 5] + w * t[i + 8]]); } }
+      for (let a = 0; a < zs.length; a++) for (let b = a + 1; b < zs.length; b++) { if (zs[a][0] !== zs[b][0] || zs[a][1] !== zs[b][1]) continue; const gap = Math.abs(zs[a][2] - zs[b][2]) - TH; n++; if (gap > 0.6 && gap < HEAD - 0.25) low++; } } }
+  assert.ok(n > 500, 'stacked samples along ramps: ' + n); assert.ok(low < 0.02 * n, 'samples with a clear height between 0.6 and ' + (HEAD - 0.25) + ' m: ' + low + ' / ' + n);
 });
