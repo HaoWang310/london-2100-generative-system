@@ -12,6 +12,10 @@ test('step 6 is wired into the page', () => {
   assert.ok(html.includes('engine/deck.js') && html.includes('data-k="6"'), 'deck.js and the step 6 card are in index.html');
   assert.ok(html.includes('[-1, -1, 0, 1, 2, 2, 2, 3, 3, 4, 5]'), 'the 3D demo stage belongs to step 6, not step 5');
 });
+test('step cards carry two buttons: play analysis and next', () => {
+  for (const k of ['function guidedPlay(', 'function guidedNext(', 'function guidedRollback(', "L('播放分析', 'Play analysis')", "L('下一步', 'Next') : L('完成', 'Finish')", '.pmStep.locked']) assert.ok(html.includes(k), k);
+  assert.ok(!html.includes('完成 · 转到三维'), 'old single-button label is gone');
+});
 test('levels: 3.6 m storeys lifted one storey', () => { assert.deepEqual(SS.deck.LV, [0, 7.2, 10.8, 14.4]); });
 test('level 3 only near the two main towers, and every edge of it has a ramp', () => {
   assert.ok(s.l3nodes > 10 && s.l3nodes < 0.35 * s.nodes, 'L3 nodes ' + s.l3nodes + ' / ' + s.nodes);
