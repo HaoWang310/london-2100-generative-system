@@ -141,6 +141,53 @@ test('index.html inline script parses', () => {
   for (const src of scripts) assert.doesNotThrow(() => new Function(src));
 });
 
+// 行尾注释里不能藏代码（拖动预览、放射蛛网的过滤都曾因此失效，解析检查发现不了）
+test('no statement hidden inside a // comment', () => {
+  const engine = readFileSync(new URL('engine/structure.js', dir), 'utf8');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  const code = /\bif \(|\b(const|let|var) [\w$]+ =|[\w$\]]\s*=\s*[\w$.]+\(|\breturn\b[^：]*;/;
+  const bad = [];
+  for (const src of [engine, ...scripts]) for (const line of src.split('\n')) { const m = line.match(/(^|[^:'"\\/])\/\/(.*)$/); if (m && code.test(m[2])) bad.push(m[2].trim().slice(0, 80)); }
+  assert.deepEqual(bad, []);
+});
+
+test('radial web clears the ordinary seeds inside the web radius', () => {
+  const Fr = SS.buildStructure(site, { ...P, mode: 'radial', trace: 1 }, new Set()), T = Fr.trace, Rw = Math.min(650, Math.max(260, 0.9 * P.coreR));
+  for (const c of site.cores) { const loose = T.seedsW.filter((q, i) => !T.fixedS[i] && Math.hypot(q[0] - c[0], q[1] - c[1]) < Rw); assert.equal(loose.length, 0, 'loose seeds near core ' + loose.length); }
+});
+
+test('two close main attractors both keep their plaza seeds', () => {
+  const s2 = JSON.parse(JSON.stringify(snap)), m = s2.attractors.find(a => a.kind === 'main'), r0 = F.rings.find(g => Math.hypot(g.c[0] - m.x, g.c[1] - m.y) < 1).r, D = 2.1 * r0; let q = null;
+  for (let k = 0; k < 8 && !q; k++) { const p = [m.x + D * Math.cos(k * Math.PI / 4), m.y + D * Math.sin(k * Math.PI / 4)]; if (site.inSite(p)) q = p; }
+  assert.ok(q, 'a spot near the first core');
+  s2.attractors.push({ ...m, x: q[0], y: q[1] }); const site2 = SS.prepareSite(s2), F2 = SS.buildStructure(site2, { ...P, trace: 1 }, new Set());
+  for (const g of F2.rings) assert.ok(F2.trace.seedsW.some(p => Math.hypot(p[0] - g.c[0], p[1] - g.c[1]) < 1), 'plaza centre seed kept at ' + g.c.map(Math.round));
+});
+
+test('corridor centreline length counts only the part inside the site', () => {
+  let inL = 0, all = 0; for (const f of F.fibres) for (let k = 1; k < f.P.length; k++) { const l = Math.hypot(f.P[k][0] - f.P[k - 1][0], f.P[k][1] - f.P[k - 1][1]); all += l; if (site.inSite([(f.P[k][0] + f.P[k - 1][0]) / 2, (f.P[k][1] + f.P[k - 1][1]) / 2])) inL += l; }
+  assert.ok(Math.abs(F.stats.totL - inL) < 1, 'totL ' + F.stats.totL + ' in site ' + inL);
+  assert.ok(F.stats.totL < all, 'some centreline lies outside the site');
+});
+
+test('each corridor carries the width it was built with', () => {
+  const Fw = SS.buildStructure(site, { ...P, wS: 25, wP: 12 }, new Set());
+  assert.ok(Fw.fibres.filter(f => f.prim).every(f => f.w === 25), 'primary lifted to the secondary width');
+  const F1 = SS.buildStructure(site, { ...P, mode: 'v1', wCore: 10, wS: 20 }, new Set()), ws = F1.fibres.filter(f => !f.prim).map(f => f.w);
+  assert.ok(Math.min(...ws) < 15 && Math.max(...ws) > 19.9, 'secondary width graded from the cores: ' + Math.min(...ws) + '–' + Math.max(...ws));
+});
+
+test('GeoJSON export keeps curved centrelines and works without a snapshot origin', () => {
+  const src = html.match(/\$\('geoBtn'\)\.onclick = (\(\) => \{[\s\S]*?features: feats \}\)\); \})/)[1];
+  let out = null; const fake = { prim: false, w: 18, P: Array.from({ length: 41 }, (_, i) => [i * 2, Math.sin(i / 6) * 30]) };
+  const run = Function('F', 'P', 'SNAP', 'dl', 'return ' + src)({ cellPolys: [], fibres: [fake], towers: [] }, { deckZ: 7.2 }, {}, (n, s) => { out = JSON.parse(s); });
+  run();
+  const f = out.features.find(x => x.properties.layer === 'corridor centreline');
+  assert.ok(f.geometry.coordinates.length > 5, 'curve kept: ' + f.geometry.coordinates.length + ' points');
+  assert.deepEqual(f.geometry.coordinates.at(-1), [80, +(Math.sin(40 / 6) * 30).toFixed(2)]);
+  assert.equal(f.properties.width_m, 18);
+});
+
 // 方案打分（与张量场工作室统一：5 组 0–100、按权重加权）；后台线程脚本能解析
 test('structure score: five groups in 0–100, weighted total, deterministic; worker script parses', () => {
   const s = SS.scoreStructure(F); assert.deepEqual(Object.keys(s.groups).sort(), ['cells', 'eff', 'farm', 'prim', 'span']);
