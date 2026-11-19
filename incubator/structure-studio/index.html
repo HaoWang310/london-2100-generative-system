@@ -584,8 +584,9 @@ function buildScene() {
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
   for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; G.tower.add(im); }
   G.tower.visible = $('c_tower').checked;
-  { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, F.columns.length));
-    F.columns.forEach((c, i) => { tmp.position.set(c[0], c[1], -1); tmp.scale.set(0.9, 0.9, (c[2] != null ? c[2] : P.deckZ - 0.2) + 1); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = F.columns.length; im.castShadow = true; G.tower.add(im); }
+  { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const cols = M.corridor && M.corridor.lvl ? SS.deck.columnsClear(M.corridor.top, F.columns, P.deckZ - 0.2).keep : F.columns;   /* 多层走道结构下：会从坡道 / 下层板面里穿出来的桥下柱去掉 */
+    const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, cols.length));
+    cols.forEach((c, i) => { tmp.position.set(c[0], c[1], -1); tmp.scale.set(0.9, 0.9, (c[2] != null ? c[2] : P.deckZ - 0.2) + 1); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); }
   G.hi = null;
   scene.add(G.site, G.plots, G.corr, G.prim, G.bld, G.farm, G.tower);
 }
