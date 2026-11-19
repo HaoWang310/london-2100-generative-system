@@ -161,6 +161,12 @@ body.demo-on #panel,body.demo-on .displayPanel,body.demo-on #cardBar,body.demo-o
 .swChip:hover i{border-color:rgba(255,255,255,.5)}
 .swChip.on{color:#f5f5f7}.swChip.on i{border:2px solid #f5f5f7}
 .swChip:focus-visible i{outline:2px solid #f5f5f7;outline-offset:2px}
+/* 三维配色卡：一张卡上能看出农田（底色渐变）、道路（彩色曲线）、结构（白块）各是什么颜色 */
+.swGrid.three{grid-template-columns:1fr;gap:10px}
+.swGrid.three .swChip{align-items:stretch;text-align:left;gap:5px}
+.swGrid.three .swChip i{position:relative;height:40px;overflow:hidden}
+.swGrid.three .swChip i svg{position:absolute;inset:0;width:100%;height:100%}
+.swGrid.three .swChip i b{position:absolute;right:7px;top:8px;bottom:8px;width:38px;border-radius:4px;background:#fafafa}
 .displayPanel .dpLegend i.lgLine{height:0;border:0;border-top:2px dashed #e0412f;border-radius:0;vertical-align:3px}
 .displayPanel .dpStats{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
 .displayPanel .dpStats b{display:block;font-size:14px;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums;color:#f5f5f7}
@@ -386,9 +392,9 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 <label class="dpSwitchRow"><span>阴影</span><input type="checkbox" id="c_shadow" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><span>室卡片</span><input type="checkbox" id="c_cards" hidden><i class="dpSw"></i></label>
   </div>
-  <div class="dpSection"><div class="dpTitle">配色</div><div class="swGrid" id="swGrid" role="radiogroup" aria-label="配色"></div></div>
+  <div class="dpSection"><div class="dpTitle" id="swTitle">配色</div><div class="swGrid" id="swGrid" role="radiogroup" aria-label="配色"></div></div>
   <div class="dpSection"><div class="dpTitle">图例</div><div class="dpLegend">
-    <span><i class="lgLine" id="lgRed"></i>红线（结构场地外缘）</span><span><i style="background:#ffffff"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路 / 跨路段</span><span><i id="lgFarm" style="background:#e1e6cf"></i>农田（离核心近亮、远暗）</span><span style="display:none"><i id="lgBld" style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span><i id="lgWater" style="background:#6e8796"></i>水体</span><span><i id="lgTower" style="background:#ffffff;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
+    <span><i class="lgLine" id="lgRed"></i>红线（结构场地外缘）</span><span><i style="background:#ffffff"></i>种植工厂走廊（结构）</span><span><i style="background:#c4ccd2"></i>跨水 / 跨铁路 / 跨路段</span><span><i id="lgFarm" style="background:#e1e6cf"></i>农田（离核心近亮、远暗）</span><span style="display:none"><i id="lgBld" style="background:#1e1e1e;border-color:rgba(255,255,255,.35)"></i>沿走廊建筑</span><span id="lgRoadRow" style="display:none"><i id="lgRoad" style="background:#d6ff40"></i>道路</span><span><i id="lgWater" style="background:#6e8796"></i>水体</span><span><i id="lgTower" style="background:#ffffff;border-radius:50%;border:1.5px solid #e0412f"></i>种植塔</span>
   </div></div>
   <div class="dpSection"><div class="dpTitle">统计</div><div class="dpStats">
     <div><b id="s_cell">–</b><span id="s_cellL">室</span></div><div style="display:none"><b id="s_bld">–</b><span>沿走廊建筑</span></div>
@@ -465,6 +471,14 @@ const MAT = {
   towW: new THREE.MeshStandardMaterial({ color: 0xeeefec, roughness: .5 }),
   hi: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .28, side: THREE.DoubleSide, depthWrite: false }),
   plot: new THREE.LineBasicMaterial({ color: 0x8f8aa8, transparent: true, opacity: .55 }),
+  // 三维配色（见 SCHEMES3）：农田按离核心远近逐顶点着色；道路是有宽度的路面，用强调色、不受光照影响；水面勾边；场地外的周边压暗
+  farm3: new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 1, side: THREE.DoubleSide }),
+  road3M: new THREE.MeshBasicMaterial({ color: 0xd6ff40, side: THREE.DoubleSide, toneMapped: false }),
+  road3L: new THREE.MeshBasicMaterial({ color: 0x96ba34, side: THREE.DoubleSide, toneMapped: false }),
+  wline3: new THREE.LineBasicMaterial({ color: 0x466ed2, toneMapped: false }),
+  out3: new THREE.MeshBasicMaterial({ color: 0x050509, side: THREE.DoubleSide, toneMapped: false }),
+  cbld3: new THREE.MeshBasicMaterial({ color: 0x11111a, side: THREE.DoubleSide, toneMapped: false }),
+  cline3: new THREE.LineBasicMaterial({ color: 0x1c1c2a, toneMapped: false }),
   roadM: new THREE.LineBasicMaterial({ color: 0xc9c2ee, transparent: true, opacity: .8 }),
 };
 function shapeOf(poly) { const s = new THREE.Shape(); poly.forEach((p, i) => i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])); return s; }
@@ -567,10 +581,22 @@ function buildScene() {
   for (const k in G) if (G[k]) scene.remove(G[k]);
   G.site = new THREE.Group();
   for (const pc of SNAP.pieces) { const sh = shapeOf(pc.outer); for (const h of pc.holes || []) if (h.length > 2) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), MAT.land); m.position.z = -0.05; m.receiveShadow = true; G.site.add(m); }
-  for (const w of SNAP.water) if (w[0] && w[0].length > 2) G.site.add(flat(w[0], 0.1, MAT.water));
-  G.plots = new THREE.Group(); for (const r of SNAP.roads) { const pts = r.pts.map(p => new THREE.Vector3(p[0], p[1], 0.4)); G.plots.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), r.grade === 'main' ? MAT.roadM : MAT.plot)); } G.plots.visible = $('c_plots').checked;
+  for (const w of SNAP.water) if (w[0] && w[0].length > 2) { G.site.add(flat(w[0], 0.1, MAT.water)); G.site.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(w[0].map(p => new THREE.Vector3(p[0], p[1], 0.16))), MAT.wline3)); }
+  // 路网：按路宽的一半画成路面（主干 / 贯通一层，支路一层），压在农田之上、结构之下
+  G.plots = new THREE.Group(); { const acc = { m: [], l: [] };
+    for (const r of SNAP.roads) { const hw = (r.width || 6.5) * 0.25, out = r.grade === 'local' ? acc.l : acc.m, z = r.grade === 'local' ? 0.34 : 0.4, Q = r.pts;
+      for (let i = 0; i + 1 < Q.length; i++) { const a = Q[i], b = Q[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); if (l < 1e-6) continue; const nx = -dy / l * hw, ny = dx / l * hw;
+        out.push(a[0] + nx, a[1] + ny, z, a[0] - nx, a[1] - ny, z, b[0] - nx, b[1] - ny, z, a[0] + nx, a[1] + ny, z, b[0] - nx, b[1] - ny, z, b[0] + nx, b[1] + ny, z); } }
+    for (const [k, mat] of [['l', MAT.road3L], ['m', MAT.road3M]]) if (acc[k].length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(acc[k]), 3)); G.plots.add(new THREE.Mesh(g, mat)); } }
+  G.plots.visible = $('c_plots').checked;
+  // 场地外的周边：一块暗底 + 周边建筑轮廓 + 周边道路，只作背景；跟着"周边环境"开关
+  G.ctx3 = new THREE.Group(); { const C = SNAP.context || {}, w = SNAP.w || 2700, h = SNAP.h || 2700; G.ctx3.add(flat([[0, 0], [w, 0], [w, h], [0, h]], -0.3, MAT.out3));
+    try { const shp = (C.bld || []).filter(b => b[0] && b[0].length > 2).map(b => shapeOf(b[0])); if (shp.length) { const m = new THREE.Mesh(new THREE.ShapeGeometry(shp), MAT.cbld3); m.position.z = -0.2; G.ctx3.add(m); } } catch (e) { console.warn(e); }
+    const seg = []; for (const l of [...(C.lanes || []), ...(C.prim || [])]) for (let i = 0; i + 1 < l.length; i++) seg.push(l[i][0], l[i][1], -0.15, l[i + 1][0], l[i + 1][1], -0.15);
+    if (seg.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(seg), 3)); G.ctx3.add(new THREE.LineSegments(g, MAT.cline3)); } }
+  G.ctx3.visible = $('c_ctx').checked;
   G.corr = new THREE.Group();
-  if (M.corridor.lvl) { const top = triMesh(M.corridor.top, MAT.deckLv), lv = M.corridor.lvl, col = new Float32Array(lv.length * 3), C = [[.55, .6, .66], [.60, .72, .82], [.80, .88, .93], [.96, .97, .98]];
+  if (M.corridor.lvl) { const top = triMesh(M.corridor.top, MAT.deckLv), lv = M.corridor.lvl, col = new Float32Array(lv.length * 3), C = [[.6, .6, .63], [.70, .71, .75], [.84, .85, .88], [.98, .98, .98]];   /* 结构统一是白到浅灰：三层只用明暗区分，颜色留给农田和道路 */
     for (let i = 0; i < lv.length; i++) { const c = C[lv[i]] || C[3]; col[3 * i] = c[0]; col[3 * i + 1] = c[1]; col[3 * i + 2] = c[2]; } top.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3)); G.corr.add(top, triMesh(M.corridor.side, MAT.deckEdge)); if (M.corridor.bottom) G.corr.add(triMesh(M.corridor.bottom, MAT.deckEdge)); }   /* 底面：板是封闭的实体，从下面看不再是空壳 */
   else G.corr.add(triMesh(M.corridor.top, MAT.deck), triMesh(M.corridor.side, MAT.glass));
   // 主线：红色细线贴在走廊顶面上方 0.8 m（塔旁跟着顶面抬升），只画红线以内；跟着图层面板的"主线"开关
@@ -579,7 +605,9 @@ function buildScene() {
       for (const p of S) { if (F.site.inSite(p)) run.push(new THREE.Vector3(p[0], p[1], zAt(p[0], p[1]) + 0.8)); else flush(); } flush(); }
     G.prim.visible = $('c_prim').checked; }
   G.bld = new THREE.Group(); G.bld.add(triMesh(M.bld.top, MAT.bld), triMesh(M.bld.side, MAT.bldS)); G.bld.visible = $('c_bld').checked;
-  G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
+  G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm3); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
+  { const a = M.farm.top, n = a.length / 3, t = new Float32Array(n), cs = (SITE && SITE.cores) || [], R = P.coreR * 1.6; for (let i = 0; i < n; i++) { let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(a[3 * i] - c[0], a[3 * i + 1] - c[1])); t[i] = cs.length ? Math.min(1, d / R) : 0.5; }
+    fm.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); G.farmT = t; G.farmMesh = fm; paintFarm3(); }
   G.tower = new THREE.Group(); const tmp = new THREE.Object3D(); const slabs = []; for (const t of F.towers) { const [x, y, r, h] = t; for (let z = 0, k = 0; z < h; z += 3.6, k++) slabs.push([x, y, r * (1 - 0.18 * z / h), z, Math.min(3.6, h - z), k % 2]); }
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
   for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; G.tower.add(im); }
@@ -609,11 +637,37 @@ const SCHEMES = [ // 渐变（核心亮 → 外围暗）+ 顺张量场流线
   { id: 'J', zh: '青', en: 'Teal', o: { grad: [[0, [212, 236, 232]], [0.45, [92, 146, 148]], [1, [22, 44, 50]]], water: '#132a33', stream: 'rgba(110,160,175,.75)' } },
   { id: 'L', zh: '灰到橙', en: 'Heat', o: { grad: [[0, [255, 104, 56]], [0.4, [150, 62, 46]], [1, [34, 34, 34]]], hatch: { col: 'rgba(255,255,255,.12)', w: 1, step: 9, len: 60 }, water: '#1f2328', red: '#ffffff' } },
 ];
+// 三维配色卡（AADRL 式）：结构白、道路一个强调色、农田一组暗色渐变，三样东西各占一种颜色。只在三维视图下出现，和上面平面的 8 张各记各的
+const SCHEMES3 = [
+  { id: 'G', zh: '灰阶 · 青', en: 'Grey · cyan', grad: [[0, [74, 74, 80]], [0.5, [50, 50, 55]], [1, [34, 34, 38]]], road: [90, 220, 240], roadL: [52, 150, 172], ground: [16, 16, 18], water: [0, 0, 0], wline: [84, 84, 92], out: [6, 6, 7], cb: [19, 19, 22], cl: [30, 30, 34], side: [104, 104, 110] },
+  { id: 'H', zh: '蓝紫 · 黄绿', en: 'Indigo · acid', grad: [[0, [58, 96, 190]], [0.5, [52, 52, 140]], [1, [36, 26, 84]]], road: [214, 255, 64], roadL: [150, 186, 52], ground: [12, 12, 24], water: [2, 3, 10], wline: [70, 110, 210], out: [5, 5, 9], cb: [17, 17, 26], cl: [28, 28, 42], side: [96, 100, 128] },
+  { id: 'I', zh: '品红 · 青', en: 'Magenta · cyan', grad: [[0, [196, 56, 128]], [0.5, [120, 44, 150]], [1, [52, 30, 92]]], road: [96, 236, 236], roadL: [60, 160, 170], ground: [18, 10, 24], water: [3, 2, 8], wline: [96, 70, 140], out: [6, 5, 9], cb: [21, 17, 28], cl: [36, 28, 48], side: [102, 94, 128] },
+];
+const SCHEME3_KEY = 'structureStudio.scheme3'; let SCHEME3 = 'H';
+const scheme3 = () => SCHEMES3.find(x => x.id === SCHEME3) || SCHEMES3[1];
+const grad3Css = sc => `linear-gradient(90deg,${sc.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})`;
+function gradAt(st, t) { let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; } const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0; return [a[1][0] + (b[1][0] - a[1][0]) * u, a[1][1] + (b[1][1] - a[1][1]) * u, a[1][2] + (b[1][2] - a[1][2]) * u]; }
+// 农田逐顶点上色（颜色按 sRGB 给，换算成线性再交给渲染器）
+const lin3 = v => Math.pow(v / 255, 2.2), LIT3 = 0.6;
+function paintFarm3() { if (!G.farmMesh || !G.farmT) return; const st = scheme3().grad, at = G.farmMesh.geometry.getAttribute('color'), arr = at.array, t = G.farmT, lin = v => lin3(v) * LIT3;
+  const LUT = new Float32Array(101 * 3); for (let i = 0; i <= 100; i++) { const c = gradAt(st, i / 100); LUT[3 * i] = lin(c[0]); LUT[3 * i + 1] = lin(c[1]); LUT[3 * i + 2] = lin(c[2]); }
+  for (let i = 0; i < t.length; i++) { const k = 3 * Math.round(t[i] * 100); arr[3 * i] = LUT[k]; arr[3 * i + 1] = LUT[k + 1]; arr[3 * i + 2] = LUT[k + 2]; } at.needsUpdate = true; }
+function applyScheme3(id, quiet) { const sc = SCHEMES3.find(x => x.id === id) || SCHEMES3[1]; SCHEME3 = sc.id; try { localStorage.setItem(SCHEME3_KEY, sc.id); } catch (e) {}
+  // 颜色按屏幕上的 sRGB 值给。渲染器输出时会做一次 sRGB 编码，所以先换算成线性；受光照的材质（地面、水、板侧面）再乘 LIT，抵消灯光把暗色提亮
+  if (typeof MAT !== 'undefined') { const set = (m, c, k = 1) => m.color.setRGB(lin3(c[0]) * k, lin3(c[1]) * k, lin3(c[2]) * k);
+    set(MAT.land, sc.ground, LIT3); set(MAT.water, sc.water, LIT3); set(MAT.deckEdge, sc.side, LIT3); set(MAT.road3M, sc.road); set(MAT.road3L, sc.roadL); set(MAT.wline3, sc.wline); set(MAT.out3, sc.out); set(MAT.cbld3, sc.cb); set(MAT.cline3, sc.cl); }
+  paintFarm3(); if (!quiet) { buildSwatches(); syncLegend(); } }
+// 图例跟着当前视图：平面用平面的配色，三维用三维的
+function syncLegend() { const three = mode === '3d', sc2 = SCHEMES.find(x => x.id === SCHEME) || SCHEMES[0], sc3 = scheme3();
+  $('lgFarm').style.background = three ? grad3Css(sc3) : gradCss(sc2); $('lgWater').style.background = three ? rgb(sc3.wline) : PAL.water; $('lgRoadRow').style.display = three ? '' : 'none'; $('lgRoad').style.background = rgb(sc3.road); }
 const SCHEME_KEY = 'structureStudio.scheme';
 let SCHEME = 'M';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
-function buildSwatches() { const g = $('swGrid'); g.textContent = '';
+function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.toggle('three', three); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
+  if (three) { for (const sc of SCHEMES3) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME3 ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME3); b.dataset.s3 = sc.id; b.title = L(sc.zh, sc.en);
+      const i = document.createElement('i'); i.style.background = grad3Css(sc); i.innerHTML = `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.road)}" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><b></b>`;
+      const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en); b.append(i, t); b.onclick = () => applyScheme3(sc.id); g.appendChild(b); } return; }
   for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
     b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('i'); i.style.background = gradCss(sc); const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en);
     b.append(i, t); b.onclick = () => { clearTimeout(prewarm.t); applyScheme(sc.id); };
@@ -627,8 +681,8 @@ function applyScheme(id, quiet) { const sc = SCHEMES.find(x => x.id === id) || S
   try { localStorage.setItem(SCHEME_KEY, sc.id); } catch (e) {}
   $('lgFarm').style.background = gradCss(sc); $('lgWater').style.background = PAL.water; $('lgRed').style.borderTopColor = PAL.red; $('lgTower').style.borderColor = PAL.red; $('lgTower').style.background = PAL.tower; $('lgBld').style.background = rgb(PAL.bld);
   const mid = PAL.grad ? PAL.grad[Math.floor(PAL.grad.length / 2)][1] : null;
-  if (typeof MAT !== 'undefined') { if (mid) MAT.farm.color.setHex(hex3(mid)); else MAT.farm.color.set(PAL.farm); MAT.water.color.set(PAL.water); MAT.deck.color.set(PAL.deck); MAT.towW.color.set(PAL.tower); MAT.bld.color.setHex(hex3(PAL.bld)); MAT.bldS.color.setHex(hex3(PAL.bld.map(v => v * .8 | 0))); }
-  buildSwatches(); tsBase = null;
+  if (typeof MAT !== 'undefined') { if (mid) MAT.farm.color.setHex(hex3(mid)); else MAT.farm.color.set(PAL.farm); MAT.deck.color.set(PAL.deck); MAT.towW.color.set(PAL.tower); MAT.bld.color.setHex(hex3(PAL.bld)); MAT.bldS.color.setHex(hex3(PAL.bld.map(v => v * .8 | 0))); }
+  buildSwatches(); syncLegend(); tsBase = null;
   if (!quiet && F) { cancelAnimationFrame(applyScheme.raf); applyScheme.raf = requestAnimationFrame(() => { makePlanBase(); drawPlan(); setTimeout(() => { buildCards(); focusCell(focus); }, 0); }); } }
 let hoverId = 0;
 function setHover(id) { if (id === hoverId) return; hoverId = id; if (mode === '2d') drawPlan(); }
@@ -778,7 +832,7 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
   cv.addEventListener('wheel', e => { e.preventDefault(); if (DEMO.on && DEMO.full) return; const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; planMoved(); }, { passive: false });
   cv.addEventListener('pointerleave', () => setHover(0));
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
-function setMode(m) { if (m === '3d' && TSV) setTsv(false); if (m === '3d' && mode !== '3d') cam.snap = true; mode = m; document.body.classList.toggle('m3d', m === '3d'); if (m !== '3d') vpMenu(false); if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
+function setMode(m) { if (m === '3d' && TSV) setTsv(false); if (m === '3d' && mode !== '3d') cam.snap = true; mode = m; document.body.classList.toggle('m3d', m === '3d'); if (m !== '3d') vpMenu(false); buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换：平面 8 张，三维 3 张 */ if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
 
 // ---------------------------------------------------------------- 卡片
 function thumb(c) {
@@ -885,7 +939,7 @@ $('mode').onchange = e => { guidedRollback(e.target); P.mode = e.target.value; P
 for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { guidedRollback($(k)); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
 for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
-$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
+$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = e => { if (G.ctx3) G.ctx3.visible = e.target.checked; tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = applyShadow;
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
 $('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); if (mode === '2d') { fitPlan(); drawPlan(); } else zoomExtents(); };
@@ -1441,6 +1495,7 @@ addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape')
 addEventListener('resize', () => { if (DEMO.on && mode === '2d') dmFit(); });
 syncPrimAng();
 try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
+try { SCHEME3 = localStorage.getItem(SCHEME3_KEY) || 'H'; } catch (e) {} applyScheme3(SCHEME3, true);
 boot();
 </script>
 </body>
