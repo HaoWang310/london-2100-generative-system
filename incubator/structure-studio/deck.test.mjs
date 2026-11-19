@@ -84,3 +84,9 @@ test('no low wedge: where a tapered walkway overlaps a ramp the clear height is 
       for (let a = 0; a < zs.length; a++) for (let b = a + 1; b < zs.length; b++) { if (zs[a][0] !== zs[b][0] || zs[a][1] !== zs[b][1]) continue; const gap = Math.abs(zs[a][2] - zs[b][2]) - TH; n++; if (gap > 0.6 && gap < HEAD - 0.25) low++; } } }
   assert.ok(n > 500, 'stacked samples along ramps: ' + n); assert.ok(low < 0.02 * n, 'samples with a clear height between 0.6 and ' + (HEAD - 0.25) + ' m: ' + low + ' / ' + n);
 });
+test('long tapers: the interrupted walkway starts narrowing well before the ramp foot where there is room', () => {
+  const R = DK.ramps.filter(r => r.kind[0] > 0), want = r => Math.round(SS.deck.DEF.taperBack * r.m), some = R.filter(r => r.back[0] > 0 || r.back[1] > 0).length, full = R.filter(r => r.back[0] >= want(r)).length;
+  assert.equal(SS.deck.DEF.taperShape, 'line'); assert.ok(some > 0.4 * R.length, 'ramps with a lengthened taper: ' + some + ' / ' + R.length); assert.ok(full > 20, 'tapers at full length: ' + full);
+  for (const r of R) assert.ok(r.back[0] <= want(r) && r.back[1] <= want(r));
+  const off = SS.deck.buildDeck(F, { taperBack: 0 }); assert.ok(off.ramps.every(r => r.back[0] === 0 && r.back[1] === 0), 'taperBack 0 keeps the short taper'); assert.equal(off.stats.r12, s.r12, 'ramp layout is not affected by the taper length');
+});
