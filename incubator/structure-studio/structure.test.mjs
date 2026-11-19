@@ -198,3 +198,10 @@ test('structure score: five groups in 0–100, weighted total, deterministic; wo
   const sk = SS.runSketch(F); assert.equal(sk.cells.length, F.cellPolys.length); assert.equal(sk.towers.length, F.towers.length);
   assert.doesNotThrow(() => new Function('importScripts', readFileSync(new URL('./engine/compare-worker.js', import.meta.url), 'utf8')));
 });
+
+// 走廊顶面标高：一般等于顶标高，大塔旁抬高 14.4 m
+test('deck height follows the deck level and rises next to towers', () => {
+  const z = SS.deckHeight(F, 7.2); const big = F.towers.find(t => t[2] > 20);
+  assert.equal(z(F.site.cen ? F.site.cen[0] + 1e5 : 1e7, 1e7), 7.2);
+  if (big) assert.ok(Math.abs(z(big[0] + big[2], big[1]) - 21.6) < 0.01);
+});

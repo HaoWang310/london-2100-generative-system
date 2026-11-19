@@ -719,6 +719,8 @@ function scoreStructure(F, w) { w = w || SCORE_W0; const site = F.site, g = F.gr
 // 方案缩略 / 预览用的轻量数据（能传给后台线程）：室多边形（抽稀）、主线、塔
 function runSketch(F) { const simp = Q => { const o = []; for (let i = 0; i < Q.length; i += Math.max(1, Math.floor(Q.length / 28))) o.push([Math.round(Q[i][0] * 10) / 10, Math.round(Q[i][1] * 10) / 10]); return o; };
   return { cells: F.cellPolys.map(cp => simp(cp.poly)), towers: F.towers.map(t => [t[0], t[1], t[2], t[4] || '']), mode: F.mode }; }
-const API = { SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+// 走廊顶面标高（种植塔附近抬升），三维里画主线等需要贴在顶面上的东西时用
+function deckHeight(F, deckZ) { return (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; }; }
+const API = { deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
