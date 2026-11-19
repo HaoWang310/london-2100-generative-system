@@ -6,7 +6,7 @@
 // 板厚 1 m，上下两层之间的净高 3.6 m → 层到层 4.6 m。第一层板顶 7.2 m（板底 6.2 m，街道净空 ≥ 5 m）
 const THICK = 1, CLEAR = 3.6, STOREY = THICK + CLEAR, HEAD = 2.2;   // HEAD = 人能走的最小净高
 const LV = [0, 7.2, 7.2 + STOREY, 7.2 + 2 * STOREY];            // 地面、L1、L2、L3 顶面标高：7.2 / 11.8 / 16.4
-const DEF = { r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1 };
+const DEF = { r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1, taperBack: 1.2, taperShape: 'line' };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------------------------------------------------------- 走廊轮廓（室多边形）的线段索引
@@ -155,6 +155,14 @@ function buildDeck(F, opt) {
   const add = (f, lv) => { let a = 0; for (let k = 0, n = f.length; k < n; k++) { const p = 3 * f[k], q = 3 * f[(k + 1) % n]; a += V[p] * V[q + 1] - V[q] * V[p + 1]; } FC.push(a < 0 ? f.slice().reverse() : f); FT.push(lv); }, dedupe = q => q.filter((x, i) => q.indexOf(x) === i);
   const removed = new Set();
   for (const r of ramps) for (let s = r.ka; s < r.ka + r.m; s++) { removed.add(r.pc.id + '_' + r.kind[1] + '_' + s + '_' + r.side); if (r.kind[0] > 0) removed.add(r.pc.id + '_' + r.kind[0] + '_' + s + '_' + r.side); }
+  // 收尖的过渡：尖的位置受坡道上方净高限制，不能再往坡上伸；要让过渡更长，就把"开始收窄"的起点往坡脚（或坡顶）外侧退 taperBack × 坡长。
+  // 被占用的走道段（别的坡道、别的收尖、走道两端、第三层范围之外）到此为止，能放多长放多长。
+  const hasFace = (pc, l, k) => { if (k < 0 || k >= pc.n) return false; if (l < 3) return true; const md = mode(pc); if (md !== 'full' && !pc.land) return false; return !(pc.land === 'A' && k >= pc.ld) && !(pc.land === 'B' && k < pc.n - pc.ld); };
+  const mateOf = (r, a, lv) => ramps.some(q => q !== r && q.pc === r.pc && q.side === r.side && q.kind[a] === lv && Math.abs(q.ka - r.ka) < 1);
+  for (const r of ramps) { r.backHi = []; r.backLo = []; if (!(D.taperBack > 0)) continue; const pc = r.pc, m = r.m, lo = r.kind[0], hi = r.kind[1], tp = hi === 3 && !!pc.land, B = Math.round(D.taperBack * m);
+    const ext = (lv, st, d) => { const out = []; for (let i = 1; i <= B; i++) { const b = st + d * i, f = Math.min(st + d * (i - 1), b); if (b < 1 || b > pc.n - 1 || !hasFace(pc, lv, f)) break; const key = pc.id + '_' + lv + '_' + f + '_' + r.side; if (removed.has(key)) break; removed.add(key); out.push(b); } return out; };
+    const foot = r.up > 0 ? r.ka : r.ka + m, top = r.up > 0 ? r.ka + m : r.ka, d = r.up > 0 ? -1 : 1;
+    if (!tp && !mateOf(r, 0, hi)) r.backHi = ext(hi, foot, d); if (lo > 0 && !mateOf(r, 1, lo)) r.backLo = ext(lo, top, -d); }
   for (const pc of PCS) { const md = mode(pc);
     for (let l = 1; l <= 3; l++) { if (l === 3 && md !== 'full' && !pc.land) continue;
       for (let k = 0; k < pc.n; k++) { if (l === 3 && pc.land === 'A' && k >= pc.ld) continue; if (l === 3 && pc.land === 'B' && k < pc.n - pc.ld) continue;
@@ -174,12 +182,15 @@ function buildDeck(F, opt) {
     // 被坡打断的走道沿坡逐渐收窄成尖
     // 收尖的长度：收尖的板和坡道上下相叠，只叠到净高还够 HEAD 的地方为止（层间坡约为坡长的 30%），不留走不了人的夹角
     const Jn = Math.max(1, Math.min(m, Math.floor(m * Math.min(0.6, Math.max(0, rise - D.thick - HEAD) / rise) + 1e-6))), mate = (a, lv) => ramps.some(q => q !== r && q.pc === pc && q.side === r.side && q.kind[a] === lv && Math.abs(q.ka - r.ka) < 1);
-    const taper = (lv, seq, tag, side = r.side, Jn_ = Jn) => { const Jn = Math.max(1, Math.min(seq.length - 1, Jn_)), sg = side === 0 ? 1 : -1, hw = k => side === 0 ? pc.hl[k] : pc.hr[k], E = [pv(pc, lv, seq[0], side)];
-      for (let j = 1; j <= Jn; j++) { const k = seq[j]; if (j === Jn) E.push(pv(pc, lv, k, 1)); else { const w = hw(k) * Math.pow(1 - j / Jn, 1.25); E.push(vert(tag + ri + '_' + j, pc.P[k][0] + pc.N[0] * sg * w, pc.P[k][1] + pc.N[1] * sg * w, LV[lv])); } }
-      for (let j = 0; j < Jn; j++) { const q = dedupe([pv(pc, lv, seq[j], 1), E[j], E[j + 1], pv(pc, lv, seq[j + 1], 1)]); if (q.length >= 3) add(q, lv); } };
-    if (!tp && !mate(0, hi)) taper(hi, ks, 'th');
-    if (tp) taper(hi, ks.slice().reverse(), 'tt', oth, m);     // 第三层板边：坡道一侧沿坡下去，另一侧的板留在第三层标高、沿坡长收成尖（水平的，不跟着坡倾斜，下面第二层净高不变）
-    if (lo > 0 && !mate(1, lo)) taper(lo, ks.slice().reverse(), 'tl'); });
+    // seq = 从整宽处到尖的各个站点（含坡外延长的那几站）；宽度按 shape 从 1 降到 0
+    const SH = { pow: u => Math.pow(1 - u, 1.25), line: u => 1 - u, ease: u => 1 - u * u * (3 - 2 * u) };
+    const taper = (lv, seq, tag, side = r.side, shape = 'pow') => { const T = seq.length - 1; if (T < 1) return; const sg = side === 0 ? 1 : -1, hw = k => side === 0 ? pc.hl[k] : pc.hr[k], f = SH[shape] || SH.pow, E = [pv(pc, lv, seq[0], side)];
+      for (let j = 1; j <= T; j++) { const k = seq[j]; if (j === T) E.push(pv(pc, lv, k, 1)); else { const w = hw(k) * f(j / T); E.push(vert(tag + ri + '_' + j, pc.P[k][0] + pc.N[0] * sg * w, pc.P[k][1] + pc.N[1] * sg * w, LV[lv])); } }
+      for (let j = 0; j < T; j++) { const q = dedupe([pv(pc, lv, seq[j], 1), E[j], E[j + 1], pv(pc, lv, seq[j + 1], 1)]); if (q.length >= 3) add(q, lv); } };
+    const rk = ks.slice().reverse(), shp = r.backHi.length || r.backLo.length ? D.taperShape : 'pow';
+    if (!tp && !mate(0, hi)) taper(hi, [...r.backHi.slice().reverse(), ...ks.slice(0, Jn + 1)], 'th', r.side, r.backHi.length ? D.taperShape : 'pow');
+    if (tp) taper(hi, rk, 'tt', oth);     // 第三层板边：坡道一侧沿坡下去，另一侧的板留在第三层标高、沿坡长收成尖（水平的，不跟着坡倾斜，下面第二层净高不变）
+    if (lo > 0 && !mate(1, lo)) taper(lo, [...r.backLo.slice().reverse(), ...rk.slice(0, Jn + 1)], 'tl', r.side, r.backLo.length ? D.taperShape : 'pow'); });
   // ---- 节点板：把相邻两条分支之间的走廊轮廓（第 5 步的过渡曲线）取成板边
   const inc = new Map(); for (const pc of PCS) { if (pc.a >= 0) { if (!inc.has(pc.a)) inc.set(pc.a, []); inc.get(pc.a).push([pc, 0]); } if (pc.b >= 0) { if (!inc.has(pc.b)) inc.set(pc.b, []); inc.get(pc.b).push([pc, 1]); } }
   let gapOn = 0, gapOff = 0, badPlates = 0, looseOrder = 0, arcs = 0;
@@ -219,7 +230,7 @@ function buildDeck(F, opt) {
     noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, arcs, badPlates, looseOrder, twins, nearPairs: nearPairs.length, cutEnds: PCS.filter(pc => Object.keys(pc.EP).length).length, ctrlF: FC.length, ctrlV: V.length / 3,
     lenKm: PCS.reduce((s, pc) => s + pc.len, 0) / 1000 };
   return { V: new Float64Array(V), F: FC, FT, sharp, stats, in3, outline: OI, params: D,
-    ramps: ramps.map(r => ({ kind: r.kind, a: r.pc.P[r.up > 0 ? r.ka : r.ka + r.m], b: r.pc.P[r.up > 0 ? r.ka + r.m : r.ka], side: r.side })) };
+    ramps: ramps.map(r => ({ kind: r.kind, back: [r.backHi.length, r.backLo.length], m: r.m, seg: r.pc.seg, a: r.pc.P[r.up > 0 ? r.ka : r.ka + r.m], b: r.pc.P[r.up > 0 ? r.ka + r.m : r.ka], side: r.side })) };
 }
 
 // ---------------------------------------------------------------- Catmull–Clark（边界按三次 B 样条，角点与非流形点不动）
