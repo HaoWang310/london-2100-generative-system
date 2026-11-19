@@ -68,3 +68,10 @@ test('no gaps: every step 5 corridor has deck above it (junctions stored as two 
   assert.ok(gap * g.RES * g.RES < 200, 'corridor area with no deck (m2): ' + gap * g.RES * g.RES);
   const m = SS.deck.deckMesh(DK, 1); assert.ok(DK.sharp.length > 0 && m.top.length > 0, 'flat cuts keep their corners');
 });
+test('the deck is a closed solid: a bottom face one slab thickness below the top, facing down', () => {
+  const m = SS.deck.deckMesh(DK, 1), t = m.top, b = m.bottom; assert.equal(b.length, t.length); assert.ok(html.includes('M.corridor.bottom'), 'the page draws the bottom face');
+  let up = 0, dn = 0; for (let i = 0; i < b.length; i += 9) { const nz = (b[i + 3] - b[i]) * (b[i + 7] - b[i + 1]) - (b[i + 4] - b[i + 1]) * (b[i + 6] - b[i]); if (nz > 0) up += nz / 2; else dn -= nz / 2; }
+  assert.ok(up < 0.001 * dn, 'area of bottom triangles facing up: ' + up.toFixed(1) + ' / ' + dn.toFixed(0)); for (let i = 2; i < b.length; i += 3) assert.ok(b[i] >= 0 && b[i] <= 14.4 - 0.9 + 1e-6);
+  // every boundary edge is shared by a side quad: top edge at z, bottom edge at z - thickness
+  assert.equal(m.side.length, m.boundary.length / 2 * 18);
+});
