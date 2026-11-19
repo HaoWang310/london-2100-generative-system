@@ -310,6 +310,42 @@
           "#langSw"
         ]
       }
+    },
+    {
+      "id": "loop-city-live",
+      "href": "incubator/loop-city-live/",
+      "cover": "assets/catalogue/loop-city-live.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "Loop City 实时应用",
+        "en": "Loop City live"
+      },
+      "desc": {
+        "zh": "三个协同工作的页面：整个环线上的黏菌与单元、单元内的毛线与道路等级，以及张量场底图。",
+        "en": "Three pages that work together: the slime mould and its cells over the whole loop, the wool and the road hierarchy inside the cells, and the base for the tensor field."
+      },
+      "tags": [
+        {
+          "zh": "黏菌",
+          "en": "Slime mould"
+        },
+        {
+          "zh": "毛线",
+          "en": "Wool"
+        },
+        {
+          "zh": "道路等级",
+          "en": "Road hierarchy"
+        }
+      ],
+      "owner": "sawhneyshreyadesign-1602",
+      "embed": {
+        "langStorageKey": "lang",
+        "langButton": "#{lang}",
+        "hide": [
+          ".lang"
+        ]
+      }
     }
   ]
 }
