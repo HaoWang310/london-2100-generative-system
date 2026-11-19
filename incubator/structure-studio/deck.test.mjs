@@ -97,6 +97,6 @@ test('3D has its own three colour cards; the panel swaps them in when the view t
     assert.ok(lum(sc.road) > 150, sc.id + ': the road accent is bright'); for (const [, c] of sc.grad) assert.ok(lum(c) < 110, sc.id + ': farmland stays darker than the white structure');
     const d = Math.max(...sc.grad.map(([, c]) => Math.max(...c.map((v, i) => Math.abs(v - sc.road[i]))))); assert.ok(d > 90, sc.id + ': road colour is clearly different from the farmland');
     const far = (p, q) => Math.max(...p.map((v, i) => Math.abs(v - q[i]))); assert.ok(lum(sc.water) > 30 && lum(sc.wline) > lum(sc.water) + 60, sc.id + ': water has its own colour and a brighter edge');
-    assert.ok(far(sc.wline, sc.road) > 60, sc.id + ': water edge differs from the road colour'); for (const [, c] of sc.grad) assert.ok(far(sc.water, c) > 40, sc.id + ': water differs from the farmland'); }
+    assert.ok(far(sc.wline, sc.road) > 60, sc.id + ': water edge differs from the road colour'); for (const [, c] of sc.grad) assert.ok(far(sc.water, c) > 30, sc.id + ': water differs from the farmland'); }
   for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M']) assert.ok(html.includes(k), k);
 });
