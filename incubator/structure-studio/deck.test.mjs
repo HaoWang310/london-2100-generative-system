@@ -90,13 +90,13 @@ test('long tapers: the interrupted walkway starts narrowing well before the ramp
   for (const r of R) assert.ok(r.back[0] <= want(r) && r.back[1] <= want(r));
   const off = SS.deck.buildDeck(F, { taperBack: 0 }); assert.ok(off.ramps.every(r => r.back[0] === 0 && r.back[1] === 0), 'taperBack 0 keeps the short taper'); assert.equal(off.stats.r12, s.r12, 'ramp layout is not affected by the taper length');
 });
-test('3D has its own three colour cards; the panel swaps them in when the view turns 3D', () => {
-  const m = html.match(/const SCHEMES3 = (\[[\s\S]*?\n\]);/); assert.ok(m, 'SCHEMES3 defined'); const S3 = Function('return ' + m[1])();
-  assert.deepEqual(S3.map(x => x.id), ['G', 'H', 'I']); assert.ok(html.includes("let SCHEME3 = 'H'"), 'default card is H');
-  for (const sc of S3) { const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; assert.ok(sc.grad.length >= 2 && sc.road.length === 3);
-    assert.ok(lum(sc.road) > 150, sc.id + ': the road accent is bright'); for (const [, c] of sc.grad) assert.ok(lum(c) < 110, sc.id + ': farmland stays darker than the white structure');
-    const d = Math.max(...sc.grad.map(([, c]) => Math.max(...c.map((v, i) => Math.abs(v - sc.road[i]))))); assert.ok(d > 90, sc.id + ': road colour is clearly different from the farmland');
-    const far = (p, q) => Math.max(...p.map((v, i) => Math.abs(v - q[i]))); assert.ok(lum(sc.water) > 30 && lum(sc.wline) > lum(sc.water) + 60, sc.id + ': water has its own colour and a brighter edge');
-    assert.ok(far(sc.wline, sc.road) > 60, sc.id + ': water edge differs from the road colour'); for (const [, c] of sc.grad) assert.ok(far(sc.water, c) > 30, sc.id + ': water differs from the farmland'); }
-  for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M']) assert.ok(html.includes(k), k);
+test('3D has its own eight colour cards; the panel swaps them in when the view turns 3D', () => {
+  const b = html.match(/const SCHEME3_BASE = (\{[^}]*\});/), m = html.match(/const SCHEMES3 = (\[[\s\S]*?\n\])\.map/); assert.ok(b && m, 'SCHEMES3 defined'); const S3 = Function('return ' + m[1])();
+  assert.deepEqual(S3.map(x => x.id), ['aurora', 'heat', 'neon', 'acid', 'coral', 'glacier', 'spectrum', 'pearl']); assert.ok(html.includes("let SCHEME3 = 'aurora'"), 'default card is Aurora');
+  const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], far = (p, q) => Math.max(...p.map((v, i) => Math.abs(v - q[i])));
+  for (const sc of S3) { assert.ok(sc.grad.length >= 3 && sc.road.length === 3 && sc.glow.length === 3);
+    for (const [, c] of sc.grad) { assert.ok(lum(c) < 185, sc.id + ': plots stay darker than the white structure (' + Math.round(lum(c)) + ')'); assert.ok(Math.max(...c) - Math.min(...c) > 35, sc.id + ': plots keep their colour'); assert.ok(far(sc.water, c) > 30, sc.id + ': water differs from the plots'); }
+    assert.ok(lum(sc.road) > 150, sc.id + ': the road line is bright'); assert.ok(Math.min(...sc.grad.map(([, c]) => far(sc.road, c))) > 70, sc.id + ': road colour differs from every plot colour');
+    assert.ok(lum(sc.wline) > lum(sc.water) + 60, sc.id + ': water has a brighter edge'); assert.ok(far(sc.wline, sc.road) > 40, sc.id + ': water edge differs from the road colour'); }
+  for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M', 'MAT.glow3a', 'THREE.AdditiveBlending']) assert.ok(html.includes(k), k);
 });
