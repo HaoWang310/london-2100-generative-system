@@ -278,6 +278,20 @@ function columnsClear(top, cols, zTop, rad) {
   for (const c of cols) { const zt = c[2] != null ? c[2] : zTop; let hit = false; for (let k = 0; k < 9 && !hit; k++) { const a = k * Math.PI / 4, r = k === 8 ? 0 : R; if (zLow(c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r) < zt - 0.05) hit = true; } (hit ? cut : keep).push(c); }
   return { keep, cut };
 }
-const API = { LV, THICK, CLEAR, STOREY, HEAD, DEF, buildDeck, catmullClark, subdivide, deckMesh, columnsClear };
+// 柱子必须真的托住结构：每根柱子找它正上方最低的那层板（或坡道），柱顶接到板底；
+// 正上方没有板的（那一侧的走道被坡道分走了、板在红线处切掉了、收尖让开了）去掉；柱身范围里只有一部分有板的（板边、收尖的斜边）也去掉；
+// 板太低、柱子不足 minH 的（坡脚附近）去掉。返回 { cols: [[x, y, 柱高]...], cut: 没有板可托的, low: 太矮的 }
+function columnsFit(top, cols, thick, rad, minH) {
+  const C = 8, G = new Map(), R = rad == null ? 1.2 : rad, TH = thick == null ? THICK : thick, MH = minH == null ? 2.5 : minH;
+  for (let i = 0; i < top.length; i += 9) { const x0 = Math.floor(Math.min(top[i], top[i + 3], top[i + 6]) / C), x1 = Math.floor(Math.max(top[i], top[i + 3], top[i + 6]) / C), y0 = Math.floor(Math.min(top[i + 1], top[i + 4], top[i + 7]) / C), y1 = Math.floor(Math.max(top[i + 1], top[i + 4], top[i + 7]) / C);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) { const k = x * 100003 + y; let l = G.get(k); if (!l) G.set(k, l = []); l.push(i); } }
+  const zLow = (x, y) => { let lo = Infinity; for (const i of G.get(Math.floor(x / C) * 100003 + Math.floor(y / C)) || []) { const ax = top[i], ay = top[i + 1], bx = top[i + 3], by = top[i + 4], cx = top[i + 6], cy = top[i + 7], d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy); if (Math.abs(d) < 1e-9) continue;
+      const u = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / d, v = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / d, w = 1 - u - v; if (u < -1e-6 || v < -1e-6 || w < -1e-6) continue; lo = Math.min(lo, u * top[i + 2] + v * top[i + 5] + w * top[i + 8]); } return lo; };
+  const out = [], cut = [], low = [];
+  for (const c of cols) { let z = zLow(c[0], c[1]), miss = z === Infinity ? 1 : 0; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, q = zLow(c[0] + Math.cos(a) * R, c[1] + Math.sin(a) * R); if (q === Infinity) miss++; else z = Math.min(z, q); }
+    if (miss) { cut.push(c); continue; } const h = z - TH + 0.15; if (h < MH) { low.push(c); continue; } out.push([c[0], c[1], h]); }
+  return { cols: out, cut, low };
+}
+const API = { LV, THICK, CLEAR, STOREY, HEAD, columnsFit, DEF, buildDeck, catmullClark, subdivide, deckMesh, columnsClear };
 if (typeof module !== 'undefined' && module.exports) module.exports = API; else { root.SS = root.SS || {}; root.SS.deck = API; }
 })(typeof self !== 'undefined' ? self : this);

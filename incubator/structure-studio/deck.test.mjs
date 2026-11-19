@@ -53,7 +53,6 @@ test('node plates do not overlap themselves or each other (close nodes are merge
   let over = 0; for (const c of cov.values()) if (c > 1) over++; assert.ok(over <= 0.0005 * n, 'overlapping samples at L1: ' + over + ' / ' + n);
 });
 test('columns that would poke through a ramp are removed, the rest stay', () => {
-  assert.ok(html.includes('SS.deck.columnsClear(M.corridor.top, F.columns'), 'the page filters columns in multi-level mode');
   const m = SS.deck.deckMesh(DK, 1), r = SS.deck.columnsClear(m.top, F.columns, 7.0); assert.equal(r.keep.length + r.cut.length, F.columns.length); assert.ok(r.cut.length > 0 && r.cut.length < 0.3 * F.columns.length, 'cut ' + r.cut.length + ' / ' + F.columns.length);
   assert.equal(SS.deck.columnsClear(m.top, r.keep, 7.0).cut.length, 0);
 });
@@ -102,4 +101,14 @@ test('3D has its own eight colour cards; the panel swaps them in when the view t
 });
 test('the run button continues from the tensor-field screen instead of restarting', () => {
   for (const k of ['async function runAuto()', "$('runBtn').onclick = runAuto;", 'async function demoStart(v1, full, from)', 'DEMO.T = from ? dmT0[from] + 1e-3 : 0', 'DEMO.T = dmT0[2] + 1e-3; DEMO.speed']) assert.ok(html.includes(k), k);
+});
+test('every column supports the deck: it reaches the underside of the lowest deck above it, or it is removed', () => {
+  assert.ok(html.includes('SS.deck.columnsFit(M.corridor.top, F.columns'), 'the page fits columns to the deck in multi-level mode');
+  const m = SS.deck.deckMesh(DK, 1), TH = SS.deck.DEF.thick, r = SS.deck.columnsFit(m.top, F.columns, TH); assert.equal(r.cols.length + r.cut.length + r.low.length, F.columns.length);
+  assert.ok(r.cols.length > 0.8 * F.columns.length, 'most columns stay: ' + r.cols.length + ' / ' + F.columns.length);
+  const under = SS.deck.LV.slice(1).map(z => z - TH + 0.15); let onLevel = 0;
+  for (const c of r.cols) { assert.ok(c[2] >= 2.5 && c[2] <= SS.deck.LV[3], 'column height ' + c[2]); if (under.some(u => Math.abs(c[2] - u) < 0.05)) onLevel++; }
+  assert.ok(onLevel > 0.85 * r.cols.length, 'columns end exactly under a deck level (the rest are under ramps): ' + onLevel + ' / ' + r.cols.length);
+  // a column moved far outside the structure has nothing to support
+  assert.equal(SS.deck.columnsFit(m.top, [[-5000, -5000]], TH).cols.length, 0);
 });
