@@ -100,3 +100,6 @@ test('3D has its own eight colour cards; the panel swaps them in when the view t
     assert.ok(lum(sc.wline) > lum(sc.water) + 60, sc.id + ': water has a brighter edge'); assert.ok(far(sc.wline, sc.road) > 40, sc.id + ': water edge differs from the road colour'); }
   for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M', 'MAT.glow3a', 'THREE.AdditiveBlending']) assert.ok(html.includes(k), k);
 });
+test('the run button continues from the tensor-field screen instead of restarting', () => {
+  for (const k of ['async function runAuto()', "$('runBtn').onclick = runAuto;", 'async function demoStart(v1, full, from)', 'DEMO.T = from ? dmT0[from] + 1e-3 : 0', 'DEMO.T = dmT0[2] + 1e-3; DEMO.speed']) assert.ok(html.includes(k), k);
+});
