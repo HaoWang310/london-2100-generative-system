@@ -38,10 +38,12 @@ planting towers sit on the tensor field's attractors and major junctions. Buildi
 | `index.html` | 页面（控制栏、视口、卡片墙、导出） |
 | `engine/structure.js` | 生成核心，纯函数，页面与测试共用 |
 | `engine/deck.js` | 第 6 步：多层走道结构（规则 → 控制网格 → 细分曲面），读第 5 步的结果 |
+| `engine/nav.js` | 三维视口导航（参考 Rhino）：旋转 / 平移 / 缩放 / 标准视图 / 缩放至全部的镜头数学 |
 | `assets/station-p2.snapshot.json` | 车站 P2 的张量场快照 |
 | `scripts/export-snapshot.js` | 在张量场工作室里导出快照 |
 | `structure.test.mjs` | 在 P2 上的回归测试（`node --test`） |
 | `deck.test.mjs` | 第 6 步的回归测试 |
+| `nav.test.mjs` | 三维视口导航的回归测试 |
 | `docs/DESIGN.md` | 生成逻辑与设计规则 |
 | `docs/DATA.md` | 输入快照与输出格式 |
 | `docs/CHANGELOG.md` | 版本记录 |
