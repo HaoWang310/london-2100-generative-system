@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loop City live</title>
+<style>
+:root{--bg:#000;--ink:#ECECEC;--ink2:#9A9A9A;--line:#2A2A2A;--acc:#E8A33D}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 'DM Sans',system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:48px 16px}
+h1{font-size:30px;margin:0 0 6px}p{color:var(--ink2);margin:0 0 18px}
+a.step{display:block;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0;color:var(--ink);text-decoration:none}
+a.step:hover{border-color:var(--acc)}a.step b{color:var(--acc);margin-right:8px}a.step span{display:block;color:var(--ink2);font-size:13px;margin-top:4px}
+.lang{position:fixed;top:14px;right:16px}.lang button{background:none;border:1px solid var(--line);color:var(--ink2);border-radius:14px;padding:4px 10px;cursor:pointer}
+.lang button.on{color:var(--ink);border-color:var(--ink2)}[data-zh]{display:none}body.zh [data-en]{display:none}body.zh [data-zh]{display:revert}
+</style></head><body>
+<div class="lang"><button id="en" class="on">EN</button> <button id="zh">中文</button></div>
+<main>
+<h1 data-en>Loop City live</h1><h1 data-zh>Loop City 实时应用</h1>
+<p data-en>Three pages that work together. Start with 01: it opens 02, and 02 opens 03, as you go.</p>
+<p data-zh>三个页面协同工作。从 01 开始：01 会打开 02，02 再打开 03。</p>
+<a class="step" href="01_Loop City - Mould and cells.html"><b>01</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Mould and cells</span><span data-zh style="color:var(--ink);font-size:15px">黏菌与单元</span>
+<span data-en>The slime mould over the whole loop. Shift-click up to 10 neighbouring cells, then double-click to send them to 02.</span>
+<span data-zh>整个环线上的黏菌。按住 Shift 点击最多 10 个相邻单元，然后双击，发送到 02。</span></a>
+<a class="step" href="02_Loop City - Wool.html"><b>02</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Wool</span><span data-zh style="color:var(--ink);font-size:15px">毛线</span>
+<span data-en>Opens from 01 with your cells: the wool, the road hierarchy, parcels, capsule stops, and a zoom-in down to every junction.</span>
+<span data-zh>从 01 带着所选单元打开：毛线、道路等级、地块、胶囊站点，并可放大到每个路口。</span></a>
+<a class="step" href="03_Loop City - Base for the tensor field.html"><b>03</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Base for the tensor field</span><span data-zh style="color:var(--ink);font-size:15px">张量场底图</span>
+<span data-en>Opens from step 16 of 02 with the parcels you took. It saves the site file for the tensor studio.</span>
+<span data-zh>从 02 的第 16 步带着所选地块打开，保存给张量场工作室使用的用地文件。</span></a>
+</main>
+<script>
+const set = z => { document.body.classList.toggle('zh', z); document.getElementById('zh').classList.toggle('on', z); document.getElementById('en').classList.toggle('on', !z); try { localStorage.setItem('lang', z ? 'zh' : 'en'); } catch (_) {} };
+document.getElementById('en').onclick = () => set(false); document.getElementById('zh').onclick = () => set(true);
+try { if (localStorage.getItem('lang') === 'zh') set(true); } catch (_) {}
+</script>
+</body></html>
