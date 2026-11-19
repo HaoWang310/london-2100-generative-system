@@ -361,11 +361,11 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
         <div class="pmBody"><p class="pmNote">换一个随机种子，得到同一套规律下的另一种方案（这一步只看平面）。室内现在铺满农田；沿走廊的建筑之后单独做成一个功能，这里先不排。</p><div class="card pmCard">
 <div class="row"><label for="seed">方案（随机种子）</label><input type="range" id="seed" min="1" max="200" step="1" value="3"><output id="v_seed">3</output></div></div><p class="pmOut">其他参数都调好后，拖这里换方案：规律不变，只是网的具体排布不同；同一个编号每次结果一样。</p><div class="pmScore" id="scoreBox"></div><div class="pmCmp" id="cmpBox"></div></div></li>
       <li class="pmStep" data-k="6"><button type="button" class="pmHead"><span class="pmNum">6</span><span>结构</span><span class="pmFlag" id="sum6"></span></button>
-        <div class="pmBody"><p class="pmNote">把第 5 步选定的平面立成多层走道结构：走廊的每层板是两条并排的走道，升层时一条走道从板上分出、沿坡升到上一层并进去，另一条留在原层；节点处是平台，不升层。三层顶面在 7.2 / 10.8 / 14.4 m（层高 3.6 m，整体抬高一层留出街道净空）。平面严格取第 5 步的走廊轮廓。</p><div class="card pmCard">
+        <div class="pmBody"><p class="pmNote">把第 5 步选定的平面立成多层走道结构：走廊的每层板是两条并排的走道，升层时一条走道从板上分出、沿坡升到上一层并进去，另一条留在原层；节点处是平台，不升层。三层顶面在 7.2 / 11.8 / 16.4 m（板厚 1 m，层间净高 3.6 m；第一层抬到 7.2 m 留出街道净空）。平面严格取第 5 步的走廊轮廓。</p><div class="card pmCard">
 <label class="lay">多层走道结构（关掉回到单层体量）<input type="checkbox" id="dkOn" checked></label>
 <div class="row"><label for="dkR3">第三层范围（离大塔）</label><input type="range" id="dkR3" min="100" max="400" step="10" value="200"><output id="v_dkR3">200 m</output></div>
 <div class="row"><label for="dkEntry">入口坡度（0 → 7.2 m）</label><input type="range" id="dkEntry" min="4" max="8" step="0.5" value="5"><output id="v_dkEntry">1 : 5</output></div>
-<div class="row"><label for="dkRamp">层间坡度（升 3.6 m）</label><input type="range" id="dkRamp" min="5" max="10" step="0.5" value="7"><output id="v_dkRamp">1 : 7</output></div>
+<div class="row"><label for="dkRamp">层间坡度（升 4.6 m）</label><input type="range" id="dkRamp" min="5" max="10" step="0.5" value="7"><output id="v_dkRamp">1 : 7</output></div>
 <div class="row"><label for="dkSub">曲面细分</label><input type="range" id="dkSub" min="1" max="2" step="1" value="2"><output id="v_dkSub">2</output></div>
         </div><p class="pmOut" id="deckOut">切到三维视图后生成。</p></div></li>
     </ol></div>
@@ -1097,7 +1097,7 @@ const DST = [ // 每一步：时长（秒）、名称、说明、读数
     pr: () => [[L('跨水 / 铁路', 'Over water / rail'), DEMO.FD.nBridge, 0, L(' 段', '')], [L('跨路', 'Over streets'), DEMO.FD.nRoad || 0, 0, L(' 段', '')], [L('跨越长度', 'Span length'), (DEMO.FD.bridgeL + (DEMO.FD.roadL || 0)) / 1000, 2, ' km'], [L('柱距', 'Column spacing'), P.colStep, 0, ' m']] },
   { d: 6, zh: '农田与种植塔', en: 'Farmland and towers', sub: () => L('室内铺满农田；种植塔落在吸引点和重要路口上。建筑之后单独做。', 'A setback from the corridor, buildings along it, farmland inside the cell; planting towers on the core nodes.'),
     pr: () => [[L('农田', 'Farmland'), DEMO.FD.stats.farmA / 1e4, 1, ' ha'], [L('种植塔', 'Towers'), DEMO.FD.towers.length, 0, '']] },
-  { d: 8, zh: '结构', en: 'Structure', sub: () => L('平面立成多层走道：三层在 7.2 / 10.8 / 14.4 m，走道分出、沿坡升层、并进上一层。', 'The plan rises into stacked walkways at 7.2 / 10.8 / 14.4 m; a lane splits off, ramps up and merges into the next level.'),
+  { d: 8, zh: '结构', en: 'Structure', sub: () => L('平面立成多层走道：三层在 7.2 / 11.8 / 16.4 m，走道分出、沿坡升层、并进上一层。', 'The plan rises into stacked walkways at 7.2 / 11.8 / 16.4 m; a lane splits off, ramps up and merges into the next level.'),
     pr: () => [[L('室', 'Cells'), DEMO.FD.cells.length, 0, ''], [L('走廊中心线', 'Centrelines'), DEMO.FD.stats.totL / 1000, 2, ' km'], [L('农田', 'Farmland'), DEMO.FD.stats.farmA / 1e4, 1, ' ha'], [L('走廊压在道路上', 'Corridors on streets'), DEMO.FD.stats.onRoad * 100, 0, '%']] },
 ];
 { const FM = { dkR3: ['r3', v => v + ' m'], dkEntry: ['entrySlope', v => '1 : ' + (+v)], dkRamp: ['rampSlope', v => '1 : ' + (+v)], dkSub: ['sub', v => v] };
