@@ -235,6 +235,31 @@ body.cards-on #cardBar{display:flex}
 .pmTh img{width:52px;height:52px;border-radius:6px;display:block;background:#000}.pmTh.best{border-color:#30d158}.pmTh.view{border-color:#0a84ff}.pmTh.cur span{color:#c7c7cc}
 body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
 @media (prefers-reduced-motion: reduce){#cmpPop{transition:none}}
+/* 三维视口（参考 Rhino）：左上角视口标题菜单、左下角世界坐标轴 */
+#vp{position:fixed;z-index:13;top:14px;left:calc(var(--pl) + 14px);font-size:12px;color:#f5f5f7}
+#axis{position:fixed;z-index:11;left:calc(var(--pl) + 10px);bottom:14px;width:64px;height:64px;pointer-events:none}
+body:not(.m3d) #vp,body:not(.m3d) #axis,body.demo-on #vp,body.demo-on #axis{display:none!important}
+body.cards-on #axis{bottom:212px}
+body.demo-run #vp{top:116px;left:calc(var(--pl) + 20px)}
+body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
+#vpLabel{display:flex;align-items:center;gap:6px;height:28px;margin:0;padding:0 9px 0 12px;background:rgba(14,14,16,.88);color:#f5f5f7;border:1px solid #2f2f34;border-radius:9px;font:inherit;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#vpLabel:hover,#vpLabel[aria-expanded="true"]{border-color:#5a5a60}
+#vpLabel svg{width:10px;height:10px;fill:none;stroke:#8e8e94;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#vpMenu{margin-top:6px;width:216px;padding:6px;background:rgba(18,18,20,.96);border:1px solid #2f2f34;border-radius:12px;box-shadow:0 16px 45px rgba(0,0,0,.4);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#vpMenu[hidden]{display:none}
+#vpMenu .vpT{padding:8px 8px 4px;font-size:10px;font-weight:650;letter-spacing:.12em;color:#8e8e94}
+#vpMenu .vpG{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+#vpMenu .vpG.c3{grid-template-columns:1fr 1fr 1fr}
+#vpMenu button{display:flex;align-items:center;gap:7px;height:28px;margin:0;padding:0 8px;background:none;color:#c7c7cc;border:0;border-radius:7px;font:inherit;text-align:left;cursor:pointer;white-space:nowrap}
+#vpMenu button:hover{background:#29292d;color:#fff}
+#vpMenu button.on{background:#2c2c31;color:#fff}
+#vpMenu button kbd{margin-left:auto;font:inherit;font-size:10.5px;color:#8e8e94}
+#vpMenu .vpSep{height:1px;margin:6px 4px;background:#2f2f34}
+#vpMenu .vpHint{padding:4px 8px 6px;font-size:10.5px;line-height:1.7;color:#8e8e94}
+#vpMenu .vpHint b{font-weight:600;color:#c7c7cc}
+.displayPanel .dpGrid.c4{grid-template-columns:repeat(4,1fr);gap:6px}
+.displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
+.displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
 </head>
 <body>
@@ -257,6 +282,22 @@ body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
   </div>
   <div id="dlbox"><div class="dlh"><b id="dlname"></b><span><button id="dlcopy">复制</button> <button id="dlclose">关闭</button></span></div><textarea id="dltext"></textarea><img id="dlimg" style="display:none" alt=""><div class="dlhint" id="dlhint"></div></div>
 </div>
+<div id="vp"><button type="button" id="vpLabel" aria-haspopup="true" aria-expanded="false" aria-label="视口菜单"><span id="vpName">透视</span><svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></button>
+  <div id="vpMenu" hidden>
+    <div class="vpT">视图</div>
+    <div class="vpG c3"><button type="button" data-view="persp">透视</button><button type="button" data-view="top">顶</button><button type="button" data-view="front">前</button><button type="button" data-view="right">右</button><button type="button" data-view="back">后</button><button type="button" data-view="left">左</button></div>
+    <div class="vpT">投影</div>
+    <div class="vpG"><button type="button" data-proj="0">透视投影</button><button type="button" data-proj="1">平行投影</button></div>
+    <div class="vpT">显示模式</div>
+    <div class="vpG"><button type="button" data-shade="render">渲染</button><button type="button" data-shade="shade">着色</button><button type="button" data-shade="ghost">半透明</button><button type="button" data-shade="wire">线框</button></div>
+    <div class="vpSep"></div>
+    <button type="button" data-act="ze" style="width:100%">缩放至全部</button>
+    <button type="button" data-act="undo" style="width:100%">上一个视图<kbd>Home</kbd></button>
+    <button type="button" data-act="redo" style="width:100%">下一个视图<kbd>End</kbd></button>
+    <div class="vpSep"></div>
+    <div class="vpHint"><b>右键拖动</b> 旋转<br><b>Shift + 右键拖动</b> 平移<br><b>Ctrl + 右键拖动</b> 缩放<br><b>滚轮</b> 以光标为中心缩放<br><b>方向键</b> 旋转 · <b>Shift + 方向键</b> 平移</div>
+  </div></div>
+<canvas id="axis" aria-hidden="true"></canvas>
 <div id="hud"><b id="hud_t">全部场地</b><span id="hud_s"></span></div>
 
 <aside id="panel" class="ts-panel" aria-label="参数">
@@ -332,7 +373,8 @@ body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
 
 <aside class="displayPanel" aria-label="显示">
   <div class="dpSection"><div class="dpTitle">视图</div><div class="dpGrid"><button type="button" class="dpTile on" id="v2d"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></svg><span>平面</span></button><button type="button" class="dpTile " id="v3d"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>三维</span></button></div></div>
-  <div class="dpSection"><div class="dpTitle">镜头</div><div class="dpGrid"><button type="button" class="dpTile dpRow" id="fitBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>全部场地</span></button><button type="button" class="dpTile dpRow" id="lowBtn"><svg viewBox="0 0 24 24"><path d="M3 17h18M6 17l4-6 3 3 3-5 3 8"/></svg><span>低视角</span></button><button type="button" class="dpTile dpRow" id="topBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg><span>俯视</span></button><button type="button" class="dpTile dpRow" id="rotBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg><span>自动旋转</span></button></div></div>
+  <div class="dpSection"><div class="dpTitle">视口</div><div class="dpGrid c4"><button type="button" class="dpTile" data-view="persp">透视</button><button type="button" class="dpTile" data-view="top">顶</button><button type="button" class="dpTile" data-view="front">前</button><button type="button" class="dpTile" data-view="right">右</button></div><div class="dpGrid"><button type="button" class="dpTile dpRow" id="fitBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>缩放至全部</span></button><button type="button" class="dpTile dpRow" id="lowBtn"><svg viewBox="0 0 24 24"><path d="M3 17h18M6 17l4-6 3 3 3-5 3 8"/></svg><span>低视角</span></button><button type="button" class="dpTile dpRow" id="projBtn"><svg viewBox="0 0 24 24"><path d="M5 7h10v10H5zM9 4h10v10"/><path d="M5 7l4-3M15 7l4-3M15 17l4-3"/></svg><span>平行投影</span></button><button type="button" class="dpTile dpRow" id="rotBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg><span>自动旋转</span></button></div></div>
+  <div class="dpSection"><div class="dpTitle">显示模式</div><div class="dpGrid c4"><button type="button" class="dpTile" data-shade="render">渲染</button><button type="button" class="dpTile" data-shade="shade">着色</button><button type="button" class="dpTile" data-shade="ghost">半透明</button><button type="button" class="dpTile" data-shade="wire">线框</button></div></div>
   <div class="dpSection"><div class="dpTitle">图层</div>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#3a3a40"></i><span>周边环境</span><input type="checkbox" id="c_ctx" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
@@ -370,11 +412,12 @@ body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/structure.js"></script>
 <script src="engine/deck.js"></script>
+<script src="engine/nav.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // ---- 中英文：独立打开时用自己的切换；在目录里打开时跟随主程序（postMessage l2100:lang / 本地存储）
-const EN = {"生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "三种吸引点都来自张量场：主节点（环形广场）= 核心，结构在这里成环、放射，中心放大种植塔；次节点（街区中心）在约 220 m 内局部加密，节点上放小种植塔；边界节点（入口广场）在场地边做半圆入口板，一条入口主线通到最近的核心。节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "种植塔（来自张量场）": "Planting towers (from the tensor field)", "两侧": "Both sides", "方案": "Variant", "换一个随机种子，得到同一套规律下的另一种方案（这一步只看平面）。室内现在铺满农田；沿走廊的建筑之后单独做成一个功能，这里先不排。": "Last step: change the random seed for another variant under the same rules. Cells are all farmland for now; buildings along the corridors will become a separate feature later.", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "跨水 / 跨铁路 / 跨路段": "Over water / rail / streets", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "生成模式": "Generation mode", "演示模式": "Demo mode", "1 · 全局拉伸": "1 · Global stretch", "2 · 局部场流线行": "2 · Field rows", "3 · 各向异性分格": "3 · Anisotropic cells", "4 · 放射蛛网（核心）": "4 · Radial web (cores)", "5 · 双向流线格网": "5 · Dual streamline grid", "6 · Frei Otto 湿毛线": "6 · Frei Otto wool threads", "7 · 叶脉生长 + 闭环": "7 · Leaf venation + loops", "8 · 黏菌 / 智能体": "8 · Slime mould / agents", "吸引点（来自张量场）": "Attractors (from the tensor field)", "方案（随机种子）": "Variant (random seed)", "其他参数都调好后，拖这里换方案：规律不变，只是网的具体排布不同；同一个编号每次结果一样。": "Once the other settings are right, drag here to change variant: the rules stay, only the exact layout of the net differs; the same number always gives the same result.", "周边环境": "Surroundings", "▶ 逐步生成": "▶ Grow step by step", "暂停": "Pause", "继续": "Resume", "立即完成": "Instant", "演示速度": "Speed", "全屏演示": "Full-screen demo", "按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。": "Builds automatically, step by step, from the site to 3D with the current sliders; the matching steps below open in turn.", "演示生成过程": "Play the process", "退出演示": "Exit demo", "上一步": "Previous step", "下一步": "Next step", "播放 / 暂停": "Play / pause", "速度": "Speed", "拉伸方式": "Stretch", "核心处次级走廊宽（模式 2 / 5）": "Secondary width at the cores (modes 2 / 5)", "按路网尺度定参": "Set from the street scale", "配色": "Colour", "农田（离核心近亮、远暗）": "Farmland (light near the cores, dark at the edge)", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
+const EN = {"视口": "Viewport", "视口菜单": "Viewport menu", "透视": "Perspective", "顶": "Top", "前": "Front", "右": "Right", "后": "Back", "左": "Left", "投影": "Projection", "透视投影": "Perspective", "平行投影": "Parallel", "显示模式": "Display mode", "渲染": "Rendered", "着色": "Shaded", "半透明": "Ghosted", "线框": "Wireframe", "缩放至全部": "Zoom extents", "上一个视图": "Previous view", "下一个视图": "Next view", "右键拖动": "Right-drag", "Shift + 右键拖动": "Shift + right-drag", "Ctrl + 右键拖动": "Ctrl + right-drag", "滚轮": "Wheel", "方向键": "Arrow keys", "Shift + 方向键": "Shift + arrows", "旋转": "rotate", "平移": "pan", "缩放": "zoom", "以光标为中心缩放": "zoom to cursor", "旋转 ·": "rotate ·", "生成中…": "Generating…", "复制": "Copy", "关闭": "Close", "全部场地": "Whole site", "参数": "Parameters", "结构工作室": "Structure Studio", "Linear Farm 种植工厂走廊 · 架在张量场街道之上": "Linear Farm planting-factory corridors · above the tensor-field streets", "收起": "Collapse", "场地": "Site", "张量场快照": "Tensor-field snapshot", "车站 P2": "Station P2", "载入…": "Load…", "骨架种子": "Skeleton seed", "生成流程": "How it is made", "全部展开": "Expand all", "全部收起": "Collapse all", "核心与疏密": "Cores and density", "三种吸引点都来自张量场：主节点（环形广场）= 核心，结构在这里成环、放射，中心放大种植塔；次节点（街区中心）在约 220 m 内局部加密，节点上放小种植塔；边界节点（入口广场）在场地边做半圆入口板，一条入口主线通到最近的核心。节点间距从核心渐变到外围：核心密、室小而圆，外围稀、室大。": "The cores are the tensor field’s main attractors (the roundabouts). Node spacing grows from the cores outwards: dense with small round cells at the core, open with large cells at the edge.", "核心数": "Cores", "核心过渡范围": "Core falloff", "核心节点间距": "Core node spacing", "外围节点间距": "Outer node spacing", "离路主线": "Off-road primaries", "主线顺着大尺度平均的张量场穿过核心，再横向平移到离主干路最远处，走廊不压在街道上。": "Primaries follow the large-scale tensor field through the cores, then shift sideways to where they are furthest from the main roads, so no corridor sits on a street.", "每个核心的主线": "Primaries per core", "主线夹角": "Primary angle", "主线顺直度": "Primary straightness", "贴路 / 离路": "On road / off road", "离路": "Off road", "贴路": "On road", "方向场旋转": "Field rotation", "拉扯": "Pull", "主线两侧成对布点，其余按疏密场布满成松弛绳网，再沿张量场主方向整体拉长：室成顺主线的透镜 / 水滴，尖端指向节点。": "Seeds in pairs either side of the primaries, the rest filled by the density field into a relaxed rope net, then the whole net is stretched along the tensor field: cells become lenses and teardrops along the primaries, tips pointing at nodes.", "拉扯强度": "Pull strength", "走廊与节点": "Corridors and nodes", "每个室按边内缩；每个角按夹角用五次曲线光滑过渡——钝角成节点板，锐角成尖尾。结构架在地面之上，跨过水面和铁路，只在场地外轮廓处切断。": "Each cell is inset from its edges, and each corner is blended with a quintic curve set by its angle: obtuse corners make node plates, acute ones make tails. The structure stands above the ground, spans water and rail, and is cut only at the site outline.", "次级走廊宽": "Secondary width", "主线走廊宽": "Primary width", "节点过渡强度": "Node blend", "最小室宽": "Minimum cell width", "桥下柱距": "Column spacing", "避开水面（打开后大半在水上的走廊删掉，两室合并）": "Avoid water (corridors mostly over water are removed and the two cells merged)", "走廊顶标高": "Deck level", "种植塔": "Planting towers", "种植塔（来自张量场）": "Planting towers (from the tensor field)", "两侧": "Both sides", "方案": "Variant", "换一个随机种子，得到同一套规律下的另一种方案（这一步只看平面）。室内现在铺满农田；沿走廊的建筑之后单独做成一个功能，这里先不排。": "Last step: change the random seed for another variant under the same rules. Cells are all farmland for now; buildings along the corridors will become a separate feature later.", "走廊外退线 → 建筑带（按弧长切段，节点附近留空）→ 室内农田；离水边、铁路至少一个退线距离。张量场的支路留作室内道路。": "A setback from the corridor, then a band of buildings (cut into lengths, gaps near nodes), then farmland inside the cell; at least one setback from water and rail. Tensor-field local streets stay as roads inside the cells.", "建筑退线": "Setback", "建筑进深": "Building depth", "建筑段长": "Building length", "段间隙": "Gap", "显示": "Display", "视图": "View", "平面": "Plan", "三维": "3D", "镜头": "Camera", "低视角": "Low angle", "俯视": "Top", "自动旋转": "Auto-rotate", "图层": "Layers", "张量场道路": "Tensor-field roads", "主线": "Primaries", "建筑": "Buildings", "农田": "Farmland", "阴影": "Shadows", "室卡片": "Cell cards", "图例": "Key", "种植工厂走廊（结构）": "Planting-factory corridor (structure)", "跨水 / 跨铁路段": "Over water / rail", "跨水 / 跨铁路 / 跨路段": "Over water / rail / streets", "农田（种植条带）": "Farmland (planting strips)", "沿走廊建筑": "Buildings along corridors", "水体": "Water", "统计": "Figures", "室": "Cells", "走廊中心线 km": "Corridor centreline km", "农田 / 走廊 ha": "Farmland / corridor ha", "主线（离路）": "Primaries (off road)", "节点 / 主线边": "Nodes / primary edges", "导出": "Export", "平面 PNG": "Plan PNG", "GeoJSON 为英国国家网格（EPSG:27700），可直接叠回伦敦地图；OBJ 导入 Rhino。": "GeoJSON is in British National Grid (EPSG:27700) and lays straight back onto the London map; OBJ opens in Rhino.", "说明": "Help", "点室或卡片聚焦该室，再点一次回到全部场地。平面：拖动平移、滚轮缩放。三维：拖动旋转，右键或 Shift 拖动平移。": "Click a cell or its card to focus it, click again for the whole site. Plan: drag to pan, wheel to zoom. 3D: drag to orbit, right-drag or Shift-drag to pan.", "拖动调整参数栏宽度": "Drag to resize the parameter panel", "拖动调整显示栏宽度": "Drag to resize the display panel", "隐藏室列表": "Hide the cell list", "隐藏": "Hide", "室列表 ▴": "Cell list ▴", "张量场结果": "Tensor-field result", "从张量场工作室取结果": "Get it from Tensor Studio", "载入文件…": "Load file…", "张量场工作室": "Tensor Studio", "用这个结果": "Use this result", "取消": "Cancel", "输入": "Input", "改名": "Rename", "删除": "Delete", "导出快照": "Export snapshot", "确定": "OK", "生成模式": "Generation mode", "演示模式": "Demo mode", "1 · 全局拉伸": "1 · Global stretch", "2 · 局部场流线行": "2 · Field rows", "3 · 各向异性分格": "3 · Anisotropic cells", "4 · 放射蛛网（核心）": "4 · Radial web (cores)", "5 · 双向流线格网": "5 · Dual streamline grid", "6 · Frei Otto 湿毛线": "6 · Frei Otto wool threads", "7 · 叶脉生长 + 闭环": "7 · Leaf venation + loops", "8 · 黏菌 / 智能体": "8 · Slime mould / agents", "吸引点（来自张量场）": "Attractors (from the tensor field)", "方案（随机种子）": "Variant (random seed)", "其他参数都调好后，拖这里换方案：规律不变，只是网的具体排布不同；同一个编号每次结果一样。": "Once the other settings are right, drag here to change variant: the rules stay, only the exact layout of the net differs; the same number always gives the same result.", "周边环境": "Surroundings", "▶ 逐步生成": "▶ Grow step by step", "暂停": "Pause", "继续": "Resume", "立即完成": "Instant", "演示速度": "Speed", "全屏演示": "Full-screen demo", "按当前控制条的参数，从场地到三维一步步自动生成；下面对应的步骤会依次展开。": "Builds automatically, step by step, from the site to 3D with the current sliders; the matching steps below open in turn.", "演示生成过程": "Play the process", "退出演示": "Exit demo", "上一步": "Previous step", "下一步": "Next step", "播放 / 暂停": "Play / pause", "速度": "Speed", "拉伸方式": "Stretch", "核心处次级走廊宽（模式 2 / 5）": "Secondary width at the cores (modes 2 / 5)", "按路网尺度定参": "Set from the street scale", "配色": "Colour", "农田（离核心近亮、远暗）": "Farmland (light near the cores, dark at the edge)", "只看张量场结果": "Tensor-field result only", "张量场方向线": "Tensor-field direction lines", "图纸元素（比例尺 · 指北 · 坐标）": "Drawing marks (scale · north · grid)", "红线（结构场地外缘）": "Red line (structure site edge)", "在这里选场地、调参数，跑完全流程（第 8 步完成）后，点右边\"用这个结果\"，结构会在这条路网上重新生成。": "Choose the site and settings here and run the whole process (step 8 done), then click \"Use this result\": the structure is regenerated on these streets."};
 const KIND_EN = { '水滴': 'teardrop', '梭形': 'spindle', '枕形': 'pillow' };
 let LANG = (() => { try { return /^en/.test(localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || 'zh') ? 'en' : 'zh'; } catch (e) { return 'zh'; } })();
 const L = (zh, en) => LANG === 'en' ? en : zh, KD = k => L(k, KIND_EN[k] || k);
@@ -403,7 +446,11 @@ const DEMO = { on: false }; // 演示播放器状态（见文件末尾）
 
 // ---------------------------------------------------------------- 三维
 let renderer, scene, camera, sun, G = {};
-const cam = { az: -0.75, el: 0.62, dist: 3200, tx: 0, ty: 0, tz: 0, rot: false };
+const NAV = SS.nav;
+// cam = 目标镜头（所有操作都改它）；camS = 画面上实际的镜头，每帧向 cam 平滑靠拢（见 engine/nav.js）
+const cam = { az: -0.75, el: 0.62, dist: 3200, tx: 0, ty: 0, tz: 0, rot: false, ortho: false, view: 'persp', tau: 0.16, snap: true }, camS = NAV.copy(cam);
+const VH = { back: [], fwd: [], t: 0 };   // 视图历史（Home / End）
+let camP, camO, vpAsp = 1, SHADE = 'render';
 const MAT = {
   land: new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 1, side: THREE.DoubleSide }),
   water: new THREE.MeshStandardMaterial({ color: 0x6e8796, roughness: .3, side: THREE.DoubleSide }),
@@ -429,27 +476,72 @@ function initGL() {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
-  camera = new THREE.PerspectiveCamera(36, 1, 1, 20000);
+  camP = camera = new THREE.PerspectiveCamera(NAV.FOV, 1, 1, 30000); camO = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 60000);
   scene.add(new THREE.HemisphereLight(0xe2eaf2, 0x3a3a3a, 0.78));
   sun = new THREE.DirectionalLight(0xfff4e6, 1.3); sun.position.set(900, -650, 1500); sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096); const sc = sun.shadow.camera; sc.left = -1500; sc.right = 1500; sc.top = 1500; sc.bottom = -1500; sc.near = 100; sc.far = 5000; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.4;
   scene.add(sun, sun.target);
   const fill = new THREE.DirectionalLight(0xbfd0e8, 0.35); fill.position.set(-500, 400, 300); scene.add(fill);
-  let drag = null;
-  c.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, sh: e.shiftKey, moved: 0 }; c.setPointerCapture(e.pointerId); });
-  c.addEventListener('pointermove', e => { if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
-      if (drag.b === 2 || drag.sh) { const s = cam.dist / 900; cam.tx -= (dx * Math.cos(cam.az) + dy * Math.sin(cam.az)) * s; cam.ty += (dx * Math.sin(cam.az) - dy * Math.cos(cam.az)) * s; }
-      else { cam.az -= dx * 0.006; cam.el = clamp(cam.el + dy * 0.006, 0.06, 1.55); } }
-    else hover3d(e); });
-  c.addEventListener('pointerup', e => { if (drag && drag.moved < 4 && drag.b === 0) { const id = pickCell(e); focusCell(id && focus && id === focus.id ? null : F.cells.find(x => x.id === id) || null); } drag = null; });
+  // 视口操作（参考 Rhino）：右键 / 左键拖动旋转，Shift 平移，Ctrl 缩放，中键平移，滚轮以光标为中心缩放；标准平行视图里拖动 = 平移
+  const pts = new Map(); let drag = null, pinch = null;
+  const ndcOf = (x, y) => { const r = c.getBoundingClientRect(); return [(x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1, r.width / r.height, r]; };
+  const actOf = e => { if (e.pointerType === 'touch') return 'orbit'; if (e.button === 1) return 'pan'; if (e.ctrlKey && e.shiftKey) return 'orbit'; if (e.shiftKey) return 'pan'; if (e.ctrlKey || e.metaKey || e.altKey) return 'zoom'; return flatView() ? 'pan' : 'orbit'; };
+  c.addEventListener('pointerdown', e => { if (autoRun()) return; vpMenu(false); c.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; drag = null; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2 }; vhPush(); return; }
+    const n = ndcOf(e.clientX, e.clientY); drag = { x: e.clientX, y: e.clientY, b: e.button, act: actOf(e), moved: 0, h: NAV.pick(camS, n[0], n[1], n[2]) }; if (e.button === 1) e.preventDefault(); });
+  c.addEventListener('pointermove', e => { if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), x = (a[0] + b[0]) / 2, y = (a[1] + b[1]) / 2, n = ndcOf(x, y), h = NAV.pick(cam, n[0], n[1], n[2]);
+      NAV.pan(cam, (x - pinch.x) / n[3].width * 2, -(y - pinch.y) / n[3].height * 2, n[2], h.depth); if (d > 0 && pinch.d > 0) NAV.zoomAt(cam, pinch.d / d, NAV.pick(cam, n[0], n[1], n[2]).p); pinch = { d, x, y }; cam.tau = 0.05; return; }
+    if (!drag) { hover3d(e); return; }
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (!dx && !dy) return; drag.x = e.clientX; drag.y = e.clientY; if (!drag.moved) { vhPush(); $('tip').style.display = 'none'; } drag.moved += Math.abs(dx) + Math.abs(dy);
+    const r = c.getBoundingClientRect(), asp = r.width / r.height; cam.tau = 0.05;
+    if (drag.act === 'pan') { NAV.pan(cam, dx / r.width * 2, -dy / r.height * 2, asp, drag.h.depth); c.style.cursor = 'grabbing'; }
+    else if (drag.act === 'zoom') { NAV.zoomAt(cam, Math.exp(dy * 0.006), drag.h.p); c.style.cursor = 'ns-resize'; }
+    else { NAV.orbit(cam, -dx * 0.0055, dy * 0.0055, drag.h.ground ? drag.h.p : null); userView(); c.style.cursor = 'grabbing'; } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!drag || pts.size) return;
+    if (drag.moved < 4 && drag.b === 0 && F && e.type === 'pointerup') { const id = pickCell(e), hit = F.cells.find(x => x.id === id) || null; if (hit || focus) focusCell(hit && focus && hit.id === focus.id ? null : hit); } drag = null; c.style.cursor = ''; };   /* 点空白处不动镜头 */
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
   c.addEventListener('contextmenu', e => e.preventDefault());
-  c.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist * (1 + e.deltaY * 0.0012), 60, 9000); }, { passive: false });
-  const loop = () => { const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-    if (cam.rot) cam.az += 0.0025; if (mode === '3d') { placeCam(camera, cam); renderer.render(scene, camera); } requestAnimationFrame(loop); };
+  c.addEventListener('wheel', e => { e.preventDefault(); if (autoRun()) return; const n = ndcOf(e.clientX, e.clientY), dy = clamp(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1), -240, 240), now = performance.now();
+    if (now - VH.t > 700) vhPush(); VH.t = now; NAV.zoomAt(cam, Math.exp(dy * (e.ctrlKey ? 0.01 : 0.0016)), NAV.pick(camS, n[0], n[1], n[2]).p); cam.tau = 0.07; }, { passive: false });
+  let tPrev = performance.now();
+  const loop = () => { const now = performance.now(), dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
+    const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); vpAsp = w / h; camP.aspect = vpAsp; camP.updateProjectionMatrix(); }
+    if (cam.rot) cam.az += 0.15 * dt;
+    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); renderer.render(scene, camera); drawAxis(); vpSync(); }
+    requestAnimationFrame(loop); };
   loop();
 }
-function placeCam(camera, cam) { const ex = cam.tx + cam.dist * Math.cos(cam.el) * Math.cos(cam.az), ey = cam.ty + cam.dist * Math.cos(cam.el) * Math.sin(cam.az), ez = cam.tz + cam.dist * Math.sin(cam.el);
-  camera.position.set(ex, ey, ez); camera.up.set(0, 0, 1); camera.lookAt(cam.tx, cam.ty, cam.tz); }
+// 把镜头状态交给 three.js：透视 / 平行两台相机共用一组状态，上方向直接取镜头坐标系（顶视图不翻转）
+function placeCam(s) { const B = NAV.basis(s), back = s.ortho ? s.dist + 8000 : s.dist; camera = s.ortho ? camO : camP;
+  if (s.ortho) { const hh = NAV.halfH(s); camO.left = -hh * vpAsp; camO.right = hh * vpAsp; camO.top = hh; camO.bottom = -hh; camO.updateProjectionMatrix(); }
+  else { const nr = clamp(s.dist / 200, 0.5, 20); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }
+  camera.position.set(s.tx + B.d[0] * back, s.ty + B.d[1] * back, s.tz + B.d[2] * back); camera.up.set(B.u[0], B.u[1], B.u[2]); camera.lookAt(s.tx, s.ty, s.tz); }
+const VIEW_ZH = { persp: '透视', top: '顶', front: '前', right: '右', back: '后', left: '左' }, VIEW_EN = { persp: 'Perspective', top: 'Top', front: 'Front', right: 'Right', back: 'Back', left: 'Left' };
+function flatView() { return cam.ortho && cam.view !== 'persp' && cam.view !== 'user'; }
+function userView() { if (cam.view !== 'persp' && cam.view !== 'user') cam.view = 'user'; }
+function vhPush() { VH.back.push(NAV.copy(cam)); if (VH.back.length > 40) VH.back.shift(); VH.fwd.length = 0; }
+function vhGo(from, to) { if (!from.length) return; to.push(NAV.copy(cam)); Object.assign(cam, from.pop()); cam.tau = 0.16; }
+function setView(v) { const V = NAV.VIEWS[v]; if (!V) return; if (mode !== '3d') setMode('3d'); vhPush(); cam.rot = false; $('rotBtn').classList.remove('on'); cam.az = V.az; cam.el = V.el; cam.ortho = V.ortho; cam.view = v; cam.tau = 0.16; }
+function setProj(o) { if (mode !== '3d') setMode('3d'); if (cam.ortho === !!o) return; vhPush(); cam.ortho = !!o; }
+// 缩放至全部（Rhino 的 Zoom Extents）：视角不变，把整个场地放进两侧面板之间的可见区域
+function zoomExtents() { if (!SITE) return; const bb = SITE.bbox, r = $('gl').getBoundingClientRect(), W = r.width || 1, H = r.height || 1; let pl = 0, pr = 0;
+  const a = $('panel'), b = document.querySelector('.displayPanel'); if (a && a.getClientRects().length) { const q = a.getBoundingClientRect(); if (q.left < W / 2) pl = Math.max(0, q.right - r.left); } if (b && b.getClientRects().length) { const q = b.getBoundingClientRect(); if (q.right > W / 2 && q.height > H / 2) pr = Math.max(0, r.right - q.left); }
+  if (W - pl - pr < 240) pl = pr = 0; vhPush(); let zt = 60; if (F && F.towers) for (const t of F.towers) zt = Math.max(zt, t[3] || 0);
+  NAV.fit(cam, [bb[0], bb[1], 0, bb[2], bb[3], zt], (W - pl - pr) / H); NAV.pan(cam, (pl - pr) / W, 0, W / H, cam.dist); cam.tau = 0.16; }
+function setShade(m) { SHADE = m; for (const k of ['deck', 'deckLv', 'deckEdge', 'glass', 'bld', 'bldS', 'farm', 'towG', 'towW']) { const t = MAT[k]; t.wireframe = m === 'wire'; t.transparent = m === 'ghost'; t.opacity = m === 'ghost' ? 0.4 : 1; t.depthWrite = m !== 'ghost'; t.needsUpdate = true; } applyShadow(); }
+function applyShadow() { if (!renderer) return; renderer.shadowMap.enabled = SHADE === 'render' && $('c_shadow').checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }
+function vpMenu(on) { const m = $('vpMenu'); if (on === undefined) on = m.hidden; m.hidden = !on; $('vpLabel').setAttribute('aria-expanded', on ? 'true' : 'false'); }
+let vpKey = '', axKey = '';
+function vpSync() { const k = cam.view + (cam.ortho ? 1 : 0) + SHADE + LANG; if (k === vpKey) return; vpKey = k;
+  $('vpName').textContent = cam.view === 'user' || (cam.view === 'persp' && cam.ortho) ? (cam.ortho ? L('平行', 'Parallel') : L('透视', 'Perspective')) : (LANG === 'en' ? VIEW_EN : VIEW_ZH)[cam.view] + (cam.view !== 'persp' && !cam.ortho ? L(' · 透视', ' · persp.') : '');
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === cam.view)); document.querySelectorAll('[data-proj]').forEach(b => b.classList.toggle('on', (b.dataset.proj === '1') === cam.ortho));
+  document.querySelectorAll('[data-shade]').forEach(b => b.classList.toggle('on', b.dataset.shade === SHADE)); $('projBtn').classList.toggle('on', cam.ortho); }
+// 左下角世界坐标轴（同 Rhino 视口左下角的 XYZ 图标）
+function drawAxis() { const k = camS.az.toFixed(3) + camS.el.toFixed(3); if (k === axKey) return; axKey = k; const cv = $('axis'), pr = devicePixelRatio || 1, S = 64; if (cv.width !== S * pr) cv.width = cv.height = S * pr;
+  const x = cv.getContext('2d'), B = NAV.basis(camS); x.setTransform(pr, 0, 0, pr, 0, 0); x.clearRect(0, 0, S, S); x.lineWidth = 1.6; x.lineCap = 'round'; x.font = '600 9.5px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const ax = [['X', 0, '#e0412f'], ['Y', 1, '#8fd19e'], ['Z', 2, '#7aa7ff']].map(a => ({ n: a[0], c: a[2], sx: B.r[a[1]], sy: B.u[a[1]], sz: B.d[a[1]] })).sort((p, q) => p.sz - q.sz);
+  for (const a of ax) { x.globalAlpha = a.sz < -0.2 ? 0.55 : 1; x.strokeStyle = x.fillStyle = a.c; x.beginPath(); x.moveTo(32, 34); x.lineTo(32 + a.sx * 19, 34 - a.sy * 19); x.stroke(); if (Math.hypot(a.sx, a.sy) > 0.25) x.fillText(a.n, 32 + a.sx * 26, 34 - a.sy * 26); } x.globalAlpha = 1; }
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 function cellAt(x, y) { const g = F.grid, i = Math.floor((x - g.xmin) / g.RES), j = Math.floor((g.ymax - y) / g.RES); if (i < 0 || j < 0 || i >= g.W || j >= g.H) return 0; return g.cellLab[j * g.W + i]; }
 function pickCell(e) { const r = $('gl').getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(plane0, p)) return 0; return cellAt(p.x, p.y); }
@@ -683,7 +775,7 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
   cv.addEventListener('wheel', e => { if (DEMO.on) { e.preventDefault(); return; } e.preventDefault(); const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; drawPlan(); }, { passive: false });
   cv.addEventListener('pointerleave', () => setHover(0));
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
-function setMode(m) { if (m === '3d' && TSV) setTsv(false); mode = m; if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
+function setMode(m) { if (m === '3d' && TSV) setTsv(false); if (m === '3d' && mode !== '3d') cam.snap = true; mode = m; document.body.classList.toggle('m3d', m === '3d'); if (m !== '3d') vpMenu(false); if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
 
 // ---------------------------------------------------------------- 卡片
 function thumb(c) {
@@ -709,9 +801,9 @@ function buildCards() {
 }
 function focusCell(c) {
   focus = c; document.querySelectorAll('.card.cell').forEach(el => el.classList.toggle('on', !!c && el.dataset.id == c.id)); setHighlight(c);
-  if (c) { const g = F.grid, ext = Math.max(c.bb[2] - c.bb[0], c.bb[3] - c.bb[1]) * g.RES; cam.tx = c.c[0]; cam.ty = c.c[1]; cam.tz = 4; cam.dist = ext * 2.2 + 120; cam.el = Math.max(cam.el, 0.45); $('hud_t').textContent = cellName(c) + ' · ' + KD(c.kind) + ' · ' + (c.area / 1e4).toFixed(2) + ' ha';
+  if (c) { const g = F.grid, ext = Math.max(c.bb[2] - c.bb[0], c.bb[3] - c.bb[1]) * g.RES; if (mode === '3d') vhPush(); cam.tau = 0.16; cam.tx = c.c[0]; cam.ty = c.c[1]; cam.tz = 4; cam.dist = ext * 2.2 + 120; if (!cam.ortho) cam.el = Math.max(cam.el, 0.45); $('hud_t').textContent = cellName(c) + ' · ' + KD(c.kind) + ' · ' + (c.area / 1e4).toFixed(2) + ' ha';
     const el = document.querySelector(`.card[data-id="${c.id}"]`); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-  else { cam.tx = SITE ? SITE.cen[0] : 0; cam.ty = SITE ? SITE.cen[1] : 0; cam.tz = 0; cam.dist = 3200; $('hud_t').textContent = L('全部场地', 'Whole site'); }
+  else { cam.tau = 0.16; cam.tx = SITE ? SITE.cen[0] : 0; cam.ty = SITE ? SITE.cen[1] : 0; cam.tz = 0; cam.dist = 3200; $('hud_t').textContent = L('全部场地', 'Whole site'); }
   drawPlan();
 }
 
@@ -791,10 +883,24 @@ for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.
 for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
 $('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = () => { tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
-$('c_shadow').onchange = e => { renderer.shadowMap.enabled = e.target.checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
+$('c_shadow').onchange = applyShadow;
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
-$('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } };
-$('lowBtn').onclick = () => { setMode('3d'); cam.el = 0.2; cam.dist = Math.min(cam.dist, 650); }; $('topBtn').onclick = () => { setMode('3d'); cam.el = 1.55; };
+$('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); if (mode === '2d') { fitPlan(); drawPlan(); } else zoomExtents(); };
+$('lowBtn').onclick = () => { setMode('3d'); vhPush(); cam.ortho = false; cam.view = 'persp'; cam.el = 0.2; cam.dist = Math.min(cam.dist, 650); cam.tau = 0.16; };
+$('projBtn').onclick = () => setProj(!cam.ortho);
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view)); document.querySelectorAll('[data-proj]').forEach(b => b.onclick = () => setProj(b.dataset.proj === '1'));
+document.querySelectorAll('[data-shade]').forEach(b => b.onclick = () => { if (mode !== '3d') setMode('3d'); setShade(b.dataset.shade); });
+document.querySelectorAll('#vpMenu [data-act]').forEach(b => b.onclick = () => { const a = b.dataset.act; if (a === 'ze') { focusCell(null); zoomExtents(); } else if (a === 'undo') vhGo(VH.back, VH.fwd); else vhGo(VH.fwd, VH.back); });
+$('vpLabel').onclick = e => { e.stopPropagation(); vpMenu(); }; $('vpMenu').addEventListener('pointerdown', e => e.stopPropagation()); addEventListener('pointerdown', e => { if (!$('vp').contains(e.target)) vpMenu(false); });
+// 键盘（同 Rhino）：方向键旋转，Shift / Ctrl + 方向键平移，PageUp / PageDown 缩放，Home / End 上一个 / 下一个视图
+addEventListener('keydown', e => { if (mode !== '3d' || autoRun() || e.defaultPrevented || e.altKey) return; const t = e.target, tg = t && t.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT' || (t && (t.isContentEditable || (t.classList && t.classList.contains('rsz'))))) return;
+  if ($('tsOverlay').classList.contains('on')) return; const k = e.key, now = performance.now(), push = () => { if (now - VH.t > 700) vhPush(); VH.t = now; };
+  if (k === 'Escape') { vpMenu(false); return; }
+  if (k.startsWith('Arrow')) { const sx = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0, sy = k === 'ArrowUp' ? 1 : k === 'ArrowDown' ? -1 : 0; push();
+    if (e.shiftKey || e.ctrlKey || e.metaKey || flatView()) NAV.pan(cam, -sx * 0.14, -sy * 0.14, vpAsp, cam.dist); else { NAV.orbit(cam, sx * 0.1, sy * 0.1); userView(); } cam.tau = 0.1; }
+  else if (k === 'PageUp' || k === 'PageDown') { push(); NAV.zoomAt(cam, k === 'PageUp' ? 0.8 : 1.25); cam.tau = 0.1; }
+  else if (k === 'Home') vhGo(VH.back, VH.fwd); else if (k === 'End') vhGo(VH.fwd, VH.back); else return;
+  e.preventDefault(); });
 $('rotBtn').onclick = e => { cam.rot = !cam.rot; e.target.classList.toggle('on', cam.rot); };
 function dl(name, text, img) { $('dlbox').style.display = 'block'; $('dlname').textContent = name; $('dltext').style.display = img ? 'none' : 'block'; $('dlimg').style.display = img ? 'block' : 'none'; $('dlcopy').style.display = img ? 'none' : 'inline-block'; $('dlhint').textContent = img ? L('右键图片 → 另存为。', 'Right-click the image → Save as.') : L('复制后存为同名文件即可导入。', 'Copy, then save under this file name to import.');
   if (img) $('dlimg').src = img; else $('dltext').value = text; $('dlcopy').textContent = L('复制', 'Copy'); }
@@ -1049,7 +1155,7 @@ function demoDraw(dt) {
   const k = dmStage(); if (k !== DEMO.stage) dmEnterStage(k);
   dmParamsTick(k);
   $('dmProg').firstElementChild.style.width = (DEMO.T / DEMO.total * 100).toFixed(2) + '%';
-  if (k === DST.length - 1) { const u = dmE(dmProg(k)); cam.rot = false; cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; cam.az = -1.6 + 1.5 * u; cam.el = 1.35 - 0.82 * u; cam.dist = 3900 - 1300 * u; return; }
+  if (k === DST.length - 1) { if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const u = dmE(dmProg(k)); cam.rot = false; cam.ortho = false; cam.view = 'persp'; cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; cam.az = -1.6 + 1.5 * u; cam.el = 1.35 - 0.82 * u; cam.dist = 3900 - 1300 * u; cam.snap = true; } return; }   /* 时间轴不动时不抢镜头：停住后可以自由转动查看 */
   const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s], RW = g.W * PV.s, RH = g.H * PV.s, mpx = PV.s / g.RES, at = j => DEMO.T >= dmT0[j];
@@ -1141,7 +1247,7 @@ function demoExit(keep3d) { if (!DEMO.on) return; DEMO.on = false; document.body
   document.querySelectorAll('.pmStep').forEach(c => c.classList.remove('running', 'done')); const sv = DEMO.saved; DEMO.saved = null; DEMO.L = null; DEMO.trail = DEMO.trail2 = DEMO.deckc = null;
   const dirty = DEMO.dirty; DEMO.dirty = false; DEMO.guided = false; DEMO.stopAt = null; DEMO.playing = false; GUI.open = null; buildNextBtns();
   if (dirty) { F = DEMO.FD; M = null; sceneDirty = true; setMode(keep3d ? '3d' : '2d'); solve(false); return; }
-  if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); buildCards(); buildNextBtns(); if (typeof scoreSoon === 'function') scoreSoon(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); cam.az = -0.75; cam.el = 0.55; if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
+  if (sv) { F = sv.F; M = null; sceneDirty = true; } makePlanBase(); buildCards(); buildNextBtns(); if (typeof scoreSoon === 'function') scoreSoon(); setMode(keep3d ? '3d' : sv ? sv.mode : '2d'); if (!keep3d) { cam.az = -0.75; cam.el = 0.55; cam.ortho = false; cam.view = 'persp'; } /* 点「完成」留在三维时保持当前镜头 */ if (mode === '2d') { fitPlan(); drawPlan(); } else ensure3D(); }
 // ── 方案比较（与张量场工作室统一）：5 组自动打分（各 0–100，按权重加权），按设定的数量自动试多个方案，排序比较 ──
 const SGROUPS = [['farm', '农田', 'Farmland', '农田占场地的比例', 'farmland share of the site'], ['cells', '室', 'Cells', '大小均匀、过小与尖角的室', 'even sizes, small and sharp cells'],
   ['prim', '主线', 'Primaries', '主线做成主线走廊的比例', 'primaries built as primary corridors'], ['span', '跨越', 'Spans', '跨街道 / 水面的长度、顺街走的段', 'length over streets / water, runs along streets'],
