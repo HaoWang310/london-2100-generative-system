@@ -384,7 +384,6 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
   <div class="dpSection"><div class="dpTitle">图层</div>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#3a3a40"></i><span>周边环境</span><input type="checkbox" id="c_ctx" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#e0412f"></i><span>主线</span><input type="checkbox" id="c_prim" hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow" style="display:none"><i class="dpDot" style="background:#1e1e1e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></i><span>建筑</span><input type="checkbox" id="c_bld" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#e1e6cf"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef;box-shadow:inset 0 0 0 1.5px #e0412f"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
@@ -599,11 +598,6 @@ function buildScene() {
   if (M.corridor.lvl) { const top = triMesh(M.corridor.top, MAT.deckLv), lv = M.corridor.lvl, col = new Float32Array(lv.length * 3), C = [[.6, .6, .63], [.70, .71, .75], [.84, .85, .88], [.98, .98, .98]];   /* 结构统一是白到浅灰：三层只用明暗区分，颜色留给农田和道路 */
     for (let i = 0; i < lv.length; i++) { const c = C[lv[i]] || C[3]; col[3 * i] = c[0]; col[3 * i + 1] = c[1]; col[3 * i + 2] = c[2]; } top.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3)); G.corr.add(top, triMesh(M.corridor.side, MAT.deckEdge)); if (M.corridor.bottom) G.corr.add(triMesh(M.corridor.bottom, MAT.deckEdge)); }   /* 底面：板是封闭的实体，从下面看不再是空壳 */
   else G.corr.add(triMesh(M.corridor.top, MAT.deck), triMesh(M.corridor.side, MAT.glass));
-  // 主线：红色细线贴在走廊顶面上方 0.8 m（塔旁跟着顶面抬升），只画红线以内；跟着图层面板的"主线"开关
-  { G.prim = new THREE.Group(); const zAt = SS.deckHeight(F, P.deckZ), mat = new THREE.LineBasicMaterial({ color: 0xe0412f, transparent: true, opacity: .95 });
-    for (const S of F.strands) { let run = []; const flush = () => { if (run.length > 1) G.prim.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(run), mat)); run = []; };
-      for (const p of S) { if (F.site.inSite(p)) run.push(new THREE.Vector3(p[0], p[1], zAt(p[0], p[1]) + 0.8)); else flush(); } flush(); }
-    G.prim.visible = $('c_prim').checked; }
   G.bld = new THREE.Group(); G.bld.add(triMesh(M.bld.top, MAT.bld), triMesh(M.bld.side, MAT.bldS)); G.bld.visible = $('c_bld').checked;
   G.farm = new THREE.Group(); const fm = triMesh(M.farm.top, MAT.farm3); fm.castShadow = false; G.farm.add(fm); G.farm.visible = $('c_farm').checked;
   { const a = M.farm.top, n = a.length / 3, t = new Float32Array(n), cs = (SITE && SITE.cores) || [], R = P.coreR * 1.6; for (let i = 0; i < n; i++) { let d = 1e9; for (const c of cs) d = Math.min(d, Math.hypot(a[3 * i] - c[0], a[3 * i + 1] - c[1])); t[i] = cs.length ? Math.min(1, d / R) : 0.5; }
@@ -616,7 +610,7 @@ function buildScene() {
     const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, cols.length));
     cols.forEach((c, i) => { tmp.position.set(c[0], c[1], -1); tmp.scale.set(0.9, 0.9, (c[2] != null ? c[2] : P.deckZ - 0.2) + 1); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); }
   G.hi = null;
-  scene.add(G.site, G.plots, G.corr, G.prim, G.bld, G.farm, G.tower);
+  scene.add(G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
 }
 function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c || mode !== '3d') return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
 
@@ -836,7 +830,7 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
     { const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s]; drawVec(ctx, X, 1, {}); if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1); } return; }
   const pv = typeof CMP !== 'undefined' && CMP.preview != null && cmpBase; ctx.drawImage(pv ? cmpBase : planBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s);
   const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s];
-  drawVec(ctx, X, 1, pv ? {} : { cells: true, prim: $('c_prim').checked, hover: hoverId, focus: focus && focus.id }); // 预览比较里的某个方案时只画它自己的平面
+  drawVec(ctx, X, 1, pv ? {} : { cells: true, prim: false, hover: hoverId, focus: focus && focus.id }); // 预览比较里的某个方案时只画它自己的平面
   if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1);
 }
 (function planEvents() { const cv = $('plan'); let drag = null;
@@ -954,7 +948,7 @@ $('mode').onchange = e => { guidedRollback(e.target); P.mode = e.target.value; P
 for (const k in FMT) $(k).addEventListener('input', () => { if (DEMO.on && DEMO.guided && !DEMO.full) { guidedRollback($(k)); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); clearTimeout(DEMO.rt); DEMO.rt = setTimeout(guidedRefresh, 220); return; } if (DEMO.on) demoExit(); P[k] = +$(k).value; $('v_' + k).textContent = FMT[k](P[k]); scheduleSolve(); });
 for (const k in FMT) if (k !== 'seed') $(k).addEventListener('input', () => { if (!CMP.list.length && !CMP.running) return; if (CMP.running) CMP.stop = true; else { CMP.stale = true; unpreview(); renderCmp(); } });
 for (const k in FMT) $(k).addEventListener('change', () => { if (DEMO.on) return; clearTimeout(fine); clearTimeout(pending); pending = setTimeout(() => solve(false), 30); });
-$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_prim').onchange = e => { if (G.prim) G.prim.visible = e.target.checked; drawPlan(); }; $('c_ctx').onchange = e => { if (G.ctx3) G.ctx3.visible = e.target.checked; tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
+$('c_bld').onchange = e => { if (G.bld) G.bld.visible = e.target.checked; }; $('c_farm').onchange = e => { if (G.farm) G.farm.visible = e.target.checked; }; $('c_tower').onchange = e => { if (G.tower) G.tower.visible = e.target.checked; }; $('c_plots').onchange = e => { if (G.plots) G.plots.visible = e.target.checked; makePlanBase(); buildCards(); drawPlan(); }; $('c_ctx').onchange = e => { if (G.ctx3) G.ctx3.visible = e.target.checked; tsBase = null; if (F) { makePlanBase(); drawPlan(); } }; $('c_furn').onchange = () => drawPlan(); $('avoidWater').onchange = e => { P.avoidWater = e.target.checked; solve(true); };
 $('c_shadow').onchange = applyShadow;
 $('v3d').onclick = () => setMode('3d'); $('v2d').onclick = () => setMode('2d');
 $('fitBtn').onclick = $('fitBtn2').onclick = () => { focusCell(null); if (mode === '2d') { fitPlan(); drawPlan(); } else zoomExtents(); };
@@ -987,7 +981,7 @@ $('geoBtn').onclick = () => { const o = SNAP.origin || [0, 0], bng = p => [+(p[0
   F.towers.forEach(t => feats.push({ type: 'Feature', properties: { layer: 'planting tower', kind: t[4] === 'sec' ? 'secondary attractor' : t[4] === 'hub' ? 'major junction' : 'main attractor', radius_m: t[2], height_m: t[3] }, geometry: { type: 'Point', coordinates: bng(t) } }));
   dl('structure-studio.geojson', JSON.stringify({ type: 'FeatureCollection', crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, source: SNAP.site, params: P, features: feats })); };
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; const x = cv.getContext('2d'); x.drawImage(TSV && tsBase ? tsBase : planBase, 0, 0);
-  { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: $('c_prim').checked }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
+  { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: false }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
 async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj;
   P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
