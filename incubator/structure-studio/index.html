@@ -582,6 +582,8 @@ function buildScene() {
   G.site = new THREE.Group();
   for (const pc of SNAP.pieces) { const sh = shapeOf(pc.outer); for (const h of pc.holes || []) if (h.length > 2) sh.holes.push(new THREE.Path(h.map(p => new THREE.Vector2(p[0], p[1])))); const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), MAT.land); m.position.z = -0.05; m.receiveShadow = true; G.site.add(m); }
   for (const w of SNAP.water) if (w[0] && w[0].length > 2) { G.site.add(flat(w[0], 0.1, MAT.water)); G.site.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(w[0].map(p => new THREE.Vector3(p[0], p[1], 0.16))), MAT.wline3)); }
+  { const seg = []; for (const l of SNAP.streams || []) for (let i = 0; i + 1 < l.length; i++) seg.push(l[i][0], l[i][1], 0.14, l[i + 1][0], l[i + 1][1], 0.14);   // 河道：一条和水面勾边同色的线
+    if (seg.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(seg), 3)); G.site.add(new THREE.LineSegments(g, MAT.wline3)); } }
   // 路网：按路宽的一半画成路面（主干 / 贯通一层，支路一层），压在农田之上、结构之下
   G.plots = new THREE.Group(); { const acc = { m: [], l: [] };
     for (const r of SNAP.roads) { const hw = (r.width || 6.5) * 0.25, out = r.grade === 'local' ? acc.l : acc.m, z = r.grade === 'local' ? 0.34 : 0.4, Q = r.pts;
@@ -637,11 +639,11 @@ const SCHEMES = [ // 渐变（核心亮 → 外围暗）+ 顺张量场流线
   { id: 'J', zh: '青', en: 'Teal', o: { grad: [[0, [212, 236, 232]], [0.45, [92, 146, 148]], [1, [22, 44, 50]]], water: '#132a33', stream: 'rgba(110,160,175,.75)' } },
   { id: 'L', zh: '灰到橙', en: 'Heat', o: { grad: [[0, [255, 104, 56]], [0.4, [150, 62, 46]], [1, [34, 34, 34]]], hatch: { col: 'rgba(255,255,255,.12)', w: 1, step: 9, len: 60 }, water: '#1f2328', red: '#ffffff' } },
 ];
-// 三维配色卡（AADRL 式）：结构白、道路一个强调色、农田一组暗色渐变，三样东西各占一种颜色。只在三维视图下出现，和上面平面的 8 张各记各的
+// 三维配色卡（AADRL 式）：结构白、道路一个强调色、农田一组暗色渐变、水面一层有颜色的暗色加亮边，各占一种颜色（水色和同一张卡的道路、农田错开）。只在三维视图下出现，和上面平面的 8 张各记各的
 const SCHEMES3 = [
-  { id: 'G', zh: '灰阶 · 青', en: 'Grey · cyan', grad: [[0, [74, 74, 80]], [0.5, [50, 50, 55]], [1, [34, 34, 38]]], road: [90, 220, 240], roadL: [52, 150, 172], ground: [16, 16, 18], water: [0, 0, 0], wline: [84, 84, 92], out: [6, 6, 7], cb: [19, 19, 22], cl: [30, 30, 34], side: [104, 104, 110] },
-  { id: 'H', zh: '蓝紫 · 黄绿', en: 'Indigo · acid', grad: [[0, [58, 96, 190]], [0.5, [52, 52, 140]], [1, [36, 26, 84]]], road: [214, 255, 64], roadL: [150, 186, 52], ground: [12, 12, 24], water: [2, 3, 10], wline: [70, 110, 210], out: [5, 5, 9], cb: [17, 17, 26], cl: [28, 28, 42], side: [96, 100, 128] },
-  { id: 'I', zh: '品红 · 青', en: 'Magenta · cyan', grad: [[0, [196, 56, 128]], [0.5, [120, 44, 150]], [1, [52, 30, 92]]], road: [96, 236, 236], roadL: [60, 160, 170], ground: [18, 10, 24], water: [3, 2, 8], wline: [96, 70, 140], out: [6, 5, 9], cb: [21, 17, 28], cl: [36, 28, 48], side: [102, 94, 128] },
+  { id: 'G', zh: '灰阶 · 青', en: 'Grey · cyan', grad: [[0, [74, 74, 80]], [0.5, [50, 50, 55]], [1, [34, 34, 38]]], road: [90, 220, 240], roadL: [52, 150, 172], ground: [16, 16, 18], water: [22, 48, 104], wline: [86, 140, 236], out: [6, 6, 7], cb: [19, 19, 22], cl: [30, 30, 34], side: [104, 104, 110] },
+  { id: 'H', zh: '蓝紫 · 黄绿', en: 'Indigo · acid', grad: [[0, [58, 96, 190]], [0.5, [52, 52, 140]], [1, [36, 26, 84]]], road: [214, 255, 64], roadL: [150, 186, 52], ground: [12, 12, 24], water: [14, 74, 88], wline: [70, 206, 214], out: [5, 5, 9], cb: [17, 17, 26], cl: [28, 28, 42], side: [96, 100, 128] },
+  { id: 'I', zh: '品红 · 青', en: 'Magenta · cyan', grad: [[0, [196, 56, 128]], [0.5, [120, 44, 150]], [1, [52, 30, 92]]], road: [96, 236, 236], roadL: [60, 160, 170], ground: [18, 10, 24], water: [20, 40, 118], wline: [96, 132, 246], out: [6, 5, 9], cb: [21, 17, 28], cl: [36, 28, 48], side: [102, 94, 128] },
 ];
 const SCHEME3_KEY = 'structureStudio.scheme3'; let SCHEME3 = 'H';
 const scheme3 = () => SCHEMES3.find(x => x.id === SCHEME3) || SCHEMES3[1];
@@ -659,7 +661,7 @@ function applyScheme3(id, quiet) { const sc = SCHEMES3.find(x => x.id === id) ||
   paintFarm3(); if (!quiet) { buildSwatches(); syncLegend(); } }
 // 图例跟着当前视图：平面用平面的配色，三维用三维的
 function syncLegend() { const three = mode === '3d', sc2 = SCHEMES.find(x => x.id === SCHEME) || SCHEMES[0], sc3 = scheme3();
-  $('lgFarm').style.background = three ? grad3Css(sc3) : gradCss(sc2); $('lgWater').style.background = three ? rgb(sc3.wline) : PAL.water; $('lgRoadRow').style.display = three ? '' : 'none'; $('lgRoad').style.background = rgb(sc3.road); }
+  $('lgFarm').style.background = three ? grad3Css(sc3) : gradCss(sc2); $('lgWater').style.background = three ? rgb(sc3.water) : PAL.water; $('lgWater').style.borderColor = three ? rgb(sc3.wline) : ''; $('lgRoadRow').style.display = three ? '' : 'none'; $('lgRoad').style.background = rgb(sc3.road); }
 const SCHEME_KEY = 'structureStudio.scheme';
 let SCHEME = 'M';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
