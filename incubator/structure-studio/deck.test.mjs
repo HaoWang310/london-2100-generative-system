@@ -90,3 +90,11 @@ test('long tapers: the interrupted walkway starts narrowing well before the ramp
   for (const r of R) assert.ok(r.back[0] <= want(r) && r.back[1] <= want(r));
   const off = SS.deck.buildDeck(F, { taperBack: 0 }); assert.ok(off.ramps.every(r => r.back[0] === 0 && r.back[1] === 0), 'taperBack 0 keeps the short taper'); assert.equal(off.stats.r12, s.r12, 'ramp layout is not affected by the taper length');
 });
+test('3D has its own three colour cards; the panel swaps them in when the view turns 3D', () => {
+  const m = html.match(/const SCHEMES3 = (\[[\s\S]*?\n\]);/); assert.ok(m, 'SCHEMES3 defined'); const S3 = Function('return ' + m[1])();
+  assert.deepEqual(S3.map(x => x.id), ['G', 'H', 'I']); assert.ok(html.includes("let SCHEME3 = 'H'"), 'default card is H');
+  for (const sc of S3) { const lum = c => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; assert.ok(sc.grad.length >= 2 && sc.road.length === 3);
+    assert.ok(lum(sc.road) > 150, sc.id + ': the road accent is bright'); for (const [, c] of sc.grad) assert.ok(lum(c) < 110, sc.id + ': farmland stays darker than the white structure');
+    const d = Math.max(...sc.grad.map(([, c]) => Math.max(...c.map((v, i) => Math.abs(v - sc.road[i]))))); assert.ok(d > 90, sc.id + ': road colour is clearly different from the farmland'); }
+  for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M']) assert.ok(html.includes(k), k);
+});
