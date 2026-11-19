@@ -97,7 +97,7 @@ test('3D has its own eight colour cards; the panel swaps them in when the view t
     for (const [, c] of sc.grad) { assert.ok(lum(c) < 185, sc.id + ': plots stay darker than the white structure (' + Math.round(lum(c)) + ')'); assert.ok(Math.max(...c) - Math.min(...c) >= 25, sc.id + ': plots keep their colour'); assert.ok(far(sc.water, c) > 30, sc.id + ': water differs from the plots'); }
     assert.ok(lum(sc.road) > 150, sc.id + ': the road line is bright'); assert.ok(Math.min(...sc.grad.map(([, c]) => far(sc.road, c))) > 70, sc.id + ': road colour differs from every plot colour');
     assert.ok(lum(sc.wline) > lum(sc.water) + 60, sc.id + ': water has a brighter edge'); assert.ok(far(sc.wline, sc.road) > 40, sc.id + ': water edge differs from the road colour'); }
-  for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ', 'MAT.road3M', 'MAT.glow3a', 'THREE.AdditiveBlending']) assert.ok(html.includes(k), k);
+  for (const k of ['function applyScheme3(', 'function paintFarm3(', 'function syncLegend(', "g.classList.toggle('three', three)", 'buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换', "'structureStudio.scheme3'", 'G.ctx3.visible = ']) assert.ok(html.includes(k), k);
 });
 test('the run button continues from the tensor-field screen instead of restarting', () => {
   for (const k of ['async function runAuto()', "$('runBtn').onclick = runAuto;", 'async function demoStart(v1, full, from)', 'DEMO.T = from ? dmT0[from] + 1e-3 : 0', 'DEMO.T = dmT0[2] + 1e-3; DEMO.speed']) assert.ok(html.includes(k), k);
@@ -111,4 +111,12 @@ test('every column supports the deck: it reaches the underside of the lowest dec
   assert.ok(onLevel > 0.85 * r.cols.length, 'columns end exactly under a deck level (the rest are under ramps): ' + onLevel + ' / ' + r.cols.length);
   // a column moved far outside the structure has nothing to support
   assert.equal(SS.deck.columnsFit(m.top, [[-5000, -5000]], TH).cols.length, 0);
+});
+test('roads in 3D are one painted image, not per-segment bands (no spikes or bright stripes at bends)', () => {
+  for (const k of ['function paintRoads3()', 'new THREE.CanvasTexture(cv)', 'MAT.road3T', 'paintFarm3(); paintRoads3();', "c.lineCap = c.lineJoin = 'round'"]) assert.ok(html.includes(k), k);
+  for (const k of ['MAT.road3M', 'MAT.glow3a', 'THREE.AdditiveBlending']) assert.ok(!html.includes(k), 'old road bands are gone: ' + k);
+  const R = new Function('return ' + html.match(/const ROAD3 = (\{[^;]*\});/)[1])();
+  assert.ok(R.size >= 2048 && R.width > 0.5 && R.width <= 1);
+  assert.ok(R.halo.length >= 12, 'enough passes for a smooth glow'); for (let i = 1; i < R.halo.length; i++) assert.ok(R.halo[i] < R.halo[i - 1], 'halo goes from wide to narrow');
+  const total = 1 - Math.pow(1 - R.alpha, R.halo.length); assert.ok(total > 0.3 && total < 0.65, 'glow at the road edge is visible but not solid: ' + total.toFixed(2));
 });
