@@ -1,5 +1,9 @@
 # 版本记录
 
+## v0.9.4（2026-11-19）· 分支 incubator/structure-studio/plan-no-columns
+
+- 平面图上不再画桥下柱的黑点（演示"跨越"一步里画的）。三维里的柱子和第 4 步的"桥下柱距"不变。
+
 ## v0.9.3（2026-11-19）· 分支 incubator/structure-studio/deck-joints
 
 - **第 6 步的断点**（第 5 步有走廊、第 6 步没有板）。原因和修改：

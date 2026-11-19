@@ -1093,7 +1093,7 @@ const DST = [ // 每一步：时长（秒）、名称、说明、读数
     pr: () => [[L('最小室宽', 'Minimum width'), P.minThick, 0, ' m'], [L('合并', 'Merged'), DEMO.FD.nRemoved, 0, '']] },
   { d: 6, zh: '走廊与节点', en: 'Corridors and nodes', sub: () => L('分格边加宽成走廊，折角按夹角融成曲线，钝角处鼓成节点板。', 'Cell edges widen into corridors; corners melt into curves by their angle, and obtuse ones swell into node plates.'),
     pr: () => { const o = [[L('次级走廊', 'Secondary'), P.wS, 0, ' m'], [L('主线走廊', 'Primary'), P.wP, 0, ' m'], [L('走廊中心线', 'Centrelines'), DEMO.FD.stats.totL / 1000, 2, ' km']]; if (DEMO.v1) o.splice(1, 0, [L('核心处次级走廊', 'Secondary at cores'), P.wCore, 0, ' m']); return o; } },
-  { d: 3, zh: '跨越', en: 'Spans', sub: () => L('走廊跨过水面、铁路和张量场街道，不在边上断开；跨路段按顶标高留出桥下净空，长段按柱距立柱。', 'Corridors span water, rail and the tensor-field streets instead of stopping at the edge; street spans keep a clearance set by the deck level, long spans get columns at a set spacing.'),
+  { d: 3, zh: '跨越', en: 'Spans', sub: () => L('走廊跨过水面、铁路和张量场街道，不在边上断开；跨路段按顶标高留出桥下净空。', 'Corridors span water, rail and the tensor-field streets instead of stopping at the edge; street spans keep a clearance set by the deck level.'),
     pr: () => [[L('跨水 / 铁路', 'Over water / rail'), DEMO.FD.nBridge, 0, L(' 段', '')], [L('跨路', 'Over streets'), DEMO.FD.nRoad || 0, 0, L(' 段', '')], [L('跨越长度', 'Span length'), (DEMO.FD.bridgeL + (DEMO.FD.roadL || 0)) / 1000, 2, ' km'], [L('柱距', 'Column spacing'), P.colStep, 0, ' m']] },
   { d: 6, zh: '农田与种植塔', en: 'Farmland and towers', sub: () => L('室内铺满农田；种植塔落在吸引点和重要路口上。建筑之后单独做。', 'A setback from the corridor, buildings along it, farmland inside the cell; planting towers on the core nodes.'),
     pr: () => [[L('农田', 'Farmland'), DEMO.FD.stats.farmA / 1e4, 1, ' ha'], [L('种植塔', 'Towers'), DEMO.FD.towers.length, 0, '']] },
@@ -1212,7 +1212,7 @@ function demoDraw(dt) {
     dx.globalCompositeOperation = 'destination-out'; for (const [A, B] of DEMO.morph) { dx.beginPath(); for (let i = 0; i < A.length; i++) { const p = [A[i][0] + (B[i][0] - A[i][0]) * u, A[i][1] + (B[i][1] - A[i][1]) * u], s = X(p); i ? dx.lineTo(s[0], s[1]) : dx.moveTo(s[0], s[1]); } dx.closePath(); dx.fill(); }
     dx.globalCompositeOperation = 'source-over'; ctx.save(); ctx.globalAlpha = Math.min(1, u * 3); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 4; ctx.drawImage(dc, 0, 0, w, h); ctx.restore(); }
   if (at(8)) { lay(DEMO.L.deck, 1); if (!at(9)) { const u = pg(8); ctx.globalCompositeOperation = 'lighter'; lay(DEMO.L.bridge, 0.55 * Math.sin(Math.PI * u)); ctx.globalCompositeOperation = 'source-over'; }
-    const ca = at(9) ? 1 - E(9) : 1; if (ca > 0) { const n = FD.columns.length, vis = Math.floor(pg(8) * n); ctx.fillStyle = `rgba(30,30,30,${ca})`; for (let i = 0; i < vis; i++) { const q = X(FD.columns[i]); ctx.fillRect(q[0] - 1.6, q[1] - 1.6, 3.2, 3.2); } } }
+    /* 平面图上不画桥下柱（三维里仍有）*/ }
   if (at(9)) { const u = dmC01((pg(9) - .6) / .4); if (u > 0) { lay(DEMO.L.towers, u); drawVec(ctx, X, 1, { cells: true }); } }
   // 7–9 走廊流粒子（"生产流线"）
   if (at(7) && pg(7) > .35) { const tc = dmTrail('trail2', w, h, pr), tx = dmFade(tc, dt > 0 ? 0.16 : 0); tx.setTransform(pr, 0, 0, pr, 0, 0); if (dt > 0) dmStepFlow(tx, X, dt * 60, DEMO.flowCol); ctx.globalAlpha = at(8) ? 1 : dmC01((pg(7) - .35) / .3); ctx.drawImage(tc, 0, 0, w, h); ctx.globalAlpha = 1; }
