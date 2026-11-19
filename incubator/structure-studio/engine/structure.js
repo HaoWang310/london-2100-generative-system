@@ -550,12 +550,12 @@ function buildStructure(site, P, EXCL) {
     for (const q of pp) { const xa = Math.max(0, Math.floor(q[0] - Bd)), xb = Math.min(W - 1, Math.ceil(q[0] + Bd)), ya = Math.max(0, Math.floor(q[1] - Bd)), yb = Math.min(H - 1, Math.ceil(q[1] + Bd));
       for (let y = ya; y <= yb; y++) { const dy = y + .5 - q[1], row = y * W; for (let x = xa; x <= xb; x++) { const dx = x + .5 - q[0], d = Math.sqrt(dx * dx + dy * dy); if (d < dB[row + x]) dB[row + x] = d; } } } });
   // 跨水 / 跨铁路段：走廊落在非陆地（水面、铁路缝、洞）上的部分，三维里做成架空桥面，下面每隔 P.colStep 放一对柱子
-  const solid = i => landM[i] && !waterM[i], columns = [], roadM = site.roadM || new Uint8Array(NN), RS = roadSpan(P.deckZ); let bridgeL = 0, nBridge = 0, roadL = 0, nRoad = 0;
+  const solid = i => landM[i] && !waterM[i], columns = [], roadM = site.roadM || new Uint8Array(NN), RS = roadSpan(P.deckZ); let bridgeL = 0, nBridge = 0, roadL = 0, nRoad = 0; const roadSpansL = [];
   const onRoadP = q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return x >= 0 && y >= 0 && x < W && y < H && roadM[y * W + x] === 1; };
   for (const f of fibres) { const Q = resample(f.P, 2), on = Q.map(q => { const t = toPix(q), x = Math.floor(t[0]), y = Math.floor(t[1]); return !(x >= 0 && y >= 0 && x < W && y < H) || !siteM[y * W + x] ? 2 : !solid(y * W + x) ? 0 : roadM[y * W + x] ? 3 : 1; });
     // 跨路段：中心线落在路面上的连续段；柱子立在走廊两侧（长段按柱距加，落在路面上的柱子不放）
     { let k = 0; while (k < Q.length) { if (on[k] !== 3) { k++; continue; } let e = k; while (e < Q.length && on[e] === 3) e++; const L = (e - k) * 2;
-      if (L >= 4) { nRoad++; roadL += L; const w = (f.prim ? P.wP : wSecAt(Q[Math.floor((k + e) / 2)])) / 2 - 2, n = Math.max(1, Math.round(L / P.colStep)), at = []; // 两端的实心体就是桥墩：只有比柱距长的段才在中间加柱
+      if (L >= 4) { nRoad++; roadL += L; roadSpansL.push(L); const w = (f.prim ? P.wP : wSecAt(Q[Math.floor((k + e) / 2)])) / 2 - 2, n = Math.max(1, Math.round(L / P.colStep)), at = []; // 两端的实心体就是桥墩：只有比柱距长的段才在中间加柱
         for (let c = 1; c < n; c++) at.push(k + Math.round(c * (e - k) / n));
         for (const idx of at) { const i2 = Math.min(Q.length - 2, Math.max(0, idx)), t = unit(sub(Q[i2 + 1], Q[i2])), nn = [-t[1], t[0]]; for (const sg of [1, -1]) { const q = add(Q[idx], mul(nn, w * sg)); if (!onRoadP(q)) columns.push([q[0], q[1], RS.clear]); } } }
       k = e; } }
@@ -625,9 +625,9 @@ function buildStructure(site, P, EXCL) {
   // 走廊中心线长度（只计场内）；校验：中心线压在道路上（< 8 m）的比例、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
   const totL = inL;
-  return { mode: MODE, rings, gatePlates, entryStrands, secs, gates, trace: TR, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
+  return { mode: MODE, rings, gatePlates, entryStrands, secs, gates, trace: TR, P, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
-    cells, cores, site, cellPolys, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
+    cells, cores, site, cellPolys, spacingAt: spacing, roadSpansL, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
 
 
@@ -688,6 +688,37 @@ function meshes(F, P) {
   return { corridor, farm, bld };
 }
 
-const API = { roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+// 方案打分（与张量场工作室统一：5 组各 0–100 分，按权重加权；lin = 在"差"与"好"之间线性折算，band = 落在合理区间内满分）
+const SCORE_W0 = { farm: 20, cells: 35, prim: 15, span: 15, eff: 15 };
+const SCORE_B = { farm: [0.60, 0.68, 0.80, 0.90], cv: [0.75, 0.30], small: [10, 0], acute: [0.12, 0], cov: [0.55, 0.95], span: [0.32, 0.14], along: [0.10, 0.02], eff: [0.45, 0.22] };
+function scoreStructure(F, w) { w = w || SCORE_W0; const site = F.site, g = F.grid, st = F.stats, B = SCORE_B;
+  const lin = (x, bad, good) => clamp((x - bad) / (good - bad), 0, 1) * 100, band = (x, z0, lo, hi, z1) => x < lo ? lin(x, z0, lo) : x > hi ? lin(x, z1, hi) : 100;
+  const raw = {}, G = {};
+  raw.farmShare = st.farmA / (site.landHa * 1e4); G.farm = band(raw.farmShare, ...B.farm);
+  { const r = [], sp = F.spacingAt || (() => 1); let small = 0;
+    let acute = 0; const angAt = (V, i) => { const n = V.length, a = V[(i - 1 + n) % n], b = V[i], e = V[(i + 1) % n], u = sub(a, b), v = sub(e, b); return Math.acos(clamp(dot(u, v) / ((Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1])) || 1), -1, 1)); };
+    for (const cp of F.cellPolys) { const Q = cp.poly; if (Q.filter(p => site.inSite(p)).length < Q.length * 0.8) continue; const c = Q.reduce((a, p) => [a[0] + p[0] / Q.length, a[1] + p[1] / Q.length], [0, 0]), s2 = sp(c) ** 2, a = Math.abs(polyArea(Q)); r.push(a / s2); if (a < 0.25 * s2) small++;
+      const V = (cp.V || []).map(o => o.p); if (V.length >= 3 && V.some((_, i) => angAt(V, i) < 40 * Math.PI / 180)) acute++; }
+    const m = r.reduce((a, b) => a + b, 0) / (r.length || 1), sd = Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length || 1)); raw.cellCV = r.length ? sd / m : 1; raw.small = small; raw.acute = acute; raw.acuteShare = r.length ? acute / r.length : 0;
+    G.cells = (lin(raw.cellCV, ...B.cv) + lin(raw.small, ...B.small) + lin(raw.acuteShare, ...B.acute)) / 3; }
+  { const pf = F.fibres.filter(f => f.prim); let n = 0, c = 0;
+    const sd2 = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1); t = clamp(t, 0, 1); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    for (const S of F.strands) for (let i = 0; i < S.length; i += 5) { const p = S[i]; if (!site.inSite(p) || site.bdist(p) < 40 || F.rings.some(r => dist(p, r.c) < 2.6 * r.r)) continue; n++; let m = 1e9; for (const f of pf) for (let k = 1; k < f.P.length && m >= 8; k++) m = Math.min(m, sd2(p, f.P[k - 1], f.P[k])); if (m < 8) c++; }
+    raw.primCover = n ? c / n : null; G.prim = n ? lin(raw.primCover, ...B.cov) : null; }
+  { let L = 0; for (const f of F.fibres) for (let k = 1; k < f.P.length; k++) { const a = f.P[k - 1], b = f.P[k]; if (site.inSite(mul(add(a, b), 0.5))) L += dist(a, b); }
+    raw.spanShare = (F.bridgeL + (F.roadL || 0)) / (L || 1); raw.alongStreet = (F.roadSpansL || []).filter(x => x > 30).reduce((a, b) => a + b, 0) / (L || 1);
+    G.span = (lin(raw.spanShare, ...B.span) + lin(raw.alongStreet, ...B.along)) / 2; }
+  raw.corrPerFarm = st.corrA / (st.farmA || 1); G.eff = lin(raw.corrPerFarm, ...B.eff);
+  // 问题（对应张量场的"断头路"）：白块（离任何室都超过一个主线走廊宽的走廊面）；换了窄走廊的室只提示
+  { const W = g.W, H = g.H, cm = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) cm[i] = g.cellsM[i] ? 1 : 0; const d = edt(cm, W, H); let blob = 0; const lim = Math.max(F.P ? F.P.wP : 20, 20);
+    for (let i = 0; i < W * H; i++) { if (!g.corr[i] || !site.landM[i] || site.waterM[i] || d[i] * g.RES <= lim) continue; const x = g.xmin + (i % W + .5) * g.RES, y = g.ymax - (((i / W) | 0) + .5) * g.RES; if (F.towers.some(t => Math.hypot(x - t[0], y - t[1]) < t[2] + 40) || (F.gatePlates || []).some(q => dist([x, y], q.c) < q.r + 20)) continue; blob++; }
+    raw.blobHa = blob * g.RES * g.RES / 1e4; }
+  const fail = raw.blobHa > 0.5 ? [{ k: 'blob', n: +raw.blobHa.toFixed(1) }] : [], warn = F.nNarrow ? [{ k: 'narrow', n: F.nNarrow }] : [];
+  let tw = 0, ts = 0; for (const k in G) { if (G[k] == null) continue; tw += w[k] || 0; ts += (w[k] || 0) * G[k]; }
+  return { total: tw ? ts / tw : 0, groups: G, raw, fail, warn }; }
+// 方案缩略 / 预览用的轻量数据（能传给后台线程）：室多边形（抽稀）、主线、塔
+function runSketch(F) { const simp = Q => { const o = []; for (let i = 0; i < Q.length; i += Math.max(1, Math.floor(Q.length / 28))) o.push([Math.round(Q[i][0] * 10) / 10, Math.round(Q[i][1] * 10) / 10]); return o; };
+  return { cells: F.cellPolys.map(cp => simp(cp.poly)), towers: F.towers.map(t => [t[0], t[1], t[2], t[4] || '']), mode: F.mode }; }
+const API = { SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
