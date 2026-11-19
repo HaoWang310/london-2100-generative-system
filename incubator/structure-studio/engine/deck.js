@@ -92,7 +92,9 @@ function buildDeck(F, opt) {
   const vert = (key, x, y, z) => { let i = vid.get(key); if (i === undefined) { i = V.length / 3; vid.set(key, i); V.push(x, y, z); } return i; };
   const edgeP = (pc, k, c) => c === 1 ? pc.P[k] : c === 0 ? [pc.P[k][0] + pc.N[0] * pc.hl[k], pc.P[k][1] + pc.N[1] * pc.hl[k]] : [pc.P[k][0] - pc.N[0] * pc.hr[k], pc.P[k][1] - pc.N[1] * pc.hr[k]];
   const pv = (pc, l, k, c) => { const p = edgeP(pc, k, c); return vert(pc.id + '_' + l + '_' + k + '_' + c, p[0], p[1], LV[l]); };
-  const add = (f, lv) => { FC.push(f); FT.push(lv); }, dedupe = q => q.filter((x, i) => q.indexOf(x) === i);
+  // 所有面统一成俯视逆时针（法线朝上）。坡道和收尖的面按走向 / 左右侧生成，原来有一半是顺时针：
+  // 法线朝下的面在三维里会被阴影偏移推到板的下面，整块显示成阴影色，看起来像板断开了一段。
+  const add = (f, lv) => { let a = 0; for (let k = 0, n = f.length; k < n; k++) { const p = 3 * f[k], q = 3 * f[(k + 1) % n]; a += V[p] * V[q + 1] - V[q] * V[p + 1]; } FC.push(a < 0 ? f.slice().reverse() : f); FT.push(lv); }, dedupe = q => q.filter((x, i) => q.indexOf(x) === i);
   const removed = new Set();
   for (const r of ramps) for (let s = r.ka; s < r.ka + r.m; s++) { removed.add(r.pc.id + '_' + r.kind[1] + '_' + s + '_' + r.side); if (r.kind[0] > 0) removed.add(r.pc.id + '_' + r.kind[0] + '_' + s + '_' + r.side); }
   for (const pc of PCS) { const md = mode(pc);
@@ -121,7 +123,7 @@ function buildDeck(F, opt) {
     if (lo > 0 && !mate(1, lo)) taper(lo, ks.slice().reverse(), 'tl'); });
   // ---- 节点板：把相邻两条分支之间的走廊轮廓（第 5 步的过渡曲线）取成板边
   const inc = new Map(); for (const pc of PCS) { if (pc.a >= 0) { if (!inc.has(pc.a)) inc.set(pc.a, []); inc.get(pc.a).push([pc, 0]); } if (pc.b >= 0) { if (!inc.has(pc.b)) inc.set(pc.b, []); inc.get(pc.b).push([pc, 1]); } }
-  let gapOn = 0, gapOff = 0;
+  let gapOn = 0, gapOff = 0, nGonPlates = 0;
   for (const [j, lst] of inc) { const pj = N[j], endK = x => x[1] === 0 ? 0 : x[0].n, ang = x => { const p = x[0].P[endK(x)]; return Math.atan2(p[1] - pj[1], p[0] - pj[0]); };
     lst.sort((p, q) => ang(p) - ang(q));
     // 逆时针绕节点：每条分支的端面按 右 → 中 → 左 的顺序；相邻分支之间插入轮廓上的点
@@ -129,11 +131,19 @@ function buildDeck(F, opt) {
       ring.push({ pc: x[0], k, c: fwd ? 2 : 0 }, { pc: x[0], k, c: 1 }, { pc: x[0], k, c: fwd ? 0 : 2 });
       if (lst.length < 2) continue; const hx = fwd ? x[0].hitL[k] : x[0].hitR[k], ky = endK(y), hy = y[1] === 0 ? y[0].hitR[ky] : y[0].hitL[ky];
       if (hx && hy && hx.pi === hy.pi) { const wk = walkOutline(F.cellPolys[hx.pi].poly, hx, hy, 0.8 * D.seg); if (wk.len < 6 * x[0].w) { wk.pts.forEach((p, gi) => ring.push({ g: j + '_' + i + '_' + gi, p })); gapOn++; } else gapOff++; } else gapOff++; }
-    if (ring.length < 3) continue;
-    for (let l = 1; l <= 3; l++) { if (l === 3 && !in3[j]) continue; add(ring.map(q => q.pc ? pv(q.pc, l, q.k, q.c) : vert('g' + q.g + '_' + l, q.p[0], q.p[1], LV[l])), l); } }
+    if (lst.length < 2) continue;                                            // 尽端：端面三点共线，不成板
+    // 轮廓上的点必须绕节点逆时针依次排开；倒退的点（轮廓交点落在板边后面）去掉，否则板边自己打结
+    const TAU = 2 * Math.PI, angOf = q => { const p = q.pc ? edgeP(q.pc, q.k, q.c) : q.p; return Math.atan2(p[1] - pj[1], p[0] - pj[0]); }, fwdA = (a0, a1) => ((a1 - a0) % TAU + TAU) % TAU;
+    const R2 = []; for (let i = 0; i < ring.length; i++) { const q = ring[i]; if (q.pc) { R2.push(q); continue; }
+      let nx = i + 1; while (!ring[nx % ring.length].pc) nx++; const a0 = angOf(R2[R2.length - 1]), span = fwdA(a0, angOf(ring[nx % ring.length])), d = fwdA(a0, angOf(q)); if (d > 0.02 && d < span - 0.02) R2.push(q); }
+    // 板从节点中心呈扇形展开（走道都从节点放射出去，板对节点中心是星形的；按多边形重心展开时凹角处会翻面）。某一步张角 ≥ 180° 时退回整块多边形
+    let star = true; for (let i = 0; i < R2.length; i++) { const d = fwdA(angOf(R2[i]), angOf(R2[(i + 1) % R2.length])); if (!(d > 1e-4 && d < Math.PI - 0.05)) star = false; }
+    if (!star) nGonPlates++;
+    for (let l = 1; l <= 3; l++) { if (l === 3 && !in3[j]) continue; const ids = R2.map(q => q.pc ? pv(q.pc, l, q.k, q.c) : vert('g' + q.g + '_' + l, q.p[0], q.p[1], LV[l]));
+      if (!star) { add(ids, l); continue; } const c = vert('n' + j + '_' + l, pj[0], pj[1], LV[l]); for (let i = 0; i < ids.length; i++) add([c, ids[i], ids[(i + 1) % ids.length]], l); } }
   const cnt = k => ramps.filter(r => r.kind[0] === k).length, edge3 = PCS.filter(pc => pc.land).length;
   const stats = { nodes: inc.size, branches: PCS.length, l3nodes: [...inc.keys()].filter(j => in3[j]).length, l3branches: PCS.filter(pc => mode(pc) === 'full').length, entries: cnt(0), r12: cnt(1), r23: cnt(2), edges3: edge3, steep: PCS.filter(pc => pc.steep).length, grown,
-    noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, ctrlF: FC.length, ctrlV: V.length / 3,
+    noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, nGonPlates, ctrlF: FC.length, ctrlV: V.length / 3,
     lenKm: PCS.reduce((s, pc) => s + pc.len, 0) / 1000 };
   return { V: new Float64Array(V), F: FC, FT, stats, in3, outline: OI, params: D,
     ramps: ramps.map(r => ({ kind: r.kind, a: r.pc.P[r.up > 0 ? r.ka : r.ka + r.m], b: r.pc.P[r.up > 0 ? r.ka + r.m : r.ka], side: r.side })) };
@@ -167,7 +177,7 @@ function deckMesh(deck, levels, thick) {
   const bd = []; for (const v of em.values()) if (v >= 0) bd.push(Math.floor(v / nV), v % nV);
   const side = new Float32Array(bd.length / 2 * 18); o = 0;
   for (let i = 0; i < bd.length; i += 2) { const a = bd[i], b = bd[i + 1], A = [V[3 * a], V[3 * a + 1], V[3 * a + 2]], B = [V[3 * b], V[3 * b + 1], V[3 * b + 2]], zA = Math.max(0, A[2] - TH), zB = Math.max(0, B[2] - TH);
-    for (const p of [A, B, [B[0], B[1], zB], A, [B[0], B[1], zB], [A[0], A[1], zA]]) { side[o++] = p[0]; side[o++] = p[1]; side[o++] = p[2]; } }
+    for (const p of [B, A, [A[0], A[1], zA], B, [A[0], A[1], zA], [B[0], B[1], zB]])   /* 侧面法线朝外 */ { side[o++] = p[0]; side[o++] = p[1]; side[o++] = p[2]; } }
   return { top, side, lvl, quads: F.length, V, boundary: bd };
 }
 const API = { LV, DEF, buildDeck, catmullClark, subdivide, deckMesh };
