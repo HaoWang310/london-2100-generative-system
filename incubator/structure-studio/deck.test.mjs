@@ -57,3 +57,14 @@ test('columns that would poke through a ramp are removed, the rest stay', () => 
   const m = SS.deck.deckMesh(DK, 1), r = SS.deck.columnsClear(m.top, F.columns, 7.0); assert.equal(r.keep.length + r.cut.length, F.columns.length); assert.ok(r.cut.length > 0 && r.cut.length < 0.3 * F.columns.length, 'cut ' + r.cut.length + ' / ' + F.columns.length);
   assert.equal(SS.deck.columnsClear(m.top, r.keep, 7.0).cut.length, 0);
 });
+test('no gaps: every step 5 corridor has deck above it (junctions stored as two coincident nodes, runs to the red line)', () => {
+  assert.ok(s.twins > 0, 'this site has junctions stored as two nodes at one position'); assert.ok(s.cutEnds > 10, 'runs reach the red line: ' + s.cutEnds); assert.equal(s.steep, 0);
+  const g = F.grid, R = SS.deck.subdivide(DK, 1), V = R.V, cov = new Uint8Array(g.W * g.H);
+  for (const f of R.F) { const xs = f.map(v => (V[3 * v] - g.xmin) / g.RES), ys = f.map(v => (g.ymax - V[3 * v + 1]) / g.RES), n = f.length;
+    for (let i = Math.max(0, Math.floor(Math.min(...xs))); i <= Math.min(g.W - 1, Math.ceil(Math.max(...xs))); i++) for (let j = Math.max(0, Math.floor(Math.min(...ys))); j <= Math.min(g.H - 1, Math.ceil(Math.max(...ys))); j++) { let sg = 0, ok = true; for (let k = 0; k < n && ok; k++) { const c = (xs[(k + 1) % n] - xs[k]) * (j + 0.5 - ys[k]) - (ys[(k + 1) % n] - ys[k]) * (i + 0.5 - xs[k]); if (Math.abs(c) < 1e-9) continue; if (!sg) sg = Math.sign(c); else if (Math.sign(c) !== sg) ok = false; } if (ok) cov[j * g.W + i] = 1; } }
+  const big = F.towers.filter(t => !t[4]), hole = (i, j) => i >= 0 && j >= 0 && i < g.W && j < g.H && g.corr[j * g.W + i] && !cov[j * g.W + i]; let gap = 0;
+  for (let j = 3; j < g.H - 3; j++) for (let i = 3; i < g.W - 3; i++) { if (!hole(i, j)) continue; const x = g.xmin + i * g.RES, y = g.ymax - j * g.RES; if (big.some(t => Math.hypot(x - t[0], y - t[1]) < 95)) continue;   // the tower plaza stays a ring
+    let all = true; for (let dj = -3; dj <= 3 && all; dj++) for (let di = -3; di <= 3; di++) if (!hole(i + di, j + dj)) { all = false; break; } if (all) gap++; }
+  assert.ok(gap * g.RES * g.RES < 200, 'corridor area with no deck (m2): ' + gap * g.RES * g.RES);
+  const m = SS.deck.deckMesh(DK, 1); assert.ok(DK.sharp.length > 0 && m.top.length > 0, 'flat cuts keep their corners');
+});
