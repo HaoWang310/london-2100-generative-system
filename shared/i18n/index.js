@@ -1,4 +1,5 @@
-// Chinese / English switching. Default language: Chinese.
+// Chinese / English switching. Default language: the device's — Chinese when its system language is Chinese (any
+// variety), English for every other; once 中文 / EN is pressed, that choice is kept on the device and wins.
 // Static text: <span data-i18n="key"></span>, attributes: data-i18n-title="key".
 // Module texts use {zh, en} objects resolved with pick().
 
@@ -13,7 +14,14 @@ function readStored() {
   try { return globalThis.localStorage?.getItem(STORAGE_KEY); } catch { return null; }
 }
 
-let lang = DICTS[readStored()] ? readStored() : 'zh';
+/** The device's system language as one of ours: zh for any Chinese, else en. Outside a browser (tests): zh. */
+export function systemLang() {
+  if (typeof document === 'undefined') return 'zh';
+  const list = globalThis.navigator?.languages?.length ? navigator.languages : [globalThis.navigator?.language || ''];
+  return /^zh\b/i.test(list[0] || '') ? 'zh' : 'en';
+}
+
+let lang = DICTS[readStored()] ? readStored() : systemLang();
 
 export const getLang = () => lang;
 
