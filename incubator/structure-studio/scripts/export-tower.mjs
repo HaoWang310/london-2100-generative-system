@@ -102,8 +102,8 @@ const inPoly = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < 
 // 塔 t = [x, y, r, h, kind, s, rot]：返回台座四层在场地坐标里的轮廓
 function place(t) { const s = t[5] || 1, a = t[6] || 0, c = Math.cos(a), n = Math.sin(a);
   return MODEL.tiers.map(P => P.map(p => [t[0] + s * (c * p[0] - n * p[1]), t[1] + s * (n * p[0] + c * p[1])])); }
-// 塔底座三种做法（t[7] = 塔脚高度）：'podium' 原模型的 4 层台座，塔立在 21.0 m；'plates' 环廊里面的空地按走廊三层铺满平面，塔立在第三层 16.4 m；'none' 塔直接立在地面
-const BASE = { podium: 21.0, plates: 16.4, none: 0 };
+// 塔底座四种做法（t[7] = 塔脚高度）：'plaza' 塔所在的室铺成 7.2 m 的环台（默认，见 structure.js 的 makePlaza），塔立在环台上；'podium' 原模型的 4 层台座，塔立在 21.0 m；'plates' 环廊里面的空地按走廊三层铺满平面，塔立在第三层 16.4 m；'none' 塔直接立在地面
+const BASE = { plaza: 7.2, podium: 21.0, plates: 16.4, none: 0 };
 // 模型坐标 → 场地坐标（三维网格用）：k = 台座第几层（0–3），塔传 -1
 function xf(t, k) { const s = t[5] || 1, a = t[6] || 0, c = Math.cos(a), n = Math.sin(a), z0 = t[7] != null ? t[7] : TOPS[3];
   return (x, y, z, zr) => [t[0] + s * (c * x - n * y), t[1] + s * (n * x + c * y), k >= 0 ? BOTS[k] + (z - zr[0]) / (zr[1] - zr[0]) * (TOPS[k] - BOTS[k]) : z0 + s * Math.max(0, z)]; }
