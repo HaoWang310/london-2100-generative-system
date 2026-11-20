@@ -1,5 +1,5 @@
 {
-  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。 detail 可选：鼠标在卡片上停 3 秒（触屏点 ⓘ）显示的详细介绍——subtitle，sections[{h, body:[{p}|{list}]}]，文字里 **粗体**。",
+  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。 detail 可选：鼠标在卡片上停 3 秒（触屏点 ⓘ）显示的详细介绍——subtitle，sections[{h, lead（触屏分页时每页的大标题，可省略）, body:[{p}|{list}]}]，文字里 **粗体**。",
   "items": [
     {
       "id": "workspace",
@@ -51,6 +51,10 @@
               "zh": "研究定位",
               "en": "Research position"
             },
+            "lead": {
+              "zh": "一个由地形、水文与建成环境约束的连续场域",
+              "en": "A continuous field, held by terrain, water and the built city"
+            },
             "body": [
               {
                 "p": {
@@ -64,6 +68,10 @@
             "h": {
               "zh": "数据层",
               "en": "Data layers"
+            },
+            "lead": {
+              "zh": "四层真实数据，叠合成同一个基准",
+              "en": "Four layers of real data, one datum"
             },
             "body": [
               {
@@ -92,6 +100,10 @@
             "h": {
               "zh": "尺度转换",
               "en": "Scale transition"
+            },
+            "lead": {
+              "zh": "从现存肌理中生长出来的街道",
+              "en": "Streets grown out of the existing fabric"
             },
             "body": [
               {
@@ -148,6 +160,10 @@
               "zh": "研究定位",
               "en": "Research position"
             },
+            "lead": {
+              "zh": "城市是一个过程，而不是一张蓝图",
+              "en": "The city as a process, not a masterplan"
+            },
             "body": [
               {
                 "p": {
@@ -161,6 +177,10 @@
             "h": {
               "zh": "生成逻辑",
               "en": "Generative logic"
+            },
+            "lead": {
+              "zh": "三种力，与一片共同演化的农田",
+              "en": "Three forces, and a farmland that co-evolves"
             },
             "body": [
               {
@@ -197,6 +217,10 @@
             "h": {
               "zh": "变体研究",
               "en": "Variation studies"
+            },
+            "lead": {
+              "zh": "哪些规则，产生了哪些形态",
+              "en": "Which rules produce which forms"
             },
             "body": [
               {
