@@ -594,7 +594,7 @@ function clipCorr(c) { if (!SS.tower || !F || !F.towers.some(t => t[5])) return 
 let TOWER3 = null;
 const b64 = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
 fetch('assets/tower-model.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { const dec = m => ({ v: b64(m.v, Int16Array), i: b64(m.i, Uint16Array) });
-  TOWER3 = { tiers: j.tiers.map(t => ({ z: t.z, ...dec(t) })), towers: j.towers.map(t => ({ id: t.id, shell: dec(t.shell), skin: dec(t.skin) })) };
+  TOWER3 = { tiers: j.tiers.map(t => ({ z: t.z, ...dec(t) })), towers: j.towers.map(t => ({ id: t.id, mesh: dec(t.mesh) })) };
   if (G.towerModel && F) buildTowerModel(); }).catch(e => console.warn('tower model', e));
 function towerMesh(m, f, zr, mat) { const n = m.v.length / 3, pos = new Float32Array(m.v.length);
   for (let i = 0; i < n; i++) { const q = f(m.v[3 * i] / 100, m.v[3 * i + 1] / 100, m.v[3 * i + 2] / 100, zr); pos[3 * i] = q[0]; pos[3 * i + 1] = q[1]; pos[3 * i + 2] = q[2]; }
@@ -606,8 +606,8 @@ function buildTowerModel() { const grp = G.towerModel; for (const o of grp.child
     const cyl = new THREE.CylinderGeometry(1, 1, 1, 40, 1); cyl.rotateX(Math.PI / 2); cyl.translate(0, 0, 0.5);
     for (const par of [0, 1]) { const L = slabs.filter(s => s[5] === par); const im = new THREE.InstancedMesh(cyl, par ? MAT.towW : MAT.towG, Math.max(1, L.length)); L.forEach((s, i) => { tmp.position.set(s[0], s[1], s[3]); tmp.scale.set(s[2], s[2], s[4]); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = L.length; im.castShadow = im.receiveShadow = true; grp.add(im); }
     return; }
-  for (const t of F.towers) { if (!t[5]) continue; TOWER3.tiers.forEach((m, k) => grp.add(towerMesh(m, SS.tower.xf(t, k), m.z, MAT.pod[k])));
-    for (const w of TOWER3.towers) { const f = SS.tower.xf(t, -1); grp.add(towerMesh(w.shell, f, null, MAT.shell), towerMesh(w.skin, f, null, MAT.skin)); } } }
+  for (const t of F.towers) { if (!t[5]) continue; if (t[7] === SS.tower.BASE.podium) TOWER3.tiers.forEach((m, k) => grp.add(towerMesh(m, SS.tower.xf(t, k), m.z, MAT.pod[k])));
+    for (const w of TOWER3.towers) { const f = SS.tower.xf(t, -1); grp.add(towerMesh(w.mesh, f, null, MAT.skin)); } } }
 function buildScene() {
   for (const k in G) if (G[k]) scene.remove(G[k]);
   G.site = new THREE.Group();
@@ -849,7 +849,7 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   const tk = (n, c) => { if (!PB.tn[n + c]) { const ks = Object.keys(PB.tn); if (ks.length > 3) delete PB.tn[ks[0]]; PB.tn[n + c] = tint(PB[n], c); } return PB.tn[n + c]; };
   ctx.drawImage(PB.deckSh, 0, 0); ctx.drawImage(tk('deckM', PAL.deck), 0, 0); ctx.globalAlpha = 0.55; ctx.drawImage(tk('brM', PAL.bridge), 0, 0); if (F.roadSpan && !F.roadSpan.ok) { ctx.globalAlpha = 0.85; ctx.drawImage(tk('rdM', '#e0412f'), 0, 0); } else ctx.drawImage(tk('rdM', PAL.bridge), 0, 0); ctx.globalAlpha = 1; // 净空不够：固定警示红（有的配色把红线设成白色）
   }
-  if (Lf.towers)   for (const t of F.towers) { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fillStyle = PAL.tower; ctx.fill(); }
+  if (Lf.towers)   for (const t of F.towers) { ctx.fillStyle = PAL.tower; if (SS.tower && t[5]) { for (const Fp of SS.tower.feet(t)) { ctx.beginPath(); Fp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); } } else { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fill(); } }   // 三片塔的塔脚
   if (only) return cv;
   planBase = cv; FC.set(fk, cv); while (FC.size > 4) FC.delete(FC.keys().next().value); }
 function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
@@ -934,7 +934,7 @@ function writeTexts() {
       : L(`${n} 层种植（层高 3.6 m）。跨街道 ${nr} 段、共 ${km} km：只留 1.2 m 桥面，桥下净空 ${R.clear.toFixed(1)} m，种植在这一段断开。`, `${n} planting floors (3.6 m storeys). ${nr} street crossings (${km} km) keep only a 1.2 m deck with ${R.clear.toFixed(1)} m clear underneath; planting breaks there.`); }
   { const tw = F.towers || [], nb = tw.filter(t => !t[4]).length, ns = tw.filter(t => t[4] === 'sec').length, nh = tw.filter(t => t[4] === 'hub').length;
     $('v_tower').textContent = L(`${nb} 座`, `${nb}`);
-    $('towerHint').textContent = L(`种植塔只放在主吸引点上：每个核心一座，台座 4 层（顶面 7.2 / 11.8 / 16.4 / 21.0 m）上立三片壳。塔尖离地 ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}；场地小的一座按面积等比缩小。`, `Planting towers stand only on the main attractors: one per core, three shells on a four-tier podium (tops at 7.2 / 11.8 / 16.4 / 21.0 m). Tips at ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}; the tower on the smaller site is scaled down by area.`); }
+    $('towerHint').textContent = L(`种植塔只放在主吸引点上：每个核心一座，三片向中间倾的弯曲壳，立在环形广场中间的地面上。塔尖离地 ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}；场地小的一座按面积等比缩小。`, `Planting towers stand only on the main attractors: one per core, three curved shells leaning inwards, standing on the ground inside the ring plaza. Tips at ${F.towers.map(t => Math.round(t[3]) + ' m').join(' / ')}; the tower on the smaller site is scaled down by area.`); }
   $('v_nCore').textContent = L(`主 ${F.cores.length} · 次 ${(F.secs || []).length} · 边界 ${(F.gates || []).length}`, `main ${F.cores.length} · sec ${(F.secs || []).length} · edge ${(F.gates || []).length}`);
   $('sum1').textContent = L(`${F.cores.length} 核心`, `${F.cores.length} cores`); $('sum2').textContent = L(`${F.strands.length} 条`, `${F.strands.length}`); $('sum3').textContent = L(`拉长 ×${x}`, `×${x}`);
   $('sum4').textContent = L(`${st.cells} 室 · 跨越 ${((F.bridgeL + (F.roadL || 0)) / 1000).toFixed(1)} km`, `${st.cells} cells · spans ${((F.bridgeL + (F.roadL || 0)) / 1000).toFixed(1)} km`); $('sum5').textContent = L(`种子 ${P.seed}`, `seed ${P.seed}`);
