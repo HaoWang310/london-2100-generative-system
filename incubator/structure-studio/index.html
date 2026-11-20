@@ -416,10 +416,10 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.19"></script>
-<script src="engine/deck.js?v=0.9.19"></script>
-<script src="engine/tower.js?v=0.9.19"></script>
-<script src="engine/nav.js?v=0.9.19"></script>
+<script src="engine/structure.js?v=0.9.20"></script>
+<script src="engine/deck.js?v=0.9.20"></script>
+<script src="engine/tower.js?v=0.9.20"></script>
+<script src="engine/nav.js?v=0.9.20"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -526,11 +526,14 @@ function initGL() {
   const loop = () => { const now = performance.now(), dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
     const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); vpAsp = w / h; camP.aspect = vpAsp; camP.updateProjectionMatrix(); }
     if (cam.rot) cam.az += 0.15 * dt;
-    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); renderer.render(scene, camera); drawAxis(); vpSync(); }
+    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); setRise(); renderer.render(scene, camera); drawAxis(); vpSync(); }
     requestAnimationFrame(loop); };
   loop();
 }
 // 把镜头状态交给 three.js：透视 / 平行两台相机共用一组状态，上方向直接取镜头坐标系（顶视图不翻转）
+// 升起动画的剖切面：只在演示的第 6 步、还没升到顶时打开
+let RISE = null; function setRise() { const on = DEMO.on && DEMO.clipH != null && isFinite(DEMO.clipH) && dmStage() === DST.length - 1; if (!on) { if (renderer.clippingPlanes.length) renderer.clippingPlanes = []; return; }
+  if (!RISE) RISE = [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)]; RISE[0].constant = DEMO.clipH; if (renderer.clippingPlanes !== RISE) renderer.clippingPlanes = RISE; }
 function placeCam(s) { const B = NAV.basis(s), back = s.ortho ? s.dist + 8000 : s.dist; camera = s.ortho ? camO : camP;
   if (s.ortho) { const hh = NAV.halfH(s); camO.left = -hh * vpAsp; camO.right = hh * vpAsp; camO.top = hh; camO.bottom = -hh; camO.updateProjectionMatrix(); }
   else { const hz = Math.abs(s.tz + B.d[2] * back), nr = clamp(Math.min(s.dist / 40, 0.5 * Math.max(hz, 1)), 0.5, 300); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }   /* 近裁剪面跟着距离放大（最多 300 m），但不超过镜头离地高度的一半 */
@@ -1255,7 +1258,9 @@ function demoDraw(dt) {
   const k = dmStage(); if (k !== DEMO.stage) dmEnterStage(k);
   dmParamsTick(k);
   $('dmProg').firstElementChild.style.width = (DEMO.T / DEMO.total * 100).toFixed(2) + '%';
-  if (k === DST.length - 1) { if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const u = dmE(dmProg(k)); cam.rot = false; cam.ortho = false; cam.view = 'persp'; cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; cam.az = -1.6 + 1.5 * u; cam.el = 1.35 - 0.82 * u; cam.dist = 3900 - 1300 * u; cam.snap = true; } return; }   /* 时间轴不动时不抢镜头：停住后可以自由转动查看 */
+  if (k === DST.length - 1) { const u = dmProg(k); DEMO.clipH = riseH(u); if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const c0 = DEMO.cam0 || { tx: SITE.cen[0], ty: SITE.cen[1], dist: 3900 }, e = dmE(dmC01((u - 0.1) / 0.8));
+      cam.rot = false; cam.ortho = false; cam.view = 'persp'; cam.tx = c0.tx + (SITE.cen[0] - c0.tx) * e; cam.ty = c0.ty + (SITE.cen[1] - c0.ty) * e; cam.tz = 0;
+      cam.az = -Math.PI / 2 + 1.45 * e; cam.el = (Math.PI / 2 - 0.002) + (0.53 - Math.PI / 2 + 0.002) * e; cam.dist = c0.dist * (1 - 0.32 * e); cam.snap = true; } return; }   /* 时间轴不动时不抢镜头：停住后可以自由转动查看 */
   const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s], RW = g.W * PV.s, RH = g.H * PV.s, mpx = PV.s / g.RES, at = j => DEMO.T >= dmT0[j];
@@ -1321,7 +1326,15 @@ function demoDraw(dt) {
   if (at(2) && !at(9)) { const t = performance.now() / 1000; for (const c of FD.cores) { const q = X(c), ph = (t * .8) % 1; ctx.beginPath(); ctx.arc(q[0], q[1], 6 + 26 * ph, 0, 7); ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - ph) * (at(3) ? .5 : 1)})`; ctx.lineWidth = 1.2; ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); } }
   if ($('c_furn').checked) { ctx.globalAlpha = E(0); const R = DEMO.full ? { x: 20, y: 110, w: w - 40, h: h - 220 } : freeRect(); drawFurniture(ctx, X, mpx, R, 1, DEMO.full ? [w - 40, h - 104] : [R.x + R.w - 24, R.y + R.h - 24]); ctx.globalAlpha = 1; }
 }
-function dmEnterStage(k) { DEMO.stage = k; const s = DST[k];
+// 第 6 步"结构"：结构从地面一层层升起来——一个水平剖切面从地面往上走（只画它下面的东西）。
+// 0–12% 只有地面（和平面一样的正俯视）；12–60% 升到第三层顶 17.4 m（柱子、一层、坡道、二层、三层依次出现）；60–92% 再往上，种植塔长到顶
+function riseH(u) { if (u < 0.12) return 0.6; if (u < 0.6) return 0.6 + 16.8 * dmE((u - 0.12) / 0.48); if (u < 0.92) { const t = dmE((u - 0.6) / 0.32), top = Math.max(60, ...((F && F.towers) || []).map(t => t[3] || 0)) + 2; return 17.4 + (top - 17.4) * t; } return Infinity; }
+// 进第 6 步前记下平面此刻的取景，三维从同样的位置、同样的比例正俯视开始，切过去不跳
+function planCam() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F && F.grid; if (!g || !w || !h || !PV.s) return null;
+  const tx = g.xmin + (w / 2 - PV.ox) / PV.s * g.RES, ty = g.ymax - (h / 2 - PV.oy) / PV.s * g.RES; return { tx, ty, dist: (h * g.RES / PV.s / 2) / NAV.TH }; }
+// 三维在后台先算好（第 07 步以后、演示停着的时候；自动播放时进第 09 步就算），到第 6 步不用停下来等
+function prebuild3D() { if (!DEMO.on || !sceneDirty || !F || DEMO.building) return; DEMO.building = true; setTimeout(() => { try { if (sceneDirty) ensure3D(); } catch (e) { console.warn(e); } DEMO.building = false; }, 60); }
+function dmEnterStage(k) { DEMO.stage = k; const s = DST[k]; if (k === DST.length - 1 && mode !== '3d') DEMO.cam0 = planCam(); if (k === DST.length - 2) prebuild3D();
   $('dmNum').textContent = String(k).padStart(2, '0'); $('dmName').textContent = L(s.zh, s.en); $('dmSub').textContent = s.sub();
   [...$('dmSteps').children].forEach((b, i) => { b.classList.toggle('on', i === k); b.classList.toggle('done', i < k); });
   const box = $('dmParams'); box.textContent = ''; DEMO.prRows = s.pr().map(([lab, v, dec, unit]) => { const d = document.createElement('div'), a = document.createElement('span'), b = document.createElement('b'); a.textContent = lab; d.append(a, b); box.appendChild(d); return { b, v, dec, unit }; });
@@ -1337,7 +1350,7 @@ function dmPlayBtn() { $('dmPlay').textContent = DEMO.playing ? '❚❚' : '▶'
 // 每次开始演示只留最新的一个动画循环（连续开始时旧循环会叠加：时间走两倍、读到还没准备好的图层）
 function demoLoop(ts, id) { if (!DEMO.on || id !== DEMO.lid) return; if (!DEMO.L) { requestAnimationFrame(t => demoLoop(t, id)); return; } const dt = DEMO.last ? Math.min(0.05, (ts - DEMO.last) / 1000) : 0; DEMO.last = ts;
   let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“播放分析”看这一步怎么生成，或点“下一步”直接出结果。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
-  try { demoDraw(step); } catch (e) { console.error(e); } requestAnimationFrame(t => demoLoop(t, id)); }
+  try { demoDraw(step); } catch (e) { console.error(e); } if (!DEMO.playing && dmStage() >= 7) prebuild3D(); requestAnimationFrame(t => demoLoop(t, id)); }
 async function demoStart(v1, full, from) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = $('runNow').disabled = false;
   await demoPrepare(v1 != null ? v1 : P.mode); // 演示统一跟着第 3 步的生成模式
   $('dmLogic').value = DEMO.mode;
@@ -1450,7 +1463,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.19'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.20'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
