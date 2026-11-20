@@ -151,9 +151,9 @@ test('third-level edges: the retreat curve starts at the ramp top, and the ramp 
 test('step 6 transition: 3D prebuilt, starts from the plan framing top-down, structure lifts up (no clip plane, so shadows follow)', () => {
   for (const k of ['function rise(u)', 'function planCam()', 'function prebuild3D()', 'DEMO.rise = rise(u)', 'setLift(); renderer.render(scene, camera)', 'G.corr.scale.z', 'G.cols.scale.z', 'G.towerModel.scale.z', 'if (k === DST.length - 2) prebuild3D();']) assert.ok(html.includes(k), k);
   assert.ok(!html.includes('clippingPlanes'), 'no clip plane: it does not clip shadows and made slabs flash');
-  const dmE = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }; const rise = Function('dmE', html.match(/function rise\(u\) \{[^\n]*\n/)[0] + '; return rise;')(dmE);
+  const dmE = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }; const rise = Function('dmE', 'const RISE0 = ' + html.match(/const RISE0 = ([0-9.]+);/)[1] + ';' + html.match(/function rise\(u\) \{[^\n]*\n/)[0] + '; return rise;')(dmE);
   let p = [-1, -1]; for (let u = 0; u <= 1.0001; u += 0.01) { const v = rise(u); assert.ok(v[0] >= p[0] && v[1] >= p[1], 'rises monotonically'); p = v; }
-  assert.deepEqual(rise(0.05), [0, 0], 'flat at the start'); assert.deepEqual(rise(0.6), [1, 0], 'structure up before the towers'); assert.deepEqual(rise(0.95), [1, 1]);
+  assert.ok(rise(0.05)[0] >= 0.1 && rise(0.05)[1] === 0, 'starts low but never flattened (flat slabs z-fight with the ground)'); assert.deepEqual(rise(0.6), [1, 0], 'structure up before the towers'); assert.ok(html.includes('G.towerModel.visible = v[1] > 0.04'), 'flat towers are hidden'); assert.deepEqual(rise(0.95), [1, 1]);
 });
 test('second level beside an L1->L2 ramp whose foot is near a junction: the half narrows from the mouth to the foot, not over the ramp', () => {
   const D2 = SS.deck.buildDeck(F, SS.deck.DEF), t = D2.stats.tips.l2; assert.ok(t.n > 30, 'places handled: ' + t.n); assert.equal(D2.stats.badPlates, 0);
