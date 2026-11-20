@@ -176,7 +176,12 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
 // 跨路：桥下净空至少 CLR；顶标高够高时带整层种植跨过去（层高 3.6 m），否则只留 1.2 m 桥面
 const CLR = 5.0;
 function roadSpan(deckZ) { const n = Math.floor((deckZ - CLR) / 3.6), T = n >= 1 ? 3.6 * n : 1.2; return { T, floors: Math.max(0, n), clear: deckZ - T, ok: deckZ - T >= CLR }; }
-function buildStructure(site, P, EXCL) {
+// 生成一次；环台模式下塔脚碰到走廊环时，把那个核心的环往外放 6 m 重来（最多再来两次）。车站 P2 一次就过
+function buildStructure(site, P, EXCL) { let RX = null, F = null;
+  for (let k = 0; k < 3; k++) { F = buildOnce(site, P, EXCL, RX); const bad = (F.plazas || []).filter(z => !z.ok); if (!bad.length) break;
+    RX = F.rings.map((_, i) => ((RX && RX[i]) || 0) + (bad.some(z => z.ti === i) ? 6 : 0)); }
+  F.ringExtra = RX; return F; }
+function buildOnce(site, P, EXCL, RX) {
   if (P.wP < P.wS) P = { ...P, wP: P.wS }; // 主线走廊不比次级走廊窄
   const rnd = mulberry32(P.seed * 977 + 31), U = (a, b) => a + (b - a) * rnd();
   const { RES, W, H, NN, xmin, ymax, toPix, landM, waterM, siteM, inSite, inWater, bdist, roadDist, cen } = site;
@@ -238,7 +243,12 @@ function buildStructure(site, P, EXCL) {
     entryStrands.push(resample(pts, 4)); }
   if (entryStrands.length) strands = strands.concat(entryStrands);
   // 主节点（环形广场）：中心一个种子 + 外圈一圈均匀种子 → 分格后自然形成中心广场岛、环形走廊（主线宽）和向外放射的走廊
-  const rings = coreAtt.map(a => ({ c: a.p, r: clamp(Math.max(0.32 * a.reach * a.s, 0.8 * P.sCore), 55, 130), w: P.wP }));
+  // 环台（P.towerBase = 'plaza'，默认）：塔立在 7.2 m 的环台上，环台 = 塔所在的那个室。室的内边（走廊环）必须让开塔脚，
+  // 所以环的半径至少 = 塔脚最远距离 + 0.8 个走廊宽（室边到环中线大约差这么多）+ 2 m；生成后再核对一次，不够再往外放（见 buildStructure）
+  const PLAZA = towerBaseOf(P) === 'plaza', TSC = PLAZA ? towerScales(coreAtt.map(a => a.p), site) : null;
+  const rings = coreAtt.map((a, i) => { const r0 = clamp(Math.max(0.32 * a.reach * a.s, 0.8 * P.sCore), 55, 130);
+    const rNeed = PLAZA ? TOWER_MODEL.footR * TSC[i] + 0.8 * Math.max(P.wCore || 0, P.wP || 0) + 2 + ((RX && RX[i]) || 0) : 0;
+    return { c: a.p, r: Math.max(r0, rNeed), w: P.wP, r0 }; });
 
 
   // 3 拉扯：v0 = 压缩空间 G 生成均匀绳网 → 沿全场主方向拉长；v1 = 直接在场地里沿局部张量场排流线行布点（格网随场连续变形）
@@ -535,6 +545,7 @@ function buildStructure(site, P, EXCL) {
   // 种植塔：来自张量场的主吸引点，每个核心一座大塔
   const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
   placeTowers(towers, site, strands, P);
+  const plazas = PLAZA ? towers.map((t, ti) => makePlaza(t, ti, cellPolys, site)).filter(Boolean) : [];
   // 只有主吸引点放种植塔（每个核心一座大塔）。次吸引点仍然局部加密，重要路口仍然记录在 site.hubs 里，但都不再放塔。
   // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
   const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
@@ -598,7 +609,9 @@ function buildStructure(site, P, EXCL) {
   for (let i = 0; i < NN; i++) if (bldM[i]) { hgt[i] = bh[BL.lab[i]]; bArea++; }
   const d0 = field(cen), nrm = [-d0[1], d0[0]];
   const farm = new Uint8Array(NN), stripe = new Uint8Array(NN); let farmA = 0, corrA = 0;
+  const pzCell = new Map(plazas.map(z => [z.cell + 1, z]));
   for (let i = 0; i < NN; i++) { const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES; stripe[i] = ((((x - cen[0]) * nrm[0] + (y - cen[1]) * nrm[1]) % 9) + 9) % 9 < 6.5 ? 1 : 0;
+    const pz = pzCell.get(lab[i]); if (pz && Math.hypot(x - pz.c[0], y - pz.c[1]) > pz.oc) { if (corr[i]) corrA++; continue; }   // 环台下面是道路和柱子，不算农田（天井里的地面岛仍是绿地）
     if (cellsM[i] && dc[i] * RES >= (P.buildings ? P.setback : 3) && dNS[i] * RES >= 3 && !bldM[i]) { farm[i] = 1; farmA++; } if (corr[i]) corrA++; }
 
   // 9 室信息（卡片）
@@ -620,7 +633,7 @@ function buildStructure(site, P, EXCL) {
   // 走廊中心线长度（只计场内）；校验：中心线压在道路上（< 8 m）的比例、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
   const totL = inL;
-  return { mode: MODE, rings, gatePlates, entryStrands, secs, gates, trace: TR, P, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
+  return { mode: MODE, rings, plazas, gatePlates, entryStrands, secs, gates, trace: TR, P, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, cores, site, cellPolys, spacingAt: spacing, roadSpansL, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
 }
@@ -680,7 +693,9 @@ function meshes(F, P) {
   const bf = new Float32Array(NN); for (let i = 0; i < NN; i++) bf[i] = g.bldM[i];
   const zb = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1); return bS[j * W + i] || 7.2; };
   const bld = ms(F, blur(bf, W, H, 0.6), 2.0, zb, () => 0);
-  return { corridor, farm, bld };
+  const pm = (F.plazas || []).map(plazaMesh), cat = k => { const n = pm.reduce((a, m) => a + m[k].length, 0), o = new Float32Array(n); let q = 0; for (const m of pm) { o.set(m[k], q); q += m[k].length; } return o; };
+  const plaza = { top: cat('top'), side: cat('side'), bottom: cat('bottom'), cols: (F.plazas || []).flatMap(z => z.cols) };   // 环台（塔下一层广场）和它的柱子
+  return { corridor, farm, bld, plaza };
 }
 
 // 方案打分（与张量场工作室统一：5 组各 0–100 分，按权重加权；lin = 在"差"与"好"之间线性折算，band = 落在合理区间内满分）
@@ -719,20 +734,60 @@ function runSketch(F) { const simp = Q => { const o = []; for (let i = 0; i < Q.
 // 和 engine/tower.js 里的数据一致（测试会核对），这样 structure.js 不依赖别的文件。
 // 缩放：最高一片塔放大到 170 m；塔所在的那块场地比最大的一块小时，按面积开平方等比缩小（台座和塔一起），最多缩到 80%。
 // 朝向：台座的一个尖角对准离塔最近的那条主线的方向（取转得最少的那个尖角）。
-// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot, 塔脚高度]。塔脚高度看 P.towerBase：'podium' 台座 21.0 m、'plates' 三层平面 16.4 m、'none' 地面 0
-const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024], base: { podium: 21.0, plates: 16.4, none: 0 } };
-function placeTowers(towers, site, strands, P) { const z0 = TOWER_MODEL.base[(P && P.towerBase) || 'none'] ?? TOWER_MODEL.top;
-  const pieces = (site.snap && site.snap.pieces) || [], areaOf = P => { let a = 0; for (let i = 0, j = P.length - 1; i < P.length; j = i++) a += (P[j][0] + P[i][0]) * (P[j][1] - P[i][1]); return Math.abs(a) / 2; };
-  const inP = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
-  const A = towers.map(t => { const pc = pieces.find(pc => inP(t, pc.outer)); return pc ? areaOf(pc.outer) - (pc.holes || []).filter(h => h.length > 2).reduce((s, h) => s + areaOf(h), 0) : 0; });
-  const Amax = Math.max(1, ...A), base = TOWER_MODEL.target / TOWER_MODEL.h;
-  towers.forEach((t, i) => { const rel = A[i] > 0 ? clamp(Math.sqrt(A[i] / Amax), TOWER_MODEL.minRel, 1) : 1, sc = base * rel;
+// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot, 塔脚高度]。塔脚高度看 P.towerBase：'plaza' 环台 7.2 m（默认）、'podium' 台座 21.0 m、'plates' 三层平面 16.4 m、'none' 地面 0
+const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024], base: { plaza: 7.2, podium: 21.0, plates: 16.4, none: 0 },
+  footR: 63.17, feet: [[[-25.8,28.2],[-7.8,29.4],[2.1,33.9],[-1.9,36.8],[-4.7,38.6],[-6.3,39.4],[-7.7,40],[-9.3,40.5],[-10.6,40.8],[-11.4,40.8],[-12.2,40.8],[-13,40.7],[-13.8,40.5],[-14.6,40.2],[-15.8,39.6],[-17.1,38.6],[-18.4,37.6],[-19.6,36.4],[-21.8,33.8],[-24.8,29.9]],[[31.1,-42.2],[36.4,-40.2],[39,-39],[41.6,-37.7],[42.8,-36.9],[44,-36],[45,-35],[45.9,-34],[46.6,-32.7],[47.1,-31.3],[47.3,-29.9],[47.2,-28.5],[47.1,-27],[46.8,-25.6],[46,-22.8],[45.1,-20.1],[42.9,-14.8],[39,-19.6],[38,-20.9],[35,-25.1],[33.1,-29.4],[31.2,-39.8]],[[-45.4,-35.5],[-45.3,-38.3],[-45.1,-40.4],[-44.9,-41.8],[-44.5,-43.1],[-44,-44.5],[-43.4,-45.7],[-42.7,-46.5],[-41.9,-47.2],[-40.7,-48],[-39.4,-48.5],[-38.1,-48.9],[-36.7,-49.1],[-35.3,-49.3],[-32.5,-49.5],[-28.2,-49.5],[-30.3,-41.4],[-33,-38.1],[-35,-36],[-45.3,-29.5]]] };   // feet：三片塔塔脚轮廓（模型坐标，隔点取自 engine/tower.js 的 MODEL.feet），footR：塔脚离中心最远的距离
+const towerBaseOf = P => (P && P.towerBase) || 'plaza';
+const inPolyS = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+// 每座塔的缩放：最高一片放大到 170 m；所在那块场地比最大的一块小时按面积开平方缩小（最多到 80%）。分格之前就要用（塔区的室要按塔脚大小放大），所以单独算
+function towerScales(pts, site) { const pieces = (site.snap && site.snap.pieces) || [], areaOf = P => { let a = 0; for (let i = 0, j = P.length - 1; i < P.length; j = i++) a += (P[j][0] + P[i][0]) * (P[j][1] - P[i][1]); return Math.abs(a) / 2; };
+  const A = pts.map(t => { const pc = pieces.find(pc => inPolyS(t, pc.outer)); return pc ? areaOf(pc.outer) - (pc.holes || []).filter(h => h.length > 2).reduce((s, h) => s + areaOf(h), 0) : 0; });
+  const Amax = Math.max(1, ...A), base = TOWER_MODEL.target / TOWER_MODEL.h; return A.map(a => base * (a > 0 ? clamp(Math.sqrt(a / Amax), TOWER_MODEL.minRel, 1) : 1)); }
+function placeTowers(towers, site, strands, P) { const z0 = TOWER_MODEL.base[towerBaseOf(P)] ?? TOWER_MODEL.top, SC = towerScales(towers, site);
+  towers.forEach((t, i) => { const sc = SC[i];
     let best = null; for (const S of strands || []) for (let k = 0; k < S.length; k++) { const d = dist(S[k], t); if (!best || d < best.d) best = { d, S, k }; }
     let rot = 0; if (best) { const a = best.S[Math.max(0, best.k - 5)], b = best.S[Math.min(best.S.length - 1, best.k + 5)], th = Math.atan2(b[1] - a[1], b[0] - a[0]); let m = Infinity;
       for (const c of TOWER_MODEL.corners) for (const d of [th, th + Math.PI]) { let r = d - c; r = Math.atan2(Math.sin(r), Math.cos(r)); if (Math.abs(r) < Math.abs(m)) m = r; } rot = m; }
     t[3] = +(z0 + TOWER_MODEL.h * sc).toFixed(1); t[4] = ''; t[5] = +sc.toFixed(4); t[6] = +rot.toFixed(4); t[7] = z0; });
 }
+// ---- 环台（塔下的一层广场）
+// 张量场在主吸引点生成的环岛：一条首尾相接、离中心距离几乎不变、绕满一圈的路。返回 { r 中线半径, w 路宽 }，没有就 null
+function findRoundabout(c, roads, rMax) { let best = null;
+  for (const rd of roads || []) { const pts = (rd.pts || []).map(q => [q[0] ?? q.x, q[1] ?? q.y]); if (pts.length < 8) continue; const d = pts.map(q => Math.hypot(q[0] - c[0], q[1] - c[1]));
+    const lo = Math.min(...d), hi = Math.max(...d), m = d.reduce((a, b) => a + b, 0) / d.length; if (hi - lo > Math.max(6, 0.12 * m) || m > rMax) continue;
+    const ang = pts.map(q => Math.atan2(q[1] - c[1], q[0] - c[0])).sort((a, b) => a - b); let gap = 2 * Math.PI - (ang[ang.length - 1] - ang[0]); for (let i = 1; i < ang.length; i++) gap = Math.max(gap, ang[i] - ang[i - 1]);
+    if (gap > Math.PI / 6) continue; if (!best || m < best.r) best = { r: m, w: rd.width || 12 }; }
+  return best; }
+const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2, 0, 1); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+const polyD = (p, P) => { let m = Infinity; for (let i = 0, j = P.length - 1; i < P.length; j = i++) m = Math.min(m, segD(p, P[j], P[i])); return m; };
+// 塔脚轮廓（场地坐标）
+function towerFeet(t) { const s = t[5] || 1, a = t[6] || 0, c = Math.cos(a), n = Math.sin(a); return TOWER_MODEL.feet.map(F => F.map(p => [t[0] + s * (c * p[0] - n * p[1]), t[1] + s * (n * p[0] + c * p[1])])); }
+// 一座塔的环台：轮廓 = 塔所在的室（走廊环的内边），顶面 7.2 m、板厚 1 m；中心开天井（让开塔脚和环岛内沿各 4 m）；
+// 柱子：环岛内外各一圈（离路边 3 m），往外每 14 m 再一圈，约 12 m 一根；不立在任何道路上、不进天井。ok = 塔脚全部落在环台里、离边 ≥ 1 m
+const PLAZA_Z = 7.2, PLAZA_T = 1.0;
+function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp => inPolyS(t, cp.poly)); if (cell < 0) return null;
+  const poly = cellPolys[cell].poly, c = [t[0], t[1]], rr = poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])), rIn = Math.min(...rr);
+  const feet = towerFeet(t), fr = feet.flat().map(p => Math.hypot(p[0] - c[0], p[1] - c[1])), footMin = Math.min(...fr);
+  const roads = (site.snap && site.snap.roads) || [], ring = findRoundabout(c, roads, rIn), oc = Math.max(10, Math.min(footMin - 4, ring ? ring.r - ring.w / 2 - 4 : Infinity));
+  let gap = Infinity; for (const F of feet) for (const p of F) gap = Math.min(gap, inPolyS(p, poly) ? polyD(p, poly) : -polyD(p, poly));
+  const RL = roads.map(rd => ({ w: rd.width || 6.5, pts: (rd.pts || []).map(q => [q[0] ?? q.x, q[1] ?? q.y]) })).filter(rd => rd.pts.some(q => Math.hypot(q[0] - c[0], q[1] - c[1]) < Math.max(...rr) + 20));
+  const onRoad = p => RL.some(rd => { for (let k = 1; k < rd.pts.length; k++) if (segD(p, rd.pts[k - 1], rd.pts[k]) < rd.w / 2 + 1.5) return true; return false; });
+  const radii = []; if (ring) { const a = ring.r - ring.w / 2 - 3; if (a > oc + 3) radii.push(a); radii.push(ring.r + ring.w / 2 + 3); } else radii.push(oc + 4);
+  while (radii[radii.length - 1] + 14 < Math.max(...rr)) radii.push(radii[radii.length - 1] + 14);
+  const cols = []; for (const R of radii) { const n = Math.max(6, Math.round(2 * Math.PI * R / 12)); for (let k = 0; k < n; k++) { const a = 2 * Math.PI * (k + 0.5 * (radii.indexOf(R) % 2)) / n, p = [c[0] + R * Math.cos(a), c[1] + R * Math.sin(a)];
+    if (!inPolyS(p, poly) || polyD(p, poly) < 2.5 || Math.hypot(p[0] - c[0], p[1] - c[1]) < oc + 2 || onRoad(p)) continue; cols.push([p[0], p[1], PLAZA_Z - PLAZA_T]); } }
+  return { ti, cell, poly, c, oc, ring, feet, cols, z: PLAZA_Z, thick: PLAZA_T, area: Math.abs(polyArea(poly)) - Math.PI * oc * oc, gap, ok: gap >= 1 }; }
+// 环台的三维网格：从天井边到室边按角度连成一圈四边形（室是包着塔的凸形格子，从塔中心看每个方向只穿出一次），加内外侧面和底面
+function plazaMesh(z) { const top = [], side = [], bottom = [], c = z.c, P = resample([...z.poly, z.poly[0]], 2.5); P.pop();
+  const ang = P.map(p => Math.atan2(p[1] - c[1], p[0] - c[0])), ord = P.map((_, i) => i).sort((a, b) => ang[a] - ang[b]), Q = ord.map(i => P[i]), A = ord.map(i => ang[i]), zt = z.z - 0.02, zb = z.z - z.thick;
+  const inn = a => [c[0] + z.oc * Math.cos(a), c[1] + z.oc * Math.sin(a)], tri = (arr, a, b, d) => arr.push(a[0], a[1], a[2], b[0], b[1], b[2], d[0], d[1], d[2]);
+  for (let i = 0; i < Q.length; i++) { const j = (i + 1) % Q.length, o0 = Q[i], o1 = Q[j], i0 = inn(A[i]), i1 = inn(A[j]);
+    tri(top, [...i0, zt], [...o0, zt], [...o1, zt]); tri(top, [...i0, zt], [...o1, zt], [...i1, zt]);
+    tri(bottom, [...i0, zb], [...o1, zb], [...o0, zb]); tri(bottom, [...i0, zb], [...i1, zb], [...o1, zb]);
+    tri(side, [...o0, zt], [...o0, zb], [...o1, zb]); tri(side, [...o0, zt], [...o1, zb], [...o1, zt]);
+    tri(side, [...i1, zt], [...i1, zb], [...i0, zb]); tri(side, [...i1, zt], [...i0, zb], [...i0, zt]); }
+  return { top: new Float32Array(top), side: new Float32Array(side), bottom: new Float32Array(bottom) }; }
 function deckHeight(F, deckZ) { return (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; }; }
-const API = { TOWER_MODEL, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+const API = { TOWER_MODEL, towerFeet, findRoundabout, plazaMesh, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
