@@ -49,7 +49,7 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
         (sec.body || []).map(b => b.list ? h('ul', {}, b.list.map(li => h('li', {}, rich(pick(li))))) : h('p', {}, rich(pick(b.p))))))));
     panel.addEventListener('pointerenter', () => { clearTimeout(hideTimer); hideTimer = 0; });
     panel.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideSoon(); });
-    root.appendChild(panel); panelFor = cardEl;
+    document.body.appendChild(panel); panelFor = cardEl;   // the page's top level: a fixed layer inside the scrolling catalogue is mis-placed by Safari
     place(cardEl);
     requestAnimationFrame(() => panel?.classList.add('is-in'));
     document.addEventListener('keydown', onKey);
@@ -105,7 +105,7 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
       track,
       h('div', { class: 'cs-foot' }, prev, count, next));
     panel.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(at + 1); if (e.key === 'ArrowLeft') go(at - 1); });
-    root.appendChild(panel); panelFor = cardEl; root.classList.add('story-open');
+    document.body.appendChild(panel); panelFor = cardEl; root.classList.add('story-open');   // top level, as above
     show(0);
     requestAnimationFrame(() => { panel?.classList.add('is-in'); panel?.querySelector('.cs-close')?.focus({ preventScroll: true }); });
     document.addEventListener('keydown', onKey);
@@ -148,9 +148,6 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
         item.cover ? h('img', { src: pick(item.cover), alt: '', loading: i < 3 ? 'eager' : 'lazy', decoding: 'async' }) : h('div', { class: 'cat-cover-empty' }),
         h('span', { class: `cat-status s-${status}` }, t(`cat.status.${status}`)),
         h('span', { class: 'cat-go', 'aria-hidden': 'true' }, '→'),
-        hasDetail ? h('span', { class: 'cat-info', role: 'button', tabindex: '0', 'aria-label': t('cat.detail.open'),
-          onclick: e => { e.preventDefault(); e.stopPropagation(); openStory(item, a, String(i + 1).padStart(2, '0')); },
-          onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openStory(item, a, String(i + 1).padStart(2, '0')); } } }, 'i') : null,
         hasDetail ? h('span', { class: 'cat-dwell', 'aria-hidden': 'true' }) : null),
       h('div', { class: 'cat-body' },
         // the card's number only: who looks after an app stays in catalogue.json ("owner") but is not shown
@@ -172,7 +169,12 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
         if (panelFor === a) hideSoon();
       });
     }
-    return a;
+    if (!hasDetail) return a;
+    // the ⓘ (touch screens) is a button of its own beside the link, over the cover's corner — not inside the link,
+    // where Safari may not hand it the tap
+    const info = h('button', { type: 'button', class: 'cat-info', 'aria-label': t('cat.detail.open'),
+      onclick: e => { e.preventDefault(); e.stopPropagation(); openStory(item, a, String(i + 1).padStart(2, '0')); } }, 'i');
+    return h('div', { class: 'cat-item', style: `--i:${i}` }, a, info);
   }
 
   function slot(i) {
