@@ -416,10 +416,10 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.22"></script>
-<script src="engine/deck.js?v=0.9.22"></script>
-<script src="engine/tower.js?v=0.9.22"></script>
-<script src="engine/nav.js?v=0.9.22"></script>
+<script src="engine/structure.js?v=0.9.23"></script>
+<script src="engine/deck.js?v=0.9.23"></script>
+<script src="engine/tower.js?v=0.9.23"></script>
+<script src="engine/nav.js?v=0.9.23"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -535,7 +535,7 @@ function initGL() {
 // 升起动画：结构（走廊板 + 柱子）的高度按 s 拉伸，种植塔按 tw 拉伸——从平面"立起来"。不用剖切面：剖切只作用在画面上、不作用在影子上，
 // 还没出现的结构会先投下整张网的影子，剖切面切过每层板时板会短暂发暗，看起来就是频闪（v0.9.20 的做法，v0.9.22 改掉）
 let LIFT = [1, 1]; function setLift() { const on = DEMO.on && DEMO.rise && dmStage() === DST.length - 1, v = on ? DEMO.rise : [1, 1];
-  if (v[0] === LIFT[0] && v[1] === LIFT[1]) return; LIFT = v.slice(); if (G.corr) G.corr.scale.z = Math.max(0.002, v[0]); if (G.cols) G.cols.scale.z = Math.max(0.002, v[0]); if (G.towerModel) G.towerModel.scale.z = Math.max(0.002, v[1]); }
+  if (v[0] === LIFT[0] && v[1] === LIFT[1]) return; LIFT = v.slice(); if (G.corr) G.corr.scale.z = v[0]; if (G.cols) G.cols.scale.z = v[0]; if (G.towerModel) { G.towerModel.visible = v[1] > 0.04; G.towerModel.scale.z = Math.max(0.04, v[1]); } }   /* 塔太扁时不画：同样会和地面打架 */
 function placeCam(s) { const B = NAV.basis(s), back = s.ortho ? s.dist + 8000 : s.dist; camera = s.ortho ? camO : camP;
   if (s.ortho) { const hh = NAV.halfH(s); camO.left = -hh * vpAsp; camO.right = hh * vpAsp; camO.top = hh; camO.bottom = -hh; camO.updateProjectionMatrix(); }
   else { const hz = Math.abs(s.tz + B.d[2] * back), nr = clamp(Math.min(s.dist / 40, 0.5 * Math.max(hz, 1)), 0.5, 300); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }   /* 近裁剪面跟着距离放大（最多 300 m），但不超过镜头离地高度的一半 */
@@ -1330,7 +1330,9 @@ function demoDraw(dt) {
 }
 // 第 6 步"结构"：结构从平面立起来。0–12% 只有地面（和平面一样的正俯视）；12–60% 走廊板和柱子的高度从 0 拉到真实高度；
 // 60–92% 种植塔从地面长到顶；之后全部是真实高度。返回 [结构高度比例, 塔高度比例]
-function rise(u) { if (u < 0.12) return [0, 0]; if (u < 0.6) return [dmE((u - 0.12) / 0.48), 0]; if (u < 0.92) return [1, dmE((u - 0.6) / 0.32)]; return [1, 1]; }
+// 结构最矮压到 RISE0（12%）：再压扁，板的顶面、底面和地面几乎贴在一起，显卡分不清前后，会出现满屏的碎点（v0.9.22 的问题）
+const RISE0 = 0.12;
+function rise(u) { if (u < 0.12) return [RISE0, 0]; if (u < 0.6) return [RISE0 + (1 - RISE0) * dmE((u - 0.12) / 0.48), 0]; if (u < 0.92) return [1, dmE((u - 0.6) / 0.32)]; return [1, 1]; }
 // 进第 6 步前记下平面此刻的取景，三维从同样的位置、同样的比例正俯视开始，切过去不跳
 function planCam() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F && F.grid; if (!g || !w || !h || !PV.s) return null;
   const tx = g.xmin + (w / 2 - PV.ox) / PV.s * g.RES, ty = g.ymax - (h / 2 - PV.oy) / PV.s * g.RES; return { tx, ty, dist: (h * g.RES / PV.s / 2) / NAV.TH }; }
@@ -1465,7 +1467,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.22'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.23'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
