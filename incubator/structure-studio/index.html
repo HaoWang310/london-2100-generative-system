@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN" translate="no">
 <head>
 <meta charset="utf-8">
+<meta name="google" content="notranslate">
 <title>结构工作室 · Structure Studio</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -383,7 +384,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
   <div class="dpSection"><div class="dpTitle">显示模式</div><div class="dpGrid c4"><button type="button" class="dpTile" data-shade="render">渲染</button><button type="button" class="dpTile" data-shade="shade">着色</button><button type="button" class="dpTile" data-shade="ghost">半透明</button><button type="button" class="dpTile" data-shade="wire">线框</button></div></div>
   <div class="dpSection"><div class="dpTitle">图层</div>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#3a3a40"></i><span>周边环境</span><input type="checkbox" id="c_ctx" checked hidden><i class="dpSw"></i></label>
-<label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
+<label class="dpSwitchRow"><i class="dpDot" style="background:#06080e;box-shadow:0 0 0 1px rgba(255,255,255,.45)"></i><span>张量场道路</span><input type="checkbox" id="c_plots" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow" style="display:none"><i class="dpDot" style="background:#1e1e1e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)"></i><span>建筑</span><input type="checkbox" id="c_bld" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#e1e6cf"></i><span>农田</span><input type="checkbox" id="c_farm" checked hidden><i class="dpSw"></i></label>
 <label class="dpSwitchRow"><i class="dpDot" style="background:#f1f1ef;box-shadow:inset 0 0 0 1.5px #e0412f"></i><span>种植塔</span><input type="checkbox" id="c_tower" checked hidden><i class="dpSw"></i></label>
@@ -416,10 +417,10 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.24"></script>
-<script src="engine/deck.js?v=0.9.24"></script>
-<script src="engine/tower.js?v=0.9.24"></script>
-<script src="engine/nav.js?v=0.9.24"></script>
+<script src="engine/structure.js?v=0.9.25"></script>
+<script src="engine/deck.js?v=0.9.25"></script>
+<script src="engine/tower.js?v=0.9.25"></script>
+<script src="engine/nav.js?v=0.9.25"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -436,7 +437,7 @@ function translateStatic() {
     r.querySelectorAll('[aria-label]').forEach(e => { if (!AT0.has(e)) AT0.set(e, e.getAttribute('aria-label')); const zh = AT0.get(e); e.setAttribute('aria-label', LANG === 'en' && EN[zh] ? EN[zh] : zh); }); }
 }
 function setLang(lang, quiet) {
-  LANG = /^en/.test(lang || '') ? 'en' : 'zh'; document.documentElement.lang = L('zh', 'en'); document.documentElement.dataset.uiLanguage = LANG;
+  LANG = /^en/.test(lang || '') ? 'en' : 'zh'; document.documentElement.lang = L('zh-CN', 'en'); document.documentElement.dataset.uiLanguage = LANG;
   document.title = L('结构工作室 · Structure Studio', 'Structure Studio · Linear Farm corridors');
   try { localStorage.setItem('structureStudio.uiLanguage', LANG); } catch (e) {}
   document.querySelectorAll('#langSw button').forEach(b => b.classList.toggle('active', b.dataset.language === LANG));
@@ -657,9 +658,9 @@ function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
 // 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
-const PAL = { _: 0, bld: [46, 46, 46], road: '255,255,255', edge: 'rgba(10,10,10,.6)', bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
+const PAL = { _: 0, bld: [46, 46, 46], road: '6,8,14', edge: 'rgba(10,10,10,.6)', bg: '#0a0a0a', land: '#1b1b1b', farm: '#e1e6cf', deck: '#f1f1ef', bridge: 'rgba(196,204,210,1)', water: '#6e8796', stream: 'rgba(110,135,150,.85)', tower: '#f1f1ef', red: '#e0412f' };
 // 色卡：渐变 + 顺张量场流线（AADRL / ZHA 式）。每套只改不同的几项，其余用 SCHEME_BASE
-const SCHEME_BASE = { bg: '#050505', land: '#121212', farm: '#222222', grad: null, hatch: { col: 'rgba(255,255,255,.16)', w: 1, step: 9, len: 60 }, deck: '#ffffff', tower: '#ffffff', bridge: 'rgba(200,205,210,1)', water: '#1a1f27', stream: 'rgba(140,155,175,.75)', bld: [12, 12, 12], road: '255,255,255', edge: 'rgba(0,0,0,.55)', red: '#e0412f' };
+const SCHEME_BASE = { bg: '#050505', land: '#121212', farm: '#222222', grad: null, hatch: { col: 'rgba(255,255,255,.16)', w: 1, step: 9, len: 60 }, deck: '#ffffff', tower: '#ffffff', bridge: 'rgba(200,205,210,1)', water: '#1a1f27', stream: 'rgba(140,155,175,.75)', bld: [12, 12, 12], road: '6,8,14', edge: 'rgba(0,0,0,.55)', red: '#e0412f' };
 const SCHEMES = [ // 渐变（核心亮 → 外围暗）+ 顺张量场流线
   { id: 'M', zh: '青到紫', en: 'Cyan–violet', o: { grad: [[0, [205, 242, 240]], [0.45, [112, 122, 192]], [1, [32, 24, 58]]], water: '#1e1b36', red: '#ffffff' } },
   { id: 'N', zh: '日落', en: 'Sunset', o: { grad: [[0, [255, 214, 140]], [0.45, [204, 106, 92]], [1, [28, 36, 66]]], water: '#1a2238', red: '#ffffff' } },
@@ -785,6 +786,10 @@ function drawContext(ctx, path, mPx) { const C = SNAP && SNAP.context; if (!C ||
   ctx.strokeStyle = 'rgba(255,255,255,.26)'; ctx.lineWidth = Math.max(2, 7 * mPx); for (const l of C.prim || []) { path(ctx, l); ctx.stroke(); }
   ctx.fillStyle = '#26262b'; ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1; for (const poly of C.bld || []) { ctx.beginPath(); for (const r of poly) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); ctx.stroke(); }
   ctx.restore(); }
+// 张量场道路：默认是暗刻线（近黑，按等级 0.62 / 0.48 / 0.34）——画在亮的渐变 / 农田上，和白色的分格线、主线、结构一眼分开（白 = 结构，黑 = 地面上的路）；
+// light = 白线（0.55 / 0.42 / 0.30），只用在演示里渐变还没铺到的暗地面上（第 00–01 步、核心向外绽放的圈外）
+function roadStroke(ctx, path, mPx, light) { for (const r of SNAP.roads) { const g = r.grade === 'main' ? 0 : r.grade === 'through' ? 1 : 2; path(ctx, r.pts);
+  ctx.strokeStyle = light ? `rgba(255,255,255,${[.55, .42, .3][g]})` : `rgba(${PAL.road},${[.62, .48, .34][g]})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); } }
 function makePlanBase(only) { // only：演示用，只画某几层（透明底），不改 planBase
   const fk = only ? null : [SCHEME, $('c_ctx').checked, $('c_plots').checked].join('|'), FC = F._pbFull || (F._pbFull = new Map());
   if (fk && FC.has(fk)) { planBase = FC.get(fk); FC.delete(fk); FC.set(fk, planBase); return; } // 最近用过的配色：直接取整张底图
@@ -831,11 +836,12 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
     const bc = document.createElement('canvas'); bc.width = g.W; bc.height = g.H; bc.getContext('2d').putImageData(bi, 0, 0); PB.bld = { [bk]: bc }; }
   ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.drawImage(PB.bld[bk], 0, 0, cv.width, cv.height); ctx.restore();
   }
-  if (Lf.water) { const wk = [PAL.water, PAL.stream, PAL.road, $('c_plots').checked, cv.width].join('|'), cs = F.site; if (!cs._wc || cs._wc.k !== wk) { const wc = document.createElement('canvas'); wc.width = cv.width; wc.height = cv.height; const ctx = wc.getContext('2d');
+  if (Lf.water) { const wk = [PAL.water, PAL.stream, PAL.road, $('c_plots').checked, cv.width, 'v2'].join('|'), cs = F.site; if (!cs._wc || cs._wc.k !== wk) { const wc = document.createElement('canvas'); wc.width = cv.width; wc.height = cv.height; const ctx = wc.getContext('2d');
   ctx.fillStyle = PAL.water; ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1; for (const w of SNAP.water) { ctx.beginPath(); for (const r of w) if (r.length > 2) path(ctx, r, true, false); ctx.fill('evenodd'); ctx.stroke(); }
   ctx.strokeStyle = PAL.stream; ctx.lineWidth = 1.3; ctx.lineJoin = ctx.lineCap = 'round'; for (const st of SNAP.streams) { path(ctx, st); ctx.stroke(); }
-  if ($('c_plots').checked) for (const r of SNAP.roads) { path(ctx, r.pts); ctx.strokeStyle = `rgba(${PAL.road},${r.grade === 'main' ? .55 : r.grade === 'through' ? .42 : .3})`; ctx.lineWidth = Math.max(1, r.width * mPx * 0.45); ctx.stroke(); }
+  if ($('c_plots').checked) roadStroke(ctx, path, mPx, false);
     cs._wc = { k: wk, cv: wc }; } ctx.drawImage(cs._wc.cv, 0, 0); }
+  if (Lf.roadsL && $('c_plots').checked) { ctx.lineJoin = ctx.lineCap = 'round'; roadStroke(ctx, path, mPx, true); } // 演示用：白色道路，只画在还没铺上渐变 / 农田的暗地面上
   if (Lf.deck) {
   // 2 结构（矢量）：足迹 − 室 + 塔，整体投影 → 读得出是架在地面之上；跨水 / 跨铁路处不断开。蒙版、阴影、桥段按结构缓存，换色只上色
   if (!PB.deckM || PB.deckM.width !== cv.width) {
@@ -1247,7 +1253,7 @@ async function demoPrepare(v1) { const busy = $('busy'), btxt = busy.textContent
   try {
     if (!DEMO.saved) DEMO.saved = { F, mode };
     const gm = typeof v1 === 'string' ? v1 : v1 ? 'v1' : 'v0'; const FD = DEMO.reuse && F && F.trace && F.mode === gm && F.grid.RES === 2 ? F : SS.buildStructure(SITE, { ...P, mode: gm, v1: gm === 'v1' ? 1 : 0, trace: 1 }, EXCL); DEMO.reuse = false; F = FD; M = null; sceneDirty = true; DEMO.FD = FD; DEMO.mode = gm; DEMO.v1 = !!(FD.trace.rows && (gm === 'v1' || gm === 'dual'));
-    DEMO.L = {}; for (const k of ['ground', 'farm', 'bld', 'water', 'deck', 'towers']) DEMO.L[k] = makePlanBase({ [k]: 1 });
+    DEMO.L = {}; for (const k of ['ground', 'farm', 'bld', 'water', 'deck', 'towers', 'roadsL']) DEMO.L[k] = makePlanBase({ [k]: 1 });
     DEMO.L.grad = dmLayerGrad(); DEMO.L.bridge = dmLayerBridge();
     DEMO.morph = FD.cellPolys.map(cp => dmMorph(cp.raw, cp.poly));
     DEMO.cells = FD.cellPolys.map(cp => { let cx = 0, cy = 0; for (const p of cp.raw) { cx += p[0]; cy += p[1]; } const c = [cx / cp.raw.length, cy / cp.raw.length]; let r = 0; for (const p of cp.raw) r = Math.max(r, dmD2(p, c)); return { c, r: Math.sqrt(r), raw: cp.raw }; });
@@ -1284,6 +1290,11 @@ function demoDraw(dt) {
   if (at(9)) { discs(E(9) * maxR * 0.75, () => lay(DEMO.L.farm, 1)); discs(dmE((pg(9) - .15) / .85) * maxR * 0.75, () => lay(DEMO.L.bld, 1)); }
   // 1 水体、溪流、道路
   lay(DEMO.L.water, at(1) ? 0.35 + 0.65 * E(1) : 0.35 * E(0));
+  // 道路在暗地面上是白线：渐变 / 农田从核心绽放到哪里，那一圈里只留暗刻线（白线用同样的圆圈挖掉）
+  { const rD = Math.max(at(2) ? E(2) * maxR * 0.6 : 0, at(9) ? E(9) * maxR * 0.75 : 0), ra = at(1) ? 0.35 + 0.65 * E(1) : 0.35 * E(0);
+    if (rD < maxR * 0.6 - 0.5) { const rc = dmTrail('roadc', w, h, pr), rx = rc.getContext('2d'); rx.setTransform(1, 0, 0, 1, 0, 0); rx.clearRect(0, 0, rc.width, rc.height); rx.setTransform(pr, 0, 0, pr, 0, 0);
+      rx.drawImage(DEMO.L.roadsL, PV.ox, PV.oy, RW, RH); if (rD > 0) { rx.globalCompositeOperation = 'destination-out'; rx.beginPath(); for (const c of FD.cores) { const q = X(c); rx.moveTo(q[0] + rD, q[1]); rx.arc(q[0], q[1], rD, 0, 7); } rx.fill(); rx.globalCompositeOperation = 'source-over'; }
+      ctx.globalAlpha = ra; ctx.drawImage(rc, 0, 0, w, h); ctx.globalAlpha = 1; } }
   // 1–7 场流粒子（拖尾残影）
   const fa = !at(1) ? 0 : !at(3) ? Math.min(1, pg(1) * 2.5) : !at(4) ? 1 - 0.7 * dmE((pg(3) - .25) / .4) : !at(7) ? 0.3 : 0.3 * (1 - E(7));
   if (fa > 0) { const tc = dmTrail('trail', w, h, pr), tx = dmFade(tc, dt > 0 ? 0.07 : 0); tx.setTransform(pr, 0, 0, pr, 0, 0); tx.globalCompositeOperation = 'lighter'; if (dt > 0) dmStepField(tx, X, dt * 60, 1); tx.globalCompositeOperation = 'source-over';
@@ -1476,7 +1487,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.24'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.25'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
