@@ -9,7 +9,7 @@
  * site's OSM streets, rail, water, buildings and the OS Terrain 50 elevation. Tensor Studio reads the EA
  * flood risk itself. Esc, or its "back to the London map" button, returns here with the red boundary kept.
  */
-import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.43.5-english';
+import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.43.6-english';
 
 const SEL_SOURCE='site-selection-source';
 const SEL_FILL='site-selection-fill';

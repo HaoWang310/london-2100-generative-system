@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.43.6: the first time on a device (no language chosen yet) the page follows the device's system language — any Chinese → 中文, every other → English; a choice made with the switch (or passed by the main app) still wins.
+
 Version 3.43.5: the timing box (`perf=1`, the five taps on the version line, the main site's switch) is gone again; the faster shadows of 3.43.0 stay.
 
 Version 3.43.4: the timing box can be switched on without the address bar (a home-screen app on iPad has none): in the main site's version menu, or by tapping this map's version line five times. It stays on for that device until switched off.
