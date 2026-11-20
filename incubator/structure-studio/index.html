@@ -416,10 +416,10 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.21"></script>
-<script src="engine/deck.js?v=0.9.21"></script>
-<script src="engine/tower.js?v=0.9.21"></script>
-<script src="engine/nav.js?v=0.9.21"></script>
+<script src="engine/structure.js?v=0.9.22"></script>
+<script src="engine/deck.js?v=0.9.22"></script>
+<script src="engine/tower.js?v=0.9.22"></script>
+<script src="engine/nav.js?v=0.9.22"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -526,14 +526,16 @@ function initGL() {
   const loop = () => { const now = performance.now(), dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
     const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); vpAsp = w / h; camP.aspect = vpAsp; camP.updateProjectionMatrix(); }
     if (cam.rot) cam.az += 0.15 * dt;
-    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); setRise(); renderer.render(scene, camera); drawAxis(); vpSync(); }
+    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); setLift(); renderer.render(scene, camera); drawAxis(); vpSync(); }
     requestAnimationFrame(loop); };
   loop();
 }
 // 把镜头状态交给 three.js：透视 / 平行两台相机共用一组状态，上方向直接取镜头坐标系（顶视图不翻转）
 // 升起动画的剖切面：只在演示的第 6 步、还没升到顶时打开
-let RISE = null; function setRise() { const on = DEMO.on && DEMO.clipH != null && isFinite(DEMO.clipH) && dmStage() === DST.length - 1; if (!on) { if (renderer.clippingPlanes.length) renderer.clippingPlanes = []; return; }
-  if (!RISE) RISE = [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)]; RISE[0].constant = DEMO.clipH; if (renderer.clippingPlanes !== RISE) renderer.clippingPlanes = RISE; }
+// 升起动画：结构（走廊板 + 柱子）的高度按 s 拉伸，种植塔按 tw 拉伸——从平面"立起来"。不用剖切面：剖切只作用在画面上、不作用在影子上，
+// 还没出现的结构会先投下整张网的影子，剖切面切过每层板时板会短暂发暗，看起来就是频闪（v0.9.20 的做法，v0.9.22 改掉）
+let LIFT = [1, 1]; function setLift() { const on = DEMO.on && DEMO.rise && dmStage() === DST.length - 1, v = on ? DEMO.rise : [1, 1];
+  if (v[0] === LIFT[0] && v[1] === LIFT[1]) return; LIFT = v.slice(); if (G.corr) G.corr.scale.z = Math.max(0.002, v[0]); if (G.cols) G.cols.scale.z = Math.max(0.002, v[0]); if (G.towerModel) G.towerModel.scale.z = Math.max(0.002, v[1]); }
 function placeCam(s) { const B = NAV.basis(s), back = s.ortho ? s.dist + 8000 : s.dist; camera = s.ortho ? camO : camP;
   if (s.ortho) { const hh = NAV.halfH(s); camO.left = -hh * vpAsp; camO.right = hh * vpAsp; camO.top = hh; camO.bottom = -hh; camO.updateProjectionMatrix(); }
   else { const hz = Math.abs(s.tz + B.d[2] * back), nr = clamp(Math.min(s.dist / 40, 0.5 * Math.max(hz, 1)), 0.5, 300); if (Math.abs(camP.near - nr) > nr * 0.2) { camP.near = nr; camP.updateProjectionMatrix(); } }   /* 近裁剪面跟着距离放大（最多 300 m），但不超过镜头离地高度的一半 */
@@ -644,7 +646,7 @@ function buildScene() {
   G.tower.visible = $('c_tower').checked;
   { const col = new THREE.CylinderGeometry(1, 1, 1, 12, 1); col.rotateX(Math.PI / 2); col.translate(0, 0, 0.5); const cols = M.corridor && M.corridor.lvl ? SS.deck.columnsFit(M.corridor.top, F.columns, DECK && DECK.params ? DECK.params.thick : 1).cols : F.columns;   /* 多层走道结构下：柱顶接到正上方最低一层板（或坡道）的板底；上面没有板可托的、太矮的去掉 */
     const im = new THREE.InstancedMesh(col, MAT.towW, Math.max(1, cols.length));
-    cols.forEach((c, i) => { tmp.position.set(c[0], c[1], 0); tmp.scale.set(0.9, 0.9, c[2] != null ? c[2] : P.deckZ - 0.2);   /* 柱脚从地面起：地面不写深度，埋到地下的部分会透出来 */ tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); }
+    cols.forEach((c, i) => { tmp.position.set(c[0], c[1], 0); tmp.scale.set(0.9, 0.9, c[2] != null ? c[2] : P.deckZ - 0.2);   /* 柱脚从地面起：地面不写深度，埋到地下的部分会透出来 */ tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); }); im.count = cols.length; im.castShadow = true; G.tower.add(im); G.cols = im; } LIFT = [1, 1];
   G.hi = null;
   groundOrder();
   scene.add(G.ctx3, G.site, G.plots, G.corr, G.bld, G.farm, G.tower);
@@ -1258,7 +1260,7 @@ function demoDraw(dt) {
   const k = dmStage(); if (k !== DEMO.stage) dmEnterStage(k);
   dmParamsTick(k);
   $('dmProg').firstElementChild.style.width = (DEMO.T / DEMO.total * 100).toFixed(2) + '%';
-  if (k === DST.length - 1) { const u = dmProg(k); DEMO.clipH = riseH(u); if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const c0 = DEMO.cam0 || { tx: SITE.cen[0], ty: SITE.cen[1], dist: 3900 }, e = dmE(dmC01((u - 0.1) / 0.8));
+  if (k === DST.length - 1) { const u = dmProg(k); DEMO.rise = rise(u); if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const c0 = DEMO.cam0 || { tx: SITE.cen[0], ty: SITE.cen[1], dist: 3900 }, e = dmE(dmC01((u - 0.1) / 0.8));
       cam.rot = false; cam.ortho = false; cam.view = 'persp'; cam.tx = c0.tx + (SITE.cen[0] - c0.tx) * e; cam.ty = c0.ty + (SITE.cen[1] - c0.ty) * e; cam.tz = 0;
       cam.az = -Math.PI / 2 + 1.45 * e; cam.el = (Math.PI / 2 - 0.002) + (0.53 - Math.PI / 2 + 0.002) * e; cam.dist = c0.dist * (1 - 0.32 * e); cam.snap = true; } return; }   /* 时间轴不动时不抢镜头：停住后可以自由转动查看 */
   const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
@@ -1326,9 +1328,9 @@ function demoDraw(dt) {
   if (at(2) && !at(9)) { const t = performance.now() / 1000; for (const c of FD.cores) { const q = X(c), ph = (t * .8) % 1; ctx.beginPath(); ctx.arc(q[0], q[1], 6 + 26 * ph, 0, 7); ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - ph) * (at(3) ? .5 : 1)})`; ctx.lineWidth = 1.2; ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); } }
   if ($('c_furn').checked) { ctx.globalAlpha = E(0); const R = DEMO.full ? { x: 20, y: 110, w: w - 40, h: h - 220 } : freeRect(); drawFurniture(ctx, X, mpx, R, 1, DEMO.full ? [w - 40, h - 104] : [R.x + R.w - 24, R.y + R.h - 24]); ctx.globalAlpha = 1; }
 }
-// 第 6 步"结构"：结构从地面一层层升起来——一个水平剖切面从地面往上走（只画它下面的东西）。
-// 0–12% 只有地面（和平面一样的正俯视）；12–60% 升到第三层顶 17.4 m（柱子、一层、坡道、二层、三层依次出现）；60–92% 再往上，种植塔长到顶
-function riseH(u) { if (u < 0.12) return 0.6; if (u < 0.6) return 0.6 + 16.8 * dmE((u - 0.12) / 0.48); if (u < 0.92) { const t = dmE((u - 0.6) / 0.32), top = Math.max(60, ...((F && F.towers) || []).map(t => t[3] || 0)) + 2; return 17.4 + (top - 17.4) * t; } return Infinity; }
+// 第 6 步"结构"：结构从平面立起来。0–12% 只有地面（和平面一样的正俯视）；12–60% 走廊板和柱子的高度从 0 拉到真实高度；
+// 60–92% 种植塔从地面长到顶；之后全部是真实高度。返回 [结构高度比例, 塔高度比例]
+function rise(u) { if (u < 0.12) return [0, 0]; if (u < 0.6) return [dmE((u - 0.12) / 0.48), 0]; if (u < 0.92) return [1, dmE((u - 0.6) / 0.32)]; return [1, 1]; }
 // 进第 6 步前记下平面此刻的取景，三维从同样的位置、同样的比例正俯视开始，切过去不跳
 function planCam() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F && F.grid; if (!g || !w || !h || !PV.s) return null;
   const tx = g.xmin + (w / 2 - PV.ox) / PV.s * g.RES, ty = g.ymax - (h / 2 - PV.oy) / PV.s * g.RES; return { tx, ty, dist: (h * g.RES / PV.s / 2) / NAV.TH }; }
@@ -1463,7 +1465,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.21'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.22'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
