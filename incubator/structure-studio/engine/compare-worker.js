@@ -1,5 +1,5 @@
 // 方案比较的后台线程：场地只准备一次，之后一次算一个方案（主线程逐个发，便于中途停止、按第一轮结果决定第二轮）
-importScripts('structure.js');
+importScripts('structure.js' + (self.location.search || ''));   // 跟页面同一个版本号
 let site = null;
 onmessage = e => {
   const m = e.data;
