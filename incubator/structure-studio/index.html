@@ -415,10 +415,11 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 <button type="button" id="cbShow" class="mini">室列表 ▴</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="engine/structure.js"></script>
-<script src="engine/deck.js"></script>
-<script src="engine/tower.js"></script>
-<script src="engine/nav.js"></script>
+<!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
+<script src="engine/structure.js?v=0.9.17"></script>
+<script src="engine/deck.js?v=0.9.17"></script>
+<script src="engine/tower.js?v=0.9.17"></script>
+<script src="engine/nav.js?v=0.9.17"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -850,7 +851,7 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   const tk = (n, c) => { if (!PB.tn[n + c]) { const ks = Object.keys(PB.tn); if (ks.length > 3) delete PB.tn[ks[0]]; PB.tn[n + c] = tint(PB[n], c); } return PB.tn[n + c]; };
   ctx.drawImage(PB.deckSh, 0, 0); ctx.drawImage(tk('deckM', PAL.deck), 0, 0); ctx.globalAlpha = 0.55; ctx.drawImage(tk('brM', PAL.bridge), 0, 0); if (F.roadSpan && !F.roadSpan.ok) { ctx.globalAlpha = 0.85; ctx.drawImage(tk('rdM', '#e0412f'), 0, 0); } else ctx.drawImage(tk('rdM', PAL.bridge), 0, 0); ctx.globalAlpha = 1; // 净空不够：固定警示红（有的配色把红线设成白色）
   }
-  if (Lf.towers)   for (const t of F.towers) { ctx.fillStyle = PAL.tower; if (SS.tower && t[5]) { for (const Fp of SS.tower.feet(t)) { ctx.beginPath(); Fp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); } } else { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fill(); } }   // 三片塔的塔脚
+  if (Lf.towers)   for (const t of F.towers) { ctx.fillStyle = PAL.tower; if (SS.tower && SS.tower.feet && t[5]) { for (const Fp of SS.tower.feet(t)) { ctx.beginPath(); Fp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); } } else { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fill(); } }   // 三片塔的塔脚
   if (only) return cv;
   planBase = cv; FC.set(fk, cv); while (FC.size > 4) FC.delete(FC.keys().next().value); }
 function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
@@ -1449,7 +1450,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.17'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
