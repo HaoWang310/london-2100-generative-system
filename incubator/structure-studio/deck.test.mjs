@@ -148,3 +148,10 @@ test('third-level edges: the retreat curve starts at the ramp top, and the ramp 
   // ramp side: no third-level face of a retreating branch is left between its mouth and its ramp top (the node plate covers it)
   const off = SS.deck.buildDeck(F, { ...SS.deck.DEF, rampEdge: false }); assert.ok(off.stats.tips.rampEdge === undefined);
 });
+test('step 6 transition: 3D prebuilt, starts from the plan framing top-down, structure rises under a moving clip plane', () => {
+  for (const k of ['function riseH(u)', 'function planCam()', 'function prebuild3D()', 'DEMO.clipH = riseH(u)', 'setRise(); renderer.render(scene, camera)', 'new THREE.Plane(new THREE.Vector3(0, 0, -1), 0)', 'if (k === DST.length - 2) prebuild3D();', 'if (!DEMO.playing && dmStage() >= 7) prebuild3D();']) assert.ok(html.includes(k), k);
+  const dmE = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }, F = { towers: [[0, 0, 24, 170]] };
+  const riseH = Function('dmE', 'F', html.match(/function riseH\(u\) \{[^\n]*\n/)[0] + '; return riseH;')(dmE, F);
+  let prev = -1; for (let u = 0; u <= 1.0001; u += 0.01) { const h = riseH(u); assert.ok(h >= prev, 'rises monotonically'); prev = h; }
+  assert.equal(riseH(0.05), 0.6, 'ground only at the start'); assert.ok(Math.abs(riseH(0.6) - 17.4) < 1e-6, 'all three levels by 60%'); assert.ok(riseH(0.91) > 150, 'towers nearly up'); assert.equal(riseH(0.95), Infinity, 'clip plane off at the end');
+});
