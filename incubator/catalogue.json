@@ -1,5 +1,5 @@
 {
-  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。",
+  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。 detail 可选：鼠标在卡片上停 3 秒（触屏点 ⓘ）显示的详细介绍——subtitle，sections[{h, body:[{p}|{list}]}]，文字里 **粗体**。",
   "items": [
     {
       "id": "workspace",
@@ -43,6 +43,67 @@
         "zh": "伦敦 70 km 范围的真实地理数据：OSM 底图与 3D 建筑，EA LiDAR 地形、EA 洪水风险、由 OS Terrain 50 推导的排水网络；可切换颜色主题、光照、天气，搜索地点。",
         "en": "Real geographic data for London within 70 km: the OSM basemap and 3D buildings, EA LiDAR terrain, EA flood risk and a drainage network derived from OS Terrain 50; colour themes, lighting, weather and place search."
       },
+      "detail": {
+        "subtitle": "London Map · A Territorial Datum",
+        "sections": [
+          {
+            "h": {
+              "zh": "研究定位",
+              "en": "Research position"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "本项目以 70 km 研究半径界定大伦敦的地域范围，把城市看作由地形、水文与既有建成环境共同约束的连续场域，而不是一块可以随意书写的空白基地。这张地图是整个多尺度生成系统的基准层：之后每一级生成，都从这里读取真实条件，再回到这里接受检验。",
+                  "en": "The project defines Greater London through a 70 km study radius and reads the city as a continuous field constrained by topography, hydrology and the existing built environment, rather than a blank site open to any inscription. This map is the datum of the whole multi-scale generative system: every subsequent level of generation reads its real conditions from here, and returns here to be tested."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "数据层",
+              "en": "Data layers"
+            },
+            "body": [
+              {
+                "list": [
+                  {
+                    "zh": "**建成环境**：OpenStreetMap 街道网络与三维建筑体量，叠加随太阳位置实时计算的阴影",
+                    "en": "**Built environment**: the OpenStreetMap street network and three-dimensional building massing, with shadows computed live from the sun's position"
+                  },
+                  {
+                    "zh": "**地形**：英国环境署（EA）LiDAR 1 m 数字地形模型",
+                    "en": "**Topography**: the Environment Agency (EA) LiDAR 1 m digital terrain model"
+                  },
+                  {
+                    "zh": "**水文**：由 OS Terrain 50 推导的汇水面积与排水网络，揭示地表径流的潜在路径",
+                    "en": "**Hydrology**: contributing area and the drainage network derived from OS Terrain 50, revealing the latent paths of surface run-off"
+                  },
+                  {
+                    "zh": "**风险**：EA 当前洪水风险，分综合、地表水、河流与海洋三类来源",
+                    "en": "**Risk**: the EA's present-day flood risk, from three sources — combined, surface water, and rivers and sea"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "尺度转换",
+              "en": "Scale transition"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "在地图上划定地块边界，系统会把该范围内的街道、水体、建筑与地形一并移交给张量场工作室，作为局部街道生成的初始条件。新生成的路网默认绕开既有建筑，使生成过程从现存城市的肌理中生长出来。",
+                  "en": "Drawing a site boundary on the map hands its streets, water, buildings and terrain to Tensor Studio as the initial conditions for local street generation. The new network routes around existing buildings by default, so that generation grows out of the fabric of the city as it stands."
+                }
+              }
+            ]
+          }
+        ]
+      },
       "tags": [
         {
           "zh": "真实数据",
@@ -78,6 +139,75 @@
       "desc": {
         "zh": "2025–2100 年沿 412 公里环线的城市生长，50 米地块，2100 年 12,222,179 人；用滑块改变吸引点、噪声场与农业规则，以相同目标重新生长并对比。",
         "en": "City growth along the 412 km loop, 2025–2100, on 50 m parcels: 12,222,179 people by 2100. Sliders change the magnets, noise fields and farming, and the city grows again to the same targets."
+      },
+      "detail": {
+        "subtitle": "Growth Simulator · The Orbital Loop",
+        "sections": [
+          {
+            "h": {
+              "zh": "研究定位",
+              "en": "Research position"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "本项目把 Loop City 的城市化看作一个随时间展开的过程，而不是一张终极蓝图。模拟沿 412 km 的环线展开，时间跨度为 2025–2100 年，以 50 m 地块为基本单元，追踪人口、建成区与农业用地在七十五年间如何相互竞争、彼此置换。",
+                  "en": "The project treats the urbanisation of Loop City as a process unfolding in time rather than a final masterplan. The simulation runs along the 412 km orbital loop from 2025 to 2100, on 50 m parcels as its basic unit, tracing how population, built fabric and farmland compete with and displace one another over seventy-five years."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "生成逻辑",
+              "en": "Generative logic"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "城市的增长由三类力共同驱动：",
+                  "en": "Growth is driven by three kinds of force:"
+                }
+              },
+              {
+                "list": [
+                  {
+                    "zh": "车站作为**吸引点**",
+                    "en": "the stations as **magnets**"
+                  },
+                  {
+                    "zh": "**FIELD** 与 **VEIN** 两种噪声场引入的空间差异",
+                    "en": "the spatial variation introduced by two noise fields, **FIELD** and **VEIN**"
+                  },
+                  {
+                    "zh": "以车站为中心的**密度环**",
+                    "en": "**density rings** centred on the stations"
+                  }
+                ]
+              },
+              {
+                "p": {
+                  "zh": "农业规则则在同一张地块网格上为生产性景观保留空间，使城市与农田作为同一系统中的两种状态共同演化。",
+                  "en": "Farming rules reserve room for a productive landscape on the same parcel grid, so that city and farmland co-evolve as two states of one system."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "变体研究",
+              "en": "Variation studies"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "系统允许调整各项驱动参数，并在**相同人口目标**下重新生长。总量不变，只改规则，城市形态之间的差异由此直接对应到规则上。这让模拟从单一预测变成一种比较性的设计工具：研究对象不再是「城市会长成什么样」，而是「哪些规则产生了哪些形态」。",
+                  "en": "Each driver can be adjusted and the city regrown to the **same population target**. With the totals held and only the rules changed, differences in urban form map directly onto the rules. The simulation thus shifts from a single forecast to a comparative design instrument: the question is no longer \"what will the city become\" but \"which rules produce which forms\"."
+                }
+              }
+            ]
+          }
+        ]
       },
       "tags": [
         {
