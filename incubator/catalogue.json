@@ -140,78 +140,6 @@
       }
     },
     {
-      "id": "slime-mould-loop",
-      "href": "incubator/slime-mould-loop/",
-      "cover": "assets/catalogue/slime-mould-loop.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "黏菌模拟 · 整条环线车站单元",
-        "en": "Slime mould · station cells, the whole loop"
-      },
-      "desc": {
-        "zh": "全部 17 个车站作为起点，轨迹沿环线走廊加粗成脉络，并在车站周围围合成单元；第 900 步暂停，识别并可导出单元。",
-        "en": "All 17 stations seed the mould; trails thicken into veins along the orbital corridor and close into cells around the stations. Pauses at step 900, finds the cells and saves them."
-      },
-      "tags": [
-        {
-          "zh": "黏菌",
-          "en": "Slime mould"
-        },
-        {
-          "zh": "车站单元",
-          "en": "Station cells"
-        },
-        {
-          "zh": "整条环线",
-          "en": "Whole loop"
-        }
-      ],
-      "owner": "sawhneyshreyadesign-1602",
-      "embed": {
-        "langStorageKey": "loopCellsLang",
-        "langButton": "#langbar button[data-lang=\"{lang}\"]",
-        "hide": [
-          "#langbar"
-        ]
-      }
-    },
-    {
-      "id": "slime-mould-quadrant",
-      "href": "incubator/slime-mould-quadrant/",
-      "cover": "assets/catalogue/slime-mould-quadrant.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "黏菌模拟 · 西北象限车站单元",
-        "en": "Slime mould · station cells, north-west quadrant"
-      },
-      "desc": {
-        "zh": "智能体从五个车站出发，轨迹沿铁路走廊加粗成脉络，并在每个车站周围围合成单元；第 900 步暂停并识别单元。",
-        "en": "Agents leave five stations; their trails thicken into veins along the rail corridor and close into a cell around each station. Pauses at step 900 and finds the cells."
-      },
-      "tags": [
-        {
-          "zh": "黏菌",
-          "en": "Slime mould"
-        },
-        {
-          "zh": "车站单元",
-          "en": "Station cells"
-        },
-        {
-          "zh": "智能体",
-          "en": "Agents"
-        }
-      ],
-      "owner": "sawhneyshreyadesign-1602",
-      "embed": {
-        "langStorageKey": "quadrantCellsLang",
-        "langButton": "#langbar button[data-lang=\"{lang}\"]",
-        "hide": [
-          "#langbar"
-        ]
-      }
-    },
-    {
       "id": "vr",
       "href": "incubator/vr/",
       "cover": {
@@ -238,42 +166,6 @@
         }
       ],
       "owner": "HaoWang310"
-    },
-    {
-      "id": "wool-mould-cells",
-      "href": "incubator/wool-mould-cells/",
-      "cover": "assets/catalogue/wool-mould-cells.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "黏菌单元上的毛线 · C12 + C13",
-        "en": "Wool on the mould cells · C12 + C13"
-      },
-      "desc": {
-        "zh": "两个黏菌单元逐步发展为道路网络：锚点、实时松弛的毛线、按连续性读取的道路等级、按真实宽度并带倒角的道路，以及地块。",
-        "en": "Two slime mould cells taken step by step to a road network: anchors, the wool relaxing live, a road hierarchy read by continuity, roads at their real widths with filleted junctions, and parcels."
-      },
-      "tags": [
-        {
-          "zh": "毛线",
-          "en": "Wool"
-        },
-        {
-          "zh": "道路等级",
-          "en": "Road hierarchy"
-        },
-        {
-          "zh": "黏菌单元",
-          "en": "Slime mould cells"
-        }
-      ],
-      "owner": "sawhneyshreyadesign-1602",
-      "embed": {
-        "langStorageKey": "woolAppsLang",
-        "langButton": "#langbar button[data-lang=\"{lang}\"]",
-        "hide": [
-          "#langbar"
-        ]
-      }
     },
     {
       "id": "structure-studio",
