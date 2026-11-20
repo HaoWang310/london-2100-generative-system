@@ -67,43 +67,6 @@
       }
     },
     {
-      "id": "tensor-studio",
-      "href": "incubator/tensor-studio/",
-      "cover": "assets/catalogue/tensor-studio.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "张量场工作室",
-        "en": "Tensor Studio"
-      },
-      "desc": {
-        "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路；按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图，可在伦敦地图上任选场地，并导出正式路网。",
-        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
-      },
-      "tags": [
-        {
-          "zh": "张量场",
-          "en": "Tensor field"
-        },
-        {
-          "zh": "道路生长",
-          "en": "Street growth"
-        },
-        {
-          "zh": "三级路网",
-          "en": "Three-grade network"
-        }
-      ],
-      "owner": "HaoWang310",
-      "embed": {
-        "langStorageKey": "tensorStudio.uiLanguage",
-        "langButton": "#panel .language-switch button[data-language=\"{lang}\"]",
-        "hide": [
-          "#panel .language-switch"
-        ],
-        "hostLang": "__TENSOR_SITE_INPUT__.lang"
-      }
-    },
-    {
       "id": "growth-simulator-dark",
       "href": "incubator/growth-simulator-dark/",
       "cover": "assets/catalogue/growth-simulator-dark.webp",
@@ -136,70 +99,6 @@
         "langButton": "#lang button[data-l=\"{lang}\"]",
         "hide": [
           "#lang"
-        ]
-      }
-    },
-    {
-      "id": "vr",
-      "href": "incubator/vr/",
-      "cover": {
-        "zh": "incubator/vr/assets/cover-zh.webp",
-        "en": "incubator/vr/assets/cover-en.webp"
-      },
-      "status": "incubating",
-      "title": {
-        "zh": "VR · Quest 3S",
-        "en": "VR · Quest 3S"
-      },
-      "desc": {
-        "zh": "把伦敦地图、地形、洪水风险和汇水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 展厅，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、汇水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
-        "en": "The London map, terrain, flood risk and drainage as a 3D model you can walk into: preview it on the desktop; on a Meta Quest 3S enter the VR gallery, walk around, slide, turn and zoom London on the table, switch flood risk, drainage and buildings, open the screens for the project, or walk the city at 1:1."
-      },
-      "tags": [
-        {
-          "zh": "WebXR",
-          "en": "WebXR"
-        },
-        {
-          "zh": "三维",
-          "en": "3D"
-        }
-      ],
-      "owner": "HaoWang310"
-    },
-    {
-      "id": "structure-studio",
-      "href": "incubator/structure-studio/",
-      "cover": "assets/catalogue/structure-studio.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "结构工作室 · Linear Farm 走廊",
-        "en": "Structure Studio · Linear Farm corridors"
-      },
-      "desc": {
-        "zh": "在张量场工作室生成的真实场地上，生成架在街道之上的种植工厂走廊网：离路主线顺张量场、核心密外围疏、按夹角光滑过渡的节点，两侧建筑、室内农田；导出 GeoJSON（英国国家网格）与 OBJ。",
-        "en": "Planting-factory corridors over a site grown in Tensor Studio: off-road primaries along the tensor field, dense at the cores and open at the edge, nodes blended by their angle, buildings on both sides and farmland in the cells; exported as GeoJSON (British National Grid) and OBJ."
-      },
-      "tags": [
-        {
-          "zh": "结构形态",
-          "en": "Structure"
-        },
-        {
-          "zh": "张量场",
-          "en": "Tensor field"
-        },
-        {
-          "zh": "Linear Farm",
-          "en": "Linear Farm"
-        }
-      ],
-      "owner": "HaoWang310",
-      "embed": {
-        "langStorageKey": "structureStudio.uiLanguage",
-        "langButton": "#langSw button[data-language=\"{lang}\"]",
-        "hide": [
-          "#langSw"
         ]
       }
     },
@@ -238,6 +137,107 @@
           ".lang"
         ]
       }
+    },
+    {
+      "id": "tensor-studio",
+      "href": "incubator/tensor-studio/",
+      "cover": "assets/catalogue/tensor-studio.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "张量场工作室",
+        "en": "Tensor Studio"
+      },
+      "desc": {
+        "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路；按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图，可在伦敦地图上任选场地，并导出正式路网。",
+        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
+      },
+      "tags": [
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        },
+        {
+          "zh": "道路生长",
+          "en": "Street growth"
+        },
+        {
+          "zh": "三级路网",
+          "en": "Three-grade network"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "tensorStudio.uiLanguage",
+        "langButton": "#panel .language-switch button[data-language=\"{lang}\"]",
+        "hide": [
+          "#panel .language-switch"
+        ],
+        "hostLang": "__TENSOR_SITE_INPUT__.lang"
+      }
+    },
+    {
+      "id": "structure-studio",
+      "href": "incubator/structure-studio/",
+      "cover": "assets/catalogue/structure-studio.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "结构工作室 · Linear Farm 走廊",
+        "en": "Structure Studio · Linear Farm corridors"
+      },
+      "desc": {
+        "zh": "在张量场工作室生成的真实场地上，生成架在街道之上的种植工厂走廊网：离路主线顺张量场、核心密外围疏、按夹角光滑过渡的节点，两侧建筑、室内农田；导出 GeoJSON（英国国家网格）与 OBJ。",
+        "en": "Planting-factory corridors over a site grown in Tensor Studio: off-road primaries along the tensor field, dense at the cores and open at the edge, nodes blended by their angle, buildings on both sides and farmland in the cells; exported as GeoJSON (British National Grid) and OBJ."
+      },
+      "tags": [
+        {
+          "zh": "结构形态",
+          "en": "Structure"
+        },
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        },
+        {
+          "zh": "Linear Farm",
+          "en": "Linear Farm"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "structureStudio.uiLanguage",
+        "langButton": "#langSw button[data-language=\"{lang}\"]",
+        "hide": [
+          "#langSw"
+        ]
+      }
+    },
+    {
+      "id": "vr",
+      "href": "incubator/vr/",
+      "cover": {
+        "zh": "incubator/vr/assets/cover-zh.webp",
+        "en": "incubator/vr/assets/cover-en.webp"
+      },
+      "status": "incubating",
+      "title": {
+        "zh": "VR · Quest 3S",
+        "en": "VR · Quest 3S"
+      },
+      "desc": {
+        "zh": "把伦敦地图、地形、洪水风险和汇水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 展厅，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、汇水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
+        "en": "The London map, terrain, flood risk and drainage as a 3D model you can walk into: preview it on the desktop; on a Meta Quest 3S enter the VR gallery, walk around, slide, turn and zoom London on the table, switch flood risk, drainage and buildings, open the screens for the project, or walk the city at 1:1."
+      },
+      "tags": [
+        {
+          "zh": "WebXR",
+          "en": "WebXR"
+        },
+        {
+          "zh": "三维",
+          "en": "3D"
+        }
+      ],
+      "owner": "HaoWang310"
     }
   ]
 }
