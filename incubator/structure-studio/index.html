@@ -593,8 +593,9 @@ function clipCorr(c) { if (!SS.tower || !F || !F.towers.some(t => t[5])) return 
 // 种植塔模型（assets/tower-model.json）：打开页面时就去加载；到了以后，三维已经建好的话只重建塔
 let TOWER3 = null;
 const b64 = (s, T) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new T(u.buffer); };
-fetch('assets/tower-model.json').then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { const dec = m => ({ v: b64(m.v, Int16Array), i: b64(m.i, Uint16Array) });
-  TOWER3 = { tiers: j.tiers.map(t => ({ z: t.z, ...dec(t) })), towers: j.towers.map(t => ({ id: t.id, mesh: dec(t.mesh) })) };
+fetch('assets/tower-model.json?v=2')   /* 版本号跟模型格式走：页面和模型数据各自有缓存，带上版本号才不会新页面读到旧数据（或反过来），读错了就只能显示圆塔 */
+ .then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => { const dec = m => ({ v: b64(m.v, Int16Array), i: b64(m.i, Uint16Array) });
+  TOWER3 = { tiers: j.tiers.map(t => ({ z: t.z, ...dec(t) })), towers: j.towers.map(t => ({ id: t.id, mesh: dec(t.mesh || t.shell) })) };
   if (G.towerModel && F) buildTowerModel(); }).catch(e => console.warn('tower model', e));
 function towerMesh(m, f, zr, mat) { const n = m.v.length / 3, pos = new Float32Array(m.v.length);
   for (let i = 0; i < n; i++) { const q = f(m.v[3 * i] / 100, m.v[3 * i + 1] / 100, m.v[3 * i + 2] / 100, zr); pos[3 * i] = q[0]; pos[3 * i + 1] = q[1]; pos[3 * i + 2] = q[2]; }

@@ -47,5 +47,5 @@ test('other bases stay available in the engine: podium (21 m) and three plates (
   assert.ok(!pl.leak && pl.top.length % 9 === 0 && pl.cols.length > 20);
 });
 test('the page loads the model, draws three shells per core and the tower feet on the plan', () => {
-  for (const k of ['<script src="engine/tower.js"></script>', "fetch('assets/tower-model.json')", 'function buildTowerModel()', 'towerMesh(w.mesh, f, null, MAT.skin)', 'if (t[7] === SS.tower.BASE.podium)', 'SS.tower.feet(t)', 'if (!TOWER3 || !SS.tower)']) assert.ok(html.includes(k), k);
+  for (const k of ['<script src="engine/tower.js"></script>', "fetch('assets/tower-model.json?v=2')", 'dec(t.mesh || t.shell)', 'function buildTowerModel()', 'towerMesh(w.mesh, f, null, MAT.skin)', 'if (t[7] === SS.tower.BASE.podium)', 'SS.tower.feet(t)', 'if (!TOWER3 || !SS.tower)']) assert.ok(html.includes(k), k);
 });
