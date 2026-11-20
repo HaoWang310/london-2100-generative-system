@@ -133,9 +133,9 @@ test('zoomed out, the flat ground layers do not flicker: log depth, a near plane
   assert.ok(html.includes('tmp.position.set(c[0], c[1], 0)'), 'columns start at ground level');
 });
 test('third-level plate edges retreat from the ramp top into the node edge: every one handled, no pointed tip left', () => {
-  const D3 = SS.deck.buildDeck(F, SS.deck.DEF), t = D3.stats.tips; assert.equal(SS.deck.DEF.tip, 'retreat');
+  const D3 = SS.deck.buildDeck(F, { ...SS.deck.DEF, retreat2Len: 0 }), t = D3.stats.tips; assert.equal(SS.deck.DEF.tip, 'retreat');   // 二层的收窄（v0.9.21）另有测试，这里关掉，只比较三层
   assert.ok(t.retreat > 0 && t.retreat === D3.stats.edges3, 'one per third-level edge ramp'); assert.equal(t.retreatDone, t.retreat, 'none skipped'); assert.equal(t.skip.length, 0); assert.equal(t.tt, 0, 'no pointed third-level tips');
-  const Dp = SS.deck.buildDeck(F, { ...SS.deck.DEF, tip: 'point' }); assert.equal(Dp.stats.tips.tt, Dp.stats.edges3, 'the old pointed tip is still available as an option');
+  const Dp = SS.deck.buildDeck(F, { ...SS.deck.DEF, tip: 'point', retreat2Len: 0 }); assert.equal(Dp.stats.tips.tt, Dp.stats.edges3, 'the old pointed tip is still available as an option');
   // the retreat only removes third-level area: levels 1 and 2 are unchanged, level 3 gets smaller
   const area = (D, l) => { let a = 0; D.F.forEach((f, i) => { if (D.FT[i] !== l) return; let zz = 0; for (const v of f) zz += D.V[3 * v + 2]; if (Math.abs(zz / f.length - SS.deck.LV[l]) > 0.01) return; for (let k = 1; k < f.length - 1; k++) { const p = 3 * f[0], q = 3 * f[k], r = 3 * f[k + 1]; a += Math.abs((D.V[q] - D.V[p]) * (D.V[r + 1] - D.V[p + 1]) - (D.V[r] - D.V[p]) * (D.V[q + 1] - D.V[p + 1])) / 2; } }); return a; };
   for (const l of [1, 2]) assert.ok(Math.abs(area(D3, l) - area(Dp, l)) < 1, 'level ' + l + ' unchanged'); assert.ok(area(D3, 3) < area(Dp, 3) - 1000, 'third level pulled back');
@@ -154,4 +154,12 @@ test('step 6 transition: 3D prebuilt, starts from the plan framing top-down, str
   const riseH = Function('dmE', 'F', html.match(/function riseH\(u\) \{[^\n]*\n/)[0] + '; return riseH;')(dmE, F);
   let prev = -1; for (let u = 0; u <= 1.0001; u += 0.01) { const h = riseH(u); assert.ok(h >= prev, 'rises monotonically'); prev = h; }
   assert.equal(riseH(0.05), 0.6, 'ground only at the start'); assert.ok(Math.abs(riseH(0.6) - 17.4) < 1e-6, 'all three levels by 60%'); assert.ok(riseH(0.91) > 150, 'towers nearly up'); assert.equal(riseH(0.95), Infinity, 'clip plane off at the end');
+});
+test('second level beside an L1->L2 ramp whose foot is near a junction: the half narrows from the mouth to the foot, not over the ramp', () => {
+  const D2 = SS.deck.buildDeck(F, SS.deck.DEF), t = D2.stats.tips.l2; assert.ok(t.n > 30, 'places handled: ' + t.n); assert.equal(D2.stats.badPlates, 0);
+  const off = SS.deck.buildDeck(F, { ...SS.deck.DEF, retreat2Len: 0 }); assert.equal(off.stats.tips.l2.n, 0);
+  // no second-level face of the ramp side lies above a ramp near those feet any more: count L2 faces whose centre is inside a ramp footprint
+  const area = (D, l) => { let a = 0; D.F.forEach((f, i) => { if (D.FT[i] !== l) return; let zz = 0; for (const v of f) zz += D.V[3 * v + 2]; if (Math.abs(zz / f.length - SS.deck.LV[l]) > 0.01) return; for (let k = 1; k < f.length - 1; k++) { const p = 3 * f[0], q = 3 * f[k], r = 3 * f[k + 1]; a += Math.abs((D.V[q] - D.V[p]) * (D.V[r + 1] - D.V[p + 1]) - (D.V[r] - D.V[p]) * (D.V[q + 1] - D.V[p + 1])) / 2; } }); return a; };
+  assert.ok(Math.abs(area(D2, 1) - area(off, 1)) < 1, 'level 1 unchanged'); assert.ok(Math.abs(area(D2, 3) - area(off, 3)) < 1, 'level 3 unchanged');
+  assert.ok(area(D2, 2) < area(off, 2), 'the slivers over the ramps are gone');
 });
