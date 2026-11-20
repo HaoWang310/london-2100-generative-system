@@ -85,7 +85,7 @@ test('no low wedge: where a tapered walkway overlaps a ramp the clear height is 
 });
 test('long tapers: the interrupted walkway starts narrowing well before the ramp foot where there is room', () => {
   const R = DK.ramps.filter(r => r.kind[0] > 0), want = r => Math.round(SS.deck.DEF.taperBack * r.m), some = R.filter(r => r.back[0] > 0 || r.back[1] > 0).length, full = R.filter(r => r.back[0] >= want(r)).length;
-  assert.equal(SS.deck.DEF.taperShape, 'line'); assert.ok(some > 0.4 * R.length, 'ramps with a lengthened taper: ' + some + ' / ' + R.length); assert.ok(full > 20, 'tapers at full length: ' + full);
+  assert.equal(SS.deck.DEF.taperShape, 'ease', 'tapers narrow along a curve tangent at both ends'); assert.ok(some > 0.4 * R.length, 'ramps with a lengthened taper: ' + some + ' / ' + R.length); assert.ok(full > 20, 'tapers at full length: ' + full);
   for (const r of R) assert.ok(r.back[0] <= want(r) && r.back[1] <= want(r));
   const off = SS.deck.buildDeck(F, { taperBack: 0 }); assert.ok(off.ramps.every(r => r.back[0] === 0 && r.back[1] === 0), 'taperBack 0 keeps the short taper'); assert.equal(off.stats.r12, s.r12, 'ramp layout is not affected by the taper length');
 });
@@ -140,4 +140,11 @@ test('third-level plate edges retreat from the ramp top into the node edge: ever
   const area = (D, l) => { let a = 0; D.F.forEach((f, i) => { if (D.FT[i] !== l) return; let zz = 0; for (const v of f) zz += D.V[3 * v + 2]; if (Math.abs(zz / f.length - SS.deck.LV[l]) > 0.01) return; for (let k = 1; k < f.length - 1; k++) { const p = 3 * f[0], q = 3 * f[k], r = 3 * f[k + 1]; a += Math.abs((D.V[q] - D.V[p]) * (D.V[r + 1] - D.V[p + 1]) - (D.V[r] - D.V[p]) * (D.V[q + 1] - D.V[p + 1])) / 2; } }); return a; };
   for (const l of [1, 2]) assert.ok(Math.abs(area(D3, l) - area(Dp, l)) < 1, 'level ' + l + ' unchanged'); assert.ok(area(D3, 3) < area(Dp, 3) - 1000, 'third level pulled back');
   const m = SS.deck.deckMesh(D3, 1); for (let i = 0; i < m.top.length; i++) assert.ok(Number.isFinite(m.top[i]));
+});
+test('third-level edges: the retreat curve starts at the ramp top, and the ramp side bends in to the ramp-top corner (no sliver)', () => {
+  const D3 = SS.deck.buildDeck(F, SS.deck.DEF), t = D3.stats.tips; assert.ok(SS.deck.DEF.rampEdge);
+  assert.equal(t.radius.length, t.retreat); assert.ok(t.radius.every(r => r > 2), 'no kink: ' + Math.min(...t.radius)); const sorted = t.radius.slice().sort((a, b) => a - b); assert.ok(sorted[sorted.length >> 1] >= 12, 'median radius ' + sorted[sorted.length >> 1]);
+  assert.equal(t.rampEdge, t.retreat, 'every ramp side handled'); assert.equal(D3.stats.badPlates, 0);
+  // ramp side: no third-level face of a retreating branch is left between its mouth and its ramp top (the node plate covers it)
+  const off = SS.deck.buildDeck(F, { ...SS.deck.DEF, rampEdge: false }); assert.ok(off.stats.tips.rampEdge === undefined);
 });
