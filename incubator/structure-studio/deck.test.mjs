@@ -132,3 +132,12 @@ test('zoomed out, the flat ground layers do not flicker: log depth, a near plane
   assert.ok(html.includes('groundOrder();\n  scene.add(G.ctx3, G.site'), 'order is applied and the surroundings are in the scene');
   assert.ok(html.includes('tmp.position.set(c[0], c[1], 0)'), 'columns start at ground level');
 });
+test('third-level plate edges retreat from the ramp top into the node edge: every one handled, no pointed tip left', () => {
+  const D3 = SS.deck.buildDeck(F, SS.deck.DEF), t = D3.stats.tips; assert.equal(SS.deck.DEF.tip, 'retreat');
+  assert.ok(t.retreat > 0 && t.retreat === D3.stats.edges3, 'one per third-level edge ramp'); assert.equal(t.retreatDone, t.retreat, 'none skipped'); assert.equal(t.skip.length, 0); assert.equal(t.tt, 0, 'no pointed third-level tips');
+  const Dp = SS.deck.buildDeck(F, { ...SS.deck.DEF, tip: 'point' }); assert.equal(Dp.stats.tips.tt, Dp.stats.edges3, 'the old pointed tip is still available as an option');
+  // the retreat only removes third-level area: levels 1 and 2 are unchanged, level 3 gets smaller
+  const area = (D, l) => { let a = 0; D.F.forEach((f, i) => { if (D.FT[i] !== l) return; let zz = 0; for (const v of f) zz += D.V[3 * v + 2]; if (Math.abs(zz / f.length - SS.deck.LV[l]) > 0.01) return; for (let k = 1; k < f.length - 1; k++) { const p = 3 * f[0], q = 3 * f[k], r = 3 * f[k + 1]; a += Math.abs((D.V[q] - D.V[p]) * (D.V[r + 1] - D.V[p + 1]) - (D.V[r] - D.V[p]) * (D.V[q + 1] - D.V[p + 1])) / 2; } }); return a; };
+  for (const l of [1, 2]) assert.ok(Math.abs(area(D3, l) - area(Dp, l)) < 1, 'level ' + l + ' unchanged'); assert.ok(area(D3, 3) < area(Dp, 3) - 1000, 'third level pulled back');
+  const m = SS.deck.deckMesh(D3, 1); for (let i = 0; i < m.top.length; i++) assert.ok(Number.isFinite(m.top[i]));
+});
