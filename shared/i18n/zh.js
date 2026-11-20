@@ -188,6 +188,8 @@ export const zh = {
   "cat.status.ready": "可用",
   "cat.status.incubating": "孵化中",
   "cat.status.planned": "规划中",
+  "cat.detail.open": "查看介绍",
+  "cat.detail.close": "关闭介绍",
   "cat.slot.title": "添加新功能",
   "cat.slot.desc": "把 app 放进 incubator/，再在 catalogue.json 中加一条，就会出现在这里。",
   "cat.back": "返回目录",
