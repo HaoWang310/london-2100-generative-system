@@ -534,7 +534,7 @@ function buildStructure(site, P, EXCL) {
 
   // 种植塔：来自张量场的主吸引点，每个核心一座大塔
   const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
-  placeTowers(towers, site, strands);
+  placeTowers(towers, site, strands, P);
   // 只有主吸引点放种植塔（每个核心一座大塔）。次吸引点仍然局部加密，重要路口仍然记录在 site.hubs 里，但都不再放塔。
   // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
   const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
@@ -719,9 +719,9 @@ function runSketch(F) { const simp = Q => { const o = []; for (let i = 0; i < Q.
 // 和 engine/tower.js 里的数据一致（测试会核对），这样 structure.js 不依赖别的文件。
 // 缩放：最高一片塔放大到 170 m；塔所在的那块场地比最大的一块小时，按面积开平方等比缩小（台座和塔一起），最多缩到 80%。
 // 朝向：台座的一个尖角对准离塔最近的那条主线的方向（取转得最少的那个尖角）。
-// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot]；台座四层顶面固定 7.2 / 11.8 / 16.4 / 21.0 m，塔立在 21.0 m 上，塔尖 = 21.0 + 157.13·s
-const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024] };
-function placeTowers(towers, site, strands) {
+// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot, 塔脚高度]。塔脚高度看 P.towerBase：'podium' 台座 21.0 m、'plates' 三层平面 16.4 m、'none' 地面 0
+const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024], base: { podium: 21.0, plates: 16.4, none: 0 } };
+function placeTowers(towers, site, strands, P) { const z0 = TOWER_MODEL.base[(P && P.towerBase) || 'none'] ?? TOWER_MODEL.top;
   const pieces = (site.snap && site.snap.pieces) || [], areaOf = P => { let a = 0; for (let i = 0, j = P.length - 1; i < P.length; j = i++) a += (P[j][0] + P[i][0]) * (P[j][1] - P[i][1]); return Math.abs(a) / 2; };
   const inP = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
   const A = towers.map(t => { const pc = pieces.find(pc => inP(t, pc.outer)); return pc ? areaOf(pc.outer) - (pc.holes || []).filter(h => h.length > 2).reduce((s, h) => s + areaOf(h), 0) : 0; });
@@ -730,7 +730,7 @@ function placeTowers(towers, site, strands) {
     let best = null; for (const S of strands || []) for (let k = 0; k < S.length; k++) { const d = dist(S[k], t); if (!best || d < best.d) best = { d, S, k }; }
     let rot = 0; if (best) { const a = best.S[Math.max(0, best.k - 5)], b = best.S[Math.min(best.S.length - 1, best.k + 5)], th = Math.atan2(b[1] - a[1], b[0] - a[0]); let m = Infinity;
       for (const c of TOWER_MODEL.corners) for (const d of [th, th + Math.PI]) { let r = d - c; r = Math.atan2(Math.sin(r), Math.cos(r)); if (Math.abs(r) < Math.abs(m)) m = r; } rot = m; }
-    t[3] = +(TOWER_MODEL.top + TOWER_MODEL.h * sc).toFixed(1); t[4] = ''; t[5] = +sc.toFixed(4); t[6] = +rot.toFixed(4); });
+    t[3] = +(z0 + TOWER_MODEL.h * sc).toFixed(1); t[4] = ''; t[5] = +sc.toFixed(4); t[6] = +rot.toFixed(4); t[7] = z0; });
 }
 function deckHeight(F, deckZ) { return (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; }; }
 const API = { TOWER_MODEL, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
