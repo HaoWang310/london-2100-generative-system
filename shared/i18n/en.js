@@ -188,6 +188,8 @@ export const en = {
   "cat.status.ready": "Ready",
   "cat.status.incubating": "Incubating",
   "cat.status.planned": "Planned",
+  "cat.detail.open": "About this app",
+  "cat.detail.close": "Close",
   "cat.slot.title": "Add a new tool",
   "cat.slot.desc": "Put an app in incubator/ and add one entry to catalogue.json — it appears here.",
   "cat.back": "Back to catalogue",
