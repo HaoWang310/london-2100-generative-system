@@ -127,3 +127,19 @@ test('base mesh: three levels of faces facing up, areas match the levels (edges 
 test('the page draws the base: three levels in 3D with the corridor shading, columns from their own level, L1 outline in the plan, tower rises from L3', () => {
   for (const k of ['M.plaza.lvl', 'triMesh(M.plaza.top, MAT.deckLv)', 'M.plaza.cols', 'SS.plazaOutline(z, F.site)', "oc.fill('evenodd')", 'const z0 = c[3] || 0', 'G.towerModel.position.z', "put('plaza_top'", "'tower base L'"]) assert.ok(html.includes(k), k);
 });
+// ---- 走廊环一律三层（v0.9.28）：塔座每一层在走廊环上都接到同一层，不悬空
+test('the corridor ring around each tower is three-level, so the base never hangs over a lower corridor', () => {
+  const D = SS.deck.buildDeck(F, SS.deck.DEF), dm = SS.deck.deckMesh(D, 1); assert.ok(D.stats.ringNodes >= 10, 'ring nodes ' + D.stats.ringNodes); assert.equal(D.stats.badPlates, 0);
+  const G = new Map(), C = 6; for (let q = 0; q < dm.top.length; q += 9) { const xs = [dm.top[q], dm.top[q + 3], dm.top[q + 6]], ys = [dm.top[q + 1], dm.top[q + 4], dm.top[q + 7]];
+    for (let x = Math.floor(Math.min(...xs) / C); x <= Math.floor(Math.max(...xs) / C); x++) for (let y = Math.floor(Math.min(...ys) / C); y <= Math.floor(Math.max(...ys) / C); y++) { const k = x + ',' + y; if (!G.has(k)) G.set(k, []); G.get(k).push(q); } }
+  const zTop = (x, y) => { let z = -1; for (const q of G.get(Math.floor(x / C) + ',' + Math.floor(y / C)) || []) { const a = dm.top, d = (a[q + 4] - a[q + 7]) * (a[q] - a[q + 6]) + (a[q + 6] - a[q + 3]) * (a[q + 1] - a[q + 7]); if (!d) continue;
+    const u = ((a[q + 4] - a[q + 7]) * (x - a[q + 6]) + (a[q + 6] - a[q + 3]) * (y - a[q + 7])) / d, v = ((a[q + 7] - a[q + 1]) * (x - a[q + 6]) + (a[q] - a[q + 6]) * (y - a[q + 7])) / d, w = 1 - u - v; if (u < -1e-6 || v < -1e-6 || w < -1e-6) continue; z = Math.max(z, u * a[q + 2] + v * a[q + 5] + w * a[q + 8]); } return z; };
+  F.plazas.forEach((z, k) => { const T = TT[k], g = T.grid, P2 = z.poly; let n = 0, hang = 0;
+    for (let i = 0; i < P2.length; i++) { const a = P2[i], b = P2[(i + 1) % P2.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      for (let s = 0; s < L; s += 1) { const p = [a[0] + (b[0] - a[0]) * s / L, a[1] + (b[1] - a[1]) * s / L], dx = p[0] - z.c[0], dy = p[1] - z.c[1], r = Math.hypot(dx, dy), o = [p[0] + dx / r * 4, p[1] + dy / r * 4], q = [p[0] - dx / r * 1.5, p[1] - dy / r * 1.5];
+        const gi = Math.floor((q[0] - g.x0) / g.res), gj = Math.floor((q[1] - g.y0) / g.res), lv = T.levels.reduce((m, L_, li) => L_.mask[gj * g.W + gi] ? li + 1 : m, 0); if (!lv) continue; n++;
+        if (zTop(o[0], o[1]) < [0, 7.2, 11.8, 16.4][lv] - 0.3) hang++; } }
+    assert.ok(n > 200, 'base reaches the ring on ' + n + ' m'); assert.equal(hang, 0, 'metres where the base hangs over a lower corridor'); });
+  const off = SS.deck.buildDeck(F, { ...SS.deck.DEF, ring3: false }); assert.ok(off.stats.ringNodes === 0 && off.stats.l3nodes < D.stats.l3nodes, 'ring3 can be switched off');
+});
+
