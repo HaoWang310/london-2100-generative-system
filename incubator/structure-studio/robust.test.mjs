@@ -36,11 +36,10 @@ function check(snap, P) { const site = SS.prepareSite(snap), F = SS.buildStructu
 for (const [name, snap, P] of CASES) test('rules hold: ' + name, () => {
   const { F, D, towers } = check(snap, P); assert.ok(F.plazas.length >= 1 && F.plazas.length === F.towers.length, 'every tower has a base'); assert.equal(D.stats.badPlates, 0, 'node plates that cross themselves');
   for (const t of F.towers) assert.equal(t[7], 16.4, 'tower on L3');
-  // 每一层坡道旁边的板边过渡（v0.9.30）：收尖都是加密的缓曲线、二层→三层坡顶下面不再有一站长的斜切三角、三层收回弧线每 ≤ 1.6 m 一个点
+  // 每一层坡道旁边的板边过渡（v0.9.30–31）：收尖都是缓曲线、二层→三层坡顶下面不再有一站长的斜切三角、三层板边和下面叠齐（接头只顺前后 4 个点）
   const cv = D.stats.tips.curves || []; assert.ok(cv.length > 50, 'tapers recorded: ' + cv.length);
   for (const c of cv) if (c.kind === '23' && c.tag === 'tl') assert.ok(c.T >= 2, 'L2 under an L2→L3 ramp top narrows over ' + c.T + ' station(s)');
-  const med = a => { a = a.slice().sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; }; assert.ok(med(cv.map(c => c.max)) < 10, 'median corner along a taper ' + med(cv.map(c => c.max)));
-  assert.ok((D.stats.tips.arcStep || 0) <= 1.6, 'retreat arc point spacing ' + D.stats.tips.arcStep);
+  assert.ok((D.stats.tips.joinMoved || 0) <= 8, 'L3 join smoothing moved ' + D.stats.tips.joinMoved + ' outline points (L3 edges must stay stacked on L2)');
   for (const { T, hang, n, clash } of towers) {
     assert.ok(T.footClear >= 3 - 1e-6, 'feet on L3 or the three-level ring, >= 3 m from the edge: ' + T.footClear);
     assert.equal(T.arcs.length, 3, 'three valleys between the three shells'); assert.ok(T.levels[0].area > T.levels[1].area && T.levels[1].area > T.levels[2].area, 'smaller going up');
