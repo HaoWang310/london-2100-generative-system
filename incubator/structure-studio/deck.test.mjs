@@ -130,7 +130,7 @@ test('zoomed out, the flat ground layers do not flicker: log depth, a near plane
   const order = Function('return ' + html.match(/const GROUND_ORDER = (\[[^\]]*\]);/)[1])();
   assert.deepEqual(order, ['out3', 'cbld3', 'cline3', 'land', 'water', 'stream', 'wline3', 'farm3', 'road3T'], 'ground layers are drawn bottom to top, same order as their heights');
   assert.ok(html.includes('groundOrder();\n  scene.add(G.ctx3, G.site'), 'order is applied and the surroundings are in the scene');
-  assert.ok(html.includes('tmp.position.set(c[0], c[1], 0)'), 'columns start at ground level');
+  assert.ok(html.includes('const z0 = c[3] || 0; tmp.position.set(c[0], c[1], z0)'), 'columns start at ground level (or on their own level, c[3])');
 });
 test('third-level plate edges retreat from the ramp top into the node edge: every one handled, no pointed tip left', () => {
   const D3 = SS.deck.buildDeck(F, { ...SS.deck.DEF, retreat2Len: 0 }), t = D3.stats.tips; assert.equal(SS.deck.DEF.tip, 'retreat');   // 二层的收窄（v0.9.21）另有测试，这里关掉，只比较三层

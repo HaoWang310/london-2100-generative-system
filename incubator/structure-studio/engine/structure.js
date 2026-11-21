@@ -688,13 +688,16 @@ function meshes(F, P) {
   { const sm = new Float32Array(NN); for (let i = 0; i < NN; i++) sm[i] = F.site.landM[i] && !F.site.waterM[i] && !roadM[i] ? 1 : 0; const sb = blur(sm, W, H, 0.7), body = new Float32Array(NN); for (let i = 0; i < NN; i++) body[i] = g.corrF[i] * sb[i];
     const walls = ms(F, body, 2.0, (x, y) => corrZ(x, y) - 0.02, () => 0).side, cs = new Float32Array(corridor.side.length + walls.length); cs.set(corridor.side); cs.set(walls, corridor.side.length); corridor.side = cs; }
   const fs = new Float32Array(NN); for (let i = 0; i < NN; i++) fs[i] = g.farm[i] ? 1 : 0; // 三维里农田整片铺（条纹只在平面图上）
+  for (const z of F.plazas || []) { const T = plazaTiers(z, F.site), q = T.grid, L1 = T.levels[0].mask;   // 塔座的缝底下是农田（L1 盖住的地方不是）
+    for (let i = 0; i < NN; i++) { if (g.polyLab[i] !== z.cell + 1) continue; const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES, a = Math.floor((x - q.x0) / q.res), b = Math.floor((y - q.y0) / q.res);
+      if (a >= 0 && b >= 0 && a < q.W && b < q.H && !L1[b * q.W + a] && Math.hypot(x - z.c[0], y - z.c[1]) > z.oc + 2) fs[i] = 1; } }
   const farm = ms(F, blur(fs, W, H, 0.6), 4.0, () => 0.25, z => z - 0.2);
   const bS = new Float32Array(NN); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let m = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const xx = x + a, yy = y + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) m = Math.max(m, g.hgt[yy * W + xx]); } bS[y * W + x] = m; }
   const bf = new Float32Array(NN); for (let i = 0; i < NN; i++) bf[i] = g.bldM[i];
   const zb = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1); return bS[j * W + i] || 7.2; };
   const bld = ms(F, blur(bf, W, H, 0.6), 2.0, zb, () => 0);
-  const pm = (F.plazas || []).map(plazaMesh), cat = k => { const n = pm.reduce((a, m) => a + m[k].length, 0), o = new Float32Array(n); let q = 0; for (const m of pm) { o.set(m[k], q); q += m[k].length; } return o; };
-  const plaza = { top: cat('top'), side: cat('side'), bottom: cat('bottom'), cols: (F.plazas || []).flatMap(z => z.cols) };   // 环台（塔下一层广场）和它的柱子
+  const pm = (F.plazas || []).map(z => plazaMesh(z, F.site)), cat = (k, T) => { const n = pm.reduce((a, m) => a + m[k].length, 0), o = new T(n); let q = 0; for (const m of pm) { o.set(m[k], q); q += m[k].length; } return o; };
+  const plaza = { top: cat('top', Float32Array), side: cat('side', Float32Array), bottom: cat('bottom', Float32Array), lvl: cat('lvl', Uint8Array), cols: (F.plazas || []).flatMap(z => plazaTiers(z, F.site).cols) };   // 三层塔座和它的柱子（[x, y, 柱顶, 柱脚]）
   return { corridor, farm, bld, plaza };
 }
 
@@ -734,8 +737,8 @@ function runSketch(F) { const simp = Q => { const o = []; for (let i = 0; i < Q.
 // 和 engine/tower.js 里的数据一致（测试会核对），这样 structure.js 不依赖别的文件。
 // 缩放：最高一片塔放大到 170 m；塔所在的那块场地比最大的一块小时，按面积开平方等比缩小（台座和塔一起），最多缩到 80%。
 // 朝向：台座的一个尖角对准离塔最近的那条主线的方向（取转得最少的那个尖角）。
-// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot, 塔脚高度]。塔脚高度看 P.towerBase：'plaza' 环台 7.2 m（默认）、'podium' 台座 21.0 m、'plates' 三层平面 16.4 m、'none' 地面 0
-const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024], base: { plaza: 7.2, podium: 21.0, plates: 16.4, none: 0 },
+// 塔 = [x, y, r, 塔尖离地高度, kind, s, rot, 塔脚高度]。塔脚高度看 P.towerBase：'plaza' 三层退台塔座，塔立在 L3 16.4 m（默认）、'podium' 台座 21.0 m、'plates' 三层平面 16.4 m、'none' 地面 0
+const TOWER_MODEL = { h: 157.13, top: 21.0, target: 170, minRel: 0.8, corners: [-2.3562, -0.576, 1.9024], base: { plaza: 16.4, podium: 21.0, plates: 16.4, none: 0 },
   footR: 63.17, feet: [[[-25.8,28.2],[-7.8,29.4],[2.1,33.9],[-1.9,36.8],[-4.7,38.6],[-6.3,39.4],[-7.7,40],[-9.3,40.5],[-10.6,40.8],[-11.4,40.8],[-12.2,40.8],[-13,40.7],[-13.8,40.5],[-14.6,40.2],[-15.8,39.6],[-17.1,38.6],[-18.4,37.6],[-19.6,36.4],[-21.8,33.8],[-24.8,29.9]],[[31.1,-42.2],[36.4,-40.2],[39,-39],[41.6,-37.7],[42.8,-36.9],[44,-36],[45,-35],[45.9,-34],[46.6,-32.7],[47.1,-31.3],[47.3,-29.9],[47.2,-28.5],[47.1,-27],[46.8,-25.6],[46,-22.8],[45.1,-20.1],[42.9,-14.8],[39,-19.6],[38,-20.9],[35,-25.1],[33.1,-29.4],[31.2,-39.8]],[[-45.4,-35.5],[-45.3,-38.3],[-45.1,-40.4],[-44.9,-41.8],[-44.5,-43.1],[-44,-44.5],[-43.4,-45.7],[-42.7,-46.5],[-41.9,-47.2],[-40.7,-48],[-39.4,-48.5],[-38.1,-48.9],[-36.7,-49.1],[-35.3,-49.3],[-32.5,-49.5],[-28.2,-49.5],[-30.3,-41.4],[-33,-38.1],[-35,-36],[-45.3,-29.5]]] };   // feet：三片塔塔脚轮廓（模型坐标，隔点取自 engine/tower.js 的 MODEL.feet），footR：塔脚离中心最远的距离
 const towerBaseOf = P => (P && P.towerBase) || 'plaza';
 const inPolyS = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
@@ -762,8 +765,8 @@ const segD = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * 
 const polyD = (p, P) => { let m = Infinity; for (let i = 0, j = P.length - 1; i < P.length; j = i++) m = Math.min(m, segD(p, P[j], P[i])); return m; };
 // 塔脚轮廓（场地坐标）
 function towerFeet(t) { const s = t[5] || 1, a = t[6] || 0, c = Math.cos(a), n = Math.sin(a); return TOWER_MODEL.feet.map(F => F.map(p => [t[0] + s * (c * p[0] - n * p[1]), t[1] + s * (n * p[0] + c * p[1])])); }
-// 一座塔的环台：轮廓 = 塔所在的室（走廊环的内边），顶面 7.2 m、板厚 1 m；中心开天井（让开塔脚和环岛内沿各 4 m）；
-// 柱子：环岛内外各一圈（离路边 3 m），往外每 14 m 再一圈，约 12 m 一根；不立在任何道路上、不进天井。ok = 塔脚全部落在环台里、离边 ≥ 1 m
+// 一座塔的塔座（轻的部分，生成时就算）：塔所在的室、天井（让开塔脚和环岛内沿各 4 m）、环岛、地面柱候选点（环岛内外各一圈、往外每 14 m 一圈，约 12 m 一根，
+// 不立在任何道路上、不进天井）。ok = 塔脚全部落在室里、离边 ≥ 1 m。三层的形状在 plazaTiers 里按需算（较慢，方案比较时不算）
 const PLAZA_Z = 7.2, PLAZA_T = 1.0;
 function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp => inPolyS(t, cp.poly)); if (cell < 0) return null;
   const poly = cellPolys[cell].poly, c = [t[0], t[1]], rr = poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])), rIn = Math.min(...rr);
@@ -777,17 +780,120 @@ function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp
   const cols = []; for (const R of radii) { const n = Math.max(6, Math.round(2 * Math.PI * R / 12)); for (let k = 0; k < n; k++) { const a = 2 * Math.PI * (k + 0.5 * (radii.indexOf(R) % 2)) / n, p = [c[0] + R * Math.cos(a), c[1] + R * Math.sin(a)];
     if (!inPolyS(p, poly) || polyD(p, poly) < 2.5 || Math.hypot(p[0] - c[0], p[1] - c[1]) < oc + 2 || onRoad(p)) continue; cols.push([p[0], p[1], PLAZA_Z - PLAZA_T]); } }
   return { ti, cell, poly, c, oc, ring, feet, cols, z: PLAZA_Z, thick: PLAZA_T, area: Math.abs(polyArea(poly)) - Math.PI * oc * oc, gap, ok: gap >= 1 }; }
-// 环台的三维网格：从天井边到室边按角度连成一圈四边形（室是包着塔的凸形格子，从塔中心看每个方向只穿出一次），加内外侧面和底面
-function plazaMesh(z) { const top = [], side = [], bottom = [], c = z.c, P = resample([...z.poly, z.poly[0]], 2.5); P.pop();
-  const ang = P.map(p => Math.atan2(p[1] - c[1], p[0] - c[0])), ord = P.map((_, i) => i).sort((a, b) => ang[a] - ang[b]), Q = ord.map(i => P[i]), A = ord.map(i => ang[i]), zt = z.z - 0.02, zb = z.z - z.thick;
-  const inn = a => [c[0] + z.oc * Math.cos(a), c[1] + z.oc * Math.sin(a)], tri = (arr, a, b, d) => arr.push(a[0], a[1], a[2], b[0], b[1], b[2], d[0], d[1], d[2]);
-  for (let i = 0; i < Q.length; i++) { const j = (i + 1) % Q.length, o0 = Q[i], o1 = Q[j], i0 = inn(A[i]), i1 = inn(A[j]);
-    tri(top, [...i0, zt], [...o0, zt], [...o1, zt]); tri(top, [...i0, zt], [...o1, zt], [...i1, zt]);
-    tri(bottom, [...i0, zb], [...o1, zb], [...o0, zb]); tri(bottom, [...i0, zb], [...i1, zb], [...o1, zb]);
-    tri(side, [...o0, zt], [...o0, zb], [...o1, zb]); tri(side, [...o0, zt], [...o1, zb], [...o1, zt]);
-    tri(side, [...i1, zt], [...i1, zb], [...i0, zb]); tri(side, [...i1, zt], [...i0, zb], [...i0, zt]); }
-  return { top: new Float32Array(top), side: new Float32Array(side), bottom: new Float32Array(bottom) }; }
+// ---- 三层退台塔座（v0.9.27）：塔所在的室里铺 L1 7.2 / L2 11.8 / L3 16.4 三层，塔立在 L3 上
+// 规则（对每个生成结果都适用，在 0.5 m 网格上用距离场做，最后描成光滑轮廓）：
+//  1 L3 = 三叶塔座：每片塔一片"叶"伸到走廊环；每两片塔之间一道向塔心凹进的圆弧（谷），弧的两端落在走廊环上、离塔脚 ≥ 3 m，
+//    中段在"离塔脚 ≥ 3 m、离天井 ≥ 8 m"的前提下凹到最深；三道谷的大小由场地自己决定（不设上限）
+//  2 L2 = L3 外放 8 m，L1 = L3 外放 16 m；离走廊环 40 m 以内台阶宽度平滑收到 0，三层的边相切地汇进走廊环
+//  3 L1 另沿辐射路伸出"臂"（路宽 / 2 + 5 m，至少 10 m）接走廊环；L2、L3 靠三片叶接
+//  4 圆滑：走廊环和天井当实体做闭运算（L3 12 m，各层 8 m）再做 4 m 开运算 → 没有缺口、窄条、尖角
+//  5 开敞：层间只有板和柱子（地面柱 6.2 m 不立在路上；L1→L2、L2→L3 各一套约 12 m 的柱网）
+const TIER = { z: [7.2, 11.8, 16.4], thick: 1.0, res: 0.5, step: 8, taper: 40, fr3: 12, frl: 8, open: 4, feetPad: 3, ocKeep: 8, padMax: 40, armMin: 10 };
+function plazaTiers(z, site) { if (z._tiers) return z._tiers;
+  const T = TIER, Q = T.res, c = z.c, poly = z.poly, roads = (site && site.snap && site.snap.roads) || [];
+  let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity; for (const p of poly) { bx0 = Math.min(bx0, p[0]); by0 = Math.min(by0, p[1]); bx1 = Math.max(bx1, p[0]); by1 = Math.max(by1, p[1]); }
+  const x0 = bx0 - 8, y0 = by0 - 8, W = Math.ceil((bx1 - bx0 + 16) / Q), H = Math.ceil((by1 - by0 + 16) / Q), N = W * H, X = i => x0 + (i + 0.5) * Q, Y = j => y0 + (j + 0.5) * Q, pix = p => [(p[0] - x0) / Q, (p[1] - y0) / Q];
+  const cell = new Uint8Array(N); fillPoly(cell, W, H, poly.map(pix), 1);
+  const R = new Float32Array(N); for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) R[j * W + i] = Math.hypot(X(i) - c[0], Y(j) - c[1]);
+  const feet = new Uint8Array(N); for (const f of z.feet) fillPoly(feet, W, H, f.map(pix), 1);
+  const not = m => { const o = new Uint8Array(N); for (let i = 0; i < N; i++) o[i] = m[i] ? 0 : 1; return o; };
+  const dil = (m, r) => { const d = edt(m, W, H), o = new Uint8Array(N); for (let i = 0; i < N; i++) o[i] = d[i] * Q <= r ? 1 : 0; return o; };
+  const ero = (m, r) => { const d = edt(not(m), W, H), o = new Uint8Array(N); for (let i = 0; i < N; i++) o[i] = d[i] * Q > r ? 1 : 0; return o; };
+  const closing = (m, r) => ero(dil(m, r), r), opening = (m, r) => dil(ero(m, r), r);
+  const inner = i => cell[i] && R[i] > z.oc, EXT = new Uint8Array(N); for (let i = 0; i < N; i++) EXT[i] = cell[i] && R[i] > z.oc ? 0 : 1;
+  const smoothM = (m, rc, ro) => { const a = new Uint8Array(N); for (let i = 0; i < N; i++) a[i] = m[i] || EXT[i] ? 1 : 0; const b = opening(closing(a, rc), ro); for (let i = 0; i < N; i++) b[i] = b[i] && inner(i) ? 1 : 0; return b; };
+  // 1 三道谷
+  const rayE = a => { const d = [Math.cos(a), Math.sin(a)]; let best = Infinity;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const p = poly[j], q = poly[i], e = [q[0] - p[0], q[1] - p[1]], den = d[0] * e[1] - d[1] * e[0]; if (Math.abs(den) < 1e-12) continue;
+      const w = [p[0] - c[0], p[1] - c[1]], s = (w[0] * e[1] - w[1] * e[0]) / den, u = (w[0] * d[1] - w[1] * d[0]) / den; if (s > 0 && u >= 0 && u <= 1) best = Math.min(best, s); } return best; };
+  const fb = dil(feet, T.feetPad), fbPts = []; for (let i = 0; i < N; i++) if (fb[i]) fbPts.push(X(i % W), Y((i / W) | 0));
+  const FT = z.feet.map(f => ({ f, a: Math.atan2(f.reduce((s, p) => s + p[1], 0) / f.length - c[1], f.reduce((s, p) => s + p[0], 0) / f.length - c[0]) })).sort((p, q) => p.a - q.a);
+  const angs = (f, ref) => f.map(p => { let a = Math.atan2(p[1] - c[1], p[0] - c[0]) - ref; a = ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + ref; });
+  const valley = new Uint8Array(N), arcs = [];
+  for (let k = 0; k < FT.length; k++) { const A = FT[k], B = FT[(k + 1) % FT.length]; let ai = A.a, aj = B.a; if (aj <= ai) aj += 2 * Math.PI;
+    const e1 = Math.max(...angs(A.f, ai)), e2 = Math.min(...angs(B.f, aj)), mid = (e1 + e2) / 2; let best = null;
+    for (let pad = 2; pad < T.padMax; pad++) { const a1 = e1 + pad / rayE(e1), a2 = e2 - pad / rayE(e2); if (a2 - a1 < 20 * Math.PI / 180) break;
+      const E1 = [c[0] + rayE(a1) * Math.cos(a1), c[1] + rayE(a1) * Math.sin(a1)], E2 = [c[0] + rayE(a2) * Math.cos(a2), c[1] + rayE(a2) * Math.sin(a2)];
+      for (let rap = z.oc + T.ocKeep; rap < 70; rap++) { const Ap = [c[0] + rap * Math.cos(mid), c[1] + rap * Math.sin(mid)];
+        const a11 = E1[0] - Ap[0], a12 = E1[1] - Ap[1], a21 = E2[0] - Ap[0], a22 = E2[1] - Ap[1], det = a11 * a22 - a12 * a21; if (Math.abs(det) < 1e-9) continue;
+        const b1 = 0.5 * (E1[0] ** 2 + E1[1] ** 2 - Ap[0] ** 2 - Ap[1] ** 2), b2 = 0.5 * (E2[0] ** 2 + E2[1] ** 2 - Ap[0] ** 2 - Ap[1] ** 2), C = [(b1 * a22 - a12 * b2) / det, (a11 * b2 - b1 * a21) / det], rc = Math.hypot(E1[0] - C[0], E1[1] - C[1]);
+        let hit = false; for (let q = 0; q < fbPts.length; q += 2) if ((fbPts[q] - C[0]) ** 2 + (fbPts[q + 1] - C[1]) ** 2 < rc * rc) { hit = true; break; } if (hit) continue;
+        const i0 = Math.max(0, Math.floor((C[0] - rc - x0) / Q)), i1 = Math.min(W - 1, Math.ceil((C[0] + rc - x0) / Q)), j0 = Math.max(0, Math.floor((C[1] - rc - y0) / Q)), j1 = Math.min(H - 1, Math.ceil((C[1] + rc - y0) / Q)); let area = 0;
+        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (cell[j * W + i] && (X(i) - C[0]) ** 2 + (Y(j) - C[1]) ** 2 < rc * rc) area++;
+        if (!best || area > best.area) best = { area, C, rc, E1, E2, Ap }; break; } }
+    if (!best) continue; arcs.push({ c: best.C, r: best.rc, ends: [best.E1, best.E2], apex: best.Ap, depth: Math.hypot(best.Ap[0] - c[0], best.Ap[1] - c[1]) });
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if ((X(i) - best.C[0]) ** 2 + (Y(j) - best.C[1]) ** 2 < best.rc * best.rc) valley[j * W + i] = 1; }
+  const base = new Uint8Array(N); for (let i = 0; i < N; i++) base[i] = inner(i) && !valley[i] ? 1 : 0;
+  const L3 = smoothM(base, T.fr3, T.open);
+  // 3 L1 的臂：沿辐射路
+  const ring = z.ring, rMax = Math.max(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), arms = new Uint8Array(N), spokes = [];
+  if (ring) { const rOut = ring.r + ring.w / 2;
+    for (const rd of roads) { const pts = (rd.pts || []).map(q => [q[0] ?? q.x, q[1] ?? q.y]), rr = pts.map(q => Math.hypot(q[0] - c[0], q[1] - c[1])); if (!pts.length) continue;
+      const lo = Math.min(...rr), hi = Math.max(...rr); if (!(lo < rOut + 2 && hi > rMax + 5 && hi - lo > 6)) continue; spokes.push({ w: rd.width || 6.5, pts });
+      const m = new Uint8Array(N); for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / (Q / 2));
+        for (let s = 0; s <= n; s++) { const x = a[0] + (b[0] - a[0]) * s / n, y = a[1] + (b[1] - a[1]) * s / n, i = Math.floor((x - x0) / Q), j = Math.floor((y - y0) / Q); if (i >= 0 && j >= 0 && i < W && j < H) m[j * W + i] = 1; } }
+      const d = dil(m, Math.max(T.armMin, (rd.width || 6.5) / 2 + 5)); for (let i = 0; i < N; i++) if (d[i] && cell[i]) arms[i] = 1; } }
+  // 2 三层：从 L3 往外放，靠走廊环处收窄
+  const dB = edt(L3, W, H), dr = edt(not(cell), W, H), lv = [];
+  for (let li = 0; li < 3; li++) { const w = T.step * (2 - li), m = new Uint8Array(N);
+    for (let i = 0; i < N; i++) { const u = clamp(dr[i] * Q / T.taper, 0, 1), sm = u * u * (3 - 2 * u); m[i] = inner(i) && (L3[i] || dB[i] * Q <= w * sm || (li === 0 && arms[i])) ? 1 : 0; }
+    lv.push(smoothM(m, T.frl, T.open)); }
+  for (let i = 0; i < N; i++) { if (lv[2][i]) lv[1][i] = 1; if (lv[1][i]) lv[0][i] = 1; }
+  // 校验：塔脚离 L3 边
+  const dIn = edt(not(lv[2]), W, H); let footClear = Infinity; for (let i = 0; i < N; i++) if (feet[i]) footClear = Math.min(footClear, dIn[i] * Q);
+  // 柱子（开敞：只有板和柱）。地面：makePlaza 的候选点里 L1 下面的（离 L1 边 ≥ 2.5 m）；L1→L2、L2→L3：12 m 柱网，离上层板边 ≥ 2.5 m
+  const dE = lv.map(m => edt(not(m), W, H)), at = (p, li) => { const i = Math.floor((p[0] - x0) / Q), j = Math.floor((p[1] - y0) / Q); return i >= 0 && j >= 0 && i < W && j < H ? dE[li][j * W + i] * Q : 0; };
+  const cols = z.cols.filter(p => at(p, 0) >= 2.5).map(p => [p[0], p[1], T.z[0] - T.thick, 0]);
+  for (let li = 1; li < 3; li++) for (let r = z.oc + 6, ring_ = 0; r < rMax; r += 12, ring_++) { const n = Math.max(6, Math.round(2 * Math.PI * r / 12));
+    for (let k = 0; k < n; k++) { const a = 2 * Math.PI * (k + 0.5 * (ring_ % 2)) / n, p = [c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]; if (at(p, li) >= 2.5) cols.push([p[0], p[1], T.z[li] - T.thick, T.z[li - 1]]); } }
+  // 轮廓：碰到走廊环的地方往外多伸 1.5 m 藏进走廊板里（不留缝），再按符号距离场描边
+  const levels = lv.map((m, li) => { const mx = new Uint8Array(N), dm = edt(m, W, H); for (let i = 0; i < N; i++) mx[i] = m[i] || (!cell[i] && R[i] > z.oc && dm[i] * Q <= 1.5) ? 1 : 0;
+    for (const fill of [0, 1]) { const tgt = new Uint8Array(N); for (let i = 0; i < N; i++) tgt[i] = mx[i] === fill ? 1 : 0; const L = label4(tgt, W, H);   // 小于 30 m² 的碎片去掉、小洞填上
+      for (let i = 0; i < N; i++) { const k = L.lab[i]; if (k && L.sizes[k] * Q * Q < 30) mx[i] = 1 - fill; } }
+    const a = edt(not(mx), W, H), b = edt(mx, W, H), sd = new Float32Array(N); for (let i = 0; i < N; i++) sd[i] = (a[i] - b[i]) * Q;
+    let area = 0; for (let i = 0; i < N; i++) if (m[i]) area += Q * Q;
+    return { z: T.z[li], area, mask: m, sd: blur(sd, W, H, 1.2) }; });
+  let voidA = 0; for (let i = 0; i < N; i++) if (inner(i) && !lv[0][i]) voidA += Q * Q;
+  return (z._tiers = { grid: { x0, y0, W, H, res: Q }, levels, arcs, spokes, cols, footClear, voidArea: voidA, cell }); }
+// 符号距离场（> 0 在里面）描轮廓：marching squares，里面在左手边，闭合成环；filled = 每个格子里的填充多边形（整行连续的整格合并成一个矩形）
+function contourField(sd, W, H, x0, y0, Q) { const X = i => x0 + (i + 0.5) * Q, Y = j => y0 + (j + 0.5) * Q, v = (i, j) => (i < 0 || j < 0 || i >= W || j >= H) ? -1 : sd[j * W + i];
+  const P = (i, j) => [X(i), Y(j)], lerp = (i0, j0, i1, j1) => { const a = v(i0, j0), b = v(i1, j1), t = a / (a - b); return [X(i0) + (X(i1) - X(i0)) * t, Y(j0) + (Y(j1) - Y(j0)) * t]; };
+  const segs = [], polys = [], rects = [];
+  for (let j = -1; j < H; j++) { let run = -1;
+    for (let i = -1; i <= W; i++) { const a = v(i, j) > 0, b = v(i + 1, j) > 0, cc = v(i + 1, j + 1) > 0, d = v(i, j + 1) > 0, full = a && b && cc && d;
+      if (full && i < W - 1) { if (run < 0) run = i; continue; } if (run >= 0) { rects.push([X(run), Y(j), X(i), Y(j + 1)]); run = -1; } if (i >= W) break;
+      if (!(a || b || cc || d)) continue;
+      // 格子四角：0 (i,j) 1 (i+1,j) 2 (i+1,j+1) 3 (i,j+1)；边：e0 下 e1 右 e2 上 e3 左
+      const C = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]], IN = [a, b, cc, d], E = k => { const p = C[k], q = C[(k + 1) % 4]; return lerp(p[0], p[1], q[0], q[1]); }, key = k => { const p = C[k], q = C[(k + 1) % 4]; return Math.min(p[0], q[0]) + ',' + Math.min(p[1], q[1]) + (p[1] === q[1] ? 'h' : 'v'); };
+      // 填充多边形：沿四角走，里面的角取角点，内外交替处取边上的交点
+      const poly = []; for (let k = 0; k < 4; k++) { if (IN[k]) poly.push(P(...C[k])); if (IN[k] !== IN[(k + 1) % 4]) poly.push(E(k)); }
+      const sad = IN[0] === IN[2] && IN[1] === IN[3] && IN[0] !== IN[1], ctr = (v(i, j) + v(i + 1, j) + v(i + 1, j + 1) + v(i, j + 1)) / 4 > 0;
+      if (sad && !ctr) { for (const k of [0, 1, 2, 3]) if (IN[k]) polys.push([P(...C[k]), E(k), E((k + 3) % 4)]); } else polys.push(poly);
+      // 边界线段：从"进入里面"的边到"离开"的边（里面在左手边）
+      const out = []; for (let k = 0; k < 4; k++) if (IN[k] && !IN[(k + 1) % 4]) out.push(k); const inn = []; for (let k = 0; k < 4; k++) if (!IN[k] && IN[(k + 1) % 4]) inn.push(k);
+      if (out.length === 1) segs.push([key(inn[0]), E(inn[0]), key(out[0]), E(out[0])]);
+      else if (out.length === 2) { const pair = sad && !ctr ? [[inn[0], out.find(k => (k + 1) % 4 === inn[0]) ?? out[0]], [inn[1], out.find(k => (k + 1) % 4 === inn[1]) ?? out[1]]] : [[inn[0], out.find(k => (k + 3) % 4 !== inn[0] && (k + 1) % 4 !== inn[0]) ?? out[1]], [inn[1], out.find(k => (k + 3) % 4 !== inn[1] && (k + 1) % 4 !== inn[1]) ?? out[0]]];
+        for (const [p, q] of pair) segs.push([key(p), E(p), key(q), E(q)]); } } }
+  // 线段连成环
+  const next = new Map(); for (const s of segs) next.set(s[0], s); const used = new Set(), rings = [];
+  for (const s0 of segs) { if (used.has(s0[0])) continue; const ring = []; let s = s0, guard = 0; while (s && !used.has(s[0]) && guard++ < 1e6) { used.add(s[0]); ring.push(s[1]); s = next.get(s[2]); } if (ring.length > 2) rings.push(ring); }
+  return { segs, polys, rects, rings }; }
+function simplifyRing(P, eps) { if (P.length < 8) return P; const keep = new Uint8Array(P.length); keep[0] = keep[P.length - 1] = 1;
+  const st = [[0, P.length - 1]]; while (st.length) { const [a, b] = st.pop(); let m = -1, md = eps; const dx = P[b][0] - P[a][0], dy = P[b][1] - P[a][1], l = Math.hypot(dx, dy) || 1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs((P[i][0] - P[a][0]) * dy - (P[i][1] - P[a][1]) * dx) / l; if (d > md) { md = d; m = i; } } if (m > 0) { keep[m] = 1; st.push([a, m], [m, b]); } }
+  return P.filter((_, i) => keep[i]); }
+// 塔座的轮廓（每层若干环，里面在左手边：外环逆时针、洞顺时针），平面图和导出用
+function plazaOutline(z, site) { const T = plazaTiers(z, site), g = T.grid; if (T._rings) return T._rings;
+  return (T._rings = T.levels.map(L => ({ z: L.z, rings: contourField(L.sd, g.W, g.H, g.x0, g.y0, g.res).rings.map(r => r.slice().reverse()).map(r => { const h = r.length >> 1; return [...simplifyRing(r.slice(0, h + 1), 0.08).slice(0, -1), ...simplifyRing([...r.slice(h), r[0]], 0.08).slice(0, -1)]; }).filter(r => r.length > 3) }))); }
+// 塔座三层的网格：顶面（每层一张）、侧面（沿轮廓 1 m 高）、底面；lvl = 每个顶面三角形的层号（1–3），按走廊三层的明暗上色
+function plazaMesh(z, site) { const T = plazaTiers(z, site), g = T.grid, top = [], side = [], bottom = [], lvl = [];
+  T.levels.forEach((L, li) => { const zt = L.z - 0.02, zb = L.z - TIER.thick, cf = contourField(L.sd, g.W, g.H, g.x0, g.y0, g.res);
+    const tri = (a, b, d) => { top.push(a[0], a[1], zt, b[0], b[1], zt, d[0], d[1], zt); bottom.push(a[0], a[1], zb, d[0], d[1], zb, b[0], b[1], zb); lvl.push(li + 1); };
+    for (const [xa, ya, xb, yb] of cf.rects) { tri([xa, ya], [xb, ya], [xb, yb]); tri([xa, ya], [xb, yb], [xa, yb]); }
+    for (const P of cf.polys) for (let k = 1; k < P.length - 1; k++) tri(P[0], P[k], P[k + 1]);
+    for (const [, a, , b] of cf.segs) side.push(a[0], a[1], zt, a[0], a[1], zb, b[0], b[1], zb, a[0], a[1], zt, b[0], b[1], zb, b[0], b[1], zt); });
+  return { top: new Float32Array(top), side: new Float32Array(side), bottom: new Float32Array(bottom), lvl: new Uint8Array(lvl) }; }
 function deckHeight(F, deckZ) { return (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; }; }
-const API = { TOWER_MODEL, towerFeet, findRoundabout, plazaMesh, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+const API = { TOWER_MODEL, TIER, towerFeet, findRoundabout, plazaTiers, plazaOutline, plazaMesh, contourField, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
