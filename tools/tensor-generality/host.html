@@ -23,12 +23,15 @@ async function demSampler({url, bounds, width, height}){
 const q = new URLSearchParams(location.search);
 try { localStorage.setItem('tensorStudio.flowMode', 'free'); localStorage.setItem('tensorStudio.uiLanguage', 'zh'); } catch (e) {}
 const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0';
-if (q.get('site')){
+if (q.get('dsite')){   // (test) a site already built (dumps/), to reproduce a run without the network
+  const dd = await (await fetch('dumps/' + q.get('dsite') + '.json')).json();
+  window.__TENSOR_SITE_INPUT__ = { D: dd.D, meta: dd.meta, ring: dd.D.site.ring, features: {}, elevation: null, lang: 'zh', close(){}, fail(e){ window.__FAIL = String(e?.message || e); }, view(){}, mapTheme: null };
+} else if (q.get('site')){
   const site = await (await fetch('sites/' + q.get('site') + '.json')).json();
   const elevation = await demSampler({ url: '../../incubator/google-map-live/assets/drainage_area/dem50_log16.webp', bounds: DRAINAGE_3857, width: DRAINAGE_3857.baseWidth50m, height: DRAINAGE_3857.baseHeight50m });
   window.__TENSOR_SITE_INPUT__ = { ring: site.ring, features: site.features, elevation, lang: 'zh', close(){}, fail(e){ window.__FAIL = String(e?.message || e); }, view(){}, mapTheme: null };
 }
 window.__T0 = performance.now();
-frame.src = '../../incubator/tensor-studio/index.html?keep=' + (q.get('keep') || '1') + (q.get('proto') === '1' ? '&proto=1' : '') + (q.get('flood') ? '&flood=' + q.get('flood') : '');
+frame.src = '../../incubator/tensor-studio/index.html?keep=' + (q.get('keep') || '1') + (q.get('proto') === '1' ? '&proto=1' : '') + (q.get('flood') ? '&flood=' + q.get('flood') : '') + (q.get('dump') ? '&dump=1' : '');
 document.body.append(frame);
 </script></body></html>
