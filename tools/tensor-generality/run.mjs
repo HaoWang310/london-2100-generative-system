@@ -12,7 +12,7 @@ for (const s of SITES){ if (only && !only.includes(s.id)) continue; for (const k
 const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const results = [];
 for (const r of runs){
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errs = [], logs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => logs.push(m.type() + ': ' + m.text().slice(0, 300))); page.on('crash', () => logs.push('PAGE CRASH')); page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
   const url = BASE + '?keep=' + r.keep + (r.id === 'p2' ? '' : '&site=' + r.id) + (process.env.PROTO === '1' ? '&proto=1' : '') + (process.env.FLOOD ? '&flood=' + process.env.FLOOD : ''), t0 = Date.now(); let res = { id: r.id, keep: r.keep };
   try {
     await page.goto(url);
@@ -30,7 +30,10 @@ for (const r of runs){
         const ev = await Promise.race([paused, new Promise(r => setTimeout(() => r(null), 10000))]);
         res.hang = ev ? ev.callFrames.slice(0, 12).map(f => (f.functionName || '(anon)') + ' ' + (f.url || '').split('/').pop() + ':' + (f.location.lineNumber + 1) + ':' + f.location.columnNumber) : 'no pause';
         console.log('HANG', r.id, r.keep, JSON.stringify(res.hang)); } catch (e){ res.hang = 'pause failed ' + e.message; }
-      res.error = 'stuck'; }
+      res.error = 'stuck';
+      try { res.stuck = await Promise.race([page.evaluate(() => { const f = document.querySelector('iframe'), d = f && f.contentDocument, w = f && f.contentWindow;
+        return { hud: d && d.getElementById('hud') && d.getElementById('hud').textContent, ts: !!(w && w.__TS), ts6: !!(w && w.__ts6), scripts: d ? [...d.scripts].map(x => (x.src || '').split('/').pop()).join(',') : null, ready: d && d.readyState }; }), new Promise(r => setTimeout(() => r('evaluate timed out'), 8000))]); } catch (e){ res.stuck = 'eval failed ' + e.message; }
+      console.log('STUCK', r.id, r.keep, 'tSite', tSite, JSON.stringify(res.stuck), JSON.stringify(logs.slice(-12)), 'detached', frame.isDetached()); }
     res.tSiteMs = tSite; res.tOpenMs = tReady;
     if (tReady){
       Object.assign(res, await frame.evaluate(() => {
