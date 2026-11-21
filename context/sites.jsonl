@@ -1,0 +1,14 @@
+{"id":"barking","context":{"streetKmPerKm2":5.9,"mainKmPerKm2":1.22,"blockM":339},"counts":{"roads":2154,"rails":37,"waters":16,"waterways":21,"buildings":4095}}
+{"id":"battersea","context":{"streetKmPerKm2":15.44,"mainKmPerKm2":4.75,"blockM":129},"counts":{"roads":5719,"rails":368,"waters":22,"waterways":14,"buildings":10641}}
+{"id":"bexleyheath-r20","context":{"streetKmPerKm2":13.19,"mainKmPerKm2":4.34,"blockM":152},"counts":{"roads":2712,"rails":4,"waters":2,"waterways":17,"buildings":9297}}
+{"id":"bexleyheath","context":{"streetKmPerKm2":13.81,"mainKmPerKm2":4.8,"blockM":145},"counts":{"roads":2636,"rails":4,"waters":2,"waterways":5,"buildings":9296}}
+{"id":"camden-s","context":{"streetKmPerKm2":16.25,"mainKmPerKm2":6.55,"blockM":123},"counts":{"roads":3401,"rails":156,"waters":7,"waterways":25,"buildings":7031}}
+{"id":"crewshill-r20","context":{"streetKmPerKm2":3.32,"mainKmPerKm2":1.84,"blockM":602},"counts":{"roads":1173,"rails":20,"waters":15,"waterways":27,"buildings":5402}}
+{"id":"crewshill","context":{"streetKmPerKm2":3.18,"mainKmPerKm2":1.81,"blockM":628},"counts":{"roads":749,"rails":20,"waters":11,"waterways":20,"buildings":2175}}
+{"id":"hampstead-r20","context":{"streetKmPerKm2":9.82,"mainKmPerKm2":2.95,"blockM":204},"counts":{"roads":3787,"rails":122,"waters":40,"waterways":53,"buildings":13625}}
+{"id":"hampstead","context":{"streetKmPerKm2":9.27,"mainKmPerKm2":2.91,"blockM":216},"counts":{"roads":3486,"rails":105,"waters":34,"waterways":45,"buildings":13580}}
+{"id":"lewisham-l","context":{"streetKmPerKm2":13.64,"mainKmPerKm2":3.56,"blockM":147},"counts":{"roads":11419,"rails":460,"waters":49,"waterways":52,"buildings":39725}}
+{"id":"soho-r20","context":{"streetKmPerKm2":20.17,"mainKmPerKm2":9.06,"blockM":99},"counts":{"roads":12789,"rails":73,"waters":15,"waterways":3,"buildings":19434}}
+{"id":"soho","context":{"streetKmPerKm2":21.12,"mainKmPerKm2":9.8,"blockM":95},"counts":{"roads":9537,"rails":40,"waters":12,"waterways":3,"buildings":13999}}
+{"id":"stratford","context":{"streetKmPerKm2":13.47,"mainKmPerKm2":3.41,"blockM":149},"counts":{"roads":9992,"rails":325,"waters":27,"waterways":39,"buildings":29413}}
+{"id":"sydenham","context":{"streetKmPerKm2":10.85,"mainKmPerKm2":3.4,"blockM":184},"counts":{"roads":2978,"rails":88,"waters":18,"waterways":3,"buildings":8738}}
