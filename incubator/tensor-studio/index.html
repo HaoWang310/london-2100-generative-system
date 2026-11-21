@@ -741,7 +741,7 @@ const lang0 = host?.lang || stored || sys || 'zh', zh = lang0 === 'zh';
 window.__TS_LANG0 = lang0;
 const keepQ = new URLSearchParams(location.search).get('keep');
 const keep = keepQ === null ? true : keepQ === '1';
-const PROTO = new URLSearchParams(location.search).get('proto') === '1';   // (v8.32) from the map, existing buildings are obstacles unless ?keep=0
+const PROTO = new URLSearchParams(location.search).get('proto') === '1', FLOODB = new URLSearchParams(location.search).get('flood') === 'b';   // (v8.32) from the map, existing buildings are obstacles unless ?keep=0
 try {
   let D, meta = {};
   if (host){
@@ -764,7 +764,7 @@ try {
   try { D.flood = await floodForSite(D, 'assets/flood_risk/'); } catch (e){ console.warn('Tensor Studio: no flood risk', e); D.flood = null; }
   // (v8.6) layer 1: elevation, where rain gathers, summer ventilation, winter cold wind, comfort
   try { D.landMask = landMaskOf(D); D.env = environmentFields(D, D.landMask); } catch (e){ console.warn('Tensor Studio: no environmental fields', e); D.env = null; }
-  window.__TS = { D, meta, host, keepBuildings: keep, proto: PROTO, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 }, envFns: { corridors } };
+  window.__TS = { D, meta, host, keepBuildings: keep, proto: PROTO, floodB: FLOODB, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 }, envFns: { corridors } };
   // (v8.7) the process mode (default) opens on step 1 with nothing grown; scripts/process.js runs it
   try { window.__TS_PROCESS_ON = localStorage.getItem('tensorStudio.flowMode') !== 'free'; } catch (e){ window.__TS_PROCESS_ON = true; }
   const s = document.createElement('script'); s.src = 'app.js?v=' + V;

@@ -13,7 +13,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME || un
 const results = [];
 for (const r of runs){
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
-  const url = BASE + '?keep=' + r.keep + (r.id === 'p2' ? '' : '&site=' + r.id) + (process.env.PROTO === '1' ? '&proto=1' : ''), t0 = Date.now(); let res = { id: r.id, keep: r.keep };
+  const url = BASE + '?keep=' + r.keep + (r.id === 'p2' ? '' : '&site=' + r.id) + (process.env.PROTO === '1' ? '&proto=1' : '') + (process.env.FLOOD ? '&flood=' + process.env.FLOOD : ''), t0 = Date.now(); let res = { id: r.id, keep: r.keep };
   try {
     await page.goto(url);
     const frame = await (async () => { for (let i = 0; i < 600; i++){ const f = page.frames().find(f => /tensor-studio\/index\.html/.test(f.url())); if (f) return f; await page.waitForTimeout(100); } throw new Error('no frame'); })();
@@ -30,7 +30,7 @@ for (const r of runs){
         const T = window.__TS, A = window.__ts6, m = T.meta || {};
         if (A.gen) A.runAll();
         // one full growth (B, the branching street net), quietly, timed
-        const t = performance.now(); A.quietRun({}); const growMs = performance.now() - t;
+        if (A.resetFloodX) A.resetFloodX(); const t = performance.now(); A.quietRun({}); const floodX = A.floodX; const growMs = performance.now() - t;
         try { A.measures && A.measures(); } catch (e) {}
         const score = A.scoreRun(), RN = A.roadNet();
         const live = A.lines.filter(l => !l.dead && l.pts.length > 1);
@@ -51,7 +51,7 @@ for (const r of runs){
         // the field itself in the inner circle (British National Grid points, 40 m apart), for the boundary test
         let field = null; if (ring && typeof fieldAtT === 'function'){ const pts = ring.slice(0, -1).map(p => geo.wgs84ToBNG(p[0], p[1])), E0 = pts.reduce((a, p) => a + p[0], 0) / pts.length, N0 = pts.reduce((a, p) => a + p[1], 0) / pts.length; field = [];
           for (let dx = -400; dx <= 400; dx += 40) for (let dy = -400; dy <= 400; dy += 40){ if (Math.hypot(dx, dy) > 400) continue; const E = Math.round(E0 + dx), Nn = Math.round(N0 + dy), t = fieldAtT(E - OX, Nn - OY); if (t != null) field.push([E, Nn, +t.toFixed(4)]); } }
-        return { field, proto: { spacing: window.__PROTO_SPACING || null, buildings: window.parent.__PROTO_BLD || window.__PROTO_BLD || null, contextDensity: T.D.site && T.D.site.contextDensity }, inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
+        return { floodX, field, proto: { spacing: window.__PROTO_SPACING || null, buildings: window.parent.__PROTO_BLD || window.__PROTO_BLD || null, contextDensity: T.D.site && T.D.site.contextDensity }, inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
           landHa: A.landHa(), flood: !!T.D.flood, growMs: Math.round(growMs), lines: lvl, net: RN && RN.stats, score: { total: score.total, groups: score.groups, raw: score.raw, fail: score.fail }, gridAxis: +gridAxis.toFixed(1), gridStrength: +gridStrength.toFixed(2) }; }));
       await frame.evaluate(() => { const A = window.__ts6; A.setModeQuiet('B'); A.start(false); });
       await page.waitForTimeout(1500);

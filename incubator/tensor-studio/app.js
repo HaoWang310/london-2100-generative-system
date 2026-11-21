@@ -153,7 +153,8 @@ function railOK(x, y, dx, dy){ let a = Math.abs((Math.atan2(dy, dx) - railAngle(
 let BRIDGES = [];
 function railCross(x, y, dx, dy){ if (!railOK(x + dx * 8, y + dy * 8, dx, dy)) return null;
   for (let s = 5; s <= 60; s += 5){ const qx = x + dx * s, qy = y + dy * s; if (!inLand(qx, qy)) return null; if (!inRail(qx, qy)){ BRIDGES.push({ x: (x + qx) / 2, y: (y + qy) / 2 }); return [qx, qy]; } } return null; }
-function inZone(x, y){ if (GZ){ const c = Math.floor(x / cell), r = Math.floor(y / cell); if (c >= 0 && r >= 0 && c < nx && r < ny && GZ[r * nx + c]) return true; }
+const inFZ = (x, y) => { if (!FZ) return false; const c = Math.floor(x / cell), r = Math.floor(y / cell); return c >= 0 && r >= 0 && c < nx && r < ny && FZ[r * nx + c] === 1; };
+function inZone(x, y){ if (inFZ(x, y)) return true; if (GZ){ const c = Math.floor(x / cell), r = Math.floor(y / cell); if (c >= 0 && r >= 0 && c < nx && r < ny && GZ[r * nx + c]) return true; }
   const z = D.zone, c = Math.floor(x / z.c), r = Math.floor((D.h - y) / z.c); if (c < 0 || r < 0 || c >= z.W || r >= z.H) return false; const i = r * z.W + c; return (ZB[i >> 3] >> (7 - (i & 7))) & 1; }
 // (v8.8) the blue-green corridors: the main runoff paths, widened. A hard constraint, the same as the watercourses: no
 // street runs inside one, a street crosses one square-ish (30 degrees or more) on a culvert. GZ 1 in a corridor (10 m
@@ -168,9 +169,15 @@ function axisOf(frm, job){ const to = (frm + 180) % 360, a = (90 - to) * PI / 18
 // (v8.5) flood risk (EA): the class of each 10 m cell, the higher of surface water and rivers & sea (0 none … 4 high)
 const FLOOD = D.flood || null, FR = FLOOD && FLOOD.grid && FLOOD.grid.length === N ? FLOOD.grid : null;
 let FRW = null;   // smoothed weights of the flow part: low 0.5, medium 1, high 1.4
+/* (proto, flood B) the high-risk land is not taken out of the site: it becomes a blue-green corridor. No street runs in it;
+ * a street crosses it within 30 degrees of square to the way the water flows (downhill), up to 200 m, as a causeway.
+ * FZ 1 in it (10 m cells, the high class smoothed so specks drop out) */
+const FLOODB = !!(window.__TS && window.__TS.floodB) && !!FR;
+const FZ = FLOODB ? (() => { const w = new Float32Array(N); for (let i = 0; i < N; i++) w[i] = FR[i] >= 4 ? 1 : 0; const sm = blur(w, 1.2), z = new Uint8Array(N); for (let i = 0; i < N; i++) z[i] = sm[i] >= 0.5 ? 1 : 0; return z; })() : null;
+let FXLEN = 0, FXN = 0;   // the causeways: total length (m) and count
 function floodWeights(){ if (FRW || !FR) return FRW; const w = new Float32Array(N); for (let i = 0; i < N; i++) w[i] = [0, 0.25, 0.5, 1, 1.4][FR[i]] || 0; return (FRW = blur(w, 1.5)); }
 const floodOn = () => !!FR && !!document.getElementById('fOn')?.checked;
-const floodAvoid = () => floodOn() ? +document.getElementById('fAvoid').value : 0;
+const floodAvoid = () => floodOn() && !FLOODB ? +document.getElementById('fAvoid').value : 0;
 function toVec(frm){ const to = (frm + 180) % 360, a = (90 - to) * PI / 180; return [Math.cos(a), Math.sin(a)]; }
 
 /* ------------------------------------------------------------------ the land mask (2.5 m), with the circus holes */
@@ -350,11 +357,11 @@ function near(x, y, d, dir, par, levels, skip){ const r = Math.ceil(d / HC), cx 
   return best; }
 function densify(pts, step){ const out = [pts[0]]; for (let i = 1; i < pts.length; i++){ const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
     for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]); } return out; }
-function streamAngle(x, y){ const c = clamp(Math.round(x / cell), 0, nx - 1), r = clamp(Math.round(y / cell), 0, ny - 1), i = r * nx + c; return GZ && GZ[i] ? GA[i] : BA.sA[i]; }
+function streamAngle(x, y){ const c = clamp(Math.round(x / cell), 0, nx - 1), r = clamp(Math.round(y / cell), 0, ny - 1), i = r * nx + c; if (FZ && FZ[i]) return BA.cA[i] + PI / 2; return GZ && GZ[i] ? GA[i] : BA.sA[i]; }
 // (v7) would a street going u cross the watercourse here at 30 degrees or more (on a culvert)?
-function culvertOK(x, y, u){ let a = Math.abs((Math.atan2(u[1], u[0]) - streamAngle(x, y)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; return a >= 30; }
-function tryCulvert(x, y, dx, dy){ let a = Math.abs((Math.atan2(dy, dx) - streamAngle(x + dx * 8, y + dy * 8)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; if (a < 30) return null;
-  for (let s = 5; s <= 40; s += 5){ const qx = x + dx * s, qy = y + dy * s; if (!inLand(qx, qy)) return null; if (!inZone(qx, qy)){ CULVERTS.push({ x: (x + qx) / 2, y: (y + qy) / 2 }); return [qx, qy]; } } return null; }
+function culvertOK(x, y, u){ let a = Math.abs((Math.atan2(u[1], u[0]) - streamAngle(x, y)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; return a >= (inFZ(x, y) ? 60 : 30); }
+function tryCulvert(x, y, dx, dy){ const fz = inFZ(x + dx * 8, y + dy * 8); let a = Math.abs((Math.atan2(dy, dx) - streamAngle(x + dx * 8, y + dy * 8)) * 180 / PI) % 180; a = a > 90 ? 180 - a : a; if (a < (fz ? 60 : 30)) return null;
+  for (let s = 5; s <= (fz ? 200 : 40); s += 5){ const qx = x + dx * s, qy = y + dy * s; if (!inLand(qx, qy)) return null; if (!inZone(qx, qy)){ CULVERTS.push({ x: (x + qx) / 2, y: (y + qy) / 2 }); if (fz){ FXLEN += s; FXN++; } return [qx, qy]; } } return null; }
 function mergeTarget(hit, ux, uy, ahead){ const Pp = LINES[hit[3]].pts; let k = 0, bd = 1e18; for (let i = 0; i < Pp.length; i++){ const d = (Pp[i][0] - hit[1]) ** 2 + (Pp[i][1] - hit[2]) ** 2; if (d < bd){ bd = d; k = i; } }
   const a = Pp[Math.min(Pp.length - 1, k + 1)], b = Pp[Math.max(0, k - 1)], st = ((a[0] - b[0]) * ux + (a[1] - b[1]) * uy) >= 0 ? 1 : -1; let acc = 0;
   while (k + st >= 0 && k + st < Pp.length && acc < ahead){ acc += Math.hypot(Pp[k + st][0] - Pp[k][0], Pp[k + st][1] - Pp[k][1]); k += st; } return Pp[k]; }
@@ -2718,6 +2725,7 @@ window.addEventListener('resize', resize);
   if (window.__TS_PROCESS_ON){ MODE = 'B'; resetNet(); } else { MODE = 'A'; start(false); MODE = 'B'; start(true); } syncTools(); drawKey(); requestAnimationFrame(frame);
   window.__ts6 = { roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
     get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
+    get floodX(){ return FZ ? { n: FXN, m: FXLEN, ha: FZ.reduce((a, b) => a + b, 0) * cell * cell / 1e4 } : null; }, resetFloodX(){ FXLEN = 0; FXN = 0; },
     get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
     // (v8.7) for the process mode
     setProc: p => { PROC = p; PH0 = ''; }, scoreRun, quietRun, thumbOf, SCORE_W0, snapB: () => SNAP.B, setSnapB: sn => { SNAP.B = sn; }, restoreSnap: sn => restore(sn), syncTools, drawCmp, get phase(){ return PHASE; }, get gen(){ return !!GEN; }, pause(){ if (GEN) GROWING = false; }, resume(){ if (GEN){ GROWING = true; PH0 = PHASE; } }, runUntil, recordFrame, setScrub, resetNet, buildTarget, placeAttractors, settleField,

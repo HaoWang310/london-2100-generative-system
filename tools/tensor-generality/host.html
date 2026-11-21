@@ -29,6 +29,6 @@ if (q.get('site')){
   window.__TENSOR_SITE_INPUT__ = { ring: site.ring, features: site.features, elevation, lang: 'zh', close(){}, fail(e){ window.__FAIL = String(e?.message || e); }, view(){}, mapTheme: null };
 }
 window.__T0 = performance.now();
-frame.src = '../../incubator/tensor-studio/index.html?keep=' + (q.get('keep') || '1') + (q.get('proto') === '1' ? '&proto=1' : '');
+frame.src = '../../incubator/tensor-studio/index.html?keep=' + (q.get('keep') || '1') + (q.get('proto') === '1' ? '&proto=1' : '') + (q.get('flood') ? '&flood=' + q.get('flood') : '');
 document.body.append(frame);
 </script></body></html>
