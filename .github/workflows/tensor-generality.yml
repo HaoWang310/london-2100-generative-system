@@ -24,7 +24,7 @@ jobs:
         run: nohup python3 -m http.server 8123 >/dev/null 2>&1 &
       - name: Flood option B (high-risk land as a corridor streets only cross)
         working-directory: tools/tensor-generality
-        env: { CHROME: /usr/bin/google-chrome, ONLY: 'crewshill', KEEP: '1', PROTO: '1', FLOOD: 'b' }
+        env: { CHROME: /usr/bin/google-chrome, ONLY: 'barking,soho,hampstead', KEEP: '1,0', PROTO: '1', FLOOD: 'b', WAITN: '450' }
         run: OUTDIR=ff node run.mjs
       - uses: actions/upload-artifact@v4
         if: always()

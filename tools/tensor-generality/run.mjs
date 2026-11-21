@@ -18,12 +18,19 @@ for (const r of runs){
     await page.goto(url);
     const frame = await (async () => { for (let i = 0; i < 600; i++){ const f = page.frames().find(f => /tensor-studio\/index\.html/.test(f.url())); if (f) return f; await page.waitForTimeout(100); } throw new Error('no frame'); })();
     let tSite = null, tReady = null;
-    for (let i = 0; i < 3600; i++){   // up to 6 min
+    for (let i = 0; i < (+process.env.WAITN || 3600); i++){   // up to 6 min
       const st = await frame.evaluate(() => ({ ts: !!window.__TS, ready: !!window.__ts6, hud: document.getElementById('hud')?.textContent || '', fail: window.parent.__FAIL || null })).catch(() => ({}));
       if (st.ts && tSite == null) tSite = Date.now() - t0;
       if (st.ready){ tReady = Date.now() - t0; break; }
       if (st.fail || /无法打开|Could not open|失败/.test(st.hud || '')){ res.error = st.fail || st.hud; break; }
       await page.waitForTimeout(100); }
+    if (!tReady && !res.error){   // stuck: pause the script and record where it is
+      try { const cdp = await page.context().newCDPSession(page); await cdp.send('Debugger.enable');
+        const paused = new Promise(r => cdp.once('Debugger.paused', r)); await cdp.send('Debugger.pause');
+        const ev = await Promise.race([paused, new Promise(r => setTimeout(() => r(null), 10000))]);
+        res.hang = ev ? ev.callFrames.slice(0, 12).map(f => (f.functionName || '(anon)') + ' ' + (f.url || '').split('/').pop() + ':' + (f.location.lineNumber + 1) + ':' + f.location.columnNumber) : 'no pause';
+        console.log('HANG', r.id, r.keep, JSON.stringify(res.hang)); } catch (e){ res.hang = 'pause failed ' + e.message; }
+      res.error = 'stuck'; }
     res.tSiteMs = tSite; res.tOpenMs = tReady;
     if (tReady){
       Object.assign(res, await frame.evaluate(() => {
@@ -61,6 +68,6 @@ for (const r of runs){
   res.errors = [...new Set(errs)].slice(0, 6); res.wallMs = Date.now() - t0;
   console.log(JSON.stringify({ id: res.id, keep: res.keep, open: res.tOpenMs, grow: res.growMs, lines: res.lines, err: res.error }));
   results.push(res); fs.writeFileSync(new URL('results.json', OUT), JSON.stringify(results, null, 1));
-  await page.close();
+  await Promise.race([page.close(), new Promise(r => setTimeout(r, 5000))]);
 }
 await browser.close();
