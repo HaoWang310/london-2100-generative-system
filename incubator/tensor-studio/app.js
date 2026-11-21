@@ -9,7 +9,16 @@ const $ = id => document.getElementById(id), v = id => +$(id).value, PI = Math.P
  * when the site loads (the sliders keep their ranges, so the user can still go back up) */
 const SITE_HA = (window.__TS && window.__TS.meta && window.__TS.meta.areaHa) || 210, SIZE_K = window.__TS && window.__TS.host ? Math.max(0.3, Math.min(1, Math.sqrt(SITE_HA / 210))) : 1;
 const AREA_K = SIZE_K * SIZE_K, SLIVER_HA = 0.15 * AREA_K, BIG_HA = 2.5 * AREA_K, PARK_HA = 4 * AREA_K, JOIN_HA = 2 * AREA_K;
-function scaleToSite(){ if (SIZE_K >= 1) return; const set = (id, val, lo) => { const e = $(id); if (!e) return; const mn = +e.min, st = +e.step || 1, want = Math.max(lo != null ? lo : mn, Math.round(val / st) * st); if (want < mn) e.min = want; e.value = want; };
+function scaleToSite(){
+  // (proto) the spacing from the existing streets round the site: the default spacings give about 21 km of street per km²
+  // of land; the round's own density sets them (0.7-3 times), capped so a small site still gets a few main streets
+  const XD = window.__TS && window.__TS.proto && D.site ? D.site.contextDensity : null;
+  if (XD != null){ const k = XD > 0 ? Math.max(0.7, Math.min(3, 21 / XD)) : 3, side = (D.site.sideM || 1000);
+    const setX = (id, val) => { const e = $(id); if (!e) return; const st = +e.step || 1, want = Math.round(val / st) * st; if (want < +e.min) e.min = want; if (want > +e.max) e.max = want; e.value = want; const o = e.nextElementSibling; if (o && o.tagName === 'OUTPUT') o.textContent = want; };
+    setX('d1', Math.min(300 * k, side / 2.2)); setX('d2', Math.min(115 * k, side / 3.5)); window.__PROTO_SPACING = { k, d1: +$('d1').value, d2: +$('d2').value, context: XD };
+    if (SIZE_K < 1){ const e = $('gW'); if (e) e.value = Math.max(10, Math.round(30 * Math.max(0.4, SIZE_K) / 5) * 5); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K)); }
+    return; }
+  if (SIZE_K >= 1) return; const set = (id, val, lo) => { const e = $(id); if (!e) return; const mn = +e.min, st = +e.step || 1, want = Math.max(lo != null ? lo : mn, Math.round(val / st) * st); if (want < mn) e.min = want; e.value = want; };
   set('d1', 300 * SIZE_K, 90); set('d2', 115 * SIZE_K, 40); set('gW', 30 * Math.max(0.4, SIZE_K), 10); CIRCUS_R = Math.round(45 * Math.max(0.55, SIZE_K));
   }   // (v8.43) the street widths are real carriageways (12 / 9 / 6.5 m), the same on any site: not scaled with it
 const clamp = (a, b, c) => Math.max(b, Math.min(c, a));
@@ -119,7 +128,8 @@ function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentEleme
 function dec(s, scale){ const b = atob(s), n = b.length >> 1, out = new Float32Array(n);
   for (let i = 0; i < n; i++){ let x = b.charCodeAt(2*i) | (b.charCodeAt(2*i+1) << 8); if (x > 32767) x -= 65536; out[i] = x / scale; } return out; }
 const nx = D.grid.nx, ny = D.grid.ny, cell = D.grid.cell, N = nx * ny, OX = D.origin[0], OY = D.origin[1];
-const BA = { cA: dec(D.basis.cA, 1e4), cW: dec(D.basis.cW, 1e3), eD: dec(D.basis.eD, 1), eA: dec(D.basis.eA, 1e4), sD: dec(D.basis.sD, 1), sA: dec(D.basis.sA, 1e4), rD: D.basis.rD ? dec(D.basis.rD, 1) : null, rA: D.basis.rA ? dec(D.basis.rA, 1e4) : null };
+const BA = { cA: dec(D.basis.cA, 1e4), cW: dec(D.basis.cW, 1e3), eD: dec(D.basis.eD, 1), eA: dec(D.basis.eA, 1e4), sD: dec(D.basis.sD, 1), sA: dec(D.basis.sA, 1e4), rD: D.basis.rD ? dec(D.basis.rD, 1) : null, rA: D.basis.rA ? dec(D.basis.rA, 1e4) : null,
+  xD: D.basis.xD ? dec(D.basis.xD, 1) : null, xA: D.basis.xA ? dec(D.basis.xA, 1e4) : null };   // (proto) the existing streets round the site
 const DIRS = D.dirs.map(d => ({ frm: d.frm, name: d.name, job: d.job, S: dec(d.S, 1e3), rel: dec(d.rel, 1e4) }));
 const YEAR = D.year;                              // 12 months and the whole year: each direction's share of hours, mean speed
 const YSUM = YEAR[12].share.reduce((s, x, k) => s + x * YEAR[12].v[k] ** 2, 0) || 1;   // the year's wind pressure, all directions
@@ -295,7 +305,10 @@ function buildTarget(){ buildCorridors();
   if (GZ && v('wG') > 0){ const f = v('wG') / 100; for (let i = 0; i < N; i++){ const d = GD[i]; if (d > 90) continue; const w = f * Math.exp(-((d / 45) ** 2)); if (w > 1e-4) add(i, GA[i], w, 2); } }
   // (v8.5) flood risk: where water would run, the streets run with the flow (downhill, across the contour): drainage corridors
   if (floodOn() && v('fW') > 0){ const f = v('fW') / 100, W_ = floodWeights(); for (let i = 0; i < N; i++){ const w = W_[i] * f * Math.min(1.5, BA.cW[i]); if (w > 1e-4) add(i, BA.cA[i] + PI / 2, w, 2); } }
-  for (let i = 0; i < N; i++){ add(i, BA.eA[i], 0.6 * Math.exp(-((BA.eD[i] / 80) ** 2)), 0); add(i, BA.sA[i], STREAM_W * Math.exp(-((BA.sD[i] / 70) ** 2)), 2); if (BA.rA) add(i, BA.rA[i], 0.9 * Math.exp(-((BA.rD[i] / 90) ** 2)), 2); }
+  // (proto) the drawn boundary pulls much less; the streets round the site carry their directions in (about 200 m)
+  const PROTO_ = !!(window.__TS && window.__TS.proto), EW = PROTO_ ? 0.15 : 0.6;
+  if (PROTO_ && BA.xA) for (let i = 0; i < N; i++){ const w = 0.7 * Math.exp(-((BA.xD[i] / 140) ** 2)); if (w > 1e-4) add(i, BA.xA[i], w, 2); }
+  for (let i = 0; i < N; i++){ add(i, BA.eA[i], EW * Math.exp(-((BA.eD[i] / 80) ** 2)), 0); add(i, BA.sA[i], STREAM_W * Math.exp(-((BA.sD[i] / 70) ** 2)), 2); if (BA.rA) add(i, BA.rA[i], 0.9 * Math.exp(-((BA.rD[i] / 90) ** 2)), 2); }
   for (const a of attractorsOn()){ const R = Math.ceil(a.reach * 2.6 / cell), c0 = Math.round(a.x / cell), r0 = Math.round(a.y / cell);
     for (let r = Math.max(0, r0 - R); r <= Math.min(ny - 1, r0 + R); r++) for (let c = Math.max(0, c0 - R); c <= Math.min(nx - 1, c0 + R); c++){
       const dx = c * cell - a.x, dy = r * cell - a.y, w = a.pull * Math.exp(-(dx * dx + dy * dy) / (a.reach * a.reach)); if (w > 1e-4) add(r * nx + c, Math.atan2(dy, dx) + PI / 2, w, 2); } }

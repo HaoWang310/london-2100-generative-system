@@ -13,7 +13,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME || un
 const results = [];
 for (const r of runs){
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }); const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
-  const url = BASE + '?keep=' + r.keep + (r.id === 'p2' ? '' : '&site=' + r.id), t0 = Date.now(); let res = { id: r.id, keep: r.keep };
+  const url = BASE + '?keep=' + r.keep + (r.id === 'p2' ? '' : '&site=' + r.id) + (process.env.PROTO === '1' ? '&proto=1' : ''), t0 = Date.now(); let res = { id: r.id, keep: r.keep };
   try {
     await page.goto(url);
     const frame = await (async () => { for (let i = 0; i < 600; i++){ const f = page.frames().find(f => /tensor-studio\/index\.html/.test(f.url())); if (f) return f; await page.waitForTimeout(100); } throw new Error('no frame'); })();
@@ -48,7 +48,7 @@ for (const r of runs){
               const dx = P[k][0] - P[k - 1][0], dy = P[k][1] - P[k - 1][1], L = Math.hypot(dx, dy), th = Math.atan2(dy, dx); acc[lv][0] += L * Math.cos(4 * th); acc[lv][1] += L * Math.sin(4 * th); acc[lv][2] += L; } }
           const ax = a => ({ axis: +((((Math.atan2(a[1], a[0]) / 4) * 180 / Math.PI) % 90 + 90) % 90).toFixed(1), strength: +(Math.hypot(a[0], a[1]) / (a[2] || 1)).toFixed(2), km: +(a[2] / 1000).toFixed(2) });
           inner = { main: ax(acc[1]), sec: ax(acc[2]), all: ax([acc[1][0] + acc[2][0], acc[1][1] + acc[2][1], acc[1][2] + acc[2][2]]) }; }
-        return { inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
+        return { proto: { spacing: window.__PROTO_SPACING || null, buildings: window.parent.__PROTO_BLD || window.__PROTO_BLD || null, contextDensity: T.D.site && T.D.site.contextDensity }, inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
           landHa: A.landHa(), flood: !!T.D.flood, growMs: Math.round(growMs), lines: lvl, net: RN && RN.stats, score: { total: score.total, groups: score.groups, raw: score.raw, fail: score.fail }, gridAxis: +gridAxis.toFixed(1), gridStrength: +gridStrength.toFixed(2) }; }));
       await frame.evaluate(() => { const A = window.__ts6; A.setModeQuiet('B'); A.start(false); });
       await page.waitForTimeout(1500);

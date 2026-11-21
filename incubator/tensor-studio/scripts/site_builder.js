@@ -144,7 +144,7 @@ const STREET = /^(motorway|trunk|primary|secondary|tertiary|minor|residential|un
 const NARROW_WATER = /^(stream|ditch|drain|brook|canal|river)$/;
 const WINDS = [[0, 'N', 'across'], [45, 'NE', 'across'], [90, 'E', 'across'], [135, 'SE', 'along'], [180, 'S', 'along'], [225, 'SW', 'along'], [270, 'W', 'along'], [315, 'NW', 'across']];
 
-export function buildTensorSite({ ring, roads = [], rails = [], waters = [], waterways = [], buildings = [], elevation = null, wind, clip = null, keepBuildings = false }){
+export function buildTensorSite({ ring, roads = [], rails = [], waters = [], waterways = [], buildings = [], elevation = null, wind, clip = null, keepBuildings = false, proto = false }){
   if (!ring || ring.length < 3) throw new Error('Site boundary needs at least three points');
   if (!wind?.year?.length || !wind?.hours?.u?.length) throw new Error('Weather year missing');
   const warnings = [];
@@ -239,16 +239,34 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
   const cW = new Float32Array(N); for (let i = 0; i < N; i++) cW[i] = clamp(sl[i] / Math.max(ms, 0.008), 0.2, 2.6);
   if (ms < 0.008 && zOK >= 0.5 * N) warnings.push('Flat ground (mean slope ' + (100 * ms).toFixed(2) + ' %): the contour pulls weakly here');
   const edge = segmentField(segsOf(pieces.flatMap(p => [p.outer, ...p.holes])), nx, ny, CELL);
+  // (proto) the existing streets round the site: their directions (a field part) and their density (the spacing)
+  let ctxField = null, contextDensity = null;
+  if (proto){
+    const CTX = /^(motorway|trunk|primary|secondary|tertiary|minor|residential|unclassified|living_street)$/, segs = [], seen2 = new Set();
+    const all = roads.map(f => ({ ...f, pts: (f.coords || []).map(loc) })).filter(f => CTX.test(f.cls || '') && f.brunnel !== 'tunnel');
+    const sb = bboxOf(site), pad = 450, box = [sb[0] - pad, sb[1] - pad, sb[2] + pad, sb[3] + pad]; let km = 0;
+    for (const f of all) for (let i = 1; i < f.pts.length; i++){ const a = f.pts[i - 1], b = f.pts[i], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      if (m[0] < box[0] || m[0] > box[2] || m[1] < box[1] || m[1] > box[3] || inRing(m, site)) continue;
+      const k = [a, b].map(p => p.join(',')).sort().join('|'); if (seen2.has(k)) continue; seen2.add(k);
+      km += Math.hypot(b[0] - a[0], b[1] - a[1]) / 1000; if (m[0] > -60 && m[1] > -60 && m[0] < w + 60 && m[1] < h + 60) segs.push([a, b]); }
+    const ringKm2 = ((box[2] - box[0]) * (box[3] - box[1]) - area) / 1e6; contextDensity = ringKm2 > 0 ? +(km / ringKm2).toFixed(2) : null;
+    ctxField = segs.length ? segmentField(segs, nx, ny, CELL) : null; }
   const strm = segmentField(segsOf(streamLines), nx, ny, CELL);
   const rail = railBits ? segmentField(segsOf(railLines), nx, ny, CELL) : null;
 
   // 6. the winds: for each of 8 directions, strong on the side it comes in, fading as it travels over the land (L = 600 m)
   //    (the baked version also used the Global Wind Atlas' local speeds; here the speed is the weather year's alone)
+  // (proto) building cover on the 10 m grid, the whole frame: the wind is slowed by the city round the site too
+  let COV = null;
+  if (proto){ COV = new Float32Array(N);
+    for (const pg of BL){ const b = bboxOf(pg[0]); const c0 = Math.max(0, Math.floor(b[0] / CELL)), c1 = Math.min(nx - 1, Math.ceil(b[2] / CELL)), r0 = Math.max(0, Math.floor(b[1] / CELL)), r1_ = Math.min(ny - 1, Math.ceil(b[3] / CELL));
+      for (let r = r0; r <= r1_; r++) for (let c = c0; c <= c1; c++) if (inRing([c * CELL, r * CELL], pg[0])) COV[r * nx + c] = 1; }
+    COV = blur(COV, nx, ny, 2.5); }
   const dirs = WINDS.map(([frm, name, job]) => {
     const ux = Math.round(Math.sin(frm * PI / 180)), uy = Math.round(Math.cos(frm * PI / 180)), step = Math.hypot(ux, uy) * CELL, F = new Float32Array(N);
     const rOrder = uy > 0 ? [ny - 1, -1, -1] : [0, ny, 1], cOrder = ux > 0 ? [nx - 1, -1, -1] : [0, nx, 1];
-    for (let r = rOrder[0]; r !== rOrder[1]; r += rOrder[2]) for (let c = cOrder[0]; c !== cOrder[1]; c += cOrder[2]){ const i = r * nx + c; if (!land10[i]) continue;
-      const rr = r + uy, cc = c + ux; F[i] = (rr >= 0 && cc >= 0 && rr < ny && cc < nx ? F[rr * nx + cc] : 0) + step; }
+    for (let r = rOrder[0]; r !== rOrder[1]; r += rOrder[2]) for (let c = cOrder[0]; c !== cOrder[1]; c += cOrder[2]){ const i = r * nx + c; if (!COV && !land10[i]) continue;
+      const rr = r + uy, cc = c + ux; F[i] = (rr >= 0 && cc >= 0 && rr < ny && cc < nx ? F[rr * nx + cc] : 0) + step * (COV ? 1 + 4 * COV[i] : 1); }
     const S = new Float32Array(N), rel = new Float32Array(N);
     for (let i = 0; i < N; i++){ const f = Math.exp(-F[i] / 600); rel[i] = 0.25 + 1.3 * f; S[i] = 1.9 * rel[i] * rel[i]; }
     return { frm, name, job, S: enc16(blur(S, nx, ny, 2), 1e3), rel: enc16(rel, 1e4) }; });
@@ -267,6 +285,7 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
   const D = {
     origin: [OX, OY], w, h, grid: { nx, ny, cell: CELL },
     basis: { cA: enc16(cA, 1e4), cW: enc16(cW, 1e3), eD: enc16(edge.D, 1), eA: enc16(edge.A, 1e4), sD: enc16(strm.D, 1), sA: enc16(strm.A, 1e4),
+      ...(ctxField ? { xD: enc16(ctxField.D, 1), xA: enc16(ctxField.A, 1e4) } : {}),
       ...(rail ? { rD: enc16(rail.D, 1), rA: enc16(rail.A, 1e4) } : {}) },
     dirs, year: wind.year, hours: wind.hours,
     ...(zOK >= 0.5 * N ? { elev: enc16(Zs, 10) } : {}),   // elevation, 0.1 m, for the environmental fields
@@ -277,7 +296,7 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
     edges: { road: pieces.map(p => p.outer), shore: pieces.flatMap(p => p.holes), shared: [] },
     buildingHoles: bldRings.map(r => r.map(q => [r1(q[0]), r1(q[1])])),
     station: { cells: [], foot: [], street: [] },
-    site: { ring: closeRing(ring), areaHa: +(area / 1e4).toFixed(2), sideM: Math.round(side), elevation: zOK >= 0.5 * N ? [+zl.toFixed(1), +zh.toFixed(1)] : null, meanSlopePct: +(100 * ms).toFixed(2) }
+    site: { ring: closeRing(ring), areaHa: +(area / 1e4).toFixed(2), sideM: Math.round(side), elevation: zOK >= 0.5 * N ? [+zl.toFixed(1), +zh.toFixed(1)] : null, meanSlopePct: +(100 * ms).toFixed(2), contextDensity }
   };
   const meta = { areaHa: D.site.areaHa, sideM: D.site.sideM, grid: [nx, ny], pieces: pieces.length, holes: pieces.reduce((s, p) => s + p.holes.length, 0), anchors: anchors.length,
     buildings: BL.length, roads: R.length, waterways: WW.length, rails: railLines.length, contours: cont.length, elevation: D.site.elevation, warnings };
