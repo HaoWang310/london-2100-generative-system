@@ -26,6 +26,9 @@ jobs:
         run: node run.mjs
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: tensor-generality, path: |
-          tools/tensor-generality/out/
-          tools/tensor-generality/sites/, retention-days: 7 }
+        with:
+          name: tensor-generality
+          retention-days: 7
+          path: |
+            tools/tensor-generality/out/
+            tools/tensor-generality/sites/
