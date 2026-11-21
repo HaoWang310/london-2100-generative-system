@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tensor Studio test host</title><style>html,body{margin:0;height:100%;background:#000}</style></head><body>
+<script type="module">
+// Stands in for the London map: hands Tensor Studio a site exactly as tensor_studio_site.js does (ring, features,
+// the OS Terrain 50 sampler), then opens it in a frame.
+import { DRAINAGE_3857 } from '../../incubator/google-map-live/scripts/map_core.js';
+const R = 6378137, clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const merc = (lon, lat) => [R * lon * Math.PI / 180, R * Math.log(Math.tan(Math.PI / 4 + clamp(lat, -85, 85) * Math.PI / 360))];
+async function demSampler({url, bounds, width, height}){
+  const image = await createImageBitmap(await (await fetch(url)).blob());
+  const canvas = new OffscreenCanvas(width, height), ctx = canvas.getContext('2d', {willReadFrequently: true}); ctx.drawImage(image, 0, 0);
+  const rgba = ctx.getImageData(0, 0, width, height).data, codes = new Uint16Array(width * height);
+  for (let i = 0; i < codes.length; i++) codes[i] = (rgba[i * 4] << 8) | rgba[i * 4 + 1];
+  const b = bounds;
+  return (lng, lat) => { const [x, y] = merc(lng, lat); if (x < b.left || x > b.right || y < b.bottom || y > b.top) return NaN;
+    const sx = (x - b.left) / (b.right - b.left) * width - .5, sy = (b.top - y) / (b.top - b.bottom) * height - .5;
+    const x0 = clamp(Math.floor(sx), 0, width - 1), x1 = clamp(x0 + 1, 0, width - 1), y0 = clamp(Math.floor(sy), 0, height - 1), y1 = clamp(y0 + 1, 0, height - 1);
+    const tx = clamp(sx - Math.floor(sx), 0, 1), ty = clamp(sy - Math.floor(sy), 0, 1);
+    const at = (c, r) => { const v = codes[r * width + c]; return v ? -100 + (v - 1) * .1 : NaN; };
+    const v = [at(x0, y0), at(x1, y0), at(x0, y1), at(x1, y1)], good = v.filter(Number.isFinite); if (!good.length) return NaN;
+    for (let i = 0; i < 4; i++) if (!Number.isFinite(v[i])) v[i] = good[0];
+    return (v[0] * (1 - tx) + v[1] * tx) * (1 - ty) + (v[2] * (1 - tx) + v[3] * tx) * ty; };
+}
+const q = new URLSearchParams(location.search);
+try { localStorage.setItem('tensorStudio.flowMode', 'free'); localStorage.setItem('tensorStudio.uiLanguage', 'zh'); } catch (e) {}
+const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0';
+if (q.get('site')){
+  const site = await (await fetch('sites/' + q.get('site') + '.json')).json();
+  const elevation = await demSampler({ url: '../../incubator/google-map-live/assets/drainage_area/dem50_log16.webp', bounds: DRAINAGE_3857, width: DRAINAGE_3857.baseWidth50m, height: DRAINAGE_3857.baseHeight50m });
+  window.__TENSOR_SITE_INPUT__ = { ring: site.ring, features: site.features, elevation, lang: 'zh', close(){}, fail(e){ window.__FAIL = String(e?.message || e); }, view(){}, mapTheme: null };
+}
+window.__T0 = performance.now();
+frame.src = '../../incubator/tensor-studio/index.html?keep=' + (q.get('keep') || '1');
+document.body.append(frame);
+</script></body></html>
