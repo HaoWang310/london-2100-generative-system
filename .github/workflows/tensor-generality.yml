@@ -24,7 +24,7 @@ jobs:
         run: nohup python3 -m http.server 8123 >/dev/null 2>&1 &
       - name: Flood option B (high-risk land as a corridor streets only cross)
         working-directory: tools/tensor-generality
-        env: { CHROME: /usr/bin/google-chrome, ONLY: 'barking,battersea,stratford,camden-s,soho,bexleyheath,hampstead,sydenham,crewshill,lewisham-l', KEEP: '1,0', PROTO: '1', FLOOD: 'b' }
+        env: { CHROME: /usr/bin/google-chrome, ONLY: 'crewshill', KEEP: '1', PROTO: '1', FLOOD: 'b' }
         run: OUTDIR=ff node run.mjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -37,7 +37,7 @@ jobs:
       - name: Keep the results on a branch (artifact downloads are not reachable from the analysis session)
         if: always()
         run: |
-          mkdir -p /tmp/res && cp -r tools/tensor-generality/ff /tmp/res/ && mkdir -p /tmp/res/context
+          mkdir -p /tmp/res && cp -r tools/tensor-generality/ff /tmp/res/ && mkdir -p /tmp/res/sites && cp tools/tensor-generality/sites/{barking,hampstead,soho}.json /tmp/res/sites/ && mkdir -p /tmp/res/context
           for f in tools/tensor-generality/sites/*.json; do node -e "const d=require('./'+process.argv[1]);console.log(JSON.stringify({id:d.site.id,context:d.context,counts:Object.fromEntries(Object.entries(d.features).map(([k,v])=>[k,v.length]))}))" "$f"; done > /tmp/res/context/sites.jsonl
           cd /tmp/res && git init -q && git checkout -q -b test/tensor-generality-out && git add -A
           git -c user.name=ci -c user.email=ci@example.invalid commit -qm "results"
