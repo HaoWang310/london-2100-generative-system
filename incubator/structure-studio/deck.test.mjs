@@ -30,8 +30,10 @@ test('subdivided surface: finite, flat plates, edges on the step 5 outline', () 
   const m = SS.deck.deckMesh(DK, 1); for (const v of m.top) assert.ok(Number.isFinite(v));
   const V = m.V, n = V.length / 3; let flat = 0; for (let i = 0; i < n; i++) { const z = V[3 * i + 2]; assert.ok(z > -1e-6 && z < 16.4 + 1e-6, 'z in range ' + z); if (SS.deck.LV.some(l => Math.abs(z - l) < 0.02)) flat++; }
   assert.ok(flat / n > 0.8, 'plates are level: ' + (flat / n).toFixed(2));
-  const d = []; for (let i = 0; i < m.boundary.length; i += 2) { const a = m.boundary[i]; d.push(DK.outline.dist([V[3 * a], V[3 * a + 1]], 30)); } d.sort((x, y) => x - y);
-  assert.ok(d[Math.floor(d.length * 0.5)] < 0.5, 'median edge-to-outline distance ' + d[Math.floor(d.length * 0.5)].toFixed(2) + ' m');
+  // 按边长取中位数（v0.9.30 起收尖是加密的曲线，点很多；按点数算会被收尖的点带偏）
+  const d = []; let L = 0; for (let i = 0; i < m.boundary.length; i += 2) { const a = m.boundary[i], b = m.boundary[i + 1], l = Math.hypot(V[3 * b] - V[3 * a], V[3 * b + 1] - V[3 * a + 1]); d.push([DK.outline.dist([(V[3 * a] + V[3 * b]) / 2, (V[3 * a + 1] + V[3 * b + 1]) / 2], 30), l]); L += l; }
+  d.sort((x, y) => x[0] - y[0]); let acc = 0, med = 0; for (const [x, l] of d) { acc += l; if (acc >= L / 2) { med = x; break; } }
+  assert.ok(med < 0.5, 'median edge-to-outline distance ' + med.toFixed(2) + ' m');
   assert.ok(s.gapOn > 4 * s.gapOff, 'node plates follow the outline between most neighbouring corridors: ' + s.gapOn + ' / ' + s.gapOff);
 });
 test('same input gives the same structure; parameters respond', () => {
@@ -162,4 +164,19 @@ test('second level beside an L1->L2 ramp whose foot is near a junction: the half
   const area = (D, l) => { let a = 0; D.F.forEach((f, i) => { if (D.FT[i] !== l) return; let zz = 0; for (const v of f) zz += D.V[3 * v + 2]; if (Math.abs(zz / f.length - SS.deck.LV[l]) > 0.01) return; for (let k = 1; k < f.length - 1; k++) { const p = 3 * f[0], q = 3 * f[k], r = 3 * f[k + 1]; a += Math.abs((D.V[q] - D.V[p]) * (D.V[r + 1] - D.V[p + 1]) - (D.V[r] - D.V[p]) * (D.V[q + 1] - D.V[p + 1])) / 2; } }); return a; };
   assert.ok(Math.abs(area(D2, 1) - area(off, 1)) < 1, 'level 1 unchanged'); assert.ok(Math.abs(area(D2, 3) - area(off, 3)) < 1, 'level 3 unchanged');
   assert.ok(area(D2, 2) < area(off, 2), 'the slivers over the ramps are gone');
+});
+
+test('ramp edges on every level are one smooth line: tapers start tangent to the walkway edge and end tangent to the centre line (v0.9.30)', () => {
+  const cv = s.tips.curves, by = k => cv.filter(c => c.kind + c.tag === k), med = a => { a = a.filter(v => v != null).sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
+  for (const k of ['01th', '12th', '12tl', '23tl']) assert.ok(by(k).length > 5, 'tapers of ' + k + ': ' + by(k).length);
+  for (const k of ['01th', '12tl']) { assert.ok(med(by(k).map(c => c.join)) < 3, k + ' median start corner ' + med(by(k).map(c => c.join))); assert.ok(med(by(k).map(c => c.max)) < 5, k + ' median corner along ' + med(by(k).map(c => c.max))); }
+  assert.ok(med(by('12th').map(c => c.max)) < 10, '12th median corner along ' + med(by('12th').map(c => c.max)));
+  // L2 under an L2→L3 ramp top: the narrowing starts at the junction mouth, never a one-station wedge
+  for (const c of by('23tl')) { assert.ok(c.T >= 2, 'one-station wedge left'); assert.ok(c.max < 15, 'corner along ' + c.max); }
+  const old = SS.deck.buildDeck(F, { loToMouth: false, smoothTaper: false }).stats.tips.curves.filter(c => c.kind + c.tag === '23tl');
+  assert.ok(old.some(c => c.T === 1), 'switches restore the old straight wedge'); assert.ok(old.every(c => c.max === 0), 'old wedge is a straight cut');
+  // the retreat arc at the ramp top (third level) has a point at least every 1.6 m
+  assert.ok(s.tips.arcStep > 0 && s.tips.arcStep <= 1.6, 'arc step ' + s.tips.arcStep);
+  // centre-line points a taper adds are spliced into the face on the other side (no T-junctions), so subdividing does not open cracks or overlaps — see the node-plate overlap test above
+  assert.equal(s.badPlates, 0);
 });
