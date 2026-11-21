@@ -21,7 +21,7 @@ async function demSampler({url, bounds, width, height}){
     return (v[0] * (1 - tx) + v[1] * tx) * (1 - ty) + (v[2] * (1 - tx) + v[3] * tx) * ty; };
 }
 const q = new URLSearchParams(location.search);
-try { localStorage.setItem('tensorStudio.flowMode', 'free'); localStorage.setItem('tensorStudio.uiLanguage', 'zh'); } catch (e) {}
+try { localStorage.setItem('tensorStudio.flowMode', q.get('flow') || 'free'); localStorage.setItem('tensorStudio.uiLanguage', 'zh'); } catch (e) {}
 const frame = document.createElement('iframe'); frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0';
 if (q.get('dsite')){   // (test) a site already built (dumps/), to reproduce a run without the network
   const dd = await (await fetch('dumps/' + q.get('dsite') + '.json')).json();

@@ -752,7 +752,7 @@ try {
     ]);
     // (proto) ?proto=1: the four changes of the generality test; existing buildings kept only from 1500 m² of footprint
     const feats = { ...host.features };
-    if (PROTO){ const m2 = pg => { const r = pg[0] || [], la = (r[0] || [0, 51.5])[1], kx = 111320 * Math.cos(la * Math.PI / 180), ky = 111320; let s = 0; for (let i = 1; i < r.length; i++) s += (r[i - 1][0] * kx) * (r[i][1] * ky) - (r[i][0] * kx) * (r[i - 1][1] * ky); return Math.abs(s / 2); };
+    if (PROTO && !host.D && feats.buildings){ const m2 = pg => { const r = pg[0] || [], la = (r[0] || [0, 51.5])[1], kx = 111320 * Math.cos(la * Math.PI / 180), ky = 111320; let s = 0; for (let i = 1; i < r.length; i++) s += (r[i - 1][0] * kx) * (r[i][1] * ky) - (r[i][0] * kx) * (r[i - 1][1] * ky); return Math.abs(s / 2); };
       window.__PROTO_BLD = { all: feats.buildings.length }; feats.buildings = feats.buildings.filter(pg => m2(pg) >= 1500); window.__PROTO_BLD.kept = feats.buildings.length; }
     if (host.D){ D = host.D; meta = host.meta || {}; }   // (test) a site built elsewhere
     else ({ D, meta } = buildTensorSite({ ...feats, ring: host.ring, elevation: host.elevation, wind, clip, keepBuildings: keep, proto: PROTO }));

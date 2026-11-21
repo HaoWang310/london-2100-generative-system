@@ -410,7 +410,8 @@ function cutBack(l, side, levels){ const Pp = l.pts; const idx = side === 0 ? [.
   l.dead = true; }
 function* closeGen(){ PHASE = 'every end meets a street';
   for (let lid = 0; lid < LINES.length; lid++){ const l = LINES[lid]; if (l.level === 0 || l.dead) continue;
-    for (const side of [0, 1]){ const Pp = l.pts, why = l.ends[side]; if (why === 'T' || why === 'Y' || why === 'J' || why === 'ring') continue; const end = side === 0 ? Pp[Pp.length - 1] : Pp[0];
+    if (l.pts.length < 2){ l.dead = true; continue; }   // (proto) a street that was only its start (it began on a crossing)
+    for (const side of [0, 1]){ const Pp = l.pts, why = l.ends[side]; if (why === 'T' || why === 'Y' || why === 'J' || why === 'ring') continue; if (l.dead || Pp.length < 2){ l.dead = true; break; } const end = side === 0 ? Pp[Pp.length - 1] : Pp[0];
       // (in B, a street stopped for running alongside another is cut back to its last junction, never extended alongside it)
       if (MODE === 'B' && why === 'near'){ cutBack(l, side); yield 1; continue; }
       if (why === 'edge'){ const c = near(end[0], end[1], 25, null, false, new Set([0, 1]), lid); if (c){ if (MODE === 'B') endOn(l, [c[1], c[2]], side); if (side === 0) l.pts.push([c[1], c[2]]); else l.pts.unshift([c[1], c[2]]); l.ends[side] = 'T'; } continue; }
