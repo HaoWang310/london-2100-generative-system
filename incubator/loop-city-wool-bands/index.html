@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Loop City · wool bands</title>
+<style>
+:root{--bg:#000;--ink:#ECECEC;--ink2:#9A9A9A;--line:#2A2A2A;--acc:#E8A33D}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 'DM Sans',system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:48px 16px}
+h1{font-size:30px;margin:0 0 6px}p{color:var(--ink2);margin:0 0 18px}
+a.step{display:block;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0;color:var(--ink);text-decoration:none}
+a.step:hover{border-color:var(--acc)}a.step b{color:var(--acc);margin-right:8px}a.step span{display:block;color:var(--ink2);font-size:13px;margin-top:4px}
+.lang{position:fixed;top:14px;right:16px}.lang button{background:none;border:1px solid var(--line);color:var(--ink2);border-radius:14px;padding:4px 10px;cursor:pointer}
+.lang button.on{color:var(--ink);border-color:var(--ink2)}[data-zh]{display:none}body.zh [data-en]{display:none}body.zh [data-zh]{display:revert}
+</style></head><body>
+<div class="lang"><button id="en" class="on">EN</button> <button id="zh">中文</button></div>
+<main>
+<h1 data-en>Loop City: from the whole loop to the parcel</h1><h1 data-zh>Loop City：从整个环线到地块</h1>
+<p data-en>Three pages that work as one chain. Start with 01: it opens 02, and 02 opens 03, as you go. Allow pop-ups for this site when the browser asks.</p>
+<p data-zh>三个页面组成一条链。从 01 开始：01 会打开 02，02 再打开 03。浏览器询问时，请允许本站弹出窗口。</p>
+<a class="step" href="01%20Loop%20City%20-%20whole%20loop,%20mould%20and%20growth.html"><b>01</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Whole loop: mould and growth</span><span data-zh style="color:var(--ink);font-size:15px">整个环线：黏菌与生长</span>
+<span data-en>The slime mould and the city growth run together over the whole loop. When the century ends, pick one cell, or shift-click several, and open them in the wool.</span>
+<span data-zh>黏菌与城市生长在整个环线上同时运行。百年结束后，选一个单元，或按住 Shift 选多个，在毛线页面中打开。</span></a>
+<a class="step" href="02%20Loop%20City%20-%20wool%20bands.html"><b>02</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Wool bands</span><span data-zh style="color:var(--ink);font-size:15px">毛线带</span>
+<span data-en>Opens from 01 with your cells: the wool in 17 steps, from anchors and threads to the road hierarchy at true widths and the parcels by use.</span>
+<span data-zh>从 01 带着所选单元打开：毛线 17 个步骤，从锚点与线到真实宽度的道路等级和按用途划分的地块。</span></a>
+<a class="step" href="02b%20Loop%20City%20-%20wool%20bands,%20four%20cells%20already%20open.html"><b>02b</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Wool bands, four cells already open</span><span data-zh style="color:var(--ink);font-size:15px">毛线带：已打开四个单元</span>
+<span data-en>The demo: page 02 with four cells already loaded, so you can go straight to the wool steps.</span>
+<span data-zh>演示页：02 已载入四个单元，可直接进入毛线步骤。</span></a>
+<a class="step" href="03%20Loop%20City%20-%20base%20for%20the%20tensor%20field.html"><b>03</b><span data-en style="display:inline;color:var(--ink);font-size:15px">Base for the tensor field</span><span data-zh style="color:var(--ink);font-size:15px">张量场底图</span>
+<span data-en>Opens from step 17 of 02 with the parcels you took, and saves the site file for the tensor studio.</span>
+<span data-zh>从 02 的第 17 步带着所选地块打开，保存给张量场工作室使用的用地文件。</span></a>
+</main>
+<script>
+// The language is kept under the same key as the three pages (woolAppsLang), so the choice carries across.
+const KEY = 'woolAppsLang';
+const set = z => { document.body.classList.toggle('zh', z); document.getElementById('zh').classList.toggle('on', z); document.getElementById('en').classList.toggle('on', !z); try { localStorage.setItem(KEY, z ? 'zh' : 'en'); } catch (_) {} };
+document.getElementById('en').onclick = () => set(false); document.getElementById('zh').onclick = () => set(true);
+try { if (localStorage.getItem(KEY) === 'zh') set(true); } catch (_) {}
+</script>
+</body></html>
