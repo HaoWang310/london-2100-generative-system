@@ -124,13 +124,15 @@ function buildDeck(F, opt) {
       const k = Math.min(pc.n, Math.ceil(40 / pc.seg)); for (let i = 0; i <= k; i++) { if (pc.a >= 0 && pc.fl[i] === 1) cut.add(pc.a); if (pc.b >= 0 && pc.fl[pc.n - i] === 1) cut.add(pc.b); } }
     for (const j of cut) in3[j] = false; }
   // ---- 塔区：围住塔所在室的那一圈走廊（走廊环）和它的节点一律三层，不受靠水 / 靠边的限制 → 塔座 L1 / L2 / L3 在走廊环上每一处都接到同一层（v0.9.28）
-  let ringNodes = 0; if (D.ring3 !== false && F.plazas && F.plazas.length) { const dSeg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  let ringNodes = 0; const ringF = new Set(); if (D.ring3 !== false && F.plazas && F.plazas.length) { const dSeg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
     const dPoly = (p, Q) => { let m = Infinity; for (let i = 0, j = Q.length - 1; i < Q.length; j = i++) m = Math.min(m, dSeg(p, Q[j], Q[i])); return m; }, ring = new Set();
-    for (const z of F.plazas) for (const f of F.fibres) { const m = f.P[f.P.length >> 1]; if (dPoly(m, z.poly) < (f.w || 20) / 2 + 8) { ring.add(f.a); ring.add(f.b); } }   // 走廊中点贴着塔所在的室 = 走廊环上的一段
+    for (const z of F.plazas) for (const f of F.fibres) { const lim = (f.w || 20) / 2 + 8; let near = 0, all = 0; for (let k = 0; k < f.P.length; k += 2) { all++; if (dPoly(f.P[k], z.poly) < lim) near++; } if (near >= 0.5 * all) { ring.add(f.a); ring.add(f.b); ringF.add(F.fibres.indexOf(f)); } }   // 一段走廊有一半以上贴着塔所在的室 = 走廊环上的一段（室被拉长时中点可能离得远）
+    const wMax = Math.max(...F.fibres.map(f => f.w || 20)); N.forEach((p, i) => { if (F.plazas.some(z => dPoly(p, z.poly) < wMax / 2 + 12)) ring.add(i); });   // 离室边不远的节点（走廊环转角处的节点）也算
     for (const i of ring) if (i >= 0) in3[find(cn[i])] = true; N.forEach((_, i) => { in3[i] = in3[find(cn[i])]; }); ringNodes = ring.size; }
   const nSeg = (len, pc) => Math.max(2, Math.round(len / pc.seg)), nPlat = pc => Math.max(1, Math.round(D.plat / pc.seg));
   const mLvl = pc => nSeg(STOREY * D.rampSlope, pc), mEnt = pc => nSeg(LV[1] * D.entrySlope, pc);
-  const mode = pc => { const za = pc.a >= 0 && in3[pc.a], zb = pc.b >= 0 && in3[pc.b]; if ((za || zb) && (pc.a < 0 || pc.b < 0) && pc.n < mLvl(pc) + nPlat(pc)) return 'full';   // 伸到红线的短段放不下坡：三层板直接做到红线
+  const mode = pc => { if (ringF.has(pc.fi)) return 'full';   // 走廊环上的走廊一律整段三层（伸到红线的也一样，在红线处平口截断，不在环上排坡）
+    const za = pc.a >= 0 && in3[pc.a], zb = pc.b >= 0 && in3[pc.b]; if ((za || zb) && (pc.a < 0 || pc.b < 0) && pc.n < mLvl(pc) + nPlat(pc)) return 'full';   // 伸到红线的短段放不下坡：三层板直接做到红线
     return za && zb ? 'full' : za ? 'A' : zb ? 'B' : null; };
   let grown = 0;
   for (let it = 0; it < 12; it++) { let ch = false; for (const pc of PCS) { const md = mode(pc); if ((md === 'A' || md === 'B') && pc.a >= 0 && pc.b >= 0 && pc.n < mLvl(pc) + nPlat(pc)) { in3[md === 'A' ? pc.b : pc.a] = true; ch = true; grown++; } } if (!ch) break; }
@@ -241,7 +243,7 @@ function buildDeck(F, opt) {
       if (hx && hy && hx.pi === hy.pi) { const wk = walkOutline(F.cellPolys[hx.pi].poly, hx, hy, 0.8 * D.seg); if (wk.len < 6 * x[0].w + 2.5 * wide) { wk.pts.forEach((p, gi) => ring.push({ g: j + '_' + i + '_' + gi, p })); cnt.on++; continue; } }
       // 两个走道口之间取不到走廊轮廓、而这一侧张角又很大时（两条走道朝同一边伸出），板边绕节点外侧补一段圆弧，把节点包进板里
       cnt.off++; const TAU = 2 * Math.PI, pa = edgeP(x[0], k, fwd ? 0 : 2), pb = edgeP(y[0], ky, y[1] === 0 ? 2 : 0), a0 = Math.atan2(pa[1] - pj[1], pa[0] - pj[0]), sp = ((Math.atan2(pb[1] - pj[1], pb[0] - pj[0]) - a0) % TAU + TAU) % TAU;
-      if (sp > 1.9 && lst.length === 2 && grp.get(j).length === 1) { const r = 0.55 * x[0].w, m = Math.ceil(sp / 0.6); for (let q = 1; q < m; q++) { const th = a0 + sp * q / m; ring.push({ g: j + '_' + i + '_a' + q, p: [pj[0] + r * Math.cos(th), pj[1] + r * Math.sin(th)] }); } cnt.arcs++; } } return { ring, cnt }; };
+      if (sp > 1.9 && lst.length === 2 && grp.get(j).length === 1 && !lst.some(y => (y[0].a < 0 || y[0].b < 0) && y[0].len < y[0].w)) {   /* 其中一条是在红线处切断的短头（不到一个走道宽）时不补：圆弧会和短头交叉 */ const r = 0.55 * x[0].w, m = Math.ceil(sp / 0.6); for (let q = 1; q < m; q++) { const th = a0 + sp * q / m; ring.push({ g: j + '_' + i + '_a' + q, p: [pj[0] + r * Math.cos(th), pj[1] + r * Math.sin(th)] }); } cnt.arcs++; } } return { ring, cnt }; };
     if (lst.length < 2) continue;                                            // 尽端：端面三点共线，不成板
     // 两条很短、几乎同方向伸出的分支，按端点角度排序可能排反：两条分支的端面在外圈上互相交叉（只有端面点，去不掉）。
     // 这时交换相邻两条分支的顺序再绕一圈，取端面不再交叉的那个顺序
@@ -251,6 +253,7 @@ function buildDeck(F, opt) {
     if (faceX(R2) && lst.length > 2) for (let i = 0; i < lst.length; i++) { const L2 = lst.slice(), k = (i + 1) % lst.length; [L2[i], L2[k]] = [L2[k], L2[i]]; const b2 = mkRing(L2), R = toR2(b2.ring); if (!faceX(R)) { lst.splice(0, lst.length, ...L2); built = b2; R2 = R; swapped++; break; } }
     // 仍然交叉：走廊刚出节点就在场地红线处平口切断（剩下不到一个走道宽的短头），短头的端面和旁边分支的端面交叉——这个短头不接进节点板，板边直接连到相邻分支
     if (faceX(R2)) for (const x of lst.filter(x => (x[0].a < 0 || x[0].b < 0) && x[0].len < x[0].w)) { const L2 = lst.filter(y => y !== x); if (L2.length < 2) continue; const b2 = mkRing(L2), R = toR2(b2.ring); if (!faceX(R)) { lst.splice(0, lst.length, ...L2); built = b2; R2 = R; stubDrop++; break; } }
+    if (faceX(R2) && lst.length === 2 && lst.some(x => (x[0].a < 0 || x[0].b < 0) && x[0].len < x[0].w)) { stubDrop++; continue; }   // 只连两条走廊、其中一条是红线处的短头：不需要节点板，长的那条直接走到红线
     const ring = built.ring; gapOn += built.cnt.on; gapOff += built.cnt.off; arcs += built.cnt.arcs;
     // 板的外圈必须是一条不打结的闭合线：轮廓上的点如果让外圈自交（交点落在板边后面、或绕到了别的走道口后面），去掉它
     for (let guard = 0; guard < 60; guard++) { const n = R2.length; let hit = -1;

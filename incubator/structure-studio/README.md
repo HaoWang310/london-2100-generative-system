@@ -43,6 +43,7 @@ planting towers sit on the tensor field's attractors and major junctions. Buildi
 | `structure.test.mjs` | 在 P2 上的回归测试（`node --test`） |
 | `deck.test.mjs` | 第 6 步的回归测试 |
 | `nav.test.mjs` | 三维视口导航的回归测试 |
+| `robust.test.mjs` | 规则普适性测试：12 种条件（种子、生成模式、拉扯、核心位置）下塔座和走廊的规则都要成立 |
 | `docs/DESIGN.md` | 生成逻辑与设计规则 |
 | `docs/DATA.md` | 输入快照与输出格式 |
 | `docs/CHANGELOG.md` | 版本记录 |
