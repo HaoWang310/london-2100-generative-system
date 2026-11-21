@@ -176,10 +176,11 @@ function prepareSite(snap, res) { // res：栅格精度（米），默认 2；�
 // 跨路：桥下净空至少 CLR；顶标高够高时带整层种植跨过去（层高 3.6 m），否则只留 1.2 m 桥面
 const CLR = 5.0;
 function roadSpan(deckZ) { const n = Math.floor((deckZ - CLR) / 3.6), T = n >= 1 ? 3.6 * n : 1.2; return { T, floors: Math.max(0, n), clear: deckZ - T, ok: deckZ - T >= CLR }; }
-// 生成一次；环台模式下塔脚碰到走廊环时，把那个核心的环往外放 6 m 重来（最多再来两次）。车站 P2 一次就过
+// 生成一次；塔座模式下塔脚没有全部落在塔所在的室里（离边 ≥ 1 m）时，把那个核心的环往外放大重来：按差多少放（至少 6 m），一直放到塔脚落进来，累计最多 30 m
+// （拉扯很大时室被拉长，放太多会挤乱主线附近的走廊；放不够的部分由三层走廊环托住，见 plazaTiers 的 footClear）。车站 P2 一次就过
 function buildStructure(site, P, EXCL) { let RX = null, F = null;
-  for (let k = 0; k < 3; k++) { F = buildOnce(site, P, EXCL, RX); const bad = (F.plazas || []).filter(z => !z.ok); if (!bad.length) break;
-    RX = F.rings.map((_, i) => ((RX && RX[i]) || 0) + (bad.some(z => z.ti === i) ? 6 : 0)); }
+  for (let k = 0; k < 10; k++) { F = buildOnce(site, P, EXCL, RX); const bad = (F.plazas || []).filter(z => !z.ok && ((RX && RX[z.ti]) || 0) < 30); if (!bad.length) break;
+    RX = F.rings.map((_, i) => { const z = bad.find(z => z.ti === i), r = (RX && RX[i]) || 0; return z ? Math.min(30, r + Math.max(6, Math.ceil(2 - z.gap))) : r; }); }
   F.ringExtra = RX; return F; }
 function buildOnce(site, P, EXCL, RX) {
   if (P.wP < P.wS) P = { ...P, wP: P.wS }; // 主线走廊不比次级走廊窄
@@ -545,7 +546,7 @@ function buildOnce(site, P, EXCL, RX) {
   // 种植塔：来自张量场的主吸引点，每个核心一座大塔
   const towers = []; for (const c of cores) { let best = null, bd = 1e9; for (const k of inner) { const d = dist(nodeP[k], c); if (d < bd) { bd = d; best = nodeP[k]; } } const p = rings.length ? c : best && bd < 80 ? best : c; towers.push([p[0], p[1], 24, 170]); }
   placeTowers(towers, site, strands, P);
-  const plazas = PLAZA ? towers.map((t, ti) => makePlaza(t, ti, cellPolys, site)).filter(Boolean) : [];
+  const plazas = PLAZA ? towers.map((t, ti) => makePlaza(t, ti, cellPolys, site, P)).filter(Boolean) : [];
   // 只有主吸引点放种植塔（每个核心一座大塔）。次吸引点仍然局部加密，重要路口仍然记录在 site.hubs 里，但都不再放塔。
   // 主节点：绕环形广场一圈环形节点板（同地面道路成环）；边界节点：场地边上一块半圆形入口板
   const gatePlates = gates.map(a => ({ c: a.p, r: clamp(0.15 * a.reach * a.s, 35, 60) }));
@@ -768,7 +769,7 @@ function towerFeet(t) { const s = t[5] || 1, a = t[6] || 0, c = Math.cos(a), n =
 // 一座塔的塔座（轻的部分，生成时就算）：塔所在的室、天井（让开塔脚和环岛内沿各 4 m）、环岛、地面柱候选点（环岛内外各一圈、往外每 14 m 一圈，约 12 m 一根，
 // 不立在任何道路上、不进天井）。ok = 塔脚全部落在室里、离边 ≥ 1 m。三层的形状在 plazaTiers 里按需算（较慢，方案比较时不算）
 const PLAZA_Z = 7.2, PLAZA_T = 1.0;
-function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp => inPolyS(t, cp.poly)); if (cell < 0) return null;
+function makePlaza(t, ti, cellPolys, site, P) { const cell = cellPolys.findIndex(cp => inPolyS(t, cp.poly)); if (cell < 0) return null;
   const poly = cellPolys[cell].poly, c = [t[0], t[1]], rr = poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1])), rIn = Math.min(...rr);
   const feet = towerFeet(t), fr = feet.flat().map(p => Math.hypot(p[0] - c[0], p[1] - c[1])), footMin = Math.min(...fr);
   const roads = (site.snap && site.snap.roads) || [], ring = findRoundabout(c, roads, rIn), oc = Math.max(10, Math.min(footMin - 4, ring ? ring.r - ring.w / 2 - 4 : Infinity));
@@ -779,7 +780,7 @@ function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp
   while (radii[radii.length - 1] + 14 < Math.max(...rr)) radii.push(radii[radii.length - 1] + 14);
   const cols = []; for (const R of radii) { const n = Math.max(6, Math.round(2 * Math.PI * R / 12)); for (let k = 0; k < n; k++) { const a = 2 * Math.PI * (k + 0.5 * (radii.indexOf(R) % 2)) / n, p = [c[0] + R * Math.cos(a), c[1] + R * Math.sin(a)];
     if (!inPolyS(p, poly) || polyD(p, poly) < 2.5 || Math.hypot(p[0] - c[0], p[1] - c[1]) < oc + 2 || onRoad(p)) continue; cols.push([p[0], p[1], PLAZA_Z - PLAZA_T]); } }
-  return { ti, cell, poly, c, oc, ring, feet, cols, z: PLAZA_Z, thick: PLAZA_T, area: Math.abs(polyArea(poly)) - Math.PI * oc * oc, gap, ok: gap >= 1 }; }
+  return { ti, cell, poly, c, oc, ring, feet, cols, ringW: 0.8 * Math.max((P && P.wCore) || 20, (P && P.wP) || 20), z: PLAZA_Z, thick: PLAZA_T, area: Math.abs(polyArea(poly)) - Math.PI * oc * oc, gap, ok: gap >= 1 }; }
 // ---- 三层退台塔座（v0.9.27）：塔所在的室里铺 L1 7.2 / L2 11.8 / L3 16.4 三层，塔立在 L3 上
 // 规则（对每个生成结果都适用，在 0.5 m 网格上用距离场做，最后描成光滑轮廓）：
 //  1 L3 = 三叶塔座：每片塔一片"叶"伸到走廊环；每两片塔之间一道向塔心凹进的圆弧（谷），弧的两端落在走廊环上、离塔脚 ≥ 3 m，
@@ -787,11 +788,12 @@ function makePlaza(t, ti, cellPolys, site) { const cell = cellPolys.findIndex(cp
 //  2 L2 = L3 外放 8 m，L1 = L3 外放 16 m；离走廊环 40 m 以内台阶宽度平滑收到 0，三层的边相切地汇进走廊环
 //  3 L1 另沿辐射路伸出"臂"（路宽 / 2 + 5 m，至少 10 m）接走廊环；L2、L3 靠三片叶接
 //  4 圆滑：走廊环和天井当实体做闭运算（L3 12 m，各层 8 m）再做 4 m 开运算 → 没有缺口、窄条、尖角
+//    塔脚外 3 m 一定在 L3 上（贴着走廊环的塔脚由三层走廊环托住）；辐射路 = 穿出塔所在的室、又伸到塔附近的路（不依赖张量场一定生成环岛）
 //  5 开敞：层间只有板和柱子（地面柱 6.2 m 不立在路上；L1→L2、L2→L3 各一套约 12 m 的柱网）
 const TIER = { z: [7.2, 11.8, 16.4], thick: 1.0, res: 0.5, step: 8, taper: 40, fr3: 12, frl: 8, open: 4, feetPad: 3, ocKeep: 8, padMax: 40, armMin: 10 };
 function plazaTiers(z, site) { if (z._tiers) return z._tiers;
   const T = TIER, Q = T.res, c = z.c, poly = z.poly, roads = (site && site.snap && site.snap.roads) || [];
-  let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity; for (const p of poly) { bx0 = Math.min(bx0, p[0]); by0 = Math.min(by0, p[1]); bx1 = Math.max(bx1, p[0]); by1 = Math.max(by1, p[1]); }
+  let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity; for (const p of [...poly, ...z.feet.flat()]) { bx0 = Math.min(bx0, p[0]); by0 = Math.min(by0, p[1]); bx1 = Math.max(bx1, p[0]); by1 = Math.max(by1, p[1]); }
   const x0 = bx0 - 8, y0 = by0 - 8, W = Math.ceil((bx1 - bx0 + 16) / Q), H = Math.ceil((by1 - by0 + 16) / Q), N = W * H, X = i => x0 + (i + 0.5) * Q, Y = j => y0 + (j + 0.5) * Q, pix = p => [(p[0] - x0) / Q, (p[1] - y0) / Q];
   const cell = new Uint8Array(N); fillPoly(cell, W, H, poly.map(pix), 1);
   const R = new Float32Array(N); for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) R[j * W + i] = Math.hypot(X(i) - c[0], Y(j) - c[1]);
@@ -827,9 +829,10 @@ function plazaTiers(z, site) { if (z._tiers) return z._tiers;
   const L3 = smoothM(base, T.fr3, T.open);
   // 3 L1 的臂：沿辐射路
   const ring = z.ring, rMax = Math.max(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), arms = new Uint8Array(N), spokes = [];
-  if (ring) { const rOut = ring.r + ring.w / 2;
+  // 辐射路 = 穿出塔所在的室、又伸到塔附近的路：有环岛时"附近" = 环岛外沿，没有环岛时 = 室内最近半径的 75 %（不依赖张量场一定生成环岛）
+  { const rIn = Math.min(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), rOut = ring ? ring.r + ring.w / 2 : 0.75 * rIn - 2;
     for (const rd of roads) { const pts = (rd.pts || []).map(q => [q[0] ?? q.x, q[1] ?? q.y]), rr = pts.map(q => Math.hypot(q[0] - c[0], q[1] - c[1])); if (!pts.length) continue;
-      const lo = Math.min(...rr), hi = Math.max(...rr); if (!(lo < rOut + 2 && hi > rMax + 5 && hi - lo > 6)) continue; spokes.push({ w: rd.width || 6.5, pts });
+      const lo = Math.min(...rr), hi = Math.max(...rr); if (!(lo < rOut + 2 && hi > (ring ? rMax + 5 : rIn + 2) && hi - lo > 6)) continue; spokes.push({ w: rd.width || 6.5, pts });
       const m = new Uint8Array(N); for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / (Q / 2));
         for (let s = 0; s <= n; s++) { const x = a[0] + (b[0] - a[0]) * s / n, y = a[1] + (b[1] - a[1]) * s / n, i = Math.floor((x - x0) / Q), j = Math.floor((y - y0) / Q); if (i >= 0 && j >= 0 && i < W && j < H) m[j * W + i] = 1; } }
       const d = dil(m, Math.max(T.armMin, (rd.width || 6.5) / 2 + 5)); for (let i = 0; i < N; i++) if (d[i] && cell[i]) arms[i] = 1; } }
@@ -838,9 +841,11 @@ function plazaTiers(z, site) { if (z._tiers) return z._tiers;
   for (let li = 0; li < 3; li++) { const w = T.step * (2 - li), m = new Uint8Array(N);
     for (let i = 0; i < N; i++) { const u = clamp(dr[i] * Q / T.taper, 0, 1), sm = u * u * (3 - 2 * u); m[i] = inner(i) && (L3[i] || dB[i] * Q <= w * sm || (li === 0 && arms[i])) ? 1 : 0; }
     lv.push(smoothM(m, T.frl, T.open)); }
+  { const keep = dil(feet, T.feetPad), dr3 = edt(cell, W, H); for (let i = 0; i < N; i++) if (keep[i] && R[i] > z.oc && (cell[i] || dr3[i] * Q > z.ringW)) lv[2][i] = 1; }   // 塔脚外 3 m 一定有 L3：室里补上（圆角可能削掉一点）；室放大到上限还放不下的塔脚（拉扯很大时），伸出走廊环的部分也铺 L3 托住
   for (let i = 0; i < N; i++) { if (lv[2][i]) lv[1][i] = 1; if (lv[1][i]) lv[0][i] = 1; }
   // 校验：塔脚离 L3 边
-  const dIn = edt(not(lv[2]), W, H); let footClear = Infinity; for (let i = 0; i < N; i++) if (feet[i]) footClear = Math.min(footClear, dIn[i] * Q);
+  const dr2 = edt(cell, W, H), sup = new Uint8Array(N); for (let i = 0; i < N; i++) sup[i] = lv[2][i] || (!cell[i] && R[i] > z.oc && dr2[i] * Q <= z.ringW) ? 1 : 0;   // 塔脚的支撑 = L3 + 走廊环（走廊环一律三层，v0.9.28；宽度按 0.8 × 走廊宽算）
+  const dIn = edt(not(sup), W, H); let footClear = Infinity; for (let i = 0; i < N; i++) if (feet[i]) footClear = Math.min(footClear, dIn[i] * Q);
   // 柱子（开敞：只有板和柱）。地面：makePlaza 的候选点里 L1 下面的（离 L1 边 ≥ 2.5 m）；L1→L2、L2→L3：12 m 柱网，离上层板边 ≥ 2.5 m
   const dE = lv.map(m => edt(not(m), W, H)), at = (p, li) => { const i = Math.floor((p[0] - x0) / Q), j = Math.floor((p[1] - y0) / Q); return i >= 0 && j >= 0 && i < W && j < H ? dE[li][j * W + i] * Q : 0; };
   const cols = z.cols.filter(p => at(p, 0) >= 2.5).map(p => [p[0], p[1], T.z[0] - T.thick, 0]);
