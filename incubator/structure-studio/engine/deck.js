@@ -6,7 +6,7 @@
 // 板厚 1 m，上下两层之间的净高 3.6 m → 层到层 4.6 m。第一层板顶 7.2 m（板底 6.2 m，街道净空 ≥ 5 m）
 const THICK = 1, CLEAR = 3.6, STOREY = THICK + CLEAR, HEAD = 2.2;   // HEAD = 人能走的最小净高
 const LV = [0, 7.2, 7.2 + STOREY, 7.2 + 2 * STOREY];            // 地面、L1、L2、L3 顶面标高：7.2 / 11.8 / 16.4
-const DEF = { r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1, taperBack: 1.2, taperShape: 'ease', tip: 'retreat', tipLen: 1, retreatLen: 2, retreatMax: 4, rampEdge: true, rampEdgeLen: 1.6, retreat2Len: 40 };   // tip：第三层板边在坡道旁边怎么收——'retreat' 收回路口（默认）· 'point' 长尖 · 'sweep' 缓曲线 · 'round' 圆弧
+const DEF = { ring3: true, r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1, taperBack: 1.2, taperShape: 'ease', tip: 'retreat', tipLen: 1, retreatLen: 2, retreatMax: 4, rampEdge: true, rampEdgeLen: 1.6, retreat2Len: 40 };   // tip：第三层板边在坡道旁边怎么收——'retreat' 收回路口（默认）· 'point' 长尖 · 'sweep' 缓曲线 · 'round' 圆弧
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------------------------------------------------------- 走廊轮廓（室多边形）的线段索引
@@ -123,6 +123,11 @@ function buildDeck(F, opt) {
   if (D.avoidEdge) { const cut = new Set(); for (const pc of PCS) { if (pc.a < 0 && pc.b >= 0 && pc.len < 60) cut.add(pc.b); if (pc.b < 0 && pc.a >= 0 && pc.len < 60) cut.add(pc.a);
       const k = Math.min(pc.n, Math.ceil(40 / pc.seg)); for (let i = 0; i <= k; i++) { if (pc.a >= 0 && pc.fl[i] === 1) cut.add(pc.a); if (pc.b >= 0 && pc.fl[pc.n - i] === 1) cut.add(pc.b); } }
     for (const j of cut) in3[j] = false; }
+  // ---- 塔区：围住塔所在室的那一圈走廊（走廊环）和它的节点一律三层，不受靠水 / 靠边的限制 → 塔座 L1 / L2 / L3 在走廊环上每一处都接到同一层（v0.9.28）
+  let ringNodes = 0; if (D.ring3 !== false && F.plazas && F.plazas.length) { const dSeg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    const dPoly = (p, Q) => { let m = Infinity; for (let i = 0, j = Q.length - 1; i < Q.length; j = i++) m = Math.min(m, dSeg(p, Q[j], Q[i])); return m; }, ring = new Set();
+    for (const z of F.plazas) for (const f of F.fibres) { const m = f.P[f.P.length >> 1]; if (dPoly(m, z.poly) < (f.w || 20) / 2 + 8) { ring.add(f.a); ring.add(f.b); } }   // 走廊中点贴着塔所在的室 = 走廊环上的一段
+    for (const i of ring) if (i >= 0) in3[find(cn[i])] = true; N.forEach((_, i) => { in3[i] = in3[find(cn[i])]; }); ringNodes = ring.size; }
   const nSeg = (len, pc) => Math.max(2, Math.round(len / pc.seg)), nPlat = pc => Math.max(1, Math.round(D.plat / pc.seg));
   const mLvl = pc => nSeg(STOREY * D.rampSlope, pc), mEnt = pc => nSeg(LV[1] * D.entrySlope, pc);
   const mode = pc => { const za = pc.a >= 0 && in3[pc.a], zb = pc.b >= 0 && in3[pc.b]; if ((za || zb) && (pc.a < 0 || pc.b < 0) && pc.n < mLvl(pc) + nPlat(pc)) return 'full';   // 伸到红线的短段放不下坡：三层板直接做到红线
@@ -307,7 +312,7 @@ function buildDeck(F, opt) {
       if (!tt) { add(ids, l); continue; } for (const t of tt) add([ids[t[0]], ids[t[1]], ids[t[2]]], l); } }
   const sharp = []; for (const pc of PCS) for (const k in pc.EP) for (let l = 1; l <= 3; l++) for (const c of [0, 2]) { const i = vid.get(pc.id + '_' + l + '_' + k + '_' + c); if (i !== undefined) sharp.push(i); }
   const cnt = k => ramps.filter(r => r.kind[0] === k).length, edge3 = PCS.filter(pc => pc.land).length;
-  const stats = { tips: tipStat, merged: [...grp.values()].filter(g => g.length > 1).length, mergedNodes: [...grp.values()].filter(g => g.length > 1).reduce((s, g) => s + g.length, 0), shortRuns: short.size, absorbed, tight, nodes: inc.size, branches: PCS.length, l3nodes: [...inc.keys()].filter(j => in3[j]).length, l3branches: PCS.filter(pc => mode(pc) === 'full').length, entries: cnt(0), r12: cnt(1), r23: cnt(2), edges3: edge3, steep: PCS.filter(pc => pc.steep).length, grown,
+  const stats = { tips: tipStat, merged: [...grp.values()].filter(g => g.length > 1).length, mergedNodes: [...grp.values()].filter(g => g.length > 1).reduce((s, g) => s + g.length, 0), shortRuns: short.size, absorbed, tight, nodes: inc.size, branches: PCS.length, l3nodes: [...inc.keys()].filter(j => in3[j]).length, ringNodes, l3branches: PCS.filter(pc => mode(pc) === 'full').length, entries: cnt(0), r12: cnt(1), r23: cnt(2), edges3: edge3, steep: PCS.filter(pc => pc.steep).length, grown,
     noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, arcs, badPlates, swapped, stubDrop, looseOrder, twins, nearPairs: nearPairs.length, cutEnds: PCS.filter(pc => Object.keys(pc.EP).length).length, ctrlF: FC.length, ctrlV: V.length / 3,
     lenKm: PCS.reduce((s, pc) => s + pc.len, 0) / 1000 };
   return { V: new Float64Array(V), F: FC, FT, sharp, stats, in3, outline: OI, params: D,
