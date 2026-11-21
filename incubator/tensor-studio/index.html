@@ -206,7 +206,7 @@ window.TS_FRAGMENTS=[
  ['Applied preset ','已应用方案 '],['Generation failed: ','生成失败：'],
  ['km/km² (towns 12–16)','千米/平方千米（城镇参考 12–16）'],
  ['km main','千米主路'],['km second','千米次路'],['junctions: T','路口：T'],
- ['loose ends','未连接端点'],['cells, median','个地块，面积中位数'],['culverts','处涵洞'],['circuses','处环形广场'],
+ ['loose ends','未连接端点'],['cells, median','个地块，面积中位数'],['culverts','处涵洞'],['causeways','处堤路'],['circuses','处环形广场'],
  ['wind simulation','风场模拟'],['wind of','风场：'],['along the contour','沿等高线'],['growing:','正在生成：'],['streets','条道路'],
  ['average','平均宽度'],['the inside streets take','内部道路占'],['of the land','场地面积'],['wind,','风场，'],['calm ','静风 '],[' · from ',' · 来自 ']
 ];
@@ -526,7 +526,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
  <div id="view"><canvas id="c"></canvas>
   <div id="hud">loading…</div></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.47.1" data-en="Station P2 example · v8.47.1">车站 P2 示例 · v8.47.1</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1"><span data-i18n data-zh="保留绕开" data-en="Keep, go round">保留绕开</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.48.0" data-en="Station P2 example · v8.48.0">车站 P2 示例 · v8.48.0</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1" data-i18n-title data-zh-title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理" data-en-title="Buildings of 1,500 m² footprint or more stay and the streets go round them; the rest may go" title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理"><span data-i18n data-zh="保留大建筑" data-en="Keep the large ones">保留大建筑</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -548,7 +548,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
   <div class="row"><label>second streets apart, m</label><input type="range" id="d2" min="80" max="220" step="5" value="115"><output></output></div>
   <div class="sub-h"><span data-i18n data-zh="洪水风险（EA 地表水与河流取较高等级）" data-en="Flood risk (EA surface water or rivers, the higher)">洪水风险（EA 地表水与河流取较高等级）</span></div>
   <label class="lay"><input type="checkbox" id="fOn" checked> <span data-i18n data-zh="洪水影响道路" data-en="Flood risk shapes the streets">洪水影响道路</span></label>
-  <div class="row"><label><span data-i18n data-zh="避让" data-en="Keep clear">避让</span></label><select id="fAvoid"><option value="4" selected><span data-i18n data-zh="高风险区（≥3.3%/年）" data-en="High risk (≥ 3.3 %/yr)">高风险区（≥3.3%/年）</span></option><option value="3"><span data-i18n data-zh="中及高风险区（≥1%/年）" data-en="Medium and high (≥ 1 %/yr)">中及高风险区（≥1%/年）</span></option><option value="0"><span data-i18n data-zh="不避让" data-en="None">不避让</span></option></select></div>
+  <div class="row"><label><span data-i18n data-zh="避让" data-en="Keep clear">避让</span></label><select id="fAvoid"><option value="b" selected><span data-i18n data-zh="高风险区作蓝绿走廊（道路只垂直穿过）" data-en="High risk as blue-green corridors (streets only cross)">高风险区作蓝绿走廊（道路只垂直穿过）</span></option><option value="4"><span data-i18n data-zh="高风险区（≥3.3%/年）" data-en="High risk (≥ 3.3 %/yr)">高风险区（≥3.3%/年）</span></option><option value="3"><span data-i18n data-zh="中及高风险区（≥1%/年）" data-en="Medium and high (≥ 1 %/yr)">中及高风险区（≥1%/年）</span></option><option value="0"><span data-i18n data-zh="不避让" data-en="None">不避让</span></option></select></div>
   <div class="row"><label><span data-i18n data-zh="顺流排水权重" data-en="Along the flow, weight">顺流排水权重</span></label><input type="range" id="fW" min="0" max="100" step="5" value="40"><output></output></div>
   <div class="flood-num" id="fNum"></div>
   <div class="sub-h"><span data-i18n data-zh="蓝绿走廊（主要汇水路径，道路只能垂直穿过）" data-en="Blue-green corridors (the main runoff paths; streets only cross them)">蓝绿走廊（主要汇水路径，道路只能垂直穿过）</span></div>
@@ -728,19 +728,23 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.47.1';
-import { floodForSite } from './scripts/flood_risk.js?v=8.47.1';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.47.1';
-const V = '8.47.1', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.48.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.48.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.48.0';
+const V = '8.48.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
-// v8.47.1 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
+// v8.48.0 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
 const sys = (() => { try { const f = (navigator.languages && navigator.languages[0]) || navigator.language || ''; return f ? (/^zh\b/i.test(f) ? 'zh' : 'en') : null; } catch (e) { return null; } })();
 const lang0 = host?.lang || stored || sys || 'zh', zh = lang0 === 'zh';
 window.__TS_LANG0 = lang0;
 const keepQ = new URLSearchParams(location.search).get('keep');
-const keep = keepQ === null ? true : keepQ === '1';   // (v8.32) from the map, existing buildings are obstacles unless ?keep=0
+const keep = keepQ === null ? true : keepQ === '1' || keepQ === 'all';   // (v8.32) from the map, existing buildings are obstacles unless ?keep=0
+// (v8.48) only the large ones: a footprint of 1,500 m² or more (?keep=all keeps every building, as before)
+const KEEP_MIN_M2 = keepQ === 'all' ? 0 : 1500;
+const footM2 = pg => { const r = pg && pg[0] || [], la = (r[0] || [0, 51.5])[1], kx = 111320 * Math.cos(la * Math.PI / 180), ky = 111320; let s = 0;
+  for (let i = 1; i < r.length; i++) s += (r[i - 1][0] * kx) * (r[i][1] * ky) - (r[i][0] * kx) * (r[i - 1][1] * ky); return Math.abs(s / 2); };
 try {
   let D, meta = {};
   if (host){
@@ -749,7 +753,9 @@ try {
       fetch('assets/luton_wind.json?v=' + V).then(r => { if (!r.ok) throw new Error('weather year HTTP ' + r.status); return r.json(); }),
       import(PC).then(m => m.default || m).catch(() => null)
     ]);
-    ({ D, meta } = buildTensorSite({ ...host.features, ring: host.ring, elevation: host.elevation, wind, clip, keepBuildings: keep }));
+    const feats = { ...host.features };
+    if (keep && KEEP_MIN_M2 && feats.buildings){ const all = feats.buildings.length; feats.buildings = feats.buildings.filter(pg => footM2(pg) >= KEEP_MIN_M2); window.__TS_KEPT = { all, kept: feats.buildings.length, minM2: KEEP_MIN_M2 }; }
+    ({ D, meta } = buildTensorSite({ ...feats, ring: host.ring, elevation: host.elevation, wind, clip, keepBuildings: keep }));
   } else {
     hud(zh ? '正在载入车站 P2 示例…' : 'Loading the station P2 example…');
     const r = await fetch('assets/station-p2.json?v=' + V); if (!r.ok) throw new Error('example site HTTP ' + r.status);
