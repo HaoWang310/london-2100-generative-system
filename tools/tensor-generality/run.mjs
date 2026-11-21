@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 import { SITES } from './sites.mjs';
-const BASE = process.env.BASE || 'http://localhost:8123/tools/tensor-generality/host.html', OUT = new URL('./out/', import.meta.url);
+const BASE = process.env.BASE || 'http://localhost:8123/tools/tensor-generality/host.html', OUT = new URL('./' + (process.env.OUTDIR || 'out') + '/', import.meta.url);
 fs.mkdirSync(OUT, { recursive: true });
 const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
 const keeps = process.env.KEEP ? process.env.KEEP.split(',') : ['1', '0'];
@@ -48,7 +48,10 @@ for (const r of runs){
               const dx = P[k][0] - P[k - 1][0], dy = P[k][1] - P[k - 1][1], L = Math.hypot(dx, dy), th = Math.atan2(dy, dx); acc[lv][0] += L * Math.cos(4 * th); acc[lv][1] += L * Math.sin(4 * th); acc[lv][2] += L; } }
           const ax = a => ({ axis: +((((Math.atan2(a[1], a[0]) / 4) * 180 / Math.PI) % 90 + 90) % 90).toFixed(1), strength: +(Math.hypot(a[0], a[1]) / (a[2] || 1)).toFixed(2), km: +(a[2] / 1000).toFixed(2) });
           inner = { main: ax(acc[1]), sec: ax(acc[2]), all: ax([acc[1][0] + acc[2][0], acc[1][1] + acc[2][1], acc[1][2] + acc[2][2]]) }; }
-        return { proto: { spacing: window.__PROTO_SPACING || null, buildings: window.parent.__PROTO_BLD || window.__PROTO_BLD || null, contextDensity: T.D.site && T.D.site.contextDensity }, inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
+        // the field itself in the inner circle (British National Grid points, 40 m apart), for the boundary test
+        let field = null; if (ring && typeof fieldAtT === 'function'){ const pts = ring.slice(0, -1).map(p => geo.wgs84ToBNG(p[0], p[1])), E0 = pts.reduce((a, p) => a + p[0], 0) / pts.length, N0 = pts.reduce((a, p) => a + p[1], 0) / pts.length; field = [];
+          for (let dx = -400; dx <= 400; dx += 40) for (let dy = -400; dy <= 400; dy += 40){ if (Math.hypot(dx, dy) > 400) continue; const E = Math.round(E0 + dx), Nn = Math.round(N0 + dy), t = fieldAtT(E - OX, Nn - OY); if (t != null) field.push([E, Nn, +t.toFixed(4)]); } }
+        return { field, proto: { spacing: window.__PROTO_SPACING || null, buildings: window.parent.__PROTO_BLD || window.__PROTO_BLD || null, contextDensity: T.D.site && T.D.site.contextDensity }, inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
           landHa: A.landHa(), flood: !!T.D.flood, growMs: Math.round(growMs), lines: lvl, net: RN && RN.stats, score: { total: score.total, groups: score.groups, raw: score.raw, fail: score.fail }, gridAxis: +gridAxis.toFixed(1), gridStrength: +gridStrength.toFixed(2) }; }));
       await frame.evaluate(() => { const A = window.__ts6; A.setModeQuiet('B'); A.start(false); });
       await page.waitForTimeout(1500);

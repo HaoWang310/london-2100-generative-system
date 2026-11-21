@@ -22,10 +22,12 @@ jobs:
         run: node fetch-sites.mjs
       - name: Serve the repository
         run: nohup python3 -m http.server 8123 >/dev/null 2>&1 &
-      - name: Run Tensor Studio on every site
+      - name: Boundary test, before and after
         working-directory: tools/tensor-generality
-        env: { CHROME: /usr/bin/google-chrome, ONLY: 'soho,bexleyheath,hampstead,sydenham,battersea,stratford,barking,crewshill,camden-s,lewisham-l,soho-r20,bexleyheath-r20,crewshill-r20,hampstead-r20', KEEP: '1,0', PROTO: '1' }
-        run: node run.mjs
+        env: { CHROME: /usr/bin/google-chrome, ONLY: 'soho,soho-r20,bexleyheath,bexleyheath-r20,hampstead,hampstead-r20,crewshill,crewshill-r20', KEEP: '0' }
+        run: |
+          OUTDIR=fb node run.mjs
+          OUTDIR=fa PROTO=1 node run.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -37,7 +39,7 @@ jobs:
       - name: Keep the results on a branch (artifact downloads are not reachable from the analysis session)
         if: always()
         run: |
-          mkdir -p /tmp/res && cp -r tools/tensor-generality/out /tmp/res/out3 && mkdir -p /tmp/res/context
+          mkdir -p /tmp/res && cp -r tools/tensor-generality/fb tools/tensor-generality/fa /tmp/res/ && mkdir -p /tmp/res/context
           for f in tools/tensor-generality/sites/*.json; do node -e "const d=require('./'+process.argv[1]);console.log(JSON.stringify({id:d.site.id,context:d.context,counts:Object.fromEntries(Object.entries(d.features).map(([k,v])=>[k,v.length]))}))" "$f"; done > /tmp/res/context/sites.jsonl
           cd /tmp/res && git init -q && git checkout -q -b test/tensor-generality-out && git add -A
           git -c user.name=ci -c user.email=ci@example.invalid commit -qm "results"
