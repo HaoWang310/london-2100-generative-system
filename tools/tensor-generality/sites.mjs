@@ -13,6 +13,8 @@ export const SITES = [
   { id: 'lewisham-l',  zh: '大地块 3.4 km · Lewisham',       en: 'Large 3.4 km · Lewisham',         c: [-0.0130, 51.4600], side: 3400 },
   // boundary dependence: the same places, the boundary turned 20°
   { id: 'soho-r20',      zh: '市中心 · 边界转 20°',  en: 'Centre · boundary turned 20°', c: [-0.1335, 51.5130], side: 1000, rot: 20, of: 'soho' },
+  { id: 'bexleyheath-r20', zh: '郊区 · 边界转 20°', en: 'Suburb · boundary turned 20°', c: [0.1350, 51.4560], side: 1200, rot: 20, of: 'bexleyheath' },
+  { id: 'crewshill-r20', zh: '绿带 · 边界转 20°', en: 'Green belt · boundary turned 20°', c: [-0.1050, 51.6750], side: 1200, rot: 20, of: 'crewshill' },
   { id: 'hampstead-r20', zh: '北部坡地 · 边界转 20°', en: 'Slope · boundary turned 20°', c: [-0.1780, 51.5590], side: 1200, rot: 20, of: 'hampstead' },
 ];
 export function ringOf(s){

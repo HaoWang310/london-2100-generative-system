@@ -6,8 +6,9 @@ import { SITES } from './sites.mjs';
 const BASE = process.env.BASE || 'http://localhost:8123/tools/tensor-generality/host.html', OUT = new URL('./out/', import.meta.url);
 fs.mkdirSync(OUT, { recursive: true });
 const only = process.env.ONLY ? process.env.ONLY.split(',') : null;
-const runs = [{ id: 'p2', keep: '1' }];
-for (const s of SITES){ if (only && !only.includes(s.id)) continue; runs.push({ id: s.id, keep: '1' }); if (!s.of) runs.push({ id: s.id, keep: '0' }); }
+const keeps = process.env.KEEP ? process.env.KEEP.split(',') : ['1', '0'];
+const runs = only ? [] : [{ id: 'p2', keep: '1' }];
+for (const s of SITES){ if (only && !only.includes(s.id)) continue; for (const k of keeps) runs.push({ id: s.id, keep: k }); }
 const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const results = [];
 for (const r of runs){
@@ -37,7 +38,17 @@ for (const r of runs){
         // main street directions: the dominant grid axis (length weighted, folded to 90°) for the boundary test
         let c = 0, s_ = 0; for (const l of live){ if (l.level !== 1) continue; const P = l.pts; for (let k = 1; k < P.length; k++){ const dx = P[k][0] - P[k - 1][0], dy = P[k][1] - P[k - 1][1], L = Math.hypot(dx, dy), th = Math.atan2(dy, dx); c += L * Math.cos(4 * th); s_ += L * Math.sin(4 * th); } }
         const gridAxis = ((Math.atan2(s_, c) / 4) * 180 / Math.PI + 90) % 90, gridStrength = Math.hypot(c, s_) / (live.filter(l => l.level === 1).reduce((a, l) => a + l.pts.reduce((b, p, k) => k ? b + Math.hypot(p[0] - l.pts[k - 1][0], p[1] - l.pts[k - 1][1]) : 0, 0), 0) || 1);
-        return { site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
+        // the boundary test: the streets' dominant grid axis in the inner circle the straight and the turned square share
+        const geo = T.geo, ring = T.D.site && T.D.site.ring, [OX, OY] = T.D.origin;
+        let inner = null; if (ring){ const pts = ring.slice(0, -1).map(p => { const q = geo.wgs84ToBNG(p[0], p[1]); return [q[0] - OX, q[1] - OY]; });
+          const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length, rad = 0.35 * (m.sideM || 1000) / Math.SQRT2 * Math.SQRT2;
+          const acc = { 1: [0, 0, 0], 2: [0, 0, 0] };
+          for (const l of live){ const lv = l.level === 1 ? 1 : l.level >= 2 ? 2 : 0; if (!lv) continue; const P = l.pts;
+            for (let k = 1; k < P.length; k++){ const mx = (P[k][0] + P[k - 1][0]) / 2, my = (P[k][1] + P[k - 1][1]) / 2; if (Math.hypot(mx - cx, my - cy) > rad) continue;
+              const dx = P[k][0] - P[k - 1][0], dy = P[k][1] - P[k - 1][1], L = Math.hypot(dx, dy), th = Math.atan2(dy, dx); acc[lv][0] += L * Math.cos(4 * th); acc[lv][1] += L * Math.sin(4 * th); acc[lv][2] += L; } }
+          const ax = a => ({ axis: +((((Math.atan2(a[1], a[0]) / 4) * 180 / Math.PI) % 90 + 90) % 90).toFixed(1), strength: +(Math.hypot(a[0], a[1]) / (a[2] || 1)).toFixed(2), km: +(a[2] / 1000).toFixed(2) });
+          inner = { main: ax(acc[1]), sec: ax(acc[2]), all: ax([acc[1][0] + acc[2][0], acc[1][1] + acc[2][1], acc[1][2] + acc[2][2]]) }; }
+        return { inner, site: { areaHa: m.areaHa ?? T.D.site?.areaHa, sideM: m.sideM, pieces: m.pieces, holes: m.holes, anchors: m.anchors ?? T.D.anchors?.length, buildings: m.buildings, roads: m.roads, waterways: m.waterways, rails: m.rails, contours: m.contours, elevation: m.elevation ?? T.D.site?.elevation, meanSlopePct: T.D.site?.meanSlopePct, warnings: m.warnings || [] },
           landHa: A.landHa(), flood: !!T.D.flood, growMs: Math.round(growMs), lines: lvl, net: RN && RN.stats, score: { total: score.total, groups: score.groups, raw: score.raw, fail: score.fail }, gridAxis: +gridAxis.toFixed(1), gridStrength: +gridStrength.toFixed(2) }; }));
       await frame.evaluate(() => { const A = window.__ts6; A.setModeQuiet('B'); A.start(false); });
       await page.waitForTimeout(1500);
