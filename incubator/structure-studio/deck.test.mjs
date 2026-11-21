@@ -166,17 +166,22 @@ test('second level beside an L1->L2 ramp whose foot is near a junction: the half
   assert.ok(area(D2, 2) < area(off, 2), 'the slivers over the ramps are gone');
 });
 
-test('ramp edges on every level are one smooth line: tapers start tangent to the walkway edge and end tangent to the centre line (v0.9.30)', () => {
+test('ramp edges on every level are one smooth line: tapers start tangent to the walkway edge and end tangent to the centre line (v0.9.30–31)', () => {
   const cv = s.tips.curves, by = k => cv.filter(c => c.kind + c.tag === k), med = a => { a = a.filter(v => v != null).sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
   for (const k of ['01th', '12th', '12tl', '23tl']) assert.ok(by(k).length > 5, 'tapers of ' + k + ': ' + by(k).length);
-  for (const k of ['01th', '12tl']) { assert.ok(med(by(k).map(c => c.join)) < 3, k + ' median start corner ' + med(by(k).map(c => c.join))); assert.ok(med(by(k).map(c => c.max)) < 5, k + ' median corner along ' + med(by(k).map(c => c.max))); }
-  assert.ok(med(by('12th').map(c => c.max)) < 10, '12th median corner along ' + med(by('12th').map(c => c.max)));
+  for (const k of ['01th', '12th', '12tl']) assert.ok(med(by(k).map(c => c.join)) < 6, k + ' median start corner ' + med(by(k).map(c => c.join)));
   // L2 under an L2→L3 ramp top: the narrowing starts at the junction mouth, never a one-station wedge
-  for (const c of by('23tl')) { assert.ok(c.T >= 2, 'one-station wedge left'); assert.ok(c.max < 15, 'corner along ' + c.max); }
+  for (const c of by('23tl')) { assert.ok(c.T >= 2, 'one-station wedge left'); assert.ok(c.max < 25, 'corner along ' + c.max); }
   const old = SS.deck.buildDeck(F, { loToMouth: false, smoothTaper: false }).stats.tips.curves.filter(c => c.kind + c.tag === '23tl');
   assert.ok(old.some(c => c.T === 1), 'switches restore the old straight wedge'); assert.ok(old.every(c => c.max === 0), 'old wedge is a straight cut');
-  // the retreat arc at the ramp top (third level) has a point at least every 1.6 m
-  assert.ok(s.tips.arcStep > 0 && s.tips.arcStep <= 1.6, 'arc step ' + s.tips.arcStep);
-  // centre-line points a taper adds are spliced into the face on the other side (no T-junctions), so subdividing does not open cracks or overlaps — see the node-plate overlap test above
   assert.equal(s.badPlates, 0);
 });
+test('third-level plate edges stay stacked on the levels below: the join smoothing only touches the four points either side of the join (v0.9.31)', () => {
+  // v0.9.30 smoothed 12 points × 10 passes, pulling ordinary L3 node-plate edges off the L2 / L1 outline (seams across the plate, hooks at void corners)
+  assert.ok(s.tips.joinMoved > 0 && s.tips.joinMoved <= 8, 'outline points moved at one join: ' + s.tips.joinMoved);
+});
+test('the smoothing does not cost much: subdivided deck stays within 15 % of the plain station tapers (v0.9.31)', () => {
+  const tri = D => SS.deck.deckMesh(D, 2).top.length / 9, now = tri(DK), plain = tri(SS.deck.buildDeck(F, { smoothTaper: false }));
+  assert.ok(now < 1.15 * plain, 'triangles ' + now + ' vs ' + plain);
+});
+

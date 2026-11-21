@@ -6,7 +6,7 @@
 // 板厚 1 m，上下两层之间的净高 3.6 m → 层到层 4.6 m。第一层板顶 7.2 m（板底 6.2 m，街道净空 ≥ 5 m）
 const THICK = 1, CLEAR = 3.6, STOREY = THICK + CLEAR, HEAD = 2.2;   // HEAD = 人能走的最小净高
 const LV = [0, 7.2, 7.2 + STOREY, 7.2 + 2 * STOREY];            // 地面、L1、L2、L3 顶面标高：7.2 / 11.8 / 16.4
-const DEF = { ring3: true, r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1, taperBack: 1.2, taperShape: 'ease', smoothTaper: true, curveStep: 1.5, loToMouth: true, tip: 'retreat', tipLen: 1, retreatLen: 2, retreatMax: 4, rampEdge: true, rampEdgeLen: 1.6, retreat2Len: 40 };   // tip：第三层板边在坡道旁边怎么收——'retreat' 收回路口（默认）· 'point' 长尖 · 'sweep' 缓曲线 · 'round' 圆弧
+const DEF = { ring3: true, r3: 200, entrySlope: 5, rampSlope: 7, plat: 12, seg: 10, sub: 2, thick: THICK, avoidEdge: true, merge: 3, near: 1, taperBack: 1.2, taperShape: 'ease', smoothTaper: true, loToMouth: true, tip: 'retreat', tipLen: 1, retreatLen: 2, retreatMax: 4, rampEdge: true, rampEdgeLen: 1.6, retreat2Len: 40 };   // tip：第三层板边在坡道旁边怎么收——'retreat' 收回路口（默认）· 'point' 长尖 · 'sweep' 缓曲线 · 'round' 圆弧
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------------------------------------------------------- 走廊轮廓（室多边形）的线段索引
@@ -204,11 +204,11 @@ function buildDeck(F, opt) {
     const Jn = Math.max(1, Math.min(m, Math.floor(m * Math.min(0.6, Math.max(0, rise - D.thick - HEAD) / rise) + 1e-6))), mate = (a, lv) => ramps.some(q => q !== r && q.pc === pc && q.side === r.side && q.kind[a] === lv && Math.abs(q.ka - r.ka) < 1);
     // seq = 从整宽处到尖的各个站点（含坡外延长的那几站）；宽度按 shape 从 1 降到 0
     const SH = { pow: u => Math.pow(1 - u, 1.25), line: u => 1 - u, ease: u => 1 - u * u * (3 - 2 * u) };
-    // 收尖（v0.9.30）：所有收尖都是一条加密的缓曲线——起点和走廊外边相切、终点和中线相切，每 curveStep 米左右一个点（原来只在站点上取点，起点有折角；
-    // 只有一站长时是一块斜切三角）。smoothTaper: false 回到原来的站点折线
+    // 收尖（v0.9.30–31）：所有收尖都是一条缓曲线——起点和走廊外边相切、终点和中线相切（原来起点有折角，只有一站长时是一块斜切三角）。
+    // 3 站以上的长收尖按站点取点，细分后就是顺的；1–2 站的短收尖每站加 3 / 1 个点（taperSub 可以指定）。smoothTaper: false 回到原来的站点折线
     const taper = (lv, seq, tag, side = r.side, shape = 'pow') => { const T = seq.length - 1; if (T < 1) return; tipStat[tag]++; const sg = side === 0 ? 1 : -1, hw = k => side === 0 ? pc.hl[k] : pc.hr[k], sm = D.smoothTaper !== false, f = sm ? SH.ease : (SH[shape] || SH.pow);
       // 每个站距里沿边加密取点；中线上也在同样位置加点，并把这些点插进中线另一侧那块板的边里（见 SPLIT），细分时中线上不留 T 形接缝
-      const per = sm ? Math.max(4, Math.ceil(pc.seg / (D.curveStep || 1.5))) : 1, n = T * per, C = [], E = [];
+      const per = !sm ? 1 : D.taperSub ? D.taperSub : T >= 3 ? 1 : T === 2 ? 2 : 4, n = T * per, C = [], E = [];   // v0.9.31：长收尖按站点取点（细分后已经顺），只给 1–2 站的短收尖加点
       for (let j = 0; j <= n; j++) { const i0 = Math.min(T - 1, Math.floor(j / per)), fr = j / per - i0, ka = seq[i0], kb = seq[i0 + 1];
         // 中线点和外边点都在两站的实际顶点之间插值（路口那一站的角点有退让，不能用 中线 + 法向 × 半宽 去算）
         const ca = edgeP(pc, ka, 1), cb = edgeP(pc, kb, 1), oa = edgeP(pc, ka, side), ob = edgeP(pc, kb, side), cx = ca[0] * (1 - fr) + cb[0] * fr, cy = ca[1] * (1 - fr) + cb[1] * fr, t = f(j / n);
@@ -288,7 +288,7 @@ function buildDeck(F, opt) {
             const P1 = [G[0] + t[0] * sG * 0.62, G[1] + t[1] * sG * 0.62], P2 = [T[0] + ax[0] * sT * 0.62, T[1] + ax[1] * sT * 0.62], Q = [];
             for (let q = 0; q <= 32; q++) { const u = q / 32, v = 1 - u; Q.push([v * v * v * T[0] + 3 * v * v * u * P2[0] + 3 * v * u * u * P1[0] + u * u * u * G[0], v * v * v * T[1] + 3 * v * v * u * P2[1] + 3 * v * u * u * P1[1] + u * u * u * G[1]]); }
             let R = Infinity, ok = true; for (let q = 1; q < 32; q++) { const a = Q[q - 1], b = Q[q], c = Q[q + 1], A = Math.hypot(b[0] - a[0], b[1] - a[1]), B = Math.hypot(c[0] - b[0], c[1] - b[1]), Cc = Math.hypot(c[0] - a[0], c[1] - a[1]), ar = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2; if (ar > 1e-9) R = Math.min(R, A * B * Cc / (4 * ar)); if (sideOf(b) * sgn < -0.3) ok = false; }
-            return { Q, R, ok, B: [T, P2, P1, G] }; };
+            return { Q, R, ok }; };
         // 候选的并回点：沿板边一个个往前，直到碰到相邻走道的口角（口角也算一个候选，从那里顺着它的边线出发）
         const cs = []; let acc = 0, mm = 0, corner = null; const cand = (G, tg, m, isC) => { const c = curve(G, tg); if (!c.ok) return; c.m = m; c.acc = acc; if (isC) corner = c; else cs.push(c); };
         for (let q = 1; q < n - 4; q++) { const e = at(io + dir * q); if (e.q.pc) { if (e.q.pc !== pc) { const q2 = e.q.pc, k2 = e.q.k, kin2 = k2 === 0 ? Math.min(q2.n, 1) : Math.max(0, k2 - 1); const pr = at(io + dir * (q - 1)).p; acc += Math.hypot(e.p[0] - pr[0], e.p[1] - pr[1]); cand(e.p, [q2.P[k2][0] - q2.P[kin2][0], q2.P[k2][1] - q2.P[kin2][1]], q, true); } break; }
@@ -298,13 +298,14 @@ function buildDeck(F, opt) {
         if (best && corner && best !== corner && corner.acc - best.acc < 1.5 * pc.w && corner.R >= 0.7 * (S.minR || 1) * pc.w) { best = corner; S.toCorner = (S.toCorner || 0) + 1; }
         if (!best) { S.skip.push(['noCurve', pc.P[k]]); return R3; } S.done++; S.radius.push(+best.R.toFixed(1)); S.at.push([+T[0].toFixed(1), +T[1].toFixed(1)]); mm = best.m;
         const ins = []; for (let q = 1; q < st.length; q++) ins.push({ q: { pc, k: st[q], c: 1 }, p: edgeP(pc, st[q], 1) });      // 中线上从路口到坡顶的各站（和坡道那一侧的板共用）
-        { const [b0, b1, b2, b3] = best.B; let len = 0; for (let q = 1; q <= 32; q++) len += Math.hypot(best.Q[q][0] - best.Q[q - 1][0], best.Q[q][1] - best.Q[q - 1][1]);
-          const NQ = Math.max(32, Math.ceil(len / (D.curveStep || 1.5))), bz = u => { const v = 1 - u; return [v * v * v * b0[0] + 3 * v * v * u * b1[0] + 3 * v * u * u * b2[0] + u * u * u * b3[0], v * v * v * b0[1] + 3 * v * v * u * b1[1] + 3 * v * u * u * b2[1] + u * u * u * b3[1]]; };
-          for (let q = 1; q < NQ; q++) ins.push({ q: { g: j + tag + pc.id + '_' + q }, p: bz(q / NQ) }); tipStat.arcStep = Math.max(tipStat.arcStep || 0, +(len / NQ).toFixed(2)); }                          // 曲线上的点（T → G）
+        for (let q = 4; q < 32; q += 4) ins.push({ q: { g: j + tag + pc.id + '_' + q }, p: best.Q[q] });      // 7 个点就够：细分会把弧线磨圆（v0.9.30 加密到 1.5 m 一个点并放大了接头的顺滑范围，把路口三层板边拉离了二层，v0.9.31 改回）                          // 曲线上的点（T → G）
         const eG = at(io + dir * mm), drop = new Set(); for (let q = 0; q < mm; q++) drop.add(at(io + dir * q)); const keep = R3.filter(e => !drop.has(e)), ci = keep.indexOf(R3[ic]); keep.splice(dir === 1 ? ci + 1 : ci, 0, ...(dir === 1 ? ins : ins.slice().reverse())); R3 = keep;
         // 曲线并回板边的接头：两边的方向只是近似对上，细分后会鼓出一个小包。把接头前后各 4 个点顺一顺（只动第三层自己的点，走道口的点不动）
-        const iG = R3.indexOf(eG), N3 = R3.length; if (iG >= 0) for (let pass = 0; pass < 10; pass++) { const np = new Map(); for (let o = -12; o <= 12; o++) { const i = ((iG + o) % N3 + N3) % N3, e = R3[i]; if (e.q.pc) continue; const a = R3[(i + N3 - 1) % N3].p, b = R3[(i + 1) % N3].p; np.set(i, [(a[0] + 2 * e.p[0] + b[0]) / 4, (a[1] + 2 * e.p[1] + b[1]) / 4]); }
+        // 记下这一步把路口原来的板边（不是新插进来的曲线点）挪了多远：三层板边要和二层、一层叠齐（v0.9.30 范围放大后挪了好几米，出现缝线和钩，v0.9.31 改回并加测试）
+        const iG = R3.indexOf(eG), N3 = R3.length, J = W => ((iG + W) % N3 + N3) % N3, P0 = new Map(); if (iG >= 0) for (let o = -4; o <= 4; o++) { const e = R3[J(o)]; if (!e.q.pc && !/_rt|_re/.test(String(e.q.g))) P0.set(J(o), e.p); }
+        if (iG >= 0) for (let pass = 0; pass < 4; pass++) { const np = new Map(); for (let o = -4; o <= 4; o++) { const i = ((iG + o) % N3 + N3) % N3, e = R3[i]; if (e.q.pc) continue; const a = R3[(i + N3 - 1) % N3].p, b = R3[(i + 1) % N3].p; np.set(i, [(a[0] + 2 * e.p[0] + b[0]) / 4, (a[1] + 2 * e.p[1] + b[1]) / 4]); }
           for (const [i, q] of np) R3[i] = { q: { g: String(R3[i].q.g).replace(/~s$/, '') + '~s' }, p: q }; }
+        { let moved = 0; for (const [i, p0] of P0) { const d = Math.hypot(R3[i].p[0] - p0[0], R3[i].p[1] - p0[1]); if (d > 0.05) moved++; tipStat.joinShift = Math.max(tipStat.joinShift || 0, +d.toFixed(2)); } tipStat.joinMoved = Math.max(tipStat.joinMoved || 0, moved); }
       return R3; };
     let R3 = R2, tris3 = tris; if (in3[j] && retreat.size) { R3 = R2.slice();
       for (const x of lst) { const pc = x[0], oth = retreat.get(pc); if (oth === undefined) continue; const ld = pc.ld || 0, kt = x[1] === 0 ? Math.min(pc.n, ld) : Math.max(0, pc.n - ld);
@@ -322,7 +323,7 @@ function buildDeck(F, opt) {
         const A = at(ia).p, A0 = at(ia + dir).p, O = edgeP(pc, kt, sd), kb = fwd ? Math.min(pc.n, kt + 1) : Math.max(0, kt - 1), O2 = edgeP(pc, kb, sd);
         if (!tA) tA = [A[0] - A0[0], A[1] - A0[1]]; const la = Math.hypot(tA[0], tA[1]) || 1, tO = [O[0] - O2[0], O[1] - O2[1]], lo = Math.hypot(tO[0], tO[1]) || 1, d = Math.hypot(O[0] - A[0], O[1] - A[1]);
         const P1 = [A[0] + tA[0] / la * d * 0.38, A[1] + tA[1] / la * d * 0.38], P2 = [O[0] + tO[0] / lo * d * 0.38, O[1] + tO[1] / lo * d * 0.38], bez = [];
-        for (let q = 1; q <= 23; q++) { const u = q / 24, v = 1 - u; bez.push({ q: { g: j + '_re' + pc.id + '_' + q }, p: [v * v * v * A[0] + 3 * v * v * u * P1[0] + 3 * v * u * u * P2[0] + u * u * u * O[0], v * v * v * A[1] + 3 * v * v * u * P1[1] + 3 * v * u * u * P2[1] + u * u * u * O[1]] }); }
+        for (let q = 1; q <= 9; q++) { const u = q / 10, v = 1 - u; bez.push({ q: { g: j + '_re' + pc.id + '_' + q }, p: [v * v * v * A[0] + 3 * v * v * u * P1[0] + 3 * v * u * u * P2[0] + u * u * u * O[0], v * v * v * A[1] + 3 * v * v * u * P1[1] + 3 * v * u * u * P2[1] + u * u * u * O[1]] }); }
         // 环上 A 和坡顶中点之间的点（走道口外角、口中点、中线上的站点）换成：弧线 + 坡顶外角
         const drop = new Set(); for (let i = ia - dir; i !== iT - dir * 0 && drop.size < n; i -= dir) { const e = at(i); if (e === R3[iT]) break; drop.add(e); }
         const keep = R3.filter(e => !drop.has(e)), iA = keep.indexOf(at(ia)), seq = [...bez, { q: { pc, k: kt, c: sd }, p: O }]; keep.splice(dir === 1 ? iA : iA + 1, 0, ...(dir === 1 ? seq.reverse() : seq)); R3 = keep; tipStat.rampEdge = (tipStat.rampEdge || 0) + 1; }
