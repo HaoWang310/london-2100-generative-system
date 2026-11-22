@@ -1,5 +1,7 @@
 # Loop City · 第 3 步 张量场底图 · Step 3, the base for the tensor field
 
+> **界面 · Interface (22 Nov 2026).** 与其他 app 统一：黑白、DM Sans、两个悬浮面板，读 `shared/ui/tokens.css`。`skin.css` 和 `skin.js` 只加面板头、所在步骤和返回第 2 步的按钮；每个控件的 id 与事件不变。图层色块保留颜色（地图的图例），不合格的数值用警告红。网址加 `#noskin` 显示原来的界面。 One interface with the other apps: black and white, DM Sans, two floating panels, reading `shared/ui/tokens.css`. The layer swatches keep their colour (they are the key to the map); a figure that fails shows in the warning red. `#noskin` shows the old interface.
+>
 > **范例 · The example (22 Nov 2026).** 单独打开时载入内置范例：车站 P2 旁的三块城区地块和一个公园（`sample-parcels.js`，由第 2 步的范例生成）。由第 2 步打开或用「打开地块包…」时用交来的地块。`?sample` 强制范例，`#nosample` 不载入。 Opened on its own, the page loads its example: three urban parcels and a park by station P2 (`sample-parcels.js`, made in step 2 from its own example).
 
 
