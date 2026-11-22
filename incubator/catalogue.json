@@ -257,17 +257,17 @@
       }
     },
     {
-      "id": "loop-city-wool-bands",
-      "href": "incubator/loop-city-wool-bands/",
-      "cover": "assets/catalogue/loop-city-wool-bands.webp",
+      "id": "loop-city-mould-growth",
+      "href": "incubator/loop-city-mould-growth/",
+      "cover": "assets/catalogue/loop-city-mould-growth.webp",
       "status": "incubating",
       "title": {
-        "zh": "Loop City · 毛线带",
-        "en": "Loop City · wool bands"
+        "zh": "Loop City · 1 整环：黏菌与生长",
+        "en": "Loop City · 1 The whole loop: mould and growth"
       },
       "desc": {
-        "zh": "从整个环线到地块的三页链：黏菌与生长读取现有道路并得出干净的单元，毛线带 17 个步骤生成道路等级与按用途划分的地块，以及张量场底图。",
-        "en": "A three-page chain from the whole loop to the parcel: the mould and growth read the existing roads and give clean cells, the wool bands make the road hierarchy and parcels by use in 17 steps, and the base for the tensor field."
+        "zh": "第 1 步：黏菌与城市生长在整条环线上同时运行（2025–2100），读取现有的高速公路和 A 级道路，得出干净的单元；选一个或多个单元，交给毛线带。",
+        "en": "Step 1: the slime mould and the city growth run together over the whole loop (2025-2100), reading the existing motorways and A roads, and give clean cells; pick one or several and hand them to the wool bands."
       },
       "tags": [
         {
@@ -275,12 +275,84 @@
           "en": "Slime mould"
         },
         {
+          "zh": "城市生长",
+          "en": "Urban growth"
+        },
+        {
+          "zh": "单元",
+          "en": "Cells"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "woolAppsLang",
+        "langButton": "#{lang}",
+        "hide": [
+          ".lang"
+        ]
+      }
+    },
+    {
+      "id": "loop-city-wool",
+      "href": "incubator/loop-city-wool/",
+      "cover": "assets/catalogue/loop-city-wool.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "Loop City · 2 毛线带",
+        "en": "Loop City · 2 Wool bands"
+      },
+      "desc": {
+        "zh": "第 2 步：在所选单元上分 17 个步骤，从锚点和毛线得到接上现有道路的路网、按间距分级的道路（真实宽度）和按用途划分的地块；选出城区地块，交给张量场底图。",
+        "en": "Step 2: on the picked cells, 17 steps from anchors and wool to a network joined to the existing roads, a road hierarchy by spacing at true widths, and parcels by use; pick urban parcels and hand them to the base for the tensor field."
+      },
+      "tags": [
+        {
           "zh": "毛线",
           "en": "Wool"
         },
         {
           "zh": "道路等级",
           "en": "Road hierarchy"
+        },
+        {
+          "zh": "地块",
+          "en": "Parcels"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "woolAppsLang",
+        "langButton": "#{lang}",
+        "hide": [
+          ".lang"
+        ]
+      }
+    },
+    {
+      "id": "loop-city-tensor-base",
+      "href": "incubator/loop-city-tensor-base/",
+      "cover": "assets/catalogue/loop-city-tensor-base.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "Loop City · 3 张量场底图",
+        "en": "Loop City · 3 Base for the tensor field"
+      },
+      "desc": {
+        "zh": "第 3 步：把毛线带选出的城区地块（和一起带上的公园）放在底图上，保存张量场工作室读取的场地文件，另可保存 GeoJSON、DXF 和 PNG。",
+        "en": "Step 3: the urban parcels picked in the wool bands (and the parks taken with them) on their base map; saves the site file the tensor app reads, with GeoJSON, DXF and PNG."
+      },
+      "tags": [
+        {
+          "zh": "地块",
+          "en": "Parcels"
+        },
+        {
+          "zh": "张量场",
+          "en": "Tensor field"
+        },
+        {
+          "zh": "场地文件",
+          "en": "Site file"
         }
       ],
       "owner": "HaoWang310",

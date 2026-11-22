@@ -13,3 +13,6 @@ Earlier publication of the same chain: incubator/loop-city-live (19 Nov 2026). T
 `02b` is page 02 with a package of four test cells set in.
 
 Not included: the lane and junction detail of the older wool page when zoomed in.
+
+
+2026-11-22: 由 HaoWang310 拆成三个孵化器文件夹（loop-city-mould-growth、loop-city-wool、loop-city-tensor-base），页面各改一行路径，其余原样。 Split by HaoWang310 into three incubator folders; one path line changed in each page, the rest as it was.

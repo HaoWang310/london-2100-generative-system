@@ -8336,7 +8336,7 @@ function detSide(s, x, y) { const vx = s.bx - s.ax, vy = s.by - s.ay, l = Math.h
 //   2 the base page, when ready, posts {type: "tensor-base-ready"} to window.opener
 //   3 this page answers {type: "loop-city-parcel-package", pkg} - the same package Save the parcels (file) saves
 // Everything in the package is British National Grid metres.
-const BASE = { PAGE: '03 Loop City - base for the tensor field.html', NAME: 'loopCityTensorBase', win: null, pkg: null, waitT: null };
+const BASE = { PAGE: '../loop-city-tensor-base/index.html', NAME: 'loopCityTensorBase', win: null, pkg: null, waitT: null };
 function pkNear(r, x, y) {                 // the nearest point of a closed ring: [x, y, distance]
   let m = Infinity, bx = 0, by = 0;
   for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {

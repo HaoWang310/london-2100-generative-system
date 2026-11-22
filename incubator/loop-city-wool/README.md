@@ -1,3 +1,6 @@
+> **2026-11-22 · 拆成一步一个孵化器 app · split into one incubator app per step.** 这个文件夹现在是第 2 步「毛线带」：`index.html`（原 02 页）和 `four-cells.html`（原 02b 页，已打开四个单元的演示）。第 1 步在 `incubator/loop-city-mould-growth/`（原 01 页），第 3 步在 `incubator/loop-city-tensor-base/`（原 03 页）。页面内容不变，只改了「打开下一步」的那一行路径；下面的说明里的旧文件名对应如上。
+> This folder is now step 2, the wool bands: `index.html` (page 02) and `four-cells.html` (page 02b). Step 1 is `incubator/loop-city-mould-growth/` (page 01) and step 3 is `incubator/loop-city-tensor-base/` (page 03). The pages are unchanged except for the one line that opens the next step. The file names below are the older ones.
+
 # Loop City: from the whole loop to the parcel
 
 Three pages that work as one chain. Each is a single self-contained HTML file: open it by double-click, no server, no install. English and Chinese (EN | 中文, top left of the map; the choice carries from page to page).
