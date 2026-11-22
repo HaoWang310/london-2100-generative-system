@@ -1,6 +1,8 @@
 # Loop City · 第 1 步 整环：黏菌与生长 · Step 1, the whole loop: mould and growth
 
-> **范例 · The example (22 Nov 2026).** 这一步的范例就是整条环线本身：打开后自动开始「运行百年」。网址加 `#norun` 则不自动运行。 The example of this step is the whole loop itself: the century starts by itself on opening; `#norun` in the address leaves it still.
+> **范例 · The example (22 Nov 2026).** 这一步的范例就是整条环线本身：打开后停在 2025 年，点「运行百年」开始。 The example of this step is the whole loop itself: the page opens on 2025; press Run the century.
+>
+> **打开速度 · Loading (22 Nov 2026).** 18 张底图和图层原来写在网页里（20.1 MB），现在是 `img/` 里的无损 WebP（逐像素相同，共 7.8 MB），网页本身 1.7 MB；浅色底图在页面出现之后才下载。生长模型的第一遍（pass 1）改为页面显示之后分片计算，期间「运行百年」「重置」不可点。因此本页须通过网页服务器打开（GitHub Pages 或 `python3 -m http.server`），不能直接双击。 The 18 base images were inline (20.1 MB); they are now lossless WebP files in `img/` (pixel for pixel the same, 7.8 MB) and the page is 1.7 MB; the light map is fetched once the page is up. Pass 1 of the growth model now runs in slices after the page is shown; Run and Reset wait for it. The page must be served over http; it no longer opens from the disk.
 
 
 黏菌与城市生长在整条环线上同时运行（2025–2100），读取现有的高速公路和 A 级道路。百年结束后，从黏菌的主干道读出单元并按规则清理。点一个单元，或按住 Shift 选多个相邻单元，双击（或按「在毛线页面中打开」）进入第 2 步；也可以「保存单元（文件）」。
