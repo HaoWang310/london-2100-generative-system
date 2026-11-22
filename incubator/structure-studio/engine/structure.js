@@ -107,6 +107,8 @@ function traceOutlines(M, W, H) {
   return out;
 }
 function prepareSite(snap, res) { // res：栅格精度（米），默认 2；拖动滑块时用 4 m 做快速预览
+  // 张量场偶尔给出不到两个点（或有坏坐标）的路：没有长度，直接去掉（v0.9.32，伦敦全域检查发现；原来会在重采样时报错、整块地生成不了）
+  if (snap.roads && snap.roads.some(r => !r.pts || r.pts.length < 2 || r.pts.some(p => !p || !isFinite(p[0]) || !isFinite(p[1])))) snap = Object.assign({}, snap, { roads: snap.roads.map(r => Object.assign({}, r, { pts: (r.pts || []).filter(p => p && isFinite(p[0]) && isFinite(p[1])) })).filter(r => r.pts.length >= 2) });
   const RES = res || 2, W = Math.ceil(snap.w / RES), H = Math.ceil(snap.h / RES), NN = W * H, xmin = 0, ymax = snap.h;
   const toPix = p => [(p[0] - xmin) / RES, (ymax - p[1]) / RES];
   const landM = new Uint8Array(NN), waterM = new Uint8Array(NN);

@@ -203,3 +203,9 @@ test('deck height follows the deck level and rises next to towers', () => {
   assert.equal(z(F.site.cen ? F.site.cen[0] + 1e5 : 1e7, 1e7), 7.2);
   if (big) assert.ok(Math.abs(z(big[0] + big[2], big[1]) - 21.6) < 0.01);
 });
+
+test('roads with fewer than two points in the snapshot are dropped, not a crash (v0.9.32)', () => {
+  const bad = JSON.parse(JSON.stringify(snap)), n0 = bad.roads.length; bad.roads.push({ grade: 'main', width: 12, pts: [[500, 500]] }, { grade: 'local', width: 6, pts: [] }, { grade: 'main', width: 12, pts: [[10, 10], [NaN, 5]] });
+  const s2 = SS.prepareSite(bad); assert.equal(s2.snap.roads.length, n0); assert.equal(bad.roads.length, n0 + 3, 'the snapshot itself is not changed');
+  const F2 = SS.buildStructure(s2, P, new Set()); assert.equal(F2.fibres.length, F.fibres.length, 'same structure as without them');
+});
