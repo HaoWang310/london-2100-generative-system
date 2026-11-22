@@ -179,3 +179,9 @@ html.lcskin .lc-sw { display:none; }
 html.lcskin input[type=checkbox] { accent-color:#fff; }
 html.lcskin #rv2View .rv2seg button { background:#000; border-color:rgba(255,255,255,.22); color:#fff; }
 html.lcskin #rv2View .rv2seg button.on { background:#fff; border-color:#fff; color:#000; }
+
+/* the look buttons, twelve of them now */
+html.lcskin .lookRow { grid-template-columns:repeat(2,1fr); gap:8px; }
+html.lcskin .lookBtn { padding:8px 10px; border-radius:12px; border-color:rgba(255,255,255,.22); background:#000; font-size:12.5px; }
+html.lcskin .lookBtn.on { border-color:#fff; }
+html.lcskin #lcPairRow { margin:12px 0 4px; }
