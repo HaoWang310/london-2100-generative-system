@@ -644,7 +644,7 @@ function buildOnce(site, P, EXCL, RX) {
       const hw = (f.w || 20) / 2, nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, slab = q => { const c = at(q); for (const k of [-1, -0.5, 0.5, 1]) if (inSite([c[0] + nx * hw * k, c[1] + ny * hw * k])) return true; return false; };
       if (okA && sB < L) { let q = sB + 2; while (q <= L && slab(q)) q += 2; sB = q - 2; } if (okB && s0 > 0) { let q = s0 - 2; while (q >= 0 && slab(q)) q -= 2; s0 = q + 2; }
       for (let q = 0; q <= L; q += 2) if (q <= sB || q >= s0) { const p = at(q); built.push(p[0], p[1], (f.w || 20) / 2 + 6); }
-      if (okA) built.push(a[0], a[1], (f.w || 20) + 12); if (okB) built.push(b[0], b[1], (f.w || 20) + 12); }   // 场内的节点：节点板，室的圆角离走廊中心线远一些
+      if (okA || s0 <= 2) built.push(a[0], a[1], (f.w || 20) + 12); if (okB || sB >= L - 2) built.push(b[0], b[1], (f.w || 20) + 12); }   // 红线外的节点：走廊板一直铺到它时，节点板也有一部分在红线内   // 场内的节点：节点板，室的圆角离走廊中心线远一些
     for (const z of plazas) { z.free = []; const xs = z.poly.map(p => p[0]), ys = z.poly.map(p => p[1]), bx0 = Math.min(...xs) - 60, bx1 = Math.max(...xs) + 60, by0 = Math.min(...ys) - 60, by1 = Math.max(...ys) + 60, nb = [];
       for (let k = 0; k < built.length; k += 3) if (built[k] > bx0 && built[k] < bx1 && built[k + 1] > by0 && built[k + 1] < by1) nb.push(built[k], built[k + 1], built[k + 2]);
       const S = []; let s0 = 0;   // 室边上的取样点，按周长顺序：[点, 周长位置, 外面没有走廊]
