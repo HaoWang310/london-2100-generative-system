@@ -1,5 +1,8 @@
 # Loop City · 第 1 步 整环：黏菌与生长 · Step 1, the whole loop: mould and growth
 
+> **范例 · The example (22 Nov 2026).** 这一步的范例就是整条环线本身：打开后自动开始「运行百年」。网址加 `#norun` 则不自动运行。 The example of this step is the whole loop itself: the century starts by itself on opening; `#norun` in the address leaves it still.
+
+
 黏菌与城市生长在整条环线上同时运行（2025–2100），读取现有的高速公路和 A 级道路。百年结束后，从黏菌的主干道读出单元并按规则清理。点一个单元，或按住 Shift 选多个相邻单元，双击（或按「在毛线页面中打开」）进入第 2 步；也可以「保存单元（文件）」。
 
 The slime mould and the city growth run together over the whole loop (2025-2100), reading the existing motorways and A roads. When the century ends, the cells are read from the mould's highways and cleaned by a rule. Click a cell, shift-click neighbours, then double-click (or "Open in the wool") for step 2; or save the cells as a file.

@@ -49,6 +49,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
   <button id="basePick" type="button" style="font:inherit;font-size:14px;padding:9px 16px;border-radius:999px;border:1px solid #555;background:#141414;color:#ECECEC;cursor:pointer">Open a parcel package…</button>
   <input type="file" id="baseFile" accept=".json,application/json" hidden>
   <div id="baseStatus" style="margin-top:16px;color:#8F8F8F;font-size:13px">Waiting for parcels…</div>
+  <div style="margin-top:22px;font-size:13px"><a href="index.html?sample" style="color:#ECECEC">Open the example (station P2) · 打开范例（车站 P2）</a> &nbsp;·&nbsp; <a href="../loop-city-wool/index.html" style="color:#ECECEC">Step 2, the wool bands · 第 2 步：毛线带</a></div>
  </div>
 </div>
 <aside id="left">
@@ -88,6 +89,9 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
  <button class="btn" id="fit">Fit the view</button>
  <p class="hint">Drag to move, wheel to zoom. North up, British National Grid.</p>
 </aside>
+<script>/* (22 Nov 2026) opened on its own (not by step 2): the example parcels. ?sample forces it, #nosample skips it */
+(function(){ var want = /[?&]sample\b/.test(location.search) || (!window.opener && !/[#&]nosample/.test(location.hash));
+  window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-parcels.js"><\/script>'); })();</script>
 <script>var LANG = 'en'; function trc(s) { return LANG === 'zh' && typeof zhOf === 'function' ? (zhOf(s) ?? s) : s; }</script>
 <script>/* Loop City - base for the tensor field (v13, 19 Nov 2026).
    The parcels taken in the wool page (step 16), on their base map, zoomed in, and the site file for the tensor app:
@@ -466,4 +470,24 @@ if (/check/.test(location.hash) && LANG === 'zh') setTimeout(() => {
 window.zhOf = zhOf; window.setLang = setLang;
 })();
 </script>
+
+<!-- (22 Nov 2026, HaoWang310) each step opens on an example, as Tensor Studio and Structure Studio do; this is the note for it -->
+<script>(function(){
+  var C = { when: function(){ return !!window.__LC_SAMPLE__; }, delay: 1200,
+    text: { zh: '范例：车站 P2 旁的三块城区地块和一个公园。想换别的地块，到第 2 步的第 17 步里选。', en: 'Example: three urban parcels and a park by station P2. Pick other parcels in step 2, at its step 17.' },
+    links: [{ href: '../loop-city-wool/index.html', zh: '← 第 2 步：毛线带', en: '← Step 2, the wool bands' }] };
+  function lang(){ try { return localStorage.getItem('woolAppsLang') === 'zh' ? 'zh' : (localStorage.getItem('woolAppsLang') ? 'en' : (/^zh\b/i.test(navigator.language || '') ? 'zh' : 'en')); } catch (e) { return 'en'; } }
+  function show(){
+    if (!C.when()) return;
+    var L = lang(), b = document.createElement('div');
+    b.id = 'lcSampleNote'; b.setAttribute('translate', 'no');
+    b.style.cssText = 'position:fixed;z-index:80;left:50%;bottom:18px;transform:translateX(-50%);max-width:min(760px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;padding:9px 10px 9px 16px;border-radius:999px;background:rgba(20,20,22,.92);border:1px solid rgba(255,255,255,.16);color:#ECECEC;font:13px/1.4 "DM Sans",-apple-system,"PingFang SC",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)';
+    var t = document.createElement('span'); t.textContent = C.text[L]; b.appendChild(t);
+    (C.links || []).forEach(function(k){ var a = document.createElement('a'); a.href = k.href; a.textContent = k[L]; a.style.cssText = 'flex:none;color:#000;background:#ECECEC;text-decoration:none;font-weight:600;padding:5px 12px;border-radius:999px;white-space:nowrap'; b.appendChild(a); });
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Close'); x.style.cssText = 'flex:none;width:26px;height:26px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#ECECEC;font-size:16px;line-height:1;cursor:pointer'; x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+    if (C.after) C.after(b);
+  }
+  if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
+})();</script>
 </body></html>
