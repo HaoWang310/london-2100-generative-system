@@ -1,7 +1,5 @@
-// incubator/catalogue.json is edited by every collaborator, and the main app
+// incubator/catalogue.json lists every incubator app, and the main app
 // (app/catalogue.js) reads it. These checks stop a broken entry from reaching main.
-// This test lives in tools/ (owned by HaoWang310), not in incubator/, so it
-// cannot be removed by a self-merged incubator pull request.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
