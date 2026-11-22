@@ -30,7 +30,7 @@
 | `shared/i18n` | 中英文词典与切换 |
 | `shared/map-viewer` | 地图视图封装（MapLibre，失败时自动退回离线矢量视图） |
 | `shared/ui` | 公共 UI 组件（参数面板、提示等） |
-| `incubator/` | 孵化区：合作者已有的独立 app 先放这里各自运行，之后再融合进 `modules/` |
+| `incubator/` | 孵化区：独立 app 先放这里各自运行，之后再融合进 `modules/` |
 | `tools/` | 工具脚本（模块隔离检查、单 HTML 打包等） |
 | `docs/` | 架构与接口文档 |
 
