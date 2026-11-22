@@ -1,16 +1,5 @@
-# 每个文件夹的负责人（规则从下往上匹配，下面的优先）。
-# 配合 main 的 ruleset「Require review from Code Owners，0 个批准」：
-#   - 只改无负责人的路径（孵化器、封面图）的 PR，作者可以自己合并；
-#   - 改到有负责人的路径时，必须由负责人批准。
+# 整个仓库（主程序、孵化器、目录封面、.github/ 等）都由 HaoWang310 负责。
+# 配合 main 的 ruleset「Require review from Code Owners」：所有路径的 PR 都需要 HaoWang310 批准。
+# 2026-11-22：仓库不再有协作者，取消了孵化器 / 目录封面「作者可自行合并」的例外。
 
-# 默认：主程序（app/、modules/、shared/、tools/、.github/ 等）由 HaoWang310 负责
 *                               @HaoWang310
-
-# 孵化器和目录封面：不设负责人，合作者的 PR 可以自己合并
-/incubator/
-/assets/catalogue/
-
-# 孵化器里 HaoWang310 自己的 app：仍需他批准
-/incubator/google-map-live/     @HaoWang310
-/incubator/tensor-studio/       @HaoWang310
-/incubator/vr/                  @HaoWang310
