@@ -636,12 +636,15 @@ function buildOnce(site, P, EXCL, RX) {
   // 走廊中心线长度（只计场内）；校验：中心线压在道路上（< 8 m）的比例、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
   const totL = inL;
-  // 塔所在的室哪些边没有走廊（v0.9.33）：走廊板只做场内的连续段（从场内的节点做到红线，见 deck.js），两端节点都在红线外的走廊整条不做。
+  // 塔所在的室哪些边没有走廊（v0.9.33）：走廊板只做场内的连续段（从场内的节点做到红线，见 deck.js；中心线出了红线、板还有一部分在红线内时接着算，v0.9.35），两端节点都在红线外的走廊整条不做。
   // 沿室的边每 2 m 取一点，附近没有会做出来的走廊中心线（走道半宽 + 6 m）和场内的节点（走道宽 + 12 m） = 这一点外面没有走廊（z.free，塔座的臂不往那里伸）
   if (plazas.length) { const built = []; for (const f of fibres) { const a = nodeP[f.a], b = nodeP[f.b], L = dist(a, b); if (!a || !b || L < 1e-6) continue; const at = q => [a[0] + (b[0] - a[0]) * q / L, a[1] + (b[1] - a[1]) * q / L], okA = inSite(a), okB = inSite(b);
       let sB = -1, s0 = L + 1; if (okA) { sB = L; for (let q = 2; q <= L; q += 2) if (!inSite(at(q))) { sB = q - 2; break; } } if (okB) { s0 = 0; for (let q = L - 2; q >= 0; q -= 2) if (!inSite(at(q))) { s0 = q + 2; break; } }
+      // 中心线出了红线，走廊板（中心线左右各半个走道宽）还有一部分在红线内时，板沿红线继续铺（v0.9.35，伦敦 Croydon 发现：原来只算到中心线出红线的地方，把沿红线还有走廊板的室边误判成没有走廊）
+      const hw = (f.w || 20) / 2, nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, slab = q => { const c = at(q); for (const k of [-1, -0.5, 0.5, 1]) if (inSite([c[0] + nx * hw * k, c[1] + ny * hw * k])) return true; return false; };
+      if (okA && sB < L) { let q = sB + 2; while (q <= L && slab(q)) q += 2; sB = q - 2; } if (okB && s0 > 0) { let q = s0 - 2; while (q >= 0 && slab(q)) q -= 2; s0 = q + 2; }
       for (let q = 0; q <= L; q += 2) if (q <= sB || q >= s0) { const p = at(q); built.push(p[0], p[1], (f.w || 20) / 2 + 6); }
-      if (okA) built.push(a[0], a[1], (f.w || 20) + 12); if (okB) built.push(b[0], b[1], (f.w || 20) + 12); }   // 场内的节点：节点板，室的圆角离走廊中心线远一些
+      if (okA || s0 <= 2) built.push(a[0], a[1], (f.w || 20) + 12); if (okB || sB >= L - 2) built.push(b[0], b[1], (f.w || 20) + 12); }   // 红线外的节点：走廊板一直铺到它时，节点板也有一部分在红线内   // 场内的节点：节点板，室的圆角离走廊中心线远一些
     for (const z of plazas) { z.free = []; const xs = z.poly.map(p => p[0]), ys = z.poly.map(p => p[1]), bx0 = Math.min(...xs) - 60, bx1 = Math.max(...xs) + 60, by0 = Math.min(...ys) - 60, by1 = Math.max(...ys) + 60, nb = [];
       for (let k = 0; k < built.length; k += 3) if (built[k] > bx0 && built[k] < bx1 && built[k + 1] > by0 && built[k + 1] < by1) nb.push(built[k], built[k + 1], built[k + 2]);
       const S = []; let s0 = 0;   // 室边上的取样点，按周长顺序：[点, 周长位置, 外面没有走廊]
