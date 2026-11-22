@@ -1,5 +1,8 @@
 # Structure Studio · 结构工作室（Linear Farm 走廊）
 
+> **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`；本 app 的变量在 `skin.css` 里对应到共用变量。只改颜色、字体和圆角，控件和引擎都没动。颜色只留给图例和警告。网址加 `#noskin` 显示原来的界面。
+
+
 在线：https://haowang310.github.io/london-2100-generative-system/incubator/structure-studio/
 
 在**张量场工作室生成的真实场地**上，生成一张架在街道之上的 **Linear Farm 种植工厂走廊网**：走廊 15–25 m 宽、层高 3.6 m（默认 2 层，顶标高 7.2 m），

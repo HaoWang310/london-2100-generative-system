@@ -1,5 +1,8 @@
 # Tensor Studio · 张量场工作室
 
+> **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`。只改颜色、字体和圆角，控件位置和 `app.js` 都没动。颜色只留给图例（显示面板里的色点、配色、图例）和警告。浅色外观只改地图，面板保持黑色。网址加 `#noskin` 显示原来的界面。
+
+
 在线：https://haowang310.github.io/london-2100-generative-system/incubator/tensor-studio/
 
 由等高线、全年风场与吸引点叠加成张量场，从锚点生长道路（v8 引擎，苹果风格界面）。

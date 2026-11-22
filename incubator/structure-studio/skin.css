@@ -1,0 +1,10 @@
+/* Structure Studio · what the shared studio layer (../../shared/ui/studio.css) does not cover (22 Nov 2026).
+   This app keeps its variables on :root, so they are mapped onto the shared tokens here. */
+html.l2ui { --side:#000; --card:#000; --ink:#fff; --grey:var(--l2-ink3); --grey2:var(--l2-ink4); --line:var(--l2-bd);
+  --fill:#000; --fill2:rgba(255,255,255,.1); --raise:rgba(255,255,255,.22); --track:var(--l2-bd); --knob:#fff; --accent:#fff; }
+
+/* what floats on the drawing */
+html.l2ui #busy, html.l2ui #dmBar, html.l2ui #dlbox, html.l2ui #cardBar, html.l2ui #cbShow, html.l2ui #hud, html.l2ui #vp { background:#000; border-color:var(--l2-bd); color:#fff; }
+html.l2ui .displayPanel .dpLegend, html.l2ui .displayPanel .dpLegend span { color:var(--l2-ink2); }
+html.l2ui .displayPanel .dpNote { color:var(--l2-ink3); }
+html.l2ui .displayPanel label.dpSwitchRow { color:#fff; }
