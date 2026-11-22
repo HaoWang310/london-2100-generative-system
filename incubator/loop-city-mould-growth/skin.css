@@ -1,0 +1,150 @@
+/* Loop City step 1 · the interface, after the Growth Simulator (22 Nov 2026).
+   An outer layer: it restyles and rearranges the page's own controls and changes nothing in the engine.
+   Remove the two lines that load skin.css and skin.js at the end of index.html to get the old interface back. */
+@font-face { font-family:'DM Sans'; src:url(font/DMSans.ttf) format('truetype'); font-weight:100 1000; }
+html.lcskin { --ink:#f5f5f7; --ink2:#c7c7cc; --ink3:#8e8e93; --line:#26262a; --line2:#1e1e21; --card:rgba(11,11,13,.94); --surface:#151517; --elev:#1f1f22; --bd:#2f2f33; --bdon:#d8d8dc; --acc2:#EFA65C; }
+html.lcskin body { font-family:'DM Sans',-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; }
+
+/* ---- the two floating panels */
+html.lcskin #panelL, html.lcskin #panel { margin:20px; height:auto; align-self:stretch; border:1px solid #2a2a2e; border-radius:30px; background:var(--card); box-shadow:0 18px 50px rgba(0,0,0,.55); overflow:hidden; }
+html.lcskin #panelL { flex:0 0 372px; margin-right:0; }
+html.lcskin #panel { flex:0 0 316px; margin-left:0; margin-bottom:84px; }
+html.lcskin #panelL.hidden, html.lcskin #panel.hidden { display:flex; }
+html.lcskin #panelL.lc-col, html.lcskin #panel.lc-col { align-self:flex-start; }
+html.lcskin .lc-col #panelScrollL, html.lcskin .lc-col #panelScroll { display:none; }
+html.lcskin #toggleTab, html.lcskin #toggleW { display:none; }
+html.lcskin #panelScrollL { padding:0 20px 22px 24px; scrollbar-width:thin; scrollbar-color:#3a3a3e transparent; }
+html.lcskin #panelScroll { padding:0 16px 18px 22px; scrollbar-width:thin; scrollbar-color:#3a3a3e transparent; }
+html.lcskin .lc-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; padding:22px 20px 10px 24px; }
+html.lcskin #panel .lc-head { padding:16px 16px 6px 22px; align-items:center; }
+html.lcskin .lc-head h1 { flex:1 1 150px; margin:0; padding-top:4px; font-size:24px; font-weight:700; letter-spacing:-.01em; line-height:1.15; color:var(--ink); }
+html.lcskin .lc-head .rh { font-size:17px; font-weight:700; }
+html.lcskin .lc-hb { display:flex; gap:8px; align-items:center; flex:none; }
+html.lcskin .lc-icon { width:40px; height:40px; padding:0; border-radius:14px; border:1px solid var(--bd); background:var(--surface); color:var(--ink); font:inherit; font-size:19px; line-height:1; cursor:pointer; }
+html.lcskin .lc-icon:hover { border-color:#5a5a60; }
+html.lcskin .lc-lead { color:#a1a1a6; font-size:13.5px; line-height:1.5; margin:0 0 12px; }
+html.lcskin .lc-badge { display:inline-block; margin:0 0 16px; padding:8px 16px; border-radius:999px; background:var(--elev); border:1px solid var(--bd); font-size:12.5px; font-weight:600; color:#e5e5ea; }
+html.lcskin .lc-h2 { font-size:13px; letter-spacing:.04em; color:#a1a1a6; margin:0 0 10px; font-weight:600; }
+html.lcskin .lc-sec { border-top:1px solid var(--line); padding:16px 0 8px; }
+html.lcskin .lc-sec:first-child { border-top:0; padding-top:4px; }
+
+/* ---- language switch, as the Growth Simulator's */
+html.lcskin #langbar, html.lcskin #hud #langbar { position:static; margin:0; display:flex; background:var(--surface); border:1px solid var(--bd); border-radius:14px; padding:3px; gap:0; pointer-events:auto; }
+html.lcskin #langbar button { border-radius:11px; padding:7px 10px; font-size:12.5px; font-weight:600; color:#a1a1a6; letter-spacing:0; }
+html.lcskin #langbar button.on { background:var(--elev); color:#fff; }
+
+/* ---- step cards */
+html.lcskin .lc-step { border:1px solid var(--bd); border-radius:14px; margin:8px 0; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
+html.lcskin .lc-step.open { border-color:#55555b; background:rgba(255,255,255,.04); }
+html.lcskin .lc-sh { display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; background:none; border:0; color:inherit; padding:12px 14px; cursor:pointer; font:inherit; }
+html.lcskin .lc-ck { flex:0 0 24px; height:24px; border-radius:50%; background:transparent; color:#8e8e93; border:1.5px solid #3a3a3e; position:relative; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12.5px; line-height:1; }
+html.lcskin .lc-step.open .lc-ck, html.lcskin .lc-step.done .lc-ck { background:#f2f2f2; color:#111; border-color:#f2f2f2; }
+html.lcskin .lc-step.done .lc-ck::after { content:""; position:absolute; right:-5px; bottom:-5px; width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 2px #0b0b0d; background:#30D158 no-repeat center / 8px 8px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23ffffff' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+html.lcskin .lc-st { flex:1; min-width:0; } html.lcskin .lc-st b { display:block; font-size:14.5px; font-weight:600; color:var(--ink); }
+html.lcskin .lc-ss { display:block; color:#a1a1a6; font-size:12px; margin-top:3px; line-height:1.45; }
+html.lcskin .lc-chev { color:#6e6e73; transition:transform .2s; margin-top:2px; } html.lcskin .lc-step.open .lc-chev { transform:rotate(90deg); }
+html.lcskin .lc-sb { display:none; padding:0 14px 10px; } html.lcskin .lc-step.open .lc-sb { display:block; }
+html.lcskin .lc-sb > details.grp { border-top:1px solid var(--line); margin-top:10px; }
+
+/* ---- the fold with every setting */
+html.lcskin .lc-adv { border-top:1px solid var(--line); margin-top:10px; padding-top:4px; }
+html.lcskin .lc-advbtn { width:100%; display:flex; align-items:center; gap:10px; background:transparent; border:0; padding:12px 0; color:#a1a1a6; font:inherit; font-size:13.5px; font-weight:600; text-align:left; cursor:pointer; }
+html.lcskin .lc-advbtn:hover { color:var(--ink); }
+html.lcskin .lc-advbtn .lc-chev { font-size:18px; line-height:1; margin:0; } html.lcskin .lc-adv.open .lc-advbtn .lc-chev { transform:rotate(90deg); }
+html.lcskin .lc-adv:not(.open) .lc-advbody { display:none; }
+html.lcskin .lc-advnote { color:#6e6e73; font-size:12px; line-height:1.45; margin:0 0 8px; }
+html.lcskin #chips { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 12px; }
+html.lcskin .chip { background:var(--surface); border:1px solid var(--bd); border-radius:999px; padding:5px 11px; font-size:12px; color:var(--ink2); }
+
+/* ---- the page's own controls, restyled */
+html.lcskin .panelHead { font-size:13px; letter-spacing:.04em; color:#a1a1a6; font-weight:600; border-bottom:0; padding:0; margin:18px 0 4px; }
+html.lcskin .panelSub, html.lcskin .v5sub, html.lcskin .hint { font-size:12.5px; line-height:1.5; color:#8e8e93; }
+html.lcskin details.grp { border-top:1px solid var(--line); padding:12px 0 6px; margin:0; }
+html.lcskin details.grp > summary { font-size:13px; letter-spacing:.02em; text-transform:none; color:var(--ink2); font-weight:600; padding:3px 0; text-align:left; justify-content:space-between; }
+html.lcskin details.why > summary { font-size:12px; letter-spacing:0; text-transform:none; }
+html.lcskin .row { gap:8px; margin:8px 0; }
+html.lcskin button.btn { padding:11px 12px; border-radius:14px; border:1px solid var(--bd); background:var(--surface); color:var(--ink); font-size:13.5px; font-weight:600; transition:border-color .15s, background .15s; }
+html.lcskin button.btn:hover { background:var(--surface); border-color:#5a5a60; filter:none; }
+html.lcskin button.btn.primary { background:#f5f5f7; border-color:#f5f5f7; color:#0b0b0d; }
+html.lcskin button.btn.primary:hover { background:#fff; }
+html.lcskin button.btn.running { background:var(--acc2); border-color:var(--acc2); color:#0b0b0d; }
+html.lcskin button.btn.sm { padding:9px 8px; font-size:12.5px; border-radius:12px; }
+html.lcskin button.btn:disabled { opacity:.4; }
+html.lcskin .f { margin:12px 0 14px; }
+html.lcskin .f .lab span:first-child { font-size:13.5px; color:var(--ink); }
+html.lcskin .f .lab span:last-child { color:var(--acc2); font-size:13px; font-weight:500; }
+html.lcskin input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:20px; margin:2px 0 0; background:transparent; cursor:pointer; border-radius:0; }
+html.lcskin input[type=range]::-webkit-slider-runnable-track { height:4px; background:#2f2f33; border-radius:2px; }
+html.lcskin input[type=range]::-moz-range-track { height:4px; background:#2f2f33; border-radius:2px; }
+html.lcskin input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:#f5f5f7; border:0; box-shadow:0 1px 4px rgba(0,0,0,.6); }
+html.lcskin input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#f5f5f7; border:0; }
+html.lcskin select { width:100%; background-color:var(--surface); color:var(--ink); border:1px solid var(--bd); border-radius:14px; padding:11px 34px 11px 12px; font:inherit; font-size:13.5px; appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg, transparent 50%, #a1a1a6 50%), linear-gradient(135deg, #a1a1a6 50%, transparent 50%); background-position:calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size:5px 5px; background-repeat:no-repeat; cursor:pointer; }
+html.lcskin label.tg { font-size:13.5px; color:var(--ink); }
+html.lcskin .note, html.lcskin .stat { background:var(--surface); border-color:var(--bd); border-radius:12px; font-size:12.5px; }
+html.lcskin #rv2View { border:0; padding:0; margin:0; background:none; }
+html.lcskin #rv2View .rv2h { display:none; }
+html.lcskin #rv2View .rv2l { display:none; }
+html.lcskin .rv2seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+html.lcskin .rv2seg button { padding:10px 8px; border-radius:14px; border:1px solid var(--bd); background:var(--surface); color:var(--ink); font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
+html.lcskin .rv2seg button.on { border-color:var(--bdon); background:var(--elev); color:#fff; }
+html.lcskin details.rv2hl { border:0; border-top:1px solid var(--line); border-radius:0; background:none; padding:12px 0 6px; margin:0; }
+
+/* ---- the display panel: playback and readout */
+html.lcskin #yearbar { display:none; }
+html.lcskin .lc-play { display:flex; gap:8px; align-items:center; }
+html.lcskin #btnPlay { flex:1; height:46px; border-radius:14px; border:1px solid #f5f5f7; background:#f5f5f7; color:#0b0b0d; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+html.lcskin #btnPlay:hover { background:#fff; }
+html.lcskin #btnRewind { height:46px; padding:0 14px; border-radius:14px; border:1px solid var(--bd); background:var(--surface); color:var(--ink); font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
+html.lcskin #btnPlay:disabled, html.lcskin #btnRewind:disabled { opacity:.4; cursor:default; }
+html.lcskin .lc-yrow { margin:12px 0 10px; }
+html.lcskin .lc-spd { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+html.lcskin .lc-spd button { height:auto; padding:9px 0; border-radius:14px; border:1px solid var(--bd); background:var(--surface); color:var(--ink); font:inherit; font-size:13.5px; cursor:pointer; }
+html.lcskin .lc-spd button.on { border-color:var(--bdon); background:var(--elev); color:#fff; }
+html.lcskin #vYear { font-size:52px; font-weight:700; line-height:1; letter-spacing:-.02em; min-width:0; color:var(--ink); }
+html.lcskin .lc-big { font-size:26px; margin-top:12px; font-variant-numeric:tabular-nums; }
+html.lcskin .lc-sub { color:#a1a1a6; font-size:13px; }
+html.lcskin .lc-tab { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; margin-top:12px; }
+html.lcskin .lc-tab td { padding:7px 0; border-bottom:1px solid #1e1e21; } html.lcskin .lc-tab td:last-child { text-align:right; }
+html.lcskin .lc-sw { display:inline-block; width:12px; height:12px; margin-right:8px; vertical-align:-1px; border-radius:3px; }
+
+/* ---- on the map */
+html.lcskin #hud { display:none; }
+html.lcskin #lcSampleNote { display:none !important; }
+html.lcskin #zoombar { left:20px; bottom:20px; gap:8px; }
+html.lcskin #zoombar button { width:auto; min-width:40px; height:40px; padding:0 12px; border-radius:14px; border:1px solid #2a2a2e; background:var(--card); color:var(--ink); font-size:15px; }
+html.lcskin #zoombar .lab { font-size:12.5px; }
+html.lcskin #scalebar { bottom:22px; font-size:11.5px; }
+html.lcskin #lcPill, html.lcskin #lcPrep { position:fixed; right:20px; bottom:20px; z-index:65; height:50px; display:flex; align-items:center; padding:0 20px; border-radius:18px; background:var(--card); border:1px solid #2a2a2e; box-shadow:0 10px 30px rgba(0,0,0,.5); font:500 14px/1 'DM Sans',-apple-system,'PingFang SC',system-ui,sans-serif; color:var(--ink); white-space:nowrap; max-width:316px; overflow:hidden; text-overflow:ellipsis; }
+html.lcskin #lcPill #yearNote { font-size:14px; color:var(--ink); min-width:0; text-align:left; overflow:hidden; text-overflow:ellipsis; }
+html.lcskin body:has(#lcPrep) #lcPill { display:none; }
+html.lcskin #loading .t { font-size:14px; }
+
+/* ---- narrow screens: the two panels above and below the map */
+@media (max-width:900px) {
+  html.lcskin body { flex-direction:column; }
+  html.lcskin #panelL { flex:0 0 auto; margin:10px 10px 0; max-height:38vh; border-radius:24px; }
+  html.lcskin #panel { flex:0 0 auto; margin:0 10px 10px; max-height:34vh; border-radius:24px; }
+  html.lcskin #stage { min-height:0; }
+  html.lcskin #lcPill { display:none; } html.lcskin #lcPrep { right:50%; transform:translateX(50%); bottom:auto; top:40vh; }
+  html.lcskin .lc-head h1 { font-size:21px; }
+  html.lcskin #panelL.lc-col, html.lcskin #panel.lc-col { align-self:stretch; }
+}
+
+/* ---- second pass: the rules the page's later modules set by id */
+html.lcskin .lc-head h1 { font-size:21px; white-space:nowrap; }
+html.lcskin #rv2View select, html.lcskin #rv2Mode { border-radius:14px; padding:11px 34px 11px 12px; font-size:13.5px; border:1px solid var(--bd); background-color:var(--surface); }
+html.lcskin #rv2View .rv2seg button { padding:10px 8px; border-radius:14px; font-size:13.5px; }
+html.lcskin #panel details.grp > summary, html.lcskin #panelL details.grp > summary { display:flex; align-items:center; gap:8px; text-align:left; letter-spacing:.02em; text-transform:none; font-size:13px; }
+html.lcskin #panel details.grp > summary::before, html.lcskin #panelL details.grp > summary::before { content:"›"; color:#6e6e73; font-size:16px; line-height:1; transition:transform .15s; display:inline-block; }
+html.lcskin #panel details.grp[open] > summary::before, html.lcskin #panelL details.grp[open] > summary::before { content:"›"; transform:rotate(90deg); }
+html.lcskin #panel details.grp > summary::after, html.lcskin #panelL details.grp > summary::after { content:""; }
+
+html.lcskin #panel details.grp > summary, html.lcskin #panelL details.grp > summary { justify-content:flex-start; }
+html.lcskin .lc-advbody #yearNote { display:block; min-width:0; text-align:left; font-size:12px; color:#6e6e73; line-height:1.45; margin:6px 0 0; white-space:normal; }
+
+@media (max-width:600px) {
+  html.lcskin #panelL { max-height:34vh; } html.lcskin #panel { max-height:30vh; }
+  html.lcskin #scalebar, html.lcskin #zoombar .lab { display:none; }
+  html.lcskin #zoombar { left:10px; bottom:10px; } html.lcskin #zoombar button { min-width:36px; height:36px; }
+  html.lcskin .lc-head { padding:16px 14px 8px 18px; } html.lcskin #panelScrollL { padding:0 14px 16px 18px; }
+}
