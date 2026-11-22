@@ -1,5 +1,9 @@
 > **2026-11-22 · 拆成一步一个孵化器 app · split into one incubator app per step.** 这个文件夹现在是第 2 步「毛线带」：`index.html`（原 02 页）和 `four-cells.html`（原 02b 页，已打开四个单元的演示）。第 1 步在 `incubator/loop-city-mould-growth/`（原 01 页），第 3 步在 `incubator/loop-city-tensor-base/`（原 03 页）。页面内容不变，只改了「打开下一步」的那一行路径；下面的说明里的旧文件名对应如上。
 
+> **界面 · Interface (22 Nov 2026).** 与其他 app 统一：黑白、DM Sans、两个悬浮面板，读 `shared/ui/tokens.css`。`skin.css` 和 `skin.js` 保留页面的每个控件（id 与事件不变），只移动几样：标题和语言切换进固定的面板头，十七个步骤下面加「上一步 / 下一步」，滑块收进「全部参数」，数据和保存移到右侧「显示」面板。颜色只留给毛线和道路的配色选项与图例。网址加 `#noskin` 显示原来的界面。 One interface with the other apps: black and white, DM Sans, two floating panels, reading `shared/ui/tokens.css`. `skin.css` and `skin.js` keep every control and move a few. `#noskin` shows the old interface.
+>
+> **修正 · Fix (22 Nov 2026).** 中文下「由毛线生成的路网」这一组滑块（第 11–17 步用）以前不会出现，旧的道路等级滑块也没有被隐藏：页面按英文标题找位置，换成中文后找不到。现在按 id 找。 In Chinese the group "The network, from the wool" (the sliders of steps 11 to 17) was never built and the older road-hierarchy sliders stayed on show: the page looked its headings up by their English text. They are now found by id.
+>
 > **范例 · The example (22 Nov 2026).** 单独打开时载入内置范例：车站 P2 一带的四个单元（`sample-cells.js`，原演示页 02b 里的那一份；`four-cells.html` 现在只是跳转）。由第 1 步打开或用「打开单元包…」时用交来的单元。`?sample` 强制范例，`#nosample` 不载入。 Opened on its own, the page loads its example: four cells round station P2 (`sample-cells.js`, the package that was inline in the 02b demo page; `four-cells.html` now only forwards). Opened by step 1, or with a cell package, it uses those cells.
 
 > This folder is now step 2, the wool bands: `index.html` (page 02) and `four-cells.html` (page 02b). Step 1 is `incubator/loop-city-mould-growth/` (page 01) and step 3 is `incubator/loop-city-tensor-base/` (page 03). The pages are unchanged except for the one line that opens the next step. The file names below are the older ones.

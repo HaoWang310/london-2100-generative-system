@@ -1,0 +1,101 @@
+/* Loop City step 2 · the interface, one with the other apps (22 Nov 2026).
+   Reads ../../shared/ui/tokens.css. An outer layer: the page's own controls restyled and a few of them moved;
+   nothing in the engine is touched. `#noskin` in the address shows the page as it was. */
+html.l2ui body { font-family:var(--l2-font); background:var(--l2-bg); color:var(--l2-ink); -webkit-font-smoothing:antialiased; }
+/* the panels keep the interface colours in the light drawing too: the map changes, the interface does not */
+html.l2ui .panel { --panel:#000; --line:var(--l2-line); --ink:var(--l2-ink); --ink2:var(--l2-ink2); --ink3:var(--l2-ink3); --gold:#fff;
+  --btn:#000; --btnline:var(--l2-bd); --btnon:#fff; --row:var(--l2-line); --chipline:var(--l2-bd2); }
+html.l2ui #app { background:var(--l2-bg); }
+html.l2ui body.light #app { background:#fff; }
+html.l2ui .panel { margin:var(--l2-gap); align-self:stretch; height:auto; border:1px solid var(--l2-bd); border-radius:var(--l2-r-panel); background:#000; color:var(--l2-ink);
+  box-shadow:var(--l2-shadow); padding:0 20px 22px 24px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.3) transparent; font-size:13.5px; }
+html.l2ui #left { width:var(--l2-w-left); margin-right:0; border-right:1px solid var(--l2-bd); }
+html.l2ui #right { width:var(--l2-w-right); margin-left:0; border-left:1px solid var(--l2-bd); padding:0 16px 18px 22px; }
+html.l2ui .panel.l2-col { align-self:flex-start; overflow:hidden; padding-bottom:0; }
+html.l2ui .panel.l2-col > :not(.l2-head) { display:none !important; }
+
+html.l2ui .l2-head { position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:10px; margin:0 -20px 4px -24px; padding:20px 20px 10px 24px; background:#000; }
+html.l2ui #right .l2-head { margin:0 -16px 0 -22px; padding:16px 16px 8px 22px; }
+html.l2ui .l2-head h1 { margin:0; font-size:21px; font-weight:700; letter-spacing:-.01em; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html.l2ui .l2-head .rh { font-size:17px; font-weight:700; }
+html.l2ui .l2-hb { display:flex; gap:8px; align-items:center; flex:none; }
+html.l2ui .l2-icon { width:40px; height:40px; padding:0; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font:inherit; font-size:19px; line-height:1; cursor:pointer; }
+html.l2ui .l2-icon:hover { border-color:var(--l2-bd2); }
+html.l2ui #langbar, html.l2ui body.light #langbar { position:static; display:flex; background:#000; border:1px solid var(--l2-bd); border-radius:var(--l2-r); padding:3px; gap:0; }
+html.l2ui #langbar button { border:0; background:transparent; border-radius:11px; padding:7px 10px; font:inherit; font-size:12.5px; font-weight:600; color:var(--l2-ink3); cursor:pointer; }
+html.l2ui #langbar button.on, html.l2ui body.light #langbar button.on { background:#fff; color:#000; }
+
+html.l2ui .panel .side { display:none; }
+html.l2ui .panel .sub { font-size:12.5px; color:var(--l2-ink3); margin:0 0 10px; }
+html.l2ui #right > .sub { display:none; }
+html.l2ui p.about { font-size:13.5px; line-height:1.5; color:var(--l2-ink3); margin:0 0 12px; }
+html.l2ui .l2-badge { display:inline-block; margin:0 0 10px; padding:8px 16px; border-radius:999px; background:#000; border:1px solid var(--l2-bd); font-size:12.5px; font-weight:600; color:#fff; }
+html.l2ui .l2-back, html.l2ui #liveAgain { display:inline-block; margin:0 6px 8px 0; padding:7px 14px; border-radius:999px; border:1px solid var(--l2-bd); background:#000; color:#fff; font:inherit; font-size:12.5px; font-weight:600; text-decoration:none; cursor:pointer; }
+html.l2ui .l2-back:hover, html.l2ui #liveAgain:hover { border-color:var(--l2-bd2); }
+html.l2ui .panel h2 { font-size:13px; letter-spacing:.04em; text-transform:none; color:var(--l2-ink3); margin:0 0 10px; font-weight:600; border-top:1px solid var(--l2-line); padding-top:16px; margin-top:16px; }
+html.l2ui .panel .l2-head + h2, html.l2ui .panel h2.l2-first { border-top:0; padding-top:2px; margin-top:0; }
+
+/* the seventeen steps */
+html.l2ui .steps { gap:6px; }
+html.l2ui .stages { gap:6px; }
+html.l2ui .steps button, html.l2ui .stages button, html.l2ui .seg button { background:#000; color:var(--l2-ink2); border:1px solid var(--l2-bd); border-radius:var(--l2-r-s); padding:9px 10px; font-size:12.5px; }
+html.l2ui .steps button:hover, html.l2ui .stages button:hover, html.l2ui .seg button:hover { color:#fff; border-color:var(--l2-bd2); }
+html.l2ui .steps button.on, html.l2ui .stages button.on, html.l2ui .seg button.on { background:#fff; border-color:#fff; color:#000; font-weight:600; }
+html.l2ui .l2-nav { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 2px; }
+html.l2ui .l2-nav button { padding:11px 12px; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
+html.l2ui .l2-nav button.nx { background:#fff; border-color:#fff; color:#000; }
+html.l2ui .l2-nav button:disabled { opacity:.35; cursor:default; }
+html.l2ui p.hint { font-size:12.5px; line-height:1.5; color:var(--l2-ink3); }
+html.l2ui #reading { border-color:var(--l2-bd); border-radius:var(--l2-r); }
+html.l2ui #reading .t { text-transform:none; letter-spacing:.04em; font-size:12.5px; color:var(--l2-ink3); }
+
+/* controls */
+html.l2ui .btns { gap:8px; }
+html.l2ui .btn { padding:10px 14px; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font-size:13px; font-weight:600; text-align:center; }
+html.l2ui .btn:hover { border-color:var(--l2-bd2); color:#fff; }
+html.l2ui .btn.primary, html.l2ui #pickSend { background:#fff !important; border-color:#fff !important; color:#000 !important; }
+html.l2ui .btn.on { background:#fff; border-color:#fff; color:#000; }
+html.l2ui #status { color:#fff; font-size:12.5px; }
+html.l2ui #editHint { color:var(--l2-ink2); font-size:12.5px; }
+html.l2ui .row { margin:12px 0 14px; }
+html.l2ui .row .lab { font-size:13.5px; color:#fff; margin-bottom:2px; }
+html.l2ui .row .lab span:last-child { color:#fff; font-size:13px; }
+html.l2ui .row .note, html.l2ui .note { font-size:12px; color:var(--l2-ink4); line-height:1.45; }
+html.l2ui input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:20px; margin:2px 0 0; background:transparent; cursor:pointer; accent-color:#fff; }
+html.l2ui input[type=range]::-webkit-slider-runnable-track { height:4px; background:var(--l2-bd); border-radius:2px; }
+html.l2ui input[type=range]::-moz-range-track { height:4px; background:var(--l2-bd); border-radius:2px; }
+html.l2ui input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:50%; background:#fff; border:0; box-shadow:0 1px 4px rgba(0,0,0,.6); }
+html.l2ui input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#fff; border:0; }
+html.l2ui .lay input[type=range] { height:16px; }
+html.l2ui .lay input[type=range]::-webkit-slider-thumb { width:14px; height:14px; margin-top:-5px; }
+html.l2ui input[type=checkbox] { accent-color:#fff; }
+html.l2ui .check, html.l2ui .lays { font-size:13px; color:var(--l2-ink2); }
+html.l2ui .leg div { font-size:12.5px; color:var(--l2-ink2); }
+html.l2ui table.nums { font-size:13px; }
+html.l2ui table.nums td { padding:6px 0; border-bottom:1px solid var(--l2-line); color:var(--l2-ink2); }
+html.l2ui table.nums td:last-child { color:#fff; }
+html.l2ui .src { font-size:11.5px; color:var(--l2-ink4); }
+html.l2ui .chip { border-color:#000; outline-color:var(--l2-bd2); }
+html.l2ui .chip.on { border-color:#fff; outline-color:#fff; }
+html.l2ui select { background:#000; color:#fff; border:1px solid var(--l2-bd); border-radius:var(--l2-r); padding:10px 12px; font:inherit; font-size:13.5px; }
+
+/* the fold with every setting */
+html.l2ui .l2-adv { border-top:1px solid var(--l2-line); margin-top:16px; padding-top:4px; }
+html.l2ui .l2-advbtn { width:100%; display:flex; align-items:center; gap:10px; background:transparent; border:0; padding:12px 0; color:var(--l2-ink3); font:inherit; font-size:13.5px; font-weight:600; text-align:left; cursor:pointer; }
+html.l2ui .l2-advbtn:hover { color:#fff; }
+html.l2ui .l2-advbtn .ch { font-size:18px; line-height:1; transition:transform .15s; display:inline-block; } html.l2ui .l2-adv.open .l2-advbtn .ch { transform:rotate(90deg); }
+html.l2ui .l2-adv:not(.open) .l2-advbody { display:none; }
+html.l2ui .l2-advbody > h2:first-child { border-top:0; margin-top:0; padding-top:2px; }
+
+/* on the map */
+html.l2ui #lcSampleNote { display:none !important; }
+
+@media (max-width:900px) {
+  html.l2ui #app { flex-direction:column; }
+  html.l2ui #left { width:auto; margin:10px 10px 0; max-height:38vh; border-radius:var(--l2-r-panel-s); }
+  html.l2ui #right { width:auto; margin:0 10px 10px; max-height:34vh; border-radius:var(--l2-r-panel-s); }
+  html.l2ui #wrap { min-height:0; }
+  html.l2ui .panel.l2-col { align-self:stretch; }
+}
+@media (max-width:600px) { html.l2ui #left { max-height:34vh; } html.l2ui #right { max-height:30vh; } }
+html.l2ui .l2-head h1 { white-space:normal; font-size:20px; }
