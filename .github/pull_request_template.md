@@ -5,9 +5,10 @@
 ## 影响范围 · Scope
 
 - [ ] 只改了一个模块 `modules/NN-…`
-- [ ] 改了 `shared/`（需要双方审核，可能影响所有模块）
+- [ ] 改了 `shared/`（可能影响所有模块）
 - [ ] 改了 `incubator/`
 - [ ] 改了 `app/`
+- [ ] 改了 `.github/`、`tools/` 或文档
 
 ## 检查 · Checks
 

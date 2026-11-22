@@ -45,7 +45,7 @@ python3 -m http.server 8000
 node --test                               # 运行全部测试
 ```
 
-## 协作
+## 开发
 
 见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

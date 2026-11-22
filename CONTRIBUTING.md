@@ -1,18 +1,20 @@
-# 协作指南 · Contributing
+# 开发指南 · Contributing
+
+> 2026-11-22 起，本仓库由 HaoWang310 一人设计和维护，不再接受协作者直接修改。孵化器里其他作者的 app 保留原署名。
 
 ## 基本原则
 
-1. **每个人只改自己负责的文件夹。** 模块之间只能通过 `shared/` 和标准数据接口 `ScaleBundle` 交流，不允许一个模块直接 import 另一个模块的文件（`tools/check-isolation.mjs` 会在 CI 中自动检查）。
-2. **不直接推送到 `main`。** 所有修改都通过分支 + Pull Request 合并，CI 测试通过后才能合并。
-3. **已有功能先保留再适配。** 从旧项目迁入的算法原样放进模块的 `legacy/` 文件夹，外面写适配器接入，不要未经讨论删除或重写。
+1. **模块之间相互独立。** 模块之间只能通过 `shared/` 和标准数据接口 `ScaleBundle` 交流，不允许一个模块直接 import 另一个模块的文件（`tools/check-isolation.mjs` 会在 CI 中自动检查）。
+2. **主程序走分支 + Pull Request。** 改 `app/`、`modules/`、`shared/`、`tools/`、`.github/` 时，先建分支、开 PR，CI 测试通过后再合并。孵化器 `incubator/` 里的独立 app 可以直接推送到 `main`。
+3. **已有功能先保留再适配。** 从旧项目迁入的算法原样放进模块的 `legacy/` 文件夹，外面写适配器接入，不要删除或简化已有功能。
 
 ## 分支命名
 
 ```
 module/03-wool-network/<简短描述>      修改某个模块
-shared/<模块名>/<简短描述>              修改公共模块（需要双方都审核）
-incubator/<app 名>/<简短描述>           孵化区独立 app
+shared/<模块名>/<简短描述>              修改公共模块（可能影响所有模块）
 app/<简短描述>                          统一外壳
+chore/<简短描述>                        配置、CI、文档
 ```
 
 ## 日常流程
@@ -23,7 +25,7 @@ git checkout -b module/04-tensor-roads/streamline-step
 # … 修改、本地测试 …
 node --test
 git push -u origin module/04-tensor-roads/streamline-step
-# 在 GitHub 上开 Pull Request
+# 在 GitHub 上开 Pull Request，CI 通过后合并
 ```
 
 ## 孵化区 `incubator/`
@@ -47,7 +49,7 @@ git push -u origin module/04-tensor-roads/streamline-step
   "title": { "zh": "中文名称", "en": "English name" },
   "desc":  { "zh": "一句话说明。", "en": "One-line description." },
   "tags":  [{ "zh": "标签", "en": "Tag" }],
-  "owner": "你的 GitHub 用户名"
+  "owner": "app 作者的 GitHub 用户名"
 }
 ```
 
