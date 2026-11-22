@@ -16,8 +16,8 @@
    switching languages always restores the source string first and never
    translates an already-translated string. */
 
-import {CHINESE_UI} from './ui_chinese_dictionary.js?v=3.43.6-english';
-import {ENGLISH_UI} from './ui_english_dictionary.js?v=3.43.6-english';
+import {CHINESE_UI} from './ui_chinese_dictionary.js?v=3.43.7-english';
+import {ENGLISH_UI} from './ui_english_dictionary.js?v=3.43.7-english';
 
 const STORAGE_KEY = 'londonMap.uiLanguage';
 const DEFAULT_LANGUAGE = 'zh';
@@ -273,7 +273,7 @@ function readStoredLanguage() {
     const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (stored === 'en' || stored === 'zh') return stored;
   } catch (error) { /* private mode */ }
-  // v3.43.6 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
+  // v3.43.7 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
   try {
     const first = (globalThis.navigator?.languages && navigator.languages[0]) || globalThis.navigator?.language || '';
     if (first) return /^zh\b/i.test(first) ? 'zh' : 'en';

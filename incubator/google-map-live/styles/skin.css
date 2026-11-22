@@ -1,0 +1,129 @@
+/* London map · the interface on the shared tokens (22 Nov 2026).
+   Black, white and white at lower opacity; DM Sans. The map, its colour themes and every key to it keep their colours.
+   The first block is written by hand. The second is made from styles/app.css by tools/ui/mono_skin.py: each rule of
+   app.css that sets a colour, again, with the colour put onto ../../shared/ui/tokens.css. Make it again after
+   changing app.css:
+     python3 tools/ui/mono_skin.py incubator/google-map-live/styles/app.css incubator/google-map-live/styles/skin.css \
+       --skip '^ *(body|html)\b|maplibregl|\.displayPanel|Legend i|LegendBar|\.dpDots' --head <this hand-written block>
+   `#noskin` in the address shows the map's interface as it was. */
+html.l2ui body, html.l2ui button, html.l2ui input, html.l2ui select, html.l2ui textarea { font-family:var(--l2-font); }
+html.l2ui #panel.panel { border-radius:var(--l2-r-panel-s); }
+html.l2ui #siteSelectionStep { color:#fff !important; }
+html.l2ui #panel input[type="checkbox"], html.l2ui #panel input[type="range"] { accent-color:#fff; }
+html.l2ui #panel .title { color:#fff; } html.l2ui #panel .sub { color:var(--l2-ink3); }
+/* ---- made from styles/app.css ---- */
+html.l2ui .osmRecovery { background:#000; color:#fff; }
+html.l2ui .osmRecovery a { color:var(--l2-ink2); }
+html.l2ui .panel { background:rgba(0,0,0,0.95); color:#fff; }
+html.l2ui .panelResizeHandle::after { background:transparent; }
+html.l2ui .panelResizeHandle:hover::after, html.l2ui .panel.resizing .panelResizeHandle::after { background:rgba(255,255,255,0.8); color:#000; }
+html.l2ui .searchForm input { border:1px solid var(--l2-bd); background:#000; color:#fff; }
+html.l2ui .searchForm input::placeholder { color:var(--l2-ink2); }
+html.l2ui .searchForm input:focus-visible { outline:2px solid #fff; }
+html.l2ui .searchStatus { color:var(--l2-ink2); }
+html.l2ui .searchStatus.error { color:var(--l2-warn); }
+html.l2ui .searchResult { background:#000; color:#fff; }
+html.l2ui .searchResult[aria-pressed=true] { border-color:#fff; background:#fff; color:#000; }
+html.l2ui .viewButtons button[aria-pressed=true] { background:#fff; border-color:#fff; color:#000; }
+html.l2ui .sub { color:var(--l2-ink2); }
+html.l2ui select, html.l2ui button { border:1px solid var(--l2-line); }
+html.l2ui select { background:#000; color:#fff; }
+html.l2ui button { background:#fff; color:#000; }
+html.l2ui button.secondary { background:#000; color:#fff; }
+html.l2ui .divider { background:rgba(255,255,255,0.12); }
+html.l2ui .section { color:#fff; }
+html.l2ui .sectionToggle { color:#fff; }
+html.l2ui .sectionToggle:hover { background:rgba(255,255,255,0.05); }
+html.l2ui .sectionToggleIcon { color:var(--l2-ink3); }
+html.l2ui .status { color:var(--l2-ink2); }
+html.l2ui .status.error { color:var(--l2-warn); }
+html.l2ui .note { color:var(--l2-ink3); }
+html.l2ui .coords { background:rgba(0,0,0,0.9); color:#fff; }
+html.l2ui #collapse { background:#000; color:#fff; }
+html.l2ui .providerBadge { background:#000; color:#fff; }
+html.l2ui .layerItem { border:1px solid var(--l2-line); background:rgba(0,0,0,0.62); color:#fff; }
+html.l2ui .layerHintTooltip { border:1px solid var(--l2-bd); background:rgba(0,0,0,0.96); color:#fff; }
+html.l2ui .layerName strong { color:#fff; }
+html.l2ui .layerName small { color:var(--l2-ink3); }
+html.l2ui .layerOptions label { color:var(--l2-ink2); }
+html.l2ui .networkLegend { color:var(--l2-ink2); }
+html.l2ui .layerStatus { color:var(--l2-ink2); }
+html.l2ui .layerStatus.error { color:var(--l2-warn); }
+html.l2ui .layerSources { color:var(--l2-ink2); }
+html.l2ui .layerSources summary { color:#fff; }
+html.l2ui .layerSources a { color:var(--l2-ink2); }
+html.l2ui .layerLegend { color:var(--l2-ink3); }
+html.l2ui .layerRow { background:#000; border:1px solid var(--l2-line); color:#fff; }
+html.l2ui .rangeRow { color:var(--l2-ink2); }
+html.l2ui .networkThresholdEdit { border:1px solid var(--l2-bd); background:#000; color:var(--l2-ink2); }
+html.l2ui .networkThresholdEdit:focus-within { border-color:#fff; box-shadow:0 0 0 1px rgba(255,255,255,1); }
+html.l2ui .networkThresholdEdit input { color:#fff; }
+html.l2ui .networkThresholdEdit span { color:var(--l2-ink3); }
+html.l2ui .simParamRow { color:var(--l2-ink2); }
+html.l2ui .simInfo { color:var(--l2-ink2); }
+html.l2ui .simStats { color:#fff; }
+html.l2ui .simLegend { color:var(--l2-ink2); }
+html.l2ui .terrainMeta { color:var(--l2-ink3); }
+html.l2ui .apiStats { border:1px solid var(--l2-bd); background:rgba(0,0,0,0.34); }
+html.l2ui .apiStatsTitle { color:#fff; }
+html.l2ui .apiStat { background:#000; color:#fff; }
+html.l2ui .apiStatValue { color:#fff; }
+html.l2ui .apiStatLabel { color:var(--l2-ink2); }
+html.l2ui .apiStatsNote { color:var(--l2-ink3); }
+html.l2ui .statsReset { color:var(--l2-ink3); }
+html.l2ui .statsReset:hover { color:#fff; }
+html.l2ui .focusActive { box-shadow:0 0 0 1px rgba(255,255,255,0.55) inset; }
+html.l2ui #panel { background:#000; border:1px solid var(--l2-line); color:#fff; }
+html.l2ui #panel .providerBadge { background:#000; border:1px solid var(--l2-bd); color:var(--l2-ink2); }
+html.l2ui #panel #uiLanguageSwitch { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel #uiLanguageSwitch button { color:var(--l2-ink3); }
+html.l2ui #panel #uiLanguageSwitch button.active { background:#fff; color:#000; }
+html.l2ui #panel #collapse { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel .searchForm input, html.l2ui #panel .networkThresholdEdit, html.l2ui #panel input[type="number"], html.l2ui #panel select { background:#000; color:#fff; border:1px solid var(--l2-bd); }
+html.l2ui #panel input::placeholder { color:var(--l2-ink3); }
+html.l2ui #panel .searchForm input:focus, html.l2ui #panel select:focus-visible, html.l2ui #panel input[type="number"]:focus-visible, html.l2ui #panel button:focus-visible { outline:2px solid #fff; }
+html.l2ui #panel button { background:#000; color:#fff; border:1px solid var(--l2-bd); }
+html.l2ui #panel button:hover:not(:disabled) { background:#000; border-color:var(--l2-bd); color:#fff; }
+html.l2ui #panel .searchForm button, html.l2ui #panel #placeSearchButton, html.l2ui #panel #siteDraw, html.l2ui #panel .simButtonRow button:not(.secondary) { background:#fff; border-color:#fff; color:#000; }
+html.l2ui #panel .searchForm button:hover:not(:disabled), html.l2ui #panel #siteDraw:hover:not(:disabled), html.l2ui #panel .simButtonRow button:not(.secondary):hover:not(:disabled) { background:#fff; border-color:#fff; color:#000; }
+html.l2ui #panel button.secondary { background:#000; color:#fff; border-color:var(--l2-bd); }
+html.l2ui #panel .row.viewButtons { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel .viewButtons button, html.l2ui #panel .viewButtons button.secondary { color:var(--l2-ink2); }
+html.l2ui #panel .viewButtons button[aria-pressed="true"], html.l2ui #panel .viewButtons button[aria-pressed="true"].secondary { background:#fff; border-color:#fff; color:#000; }
+html.l2ui #panel .viewButtons button:hover:not(:disabled):not([aria-pressed="true"]) { background:#000; color:#fff; }
+html.l2ui #panel .divider { background:#000; color:#fff; }
+html.l2ui #panel .section { color:var(--l2-ink3); }
+html.l2ui #panel .sectionToggle { color:#fff; }
+html.l2ui #panel .sectionToggle:hover:not(:disabled) { background:#000; color:#fff; }
+html.l2ui #panel .sectionToggleIcon { color:var(--l2-ink3); background:#000; }
+html.l2ui #panel .layerItem { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel .layerRow { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel label.layerRow:hover { background:#000; color:#fff; }
+html.l2ui #panel .layerItem label.layerRow:hover { background:#000; color:#fff; }
+html.l2ui #panel .layerName strong { color:#fff; }
+html.l2ui #panel .layerName small { color:var(--l2-ink3); }
+html.l2ui #panel .layerRow>span[style] { color:var(--l2-ink3) !important; }
+html.l2ui #panel .rangeRow, html.l2ui #panel .networkLegend, html.l2ui #panel .layerOptions label, html.l2ui #panel .simParamRow, html.l2ui #panel .simLegend { color:var(--l2-ink2); }
+html.l2ui #panel .layerStatus { color:var(--l2-ink2); }
+html.l2ui #panel .layerSources, html.l2ui #panel .layerSources summary, html.l2ui #panel .layerSources a, html.l2ui #panel .layerLegend, html.l2ui #panel .terrainMeta, html.l2ui #panel .simInfo, html.l2ui #panel .simStats, html.l2ui #panel .apiStatsNote, html.l2ui #panel .note { color:var(--l2-ink3); }
+html.l2ui #panel .status:not(.error), html.l2ui #panel .searchStatus:not(.error) { color:var(--l2-warn); }
+html.l2ui #panel .networkThresholdEdit { background:#000; color:#fff; }
+html.l2ui #panel .networkThresholdEdit:focus-within { border-color:#fff; }
+html.l2ui #panel .networkThresholdEdit input { color:#fff; }
+html.l2ui #panel select { background:#000; color:#fff; }
+html.l2ui #panel #floodRiskSource, html.l2ui #panel #floodDisplayMode { background:#000 !important; color:#fff !important; border:1px solid var(--l2-bd) !important; }
+html.l2ui #panel .apiStats { background:#000; border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui #panel .apiStatsTitle { color:#fff; }
+html.l2ui #panel .apiStat { background:#000; color:#fff; }
+html.l2ui #panel .apiStatValue { color:#fff; }
+html.l2ui #panel .apiStatLabel, html.l2ui #panel .statsReset { color:var(--l2-ink3); }
+html.l2ui #panel .content::-webkit-scrollbar-thumb, html.l2ui #panel .searchResults::-webkit-scrollbar-thumb { background:#000; border:2px solid var(--l2-line); color:#fff; }
+html.l2ui #panel .panelResizeHandle::after { background:transparent; }
+html.l2ui #panel .panelResizeHandle:hover::after, html.l2ui #panel.resizing .panelResizeHandle::after { background:#000; color:#fff; }
+html.l2ui .coords { background:rgba(0,0,0,0.94); border:1px solid var(--l2-bd); color:#fff; }
+html.l2ui .layerHintTooltip { background:rgba(0,0,0,0.97); border:1px solid var(--l2-bd); color:var(--l2-ink2); }
+html.l2ui #panel .layerInfo, html.l2ui .layerInfo { color:var(--l2-ink3); }
+html.l2ui #panel .layerInfo:active { background:rgba(255,255,255,0.1); }
+html.l2ui .dpToggle { border:1px solid var(--l2-bd); background:rgba(0,0,0,0.94); color:#fff; }
+html.l2ui .dpToggle[aria-expanded="true"] { background:#fff; border-color:#fff; color:#000; }
+html.l2ui #panel .sheetHandle::before { background:#000; color:#fff; }

@@ -86,3 +86,14 @@ html.l2ui #panel .language-switch button.on, html.l2ui #panel .language-switch b
 html.l2ui #panel .pmActs button.primary, html.l2ui #panel .pmChips button.on { background:#fff; color:#000; border-color:#fff; }
 html.l2ui .pmTh { color:#fff; } html.l2ui .pmTh.best { border-color:#fff; } html.l2ui .pmTh.view { border-color:var(--l2-ink3); }
 html.l2ui .pmSBar, html.l2ui .pmProg { background:var(--l2-bd); }
+
+/* the London map's display panel: the same tiles, pressed by aria-pressed; its switches are inputs */
+html.l2ui .displayPanel .dpTile[aria-pressed="true"] { background:#fff; color:#000; border-color:#fff; }
+html.l2ui .displayPanel .dpTile:hover:not(:disabled):not([aria-pressed="true"]):not(.on) { background:#000; color:#fff; border-color:var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch::after { background:var(--l2-ink3); }
+html.l2ui .displayPanel .dpSwitch:checked, html.l2ui .displayPanel .dpSwitch.dpInvert:not(:checked) { background:#fff; box-shadow:none; }
+html.l2ui .displayPanel .dpSwitch:checked::after, html.l2ui .displayPanel .dpSwitch.dpInvert:not(:checked)::after { background:#000; }
+html.l2ui .displayPanel .dpSwitch.dpInvert:checked { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch.dpInvert:checked::after { background:var(--l2-ink3); }
+html.l2ui .displayPanel .dpDots i { border-color:var(--l2-bd2); }

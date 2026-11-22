@@ -2,6 +2,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.43.7: one interface with the other apps. The panels use black, white and white at lower opacity only, and DM Sans, read from `shared/ui/tokens.css` of the main site (`styles/skin.css`, made from `styles/app.css` by `tools/ui/mono_skin.py`, and `shared/ui/studio.css` for the display panel). The pressed tile, the chosen language and the main buttons are solid white. The map, its colour themes, the layer keys and the legends keep their colours; errors show in red. No script changed apart from the version number. `#noskin` in the address shows the interface as it was.
+
 Version 3.43.6: the first time on a device (no language chosen yet) the page follows the device's system language — any Chinese → 中文, every other → English; a choice made with the switch (or passed by the main app) still wins.
 
 Version 3.43.5: the timing box (`perf=1`, the five taps on the version line, the main site's switch) is gone again; the faster shadows of 3.43.0 stay.
