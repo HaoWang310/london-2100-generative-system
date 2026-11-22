@@ -644,8 +644,13 @@ function buildOnce(site, P, EXCL, RX) {
       if (okA) built.push(a[0], a[1], (f.w || 20) + 12); if (okB) built.push(b[0], b[1], (f.w || 20) + 12); }   // 场内的节点：节点板，室的圆角离走廊中心线远一些
     for (const z of plazas) { z.free = []; const xs = z.poly.map(p => p[0]), ys = z.poly.map(p => p[1]), bx0 = Math.min(...xs) - 60, bx1 = Math.max(...xs) + 60, by0 = Math.min(...ys) - 60, by1 = Math.max(...ys) + 60, nb = [];
       for (let k = 0; k < built.length; k += 3) if (built[k] > bx0 && built[k] < bx1 && built[k + 1] > by0 && built[k + 1] < by1) nb.push(built[k], built[k + 1], built[k + 2]);
-      for (let i = 0; i < z.poly.length; i++) { const a = z.poly[i], b = z.poly[(i + 1) % z.poly.length], L = dist(a, b); for (let q = 0; q < L; q += 2) { const p = [a[0] + (b[0] - a[0]) * q / L, a[1] + (b[1] - a[1]) * q / L]; if (!inSite(p)) continue;
-        let ok = false; for (let k = 0; k < nb.length && !ok; k += 3) ok = (nb[k] - p[0]) ** 2 + (nb[k + 1] - p[1]) ** 2 < nb[k + 2] ** 2; if (!ok) z.free.push(p); } } } }
+      const S = []; let s0 = 0;   // 室边上的取样点，按周长顺序：[点, 周长位置, 外面没有走廊]
+      for (let i = 0; i < z.poly.length; i++) { const a = z.poly[i], b = z.poly[(i + 1) % z.poly.length], L = dist(a, b); for (let q = 0; q < L; q += 2) { const p = [a[0] + (b[0] - a[0]) * q / L, a[1] + (b[1] - a[1]) * q / L];
+        let ok = !inSite(p); for (let k = 0; k < nb.length && !ok; k += 3) ok = (nb[k] - p[0]) ** 2 + (nb[k + 1] - p[1]) ** 2 < nb[k + 2] ** 2; S.push([p, s0 + q, !ok]); } s0 += L; }
+      // 只认连续 12 m 以上的一段（v0.9.34）：走廊转角处偶尔有一两个取样点离走廊稍远，那不是"这一侧没有走廊"（伦敦 Greenwich 默认参数下 2 m 的一点曾去掉了一条接得上走廊的臂）
+      const n = S.length, st = S.findIndex(q => !q[2]); if (st < 0) { if (n) z.free = S.map(q => q[0]); }
+      else { let run = []; const flush = () => { if (run.length) { const len = ((run[run.length - 1][1] - run[0][1]) % s0 + s0) % s0 + 2; if (len >= 12) for (const q of run) z.free.push(q[0]); } run = []; };
+        for (let j = 1; j <= n; j++) { const q = S[(st + j) % n]; if (q[2]) run.push(q); else flush(); } flush(); } } }
   return { mode: MODE, rings, plazas, gatePlates, entryStrands, secs, gates, trace: TR, P, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, cores, site, cellPolys, spacingAt: spacing, roadSpansL, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
