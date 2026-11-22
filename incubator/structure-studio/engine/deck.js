@@ -85,8 +85,16 @@ function buildDeck(F, opt) {
   const spanOf = j => { const g = grp.get(j), c = cenOf(j); let r = 0; for (const i of g) r = Math.max(r, Math.hypot(N[i][0] - c[0], N[i][1] - c[1])); return r; };
   // ---- 走道口退让：同一块节点板上的各条走道，口部（端面）要退到互不压住为止。
   //      夹角小的两条走道在节点附近是叠在一起的，口部留在那里板就会自己压自己。
-  const ends = new Map(), mg = new Map(); let absorbed = 0;
-  FB.forEach((f, fi) => { if (short.has(fi)) return; const a = N[f.a], b = N[f.b], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 6) return; const ra = find(f.a), rb = find(f.b);
+  const ends = new Map(), mg = new Map(); let absorbed = 0, dupes = 0;
+  // ---- 重复走道（v0.9.32）：两端落在同一对节点（板）上、两端都相距不到一个走道宽的走道，在节点处是叠在一起的，
+  //      两条的口互相压住，节点板外圈会打结（常见于两条 6–10 m 的平行短段）。只留一条（宽的那条，一样宽留先出现的）
+  const dup = new Set(); { const seen = new Map();
+    FB.forEach((f, fi) => { if (short.has(fi)) return; const a = N[f.a], b = N[f.b]; if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 6) return; const ra = find(f.a), rb = find(f.b); if (ra === rb) return;
+      const flip = ra > rb, key = flip ? rb + '_' + ra : ra + '_' + rb, A = flip ? b : a, B = flip ? a : b, lst = seen.get(key) || [];
+      const hit = lst.find(g => { const w = Math.max(g.w, f.w); return Math.hypot(g.A[0] - A[0], g.A[1] - A[1]) < w && Math.hypot(g.B[0] - B[0], g.B[1] - B[1]) < w; });
+      if (!hit) { lst.push({ fi, A, B, w: f.w }); seen.set(key, lst); return; }
+      dupes++; if (f.w > hit.w) { dup.add(hit.fi); Object.assign(hit, { fi, A, B, w: f.w }); } else dup.add(fi); }); }
+  FB.forEach((f, fi) => { if (short.has(fi) || dup.has(fi)) return; const a = N[f.a], b = N[f.b], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 6) return; const ra = find(f.a), rb = find(f.b);
     if (D.merge > 0 && ra === rb && inSite(a) && inSite(b)) { short.add(fi); absorbed++; return; }                    // 两端在同一块板上的走道并进板里
     const t = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], init = Math.min(1.25 * f.w, 0.36 * L), cap = Math.max(init, 0.8 * L), H = 0.62 * f.w;
     for (const [key, r, o, d] of [[fi + 'a', ra, a, t], [fi + 'b', rb, b, [-t[0], -t[1]]]]) { const e = { key, fi, node: key.endsWith('a') ? f.a : f.b, o, d, L, H, m: init, cap, w: f.w }; mg.set(key, e); if (!ends.has(r)) ends.set(r, []); ends.get(r).push(e); } });
@@ -101,7 +109,7 @@ function buildDeck(F, opt) {
   let tight = 0; for (const lst of ends.values()) for (let i = 0; i < lst.length; i++) for (let k = i + 1; k < lst.length; k++) if (clash(lst[i], lst[k])) tight++;
   // ---- 分支：节点之间的直线段，按场地红线裁剪；两端各退出一段节点板
   const PCS = [];
-  FB.forEach((f, fi) => { const a = N[f.a], b = N[f.b], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 6 || short.has(fi)) return;
+  FB.forEach((f, fi) => { const a = N[f.a], b = N[f.b], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 6 || short.has(fi) || dup.has(fi)) return;
     const t = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], nrm = [-t[1], t[0]], at = s => [a[0] + t[0] * s, a[1] + t[1] * s];
     let sA = 0, sB = L; const okA = inSite(a), okB = inSite(b);                       // 场内的连续段
     if (okA) { sB = L; for (let s = 2; s <= L; s += 2) if (!inSite(at(s))) { sB = s - 2; break; } }
@@ -237,7 +245,7 @@ function buildDeck(F, opt) {
     if (lo > 0 && !mate(1, lo)) taper(lo, [...r.backLo.slice().reverse(), ...rk.slice(0, Jn + 1)], 'tl', r.side, r.backLo.length ? D.taperShape : 'pow'); });
   // ---- 节点板：把相邻两条分支之间的走廊轮廓（第 5 步的过渡曲线）取成板边
   const inc = new Map(); for (const pc of PCS) { if (pc.a >= 0) { if (!inc.has(pc.a)) inc.set(pc.a, []); inc.get(pc.a).push([pc, 0]); } if (pc.b >= 0) { if (!inc.has(pc.b)) inc.set(pc.b, []); inc.get(pc.b).push([pc, 1]); } }
-  let gapOn = 0, gapOff = 0, badPlates = 0, swapped = 0, stubDrop = 0, looseOrder = 0, arcs = 0;
+  let plateHull = 0, gapOn = 0, gapOff = 0, badPlates = 0, swapped = 0, stubDrop = 0, looseOrder = 0, arcs = 0;
   // 并板后各条走道绕板一圈的先后：沿着组内短走道连成的小网，贴着外侧逆时针走一圈，依次遇到的走道口就是板边的顺序
   const inner = new Map(), link = (u, v) => { if (u === v) return; for (const [p, q] of [[u, v], [v, u]]) { if (!inner.has(p)) inner.set(p, []); if (!inner.get(p).includes(q)) inner.get(p).push(q); } }; for (const fi of short) link(FB[fi].a, FB[fi].b); for (const [u, v] of nearPairs) link(u, v);
   function walkOrder(j, lst) { const adj = new Map(), A = (u, p) => Math.atan2(p[1] - N[u][1], p[0] - N[u][0]);
@@ -263,6 +271,7 @@ function buildDeck(F, opt) {
     // 这时交换相邻两条分支的顺序再绕一圈，取端面不再交叉的那个顺序
     const toR2 = ring => ring.map(q => ({ q, p: q.pc ? edgeP(q.pc, q.k, q.c) : q.p })), faceX = R => { const n = R.length; for (let a = 0; a < n; a++) for (let b = a + 2; b < n; b++) { if (a === 0 && b === n - 1) continue;
         const A = R[a].q.pc && R[(a + 1) % n].q.pc, B = R[b].q.pc && R[(b + 1) % n].q.pc; if (A && B && segX(R[a].p, R[(a + 1) % n].p, R[b].p, R[(b + 1) % n].p)) return true; } return false; };
+    const ringX = R => { const n = R.length; for (let a = 0; a < n; a++) for (let b = a + 2; b < n; b++) { if (a === 0 && b === n - 1) continue; if (segX(R[a].p, R[(a + 1) % n].p, R[b].p, R[(b + 1) % n].p)) return true; } return false; };
     let built = mkRing(lst), R2 = toR2(built.ring);
     if (faceX(R2) && lst.length > 2) for (let i = 0; i < lst.length; i++) { const L2 = lst.slice(), k = (i + 1) % lst.length; [L2[i], L2[k]] = [L2[k], L2[i]]; const b2 = mkRing(L2), R = toR2(b2.ring); if (!faceX(R)) { lst.splice(0, lst.length, ...L2); built = b2; R2 = R; swapped++; break; } }
     // 仍然交叉：走廊刚出节点就在场地红线处平口切断（剩下不到一个走道宽的短头），短头的端面和旁边分支的端面交叉——这个短头不接进节点板，板边直接连到相邻分支
@@ -272,7 +281,10 @@ function buildDeck(F, opt) {
     // 板的外圈必须是一条不打结的闭合线：轮廓上的点如果让外圈自交（交点落在板边后面、或绕到了别的走道口后面），去掉它
     for (let guard = 0; guard < 60; guard++) { const n = R2.length; let hit = -1;
       for (let a = 0; a < n && hit < 0; a++) for (let b = a + 2; b < n; b++) { if (a === 0 && b === n - 1) continue; if (segX(R2[a].p, R2[(a + 1) % n].p, R2[b].p, R2[(b + 1) % n].p)) { for (const i of [(a + 1) % n, b, a, (b + 1) % n]) if (!R2[i].q.pc) { hit = i; break; } if (hit < 0) hit = -2; break; } }
-      if (hit === -1) break; if (hit === -2) { badPlates++; break; } R2.splice(hit, 1); }
+      if (hit < 0) break; R2.splice(hit, 1); }
+    // 兜底（v0.9.32）：只剩走道口的点还交叉时，板边改成所有走道口和轮廓点绕节点中心按角度排的外轮廓（星形，不会自交）
+    if (ringX(R2)) { const S = R2.slice().sort((p, q) => Math.atan2(p.p[1] - pj[1], p.p[0] - pj[0]) - Math.atan2(q.p[1] - pj[1], q.p[0] - pj[0]));
+      if (!ringX(S)) { R2.splice(0, R2.length, ...S); plateHull++; } else badPlates++; }
     const tris = earClip(R2.map(x => x.p));                                   // 切耳三角化：凹的、细长的板都不会翻面
     // 第三层的板边在"退回"的走道口另走一条线：去掉那一侧的口角和它旁边一段轮廓点，换成从轮廓上顺着切线出发、弯进走道口中点的一条曲线
     // 板边“收回”：去掉 oth 那一侧的走道口角和旁边一段轮廓，换成从中线上的 kt 站出发、弯回节点板边的一条曲线（三层：kt = 坡顶；二层：kt = 坡脚）
@@ -337,7 +349,7 @@ function buildDeck(F, opt) {
   const sharp = []; for (const pc of PCS) for (const k in pc.EP) for (let l = 1; l <= 3; l++) for (const c of [0, 2]) { const i = vid.get(pc.id + '_' + l + '_' + k + '_' + c); if (i !== undefined) sharp.push(i); }
   const cnt = k => ramps.filter(r => r.kind[0] === k).length, edge3 = PCS.filter(pc => pc.land).length;
   const stats = { tips: tipStat, merged: [...grp.values()].filter(g => g.length > 1).length, mergedNodes: [...grp.values()].filter(g => g.length > 1).reduce((s, g) => s + g.length, 0), shortRuns: short.size, absorbed, tight, nodes: inc.size, branches: PCS.length, l3nodes: [...inc.keys()].filter(j => in3[j]).length, ringNodes, l3branches: PCS.filter(pc => mode(pc) === 'full').length, entries: cnt(0), r12: cnt(1), r23: cnt(2), edges3: edge3, steep: PCS.filter(pc => pc.steep).length, grown,
-    noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, arcs, badPlates, swapped, stubDrop, looseOrder, twins, nearPairs: nearPairs.length, cutEnds: PCS.filter(pc => Object.keys(pc.EP).length).length, ctrlF: FC.length, ctrlV: V.length / 3,
+    noEntryShort: PCS.filter(pc => pc.noEntry === 'short').length, noEntryRoad: PCS.filter(pc => pc.noEntry === 'road').length, gapOn, gapOff, arcs, badPlates, plateHull, dupes, swapped, stubDrop, looseOrder, twins, nearPairs: nearPairs.length, cutEnds: PCS.filter(pc => Object.keys(pc.EP).length).length, ctrlF: FC.length, ctrlV: V.length / 3,
     lenKm: PCS.reduce((s, pc) => s + pc.len, 0) / 1000 };
   return { V: new Float64Array(V), F: FC, FT, sharp, stats, in3, outline: OI, params: D,
     ramps: ramps.map(r => ({ kind: r.kind, back: [r.backHi.length, r.backLo.length], m: r.m, seg: r.pc.seg, a: r.pc.P[r.up > 0 ? r.ka : r.ka + r.m], b: r.pc.P[r.up > 0 ? r.ka + r.m : r.ka], side: r.side })) };
