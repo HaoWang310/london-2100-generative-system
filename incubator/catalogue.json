@@ -293,46 +293,6 @@
       }
     },
     {
-      "id": "loop-city-real-map",
-      "href": "incubator/loop-city-real-map/",
-      "cover": "assets/catalogue/loop-city-real-map.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "Loop City 真实地图（底图）",
-        "en": "Loop City on the real map (base map)"
-      },
-      "desc": {
-        "zh": "真实的 OpenStreetMap 城市及其数据，深色与浅色，可看平面和 3D：按服务分类的现状铁路、HS1 与 HS2、绿带、AONB、地形与 3D 起伏。为与伦敦地图结合而做的底图。",
-        "en": "The real OpenStreetMap city and its data, dark and light, in plan and in 3D: the existing rail by service, HS1 and HS2, the Green Belt, AONB, topography and 3D relief. A base map built to be combined with the London map."
-      },
-      "tags": [
-        {
-          "zh": "真实地图",
-          "en": "Real map"
-        },
-        {
-          "zh": "铁路",
-          "en": "Rail"
-        },
-        {
-          "zh": "绿带",
-          "en": "Green Belt"
-        },
-        {
-          "zh": "3D",
-          "en": "3D"
-        }
-      ],
-      "owner": "HaoWang310",
-      "embed": {
-        "langStorageKey": "loopCityMap.uiLanguage",
-        "langButton": "#langbar button[data-lang=\"{lang}\"]",
-        "hide": [
-          "#langbar"
-        ]
-      }
-    },
-    {
       "id": "tensor-studio",
       "href": "incubator/tensor-studio/",
       "cover": "assets/catalogue/tensor-studio.webp",
@@ -402,6 +362,46 @@
         "langButton": "#langSw button[data-language=\"{lang}\"]",
         "hide": [
           "#langSw"
+        ]
+      }
+    },
+    {
+      "id": "loop-city-real-map",
+      "href": "incubator/loop-city-real-map/",
+      "cover": "assets/catalogue/loop-city-real-map.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "Loop City 真实地图（底图）",
+        "en": "Loop City on the real map (base map)"
+      },
+      "desc": {
+        "zh": "真实的 OpenStreetMap 城市及其数据，深色与浅色，可看平面和 3D：按服务分类的现状铁路、HS1 与 HS2、绿带、AONB、地形与 3D 起伏。为与伦敦地图结合而做的底图。",
+        "en": "The real OpenStreetMap city and its data, dark and light, in plan and in 3D: the existing rail by service, HS1 and HS2, the Green Belt, AONB, topography and 3D relief. A base map built to be combined with the London map."
+      },
+      "tags": [
+        {
+          "zh": "真实地图",
+          "en": "Real map"
+        },
+        {
+          "zh": "铁路",
+          "en": "Rail"
+        },
+        {
+          "zh": "绿带",
+          "en": "Green Belt"
+        },
+        {
+          "zh": "3D",
+          "en": "3D"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "loopCityMap.uiLanguage",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
+        "hide": [
+          "#langbar"
         ]
       }
     },
