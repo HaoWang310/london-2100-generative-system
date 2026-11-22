@@ -1,5 +1,5 @@
 {
-  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。 detail 可选：鼠标在卡片上停 3 秒（触屏点 ⓘ）显示的详细介绍——subtitle，sections[{h, lead（触屏分页时每页的大标题，可省略）, body:[{p}|{list}]}]，文字里 **粗体**。",
+  "_readme": "目录内容。新增一个 app：把它放进 incubator/<文件夹>/，再在 items 里加一条。status: ready 可用 / incubating 孵化中 / planned 规划中。cover 可留空。 detail 可选：鼠标在卡片上停 3 秒（触屏点 ⓘ）显示的详细介绍——subtitle，sections[{h, lead（触屏分页时每页的大标题，可省略）, body:[{p}|{list}]}]，文字里 **粗体**。 parked：暂不在目录显示、但文件夹保留待用的 app（原条目加 parked 说明）；移回 items 即可恢复显示。",
   "items": [
     {
       "id": "workspace",
@@ -257,42 +257,6 @@
       }
     },
     {
-      "id": "loop-city-live",
-      "href": "incubator/loop-city-live/",
-      "cover": "assets/catalogue/loop-city-live.webp",
-      "status": "incubating",
-      "title": {
-        "zh": "Loop City 实时应用",
-        "en": "Loop City live"
-      },
-      "desc": {
-        "zh": "三个协同工作的页面：整个环线上的黏菌与单元、单元内的毛线与道路等级，以及张量场底图。",
-        "en": "Three pages that work together: the slime mould and its cells over the whole loop, the wool and the road hierarchy inside the cells, and the base for the tensor field."
-      },
-      "tags": [
-        {
-          "zh": "黏菌",
-          "en": "Slime mould"
-        },
-        {
-          "zh": "毛线",
-          "en": "Wool"
-        },
-        {
-          "zh": "道路等级",
-          "en": "Road hierarchy"
-        }
-      ],
-      "owner": "HaoWang310",
-      "embed": {
-        "langStorageKey": "lang",
-        "langButton": "#{lang}",
-        "hide": [
-          ".lang"
-        ]
-      }
-    },
-    {
       "id": "loop-city-wool-bands",
       "href": "incubator/loop-city-wool-bands/",
       "cover": "assets/catalogue/loop-city-wool-bands.webp",
@@ -468,6 +432,50 @@
         }
       ],
       "owner": "HaoWang310"
+    }
+  ],
+  "parked": [
+    {
+      "id": "loop-city-live",
+      "href": "incubator/loop-city-live/",
+      "cover": "assets/catalogue/loop-city-live.webp",
+      "status": "incubating",
+      "title": {
+        "zh": "Loop City 实时应用",
+        "en": "Loop City live"
+      },
+      "desc": {
+        "zh": "三个协同工作的页面：整个环线上的黏菌与单元、单元内的毛线与道路等级，以及张量场底图。",
+        "en": "Three pages that work together: the slime mould and its cells over the whole loop, the wool and the road hierarchy inside the cells, and the base for the tensor field."
+      },
+      "tags": [
+        {
+          "zh": "黏菌",
+          "en": "Slime mould"
+        },
+        {
+          "zh": "毛线",
+          "en": "Wool"
+        },
+        {
+          "zh": "道路等级",
+          "en": "Road hierarchy"
+        }
+      ],
+      "owner": "HaoWang310",
+      "embed": {
+        "langStorageKey": "lang",
+        "langButton": "#{lang}",
+        "hide": [
+          ".lang"
+        ]
+      },
+      "parked": {
+        "since": "2026-11-22",
+        "by": "HaoWang310",
+        "zh": "暂不在目录显示，文件夹保留待用。新版见 loop-city-wool-bands；本版保留放大后的车道与路口细节（真实宽度的道路、公交专用道、自行车道、人行道）和胶囊站点，以后可能并入道路功能。",
+        "en": "Not shown in the catalogue for now; the folder is kept for later use. The newer version is loop-city-wool-bands; this one keeps the lane and junction detail when zoomed in (roads at true width, bus lanes, cycle tracks, footways) and the capsule stops, which may be brought into the road functions later."
+      }
     }
   ]
 }
