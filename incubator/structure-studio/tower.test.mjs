@@ -143,3 +143,21 @@ test('the corridor ring around each tower is three-level, so the base never hang
   const off = SS.deck.buildDeck(F, { ...SS.deck.DEF, ring3: false }); assert.ok(off.stats.ringNodes === 0 && off.stats.l3nodes < D.stats.l3nodes, 'ring3 can be switched off');
 });
 
+
+test('the tower base stops at the site red line: a room that reaches past it is cut flat there, feet still held (v0.9.32)', () => {
+  for (const z0 of F.plazas) { const T0 = SS.plazaTiers(z0, site), c = z0.c, rFeet = Math.max(...z0.feet.flat().map(p => Math.hypot(p[0] - c[0], p[1] - c[1])));
+    // 假想的红线：一条离塔心 d 的直线，从室中间穿过（塔脚外 6 m）；红线内是一个很大的矩形
+    const far = z0.poly.reduce((m, p) => Math.hypot(p[0] - c[0], p[1] - c[1]) > Math.hypot(m[0] - c[0], m[1] - c[1]) ? p : m, z0.poly[0]), rMax = Math.hypot(far[0] - c[0], far[1] - c[1]);
+    const d = rFeet + 6; assert.ok(d < rMax - 5, 'the line passes through the room');
+    const u = [(far[0] - c[0]) / rMax, (far[1] - c[1]) / rMax], n = [-u[1], u[0]], B = 3000, at = (s, t) => [c[0] + u[0] * s + n[0] * t, c[1] + u[1] * s + n[1] * t];
+    const site2 = Object.assign({}, site, { footPolys: [[at(d, -B), at(d, B), at(-B, B), at(-B, -B)]] });
+    const z = Object.assign({}, z0); delete z._tiers; const T = SS.plazaTiers(z, site2), g = T.grid;
+    let out = 0, reach = -Infinity, lost = 0; T.levels.forEach((L, li) => { for (let j = 0; j < g.H; j++) for (let i = 0; i < g.W; i++) { const x = g.x0 + (i + 0.5) * g.res, y = g.y0 + (j + 0.5) * g.res, s = (x - c[0]) * u[0] + (y - c[1]) * u[1];
+      if (L.mask[j * g.W + i]) { if (s > d + g.res) out++; if (li === 0) reach = Math.max(reach, s); } else if (T0.levels[li].mask[j * g.W + i] && s < d - 12) lost++; } });
+    assert.equal(out, 0, 'no tier beyond the red line');
+    assert.ok(reach > d - 1.5, 'the base runs up to the red line (flat cut, not pulled back): ' + (d - reach).toFixed(1) + ' m short');
+    assert.ok(T.clipArea > 20 && T0.clipArea === 0, 'clipped area is reported');
+    assert.ok(lost * g.res * g.res < 0.02 * T0.levels[0].area, 'away from the line the base is unchanged: ' + (lost * g.res * g.res).toFixed(0) + ' m² differ');
+    assert.ok(T.footClear >= 2.5, 'feet still on L3: ' + T.footClear.toFixed(1)); assert.equal(T.arcs.length, T0.arcs.length, 'valleys kept');
+    for (const p of T.cols) assert.ok((p[0] - c[0]) * u[0] + (p[1] - c[1]) * u[1] < d - 2, 'no column beyond the red line'); }
+});

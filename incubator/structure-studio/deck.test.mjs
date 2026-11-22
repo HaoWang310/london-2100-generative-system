@@ -185,3 +185,18 @@ test('the smoothing does not cost much: subdivided deck stays within 15 % of the
   assert.ok(now < 1.15 * plain, 'triangles ' + now + ' vs ' + plain);
 });
 
+
+test('a duplicated corridor between the same two nodes is built once: same deck, no knotted plate (v0.9.32)', () => {
+  const base = SS.deck.buildDeck(F, {}), N = F.nodeP, len = f => Math.hypot(N[f.a][0] - N[f.b][0], N[f.a][1] - N[f.b][1]);
+  assert.equal(base.stats.dupes, 0, 'P2 has no duplicates'); assert.equal(base.stats.badPlates, 0); assert.equal(base.stats.plateHull, 0, 'no plate needed the fallback outline');
+  const cand = F.fibres.map((f, i) => [f, i]).filter(([f]) => len(f) > SS.deck.DEF.merge * f.w + 5 && len(f) < 150 && site.inSite(N[f.a]) && site.inSite(N[f.b])).slice(0, 6); assert.ok(cand.length >= 3);
+  // 同一条走道再来一遍（方向反过来）、再来一条端点挪开 1 m 的平行段（两端是位置几乎相同的另一对节点）：都只算一条
+  const nodeP = N.map(p => p.slice()), extra = []; for (const [f] of cand) { extra.push(Object.assign({}, f, { a: f.b, b: f.a })); const t = [(N[f.b][0] - N[f.a][0]) / len(f), (N[f.b][1] - N[f.a][1]) / len(f)];
+    nodeP.push([N[f.a][0] - t[1] * 1, N[f.a][1] + t[0] * 1], [N[f.b][0] - t[1] * 1, N[f.b][1] + t[0] * 1]);
+    extra.push(Object.assign({}, f, { a: nodeP.length - 2, b: nodeP.length - 1 })); }
+  const F2 = Object.assign({}, F, { nodeP, fibres: [...F.fibres, ...extra] }), D2 = SS.deck.buildDeck(F2, {});
+  assert.equal(D2.stats.dupes, extra.length, 'every duplicate is found'); assert.equal(D2.stats.badPlates, 0);
+  assert.equal(D2.F.length, base.F.length, 'same faces as without the duplicates'); assert.equal(D2.V.length, base.V.length);
+  const wide = Object.assign({}, cand[0][0], { w: cand[0][0].w + 4 }), D3 = SS.deck.buildDeck(Object.assign({}, F, { fibres: [...F.fibres, wide] }), {});
+  assert.equal(D3.stats.dupes, 1); assert.equal(D3.stats.badPlates, 0, 'the wider of the two is the one kept');
+});

@@ -40,10 +40,11 @@ planting towers sit on the tensor field's attractors and major junctions. Buildi
 | `engine/nav.js` | 三维视口导航（参考 Rhino）：旋转 / 平移 / 缩放 / 标准视图 / 缩放至全部的镜头数学 |
 | `assets/station-p2.snapshot.json` | 车站 P2 的张量场快照 |
 | `scripts/export-snapshot.js` | 在张量场工作室里导出快照 |
+| `scripts/london-audit.js` | 伦敦全域检查：在线上伦敦地图页的控制台里运行，19 块真实场地 × 7 组参数，从地图到张量场到结构整条流程跑一遍，核对塔座、节点板、坡道板边的规则（用法见文件开头） |
 | `structure.test.mjs` | 在 P2 上的回归测试（`node --test`） |
 | `deck.test.mjs` | 第 6 步的回归测试 |
 | `nav.test.mjs` | 三维视口导航的回归测试 |
-| `robust.test.mjs` | 规则普适性测试：12 种条件（种子、生成模式、拉扯、核心位置）下塔座、走廊和坡道旁边板边的规则都要成立 |
+| `robust.test.mjs` | 规则普适性测试：14 种条件（种子、生成模式、拉扯、核心位置、红线离塔很近）下塔座、走廊和坡道旁边板边的规则都要成立 |
 | `docs/DESIGN.md` | 生成逻辑与设计规则 |
 | `docs/DATA.md` | 输入快照与输出格式 |
 | `docs/CHANGELOG.md` | 版本记录 |
