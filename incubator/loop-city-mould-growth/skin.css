@@ -148,3 +148,34 @@ html.lcskin .lc-advbody #yearNote { display:block; min-width:0; text-align:left;
   html.lcskin #zoombar { left:10px; bottom:10px; } html.lcskin #zoombar button { min-width:36px; height:36px; }
   html.lcskin .lc-head { padding:16px 14px 8px 18px; } html.lcskin #panelScrollL { padding:0 14px 16px 18px; }
 }
+
+/* ==== black and white only (22 Nov 2026) ====
+   The interface uses black, white, and white at lower opacity; nothing else. Colour stays only where it is a key
+   to the map: the swatches in Layers and the choices in Mould look. The map itself is not touched. */
+html.lcskin { --ink:#fff; --ink2:rgba(255,255,255,.72); --ink3:rgba(255,255,255,.5); --line:rgba(255,255,255,.14); --card:#000; --surface:#000; --elev:rgba(255,255,255,.1); --bd:rgba(255,255,255,.22); --bdon:#fff; --acc2:#fff; --accent:#fff; --accent2:#fff; }
+html.lcskin body { background:#000; color:#fff; }
+html.lcskin #panelL, html.lcskin #panel, html.lcskin #lcPill, html.lcskin #lcPrep, html.lcskin #zoombar button { background:#000; border-color:rgba(255,255,255,.22); }
+html.lcskin .lc-lead, html.lcskin .lc-h2, html.lcskin .lc-ss, html.lcskin .lc-sub, html.lcskin .panelHead, html.lcskin .lc-advbtn { color:rgba(255,255,255,.6); }
+html.lcskin .panelSub, html.lcskin .v5sub, html.lcskin .hint, html.lcskin .lc-advnote { color:rgba(255,255,255,.5); }
+html.lcskin .lc-badge { background:#000; border-color:rgba(255,255,255,.22); color:#fff; }
+html.lcskin .lc-step { border-color:rgba(255,255,255,.22); background:#000; } html.lcskin .lc-step.open { border-color:#fff; background:#000; }
+html.lcskin .lc-ck { border-color:rgba(255,255,255,.4); color:rgba(255,255,255,.6); }
+html.lcskin .lc-step.open .lc-ck, html.lcskin .lc-step.done .lc-ck { background:#fff; color:#000; border-color:#fff; }
+html.lcskin .lc-step.done .lc-ck { color:transparent; background:#fff no-repeat center / 12px 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4.2l2 2L7 1.8' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+html.lcskin .lc-step.done .lc-ck::after { display:none; }
+html.lcskin button.btn, html.lcskin .lc-icon, html.lcskin #btnRewind, html.lcskin .lc-spd button, html.lcskin .rv2seg button, html.lcskin select, html.lcskin #langbar { background-color:#000; border-color:rgba(255,255,255,.22); color:#fff; }
+html.lcskin button.btn.primary, html.lcskin #btnPlay { background:#fff; border-color:#fff; color:#000; }
+html.lcskin button.btn.running { background:#000; border-color:#fff; color:#fff; }
+html.lcskin .lc-spd button.on, html.lcskin .rv2seg button.on, html.lcskin #langbar button.on { background:#fff; color:#000; border-color:#fff; }
+html.lcskin #langbar button { color:rgba(255,255,255,.6); }
+html.lcskin .f .lab span:last-child { color:#fff; }
+html.lcskin input[type=range]::-webkit-slider-runnable-track { background:rgba(255,255,255,.22); }
+html.lcskin input[type=range]::-webkit-slider-thumb { background:#fff; }
+html.lcskin .tg i { background:#000; box-shadow:inset 0 0 0 1px rgba(255,255,255,.4); } html.lcskin .tg i::after { background:rgba(255,255,255,.6); box-shadow:none; }
+html.lcskin .tg input:checked + i { background:#fff; box-shadow:none; } html.lcskin .tg input:checked + i::after { background:#000; }
+html.lcskin .lc-tab td, html.lcskin details.grp, html.lcskin .lc-sec, html.lcskin .lc-adv { border-color:rgba(255,255,255,.14); }
+html.lcskin .chip, html.lcskin #btnChipsSet { background:#000 !important; border-color:rgba(255,255,255,.22) !important; color:#fff !important; }
+html.lcskin .lc-sw { display:none; }
+html.lcskin input[type=checkbox] { accent-color:#fff; }
+html.lcskin #rv2View .rv2seg button { background:#000; border-color:rgba(255,255,255,.22); color:#fff; }
+html.lcskin #rv2View .rv2seg button.on { background:#fff; border-color:#fff; color:#000; }
