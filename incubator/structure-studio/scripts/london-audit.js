@@ -58,7 +58,7 @@ window.__AUDIT = { done: false, log: [], res: [] }; window.__SNAPS = {};
           for (const q of tris(p[0], p[1])) { const a = dm.top, zt = Math.max(a[q + 2], a[q + 5], a[q + 8]), zb = Math.min(a[q + 2], a[q + 5], a[q + 8]) - 1; if (p[2] < zb + 0.05 || p[2] > zt - 0.05) continue; if (inTri(p, q)) { clash++; break; } } }
         let outA = 0; for (const L_ of T.levels) for (let j = 0; j < g.H; j++) for (let i = 0; i < g.W; i++) if (L_.mask[j * g.W + i] && !site.inSite([g.x0 + (i + 0.5) * g.res, g.y0 + (j + 0.5) * g.res])) outA += g.res * g.res;   // 塔座铺到红线外的面积（m²，三层合计；栅格 2 m 的红线 → 允许 ~1 m 的锯齿）
         let feetOut = 0; for (const fp of SS.towerFeet(F.towers[z.ti])) for (const p of fp) if (!site.inSite(p)) feetOut++;
-        return { ok: z.ok, footClear: +T.footClear.toFixed(1), arcs: T.arcs.length, areas: T.levels.map(L => +(L.area / 1e4).toFixed(2)), ringN: n, hangOut, hangIn, outA: Math.round(outA), clash, feetOut, ringExtra: (F.ringExtra && F.ringExtra[z.ti]) || 0 }; });
+        return { ok: z.ok, footClear: +T.footClear.toFixed(1), arcs: T.arcs.length, areas: T.levels.map(L => +(L.area / 1e4).toFixed(2)), ringN: n, deadArms: T.deadArms || 0, free: (z.free || []).length * 2, hangOut, hangIn, outA: Math.round(outA), clash, feetOut, ringExtra: (F.ringExtra && F.ringExtra[z.ti]) || 0 }; });
       return out; };
     for (const S of window.__SITES) {
       const r = { name: S.name }; A.res.push(r); say('site ' + S.name);

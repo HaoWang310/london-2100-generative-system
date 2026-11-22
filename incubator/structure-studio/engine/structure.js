@@ -636,6 +636,16 @@ function buildOnce(site, P, EXCL, RX) {
   // 走廊中心线长度（只计场内）；校验：中心线压在道路上（< 8 m）的比例、路网尺度
   let onL = 0, inL = 0; for (const f of fibres) for (let k = 1; k < f.P.length; k++) { const m = mul(add(f.P[k], f.P[k - 1]), 0.5); if (!inSite(m)) continue; const l = dist(f.P[k], f.P[k - 1]); inL += l; if (site.roadDistAll(m) < 8) onL += l; }
   const totL = inL;
+  // 塔所在的室哪些边没有走廊（v0.9.33）：走廊板只做场内的连续段（从场内的节点做到红线，见 deck.js），两端节点都在红线外的走廊整条不做。
+  // 沿室的边每 2 m 取一点，附近没有会做出来的走廊中心线（走道半宽 + 6 m）和场内的节点（走道宽 + 12 m） = 这一点外面没有走廊（z.free，塔座的臂不往那里伸）
+  if (plazas.length) { const built = []; for (const f of fibres) { const a = nodeP[f.a], b = nodeP[f.b], L = dist(a, b); if (!a || !b || L < 1e-6) continue; const at = q => [a[0] + (b[0] - a[0]) * q / L, a[1] + (b[1] - a[1]) * q / L], okA = inSite(a), okB = inSite(b);
+      let sB = -1, s0 = L + 1; if (okA) { sB = L; for (let q = 2; q <= L; q += 2) if (!inSite(at(q))) { sB = q - 2; break; } } if (okB) { s0 = 0; for (let q = L - 2; q >= 0; q -= 2) if (!inSite(at(q))) { s0 = q + 2; break; } }
+      for (let q = 0; q <= L; q += 2) if (q <= sB || q >= s0) { const p = at(q); built.push(p[0], p[1], (f.w || 20) / 2 + 6); }
+      if (okA) built.push(a[0], a[1], (f.w || 20) + 12); if (okB) built.push(b[0], b[1], (f.w || 20) + 12); }   // 场内的节点：节点板，室的圆角离走廊中心线远一些
+    for (const z of plazas) { z.free = []; const xs = z.poly.map(p => p[0]), ys = z.poly.map(p => p[1]), bx0 = Math.min(...xs) - 60, bx1 = Math.max(...xs) + 60, by0 = Math.min(...ys) - 60, by1 = Math.max(...ys) + 60, nb = [];
+      for (let k = 0; k < built.length; k += 3) if (built[k] > bx0 && built[k] < bx1 && built[k + 1] > by0 && built[k + 1] < by1) nb.push(built[k], built[k + 1], built[k + 2]);
+      for (let i = 0; i < z.poly.length; i++) { const a = z.poly[i], b = z.poly[(i + 1) % z.poly.length], L = dist(a, b); for (let q = 0; q < L; q += 2) { const p = [a[0] + (b[0] - a[0]) * q / L, a[1] + (b[1] - a[1]) * q / L]; if (!inSite(p)) continue;
+        let ok = false; for (let k = 0; k < nb.length && !ok; k += 3) ok = (nb[k] - p[0]) ** 2 + (nb[k + 1] - p[1]) ** 2 < nb[k + 2] ** 2; if (!ok) z.free.push(p); } } } }
   return { mode: MODE, rings, plazas, gatePlates, entryStrands, secs, gates, trace: TR, P, nRemoved, strands, nodeP, fixed, edges, fibres, inner, towers, cen, nrm,
     grid: { W, H, RES, xmin, ymax, landM, corrF, corr, cellsM, sd: sdGrid, cellLab: CL.lab, polyLab: lab, bldM, hgt, farm, stripe, dc },
     cells, cores, site, cellPolys, spacingAt: spacing, roadSpansL, nNarrow: nNarrowCells, nWaterCut, nBridge, bridgeL, nRoad, roadL, roadSpan: RS, columns, seedsN: seeds.length, stats: { onRoad: inL ? onL / inL : 0, d1: site.d1, d2: site.d2, mode: MODE, strands: strands.length, nodes: inner.length, primE: edges.filter(e => e.prim).length, waterCut: nWaterCut, cells: cells.length, bld: nB, totL, farmA: farmA * RES * RES, corrA: corrA * RES * RES, bldA: bArea * RES * RES } };
@@ -792,6 +802,7 @@ function makePlaza(t, ti, cellPolys, site, P) { const cell = cellPolys.findIndex
 //  4 圆滑：走廊环和天井当实体做闭运算（L3 12 m，各层 8 m）再做 4 m 开运算 → 没有缺口、窄条、尖角
 //    塔脚外 3 m 一定在 L3 上（贴着走廊环的塔脚由三层走廊环托住）；辐射路 = 穿出塔所在的室、又伸到塔附近的路（不依赖张量场一定生成环岛）
 //  5 开敞：层间只有板和柱子（地面柱 6.2 m 不立在路上；L1→L2、L2→L3 各一套约 12 m 的柱网）
+//  7 断头的臂不做（v0.9.33）：辐射路穿出室的那条边外面没有走廊时（室贴着红线），L1 不沿这条路伸臂；塔座在那一侧沿室的边直切
 //  6 红线：三层都只做到场地红线以内（v0.9.32），室伸出红线的部分不铺，在红线处平口截断，和走廊一样
 const TIER = { z: [7.2, 11.8, 16.4], thick: 1.0, res: 0.5, step: 8, taper: 40, fr3: 12, frl: 8, open: 4, feetPad: 3, ocKeep: 8, padMax: 40, armMin: 10 };
 function plazaTiers(z, site) { if (z._tiers) return z._tiers;
@@ -833,11 +844,15 @@ function plazaTiers(z, site) { if (z._tiers) return z._tiers;
   const base = new Uint8Array(N); for (let i = 0; i < N; i++) base[i] = inner(i) && !valley[i] ? 1 : 0;
   const L3 = smoothM(base, T.fr3, T.open);
   // 3 L1 的臂：沿辐射路
-  const ring = z.ring, rMax = Math.max(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), arms = new Uint8Array(N), spokes = [];
+  const ring = z.ring, rMax = Math.max(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), arms = new Uint8Array(N), spokes = []; let deadArms = 0;
   // 辐射路 = 穿出塔所在的室、又伸到塔附近的路：有环岛时"附近" = 环岛外沿，没有环岛时 = 室内最近半径的 75 %（不依赖张量场一定生成环岛）
   { const rIn = Math.min(...poly.map(p => Math.hypot(p[0] - c[0], p[1] - c[1]))), rOut = ring ? ring.r + ring.w / 2 : 0.75 * rIn - 2;
     for (const rd of roads) { const pts = (rd.pts || []).map(q => [q[0] ?? q.x, q[1] ?? q.y]), rr = pts.map(q => Math.hypot(q[0] - c[0], q[1] - c[1])); if (!pts.length) continue;
       const lo = Math.min(...rr), hi = Math.max(...rr); if (!(lo < rOut + 2 && hi > (ring ? rMax + 5 : rIn + 2) && hi - lo > 6)) continue; spokes.push({ w: rd.width || 6.5, pts });
+      // 断头的臂不做（v0.9.33）：这条路穿出室的那条边外面没有走廊（室贴着红线，那一侧的走廊被红线切掉了），臂伸过去哪也不通
+      if (z.free && z.free.length) { const lim = ((rd.width || 6.5) / 2 + 6) ** 2; let dead = false; for (let k = 1; k < pts.length && !dead; k++) { const a = pts[k - 1], b = pts[k], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2));
+          for (let q = 0; q <= n && !dead; q++) { const x = a[0] + (b[0] - a[0]) * q / n, y = a[1] + (b[1] - a[1]) * q / n; for (const f of z.free) if ((f[0] - x) ** 2 + (f[1] - y) ** 2 < lim) { dead = true; break; } } }
+        if (dead) { deadArms++; continue; } }
       const m = new Uint8Array(N); for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(L / (Q / 2));
         for (let s = 0; s <= n; s++) { const x = a[0] + (b[0] - a[0]) * s / n, y = a[1] + (b[1] - a[1]) * s / n, i = Math.floor((x - x0) / Q), j = Math.floor((y - y0) / Q); if (i >= 0 && j >= 0 && i < W && j < H) m[j * W + i] = 1; } }
       const d = dil(m, Math.max(T.armMin, (rd.width || 6.5) / 2 + 5)); for (let i = 0; i < N; i++) if (d[i] && cell[i] && inS[i]) arms[i] = 1; } }
@@ -865,7 +880,7 @@ function plazaTiers(z, site) { if (z._tiers) return z._tiers;
     return { z: T.z[li], area, mask: m, sd: blur(sd, W, H, 1.2) }; });
   let voidA = 0; for (let i = 0; i < N; i++) if (inner(i) && !lv[0][i]) voidA += Q * Q;
   let clipA = 0; for (let i = 0; i < N; i++) if (cell[i] && R[i] > z.oc && !inS[i]) clipA += Q * Q;   // 室在红线外的面积（塔座不铺）
-  return (z._tiers = { grid: { x0, y0, W, H, res: Q }, levels, arcs, spokes, cols, footClear, voidArea: voidA, clipArea: clipA, cell, inSite: inS }); }
+  return (z._tiers = { grid: { x0, y0, W, H, res: Q }, levels, arcs, spokes, deadArms, cols, footClear, voidArea: voidA, clipArea: clipA, cell, inSite: inS }); }
 // 符号距离场（> 0 在里面）描轮廓：marching squares，里面在左手边，闭合成环；filled = 每个格子里的填充多边形（整行连续的整格合并成一个矩形）
 function contourField(sd, W, H, x0, y0, Q) { const X = i => x0 + (i + 0.5) * Q, Y = j => y0 + (j + 0.5) * Q, v = (i, j) => (i < 0 || j < 0 || i >= W || j >= H) ? -1 : sd[j * W + i];
   const P = (i, j) => [X(i), Y(j)], lerp = (i0, j0, i1, j1) => { const a = v(i0, j0), b = v(i1, j1), t = a / (a - b); return [X(i0) + (X(i1) - X(i0)) * t, Y(j0) + (Y(j1) - Y(j0)) * t]; };
