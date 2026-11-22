@@ -71,13 +71,15 @@
   add(s4, row($('btnLiveOpen'), $('btnHwSend')), $('btnHwGeo') && $('btnHwGeo').parentElement, gCell.querySelector('details.why'));
   gRun.style.display = 'none'; gCell.style.display = 'none';
   if (c8) c8.open = false;
+  /* four sliders of the older parcel method that sat in The network: kept on the page, not shown */
+  ['iBridge', 'iNetSimp', 'iLineSmooth', 'iRoadW'].forEach(function (id) { var r = $(id) && $(id).closest('.f, .sw, label.tg'); if (r) r.classList.add('lc-old'); });
 
   var adv = el('div', 'lc-adv'), advBtn = el('button', 'lc-advbtn'), advBody = el('div', 'lc-advbody');
   advBtn.type = 'button';
   var ac = el('span', 'lc-chev'); ac.textContent = '›';
   add(advBtn, ac, el('span', '', 'All settings', '全部参数'));
   advBtn.onclick = function () { adv.classList.toggle('open'); };
-  add(advBody, el('p', 'lc-advnote', 'Every slider and switch of the two models and of the older methods. Moving one that changes a run means running the century again.', '两个模型和旧方法的全部滑块与开关。改动会影响运行的参数后，需要重新运行百年。'));
+  add(advBody, el('p', 'lc-advnote', 'The sliders and switches of the two models. Moving one that changes a run means running the century again.', '两个模型的滑块与开关。改动会影响运行的参数后，需要重新运行百年。'));
   leftRest.forEach(function (d) { d.open = false; advBody.appendChild(d); });
   rightRest.forEach(function (d) { if (d.tagName === 'DETAILS') d.open = false; advBody.appendChild(d); });
   if ($('chips')) add(advBody, el('div', 'panelHead', 'Run figures', '运行数据'), $('chips'));

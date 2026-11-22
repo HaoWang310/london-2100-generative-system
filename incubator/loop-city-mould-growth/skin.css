@@ -179,3 +179,5 @@ html.lcskin .lc-sw { display:none; }
 html.lcskin input[type=checkbox] { accent-color:#fff; }
 html.lcskin #rv2View .rv2seg button { background:#000; border-color:rgba(255,255,255,.22); color:#fff; }
 html.lcskin #rv2View .rv2seg button.on { background:#fff; border-color:#fff; color:#000; }
+/* The older parcel method (parcels from the yearly roads) is not shown: its code and its controls stay on the page, and #noskin shows them. */
+html.lcskin #c8Old, html.lcskin .lc-old { display:none; }
