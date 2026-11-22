@@ -61,3 +61,16 @@ for (const [name, snap, P] of [['p2 · red line 110 m east of tower 2, pull 2', 
   assert.ok(towers.some(t => t.T.clipArea > 500), 'the tower room does reach past the red line here: ' + towers.map(t => t.T.clipArea.toFixed(0)));
   for (const { T, clash, outA } of towers) { assert.ok(outA <= 60, 'base beyond the red line: ' + outA.toFixed(0) + ' m²'); assert.ok(T.footClear >= 3 - 1e-6, 'feet held: ' + T.footClear); assert.equal(T.arcs.length, 3, 'three valleys'); assert.equal(clash, 0, 'shell points inside a corridor slab'); }
 });
+
+// 断头的臂不做（v0.9.33）：室贴着红线、那一侧的走廊被红线切掉时，L1 不沿穿出那条边的辐射路伸臂。没贴红线的塔（车站 P2 原样）一条都不少
+test('tower base arms only follow roads that reach a corridor: p2 · red line 110 m north of tower 1, wide corridors', () => {
+  const { F, towers } = check(cropped(SITES.p2, 0, 90, 110), PU), dead = towers.map(t => t.T.deadArms); assert.ok(dead.some(n => n >= 1), 'a dead-end arm is found here: ' + dead);
+  F.plazas.forEach((z, i) => { const T = towers[i].T, g = T.grid, L1 = T.levels[0].mask, L2 = T.levels[1].mask; assert.equal(T.arcs.length, 3); assert.ok(T.footClear >= 3 - 1e-6); assert.ok(towers[i].outA <= 60);
+    // 没有走廊的那段室边：边内 3 m 处不再有"只有 L1"的板（臂），只剩和 L2、L3 一起收住的那一圈
+    let armOnly = 0; for (const p of z.free) { const dx = z.c[0] - p[0], dy = z.c[1] - p[1], r = Math.hypot(dx, dy), q = [p[0] + dx / r * 3, p[1] + dy / r * 3], k = Math.floor((q[1] - g.y0) / g.res) * g.W + Math.floor((q[0] - g.x0) / g.res); if (L1[k] && !L2[k]) armOnly++; }
+    assert.ok(armOnly * 2 <= 12, 'L1-only slab left along the edge without a corridor: ' + armOnly * 2 + ' m of ' + z.free.length * 2 + ' m'); });
+});
+test('tower base arms: nothing is dropped where the corridor ring is complete (station P2)', () => {
+  const site = SS.prepareSite(SITES.p2), F = SS.buildStructure(site, P0, new Set());
+  for (const z of F.plazas) { assert.ok(z.free.length * 2 <= 4, 'room edge without a corridor: ' + z.free.length * 2 + ' m'); const T = SS.plazaTiers(z, site); assert.equal(T.deadArms, 0); assert.ok(T.spokes.length >= 5); }
+});
