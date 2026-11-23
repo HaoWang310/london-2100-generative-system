@@ -9539,9 +9539,12 @@ function drawNodes(){
     if(!n.inZone) return;
     const r = 7/S.view.k;
     vx.beginPath(); vx.arc(n.x, n.y, r, 0, Math.PI*2);
-    vx.fillStyle = (window.RV2 && RV2.light && RV2.nodeFill) ? RV2.nodeFill(n) : (n.t==="P" ? "#ffffff" : "#d8be86");
+    /* 23 Nov 2026: on the dark map the stations are white, whatever the cells are coloured (the sand dot was lost on
+       sand cells): a P station solid, the others a ring. The light map keeps its own. */
+    const lightMap = !!(window.RV2 && RV2.light);
+    vx.fillStyle = (lightMap && RV2.nodeFill) ? RV2.nodeFill(n) : (n.t==="P" ? "#ffffff" : "#0b0b0d");
     vx.fill();
-    vx.lineWidth = 2.4/S.view.k; vx.strokeStyle = (window.RV2 ? RV2.col("#d1cec9") : "#d1cec9"); vx.stroke();
+    vx.lineWidth = 2.4/S.view.k; vx.strokeStyle = lightMap ? RV2.col("#d1cec9") : "#ffffff"; vx.stroke();
     vx.fillStyle = (window.RV2 ? RV2.col("#d1cec9") : "#d1cec9");
     vx.font = (12/S.view.k)+"px Inter, system-ui, sans-serif";
     vx.fillText(n.id, n.x + r*1.6, n.y + r*0.6);
@@ -9554,7 +9557,7 @@ function drawSeeds(){
     const r = 5.5/S.view.k;
     vx.beginPath(); vx.arc(s.x, s.y, r, 0, Math.PI*2);
     vx.fillStyle = "rgba(49,44,35,.95)"; vx.fill();
-    vx.lineWidth = 2/S.view.k; vx.strokeStyle = "#c38f65"; vx.stroke();
+    vx.lineWidth = 2/S.view.k; vx.strokeStyle = (window.RV2 && RV2.light) ? "#c38f65" : "#ffffff"; vx.stroke();   // white on the dark map, as the stations
   });
   vx.restore();
 }
@@ -16822,6 +16825,11 @@ const HW = {
      can be clicked, only when the year on show is the year they were read from; through a replay, and at any earlier
      year the bar is dragged to, the map is the mould and the city alone, as it was the first time. The railway is not
      a result of the run and stays. The choice of cell is kept and is back with the cells. */
+  mark(path, px, z) {
+    const light = !!(window.RV2 && RV2.light);
+    vx.fillStyle = light ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.22)"; vx.fill(path, "evenodd");
+    vx.strokeStyle = light ? "#1d1d1f" : "#ffffff"; vx.lineWidth = px(5.2 * z); vx.stroke(path);
+  },
   shown() { return !S.playing && (S.year == null || S.showY == null || S.showY >= S.year); },
   draw() {
     if (!this.res || !this.paths) return;
@@ -16847,7 +16855,10 @@ const HW = {
     vx.globalAlpha = 1;
     const c = here ? this.cells[this.sel] : null;
     if (c) {
-      vx.strokeStyle = this.SAND; vx.lineWidth = px(2.4 * z); vx.stroke(c.path);
+      /* 23 Nov 2026: the chosen cell was outlined in sand, which the sand cells of palette C swallow, and white alone is
+         the highways' own line. So it is told by weight and light, under any palette: the cell a step lighter, and a
+         white outline twice as heavy as a highway. */
+      this.mark(c.path, px, z);
       if (this.on.frame) {
         const t = this.tileOf(c), a = this.toMap(t[0], t[3]), b = this.toMap(t[1], t[2]);
         vx.strokeStyle = "#7f7f7f"; vx.lineWidth = px(1); vx.setLineDash([px(6), px(4)]);
@@ -17270,7 +17281,7 @@ const PICS = {
       x.fillStyle = V5.cellFill(cl); x.fill("evenodd");
       x.strokeStyle = "rgba(232,232,232,.55)"; x.lineWidth = 0.6; x.stroke();
     });
-    if (sel) { x.beginPath(); path(sel.ring); x.strokeStyle = HW.SAND; x.lineWidth = 2; x.stroke(); }
+    if (sel) { x.beginPath(); path(sel.ring); x.fillStyle = "rgba(255,255,255,.22)"; x.fill(); x.strokeStyle = "#ffffff"; x.lineWidth = 3; x.stroke(); }
     return { url: c.toDataURL("image/jpeg", 0.85), box: [ex.e0, ex.n0, ex.e1, ex.n1].map(v => Math.round(v * 10) / 10) };
   },
   init() {
@@ -17492,8 +17503,7 @@ const MULTI = {
     const k = S.view.k, z = k > 1.0 ? 1.35 : 1.0, px = v => v / k;
     vx.save();
     vx.lineJoin = "round"; vx.lineCap = "round";
-    vx.strokeStyle = HW.SAND; vx.lineWidth = px(2.4 * z);
-    this.sel.forEach(i => vx.stroke(HW.cells[i].path));
+    this.sel.forEach(i => { if (i !== HW.sel) HW.mark(HW.cells[i].path, px, z); });   // HW.draw has marked HW.sel already
     if (HW.on.frame) {
       const t = this.windowOf(this.sel), a = HW.toMap(t[0], t[3]), b = HW.toMap(t[1], t[2]);
       vx.strokeStyle = "#7f7f7f"; vx.lineWidth = px(1); vx.setLineDash([px(6), px(4)]);
@@ -18935,7 +18945,7 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<script src="colours.js?v=1"></script>
+<script src="colours.js?v=2"></script>
 <script src="skin.js?v=9"></script>
 </body>
 </html>

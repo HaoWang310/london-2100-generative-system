@@ -13,6 +13,13 @@
 
    The page opens on Frost every time, with the switch off: the look is no longer remembered between visits.
 
+   Cell palettes (23 Nov 2026). A second row, "Cell palette": C Productive territory (what the page opens on), A Research
+   core, B Hydrological field, D Adaptive network, and Original (the orange and green the page had). Each is two colours
+   from the studio's board, urban and rural: the urban cells, and the city in three tints of it (low rise the colour
+   itself, then lighter); the rural cells, and the farming in a darker and a lighter tint. Cells that are neither stay
+   grey. The mould keeps its own look. With the switch above on and one of the five colour looks chosen, that pairing
+   wins. The light map keeps its own colours. Not remembered between visits.
+
    View only. The run, the cells and the figures handed to step 2 are the same under every look. */
 (function () {
   'use strict';
@@ -36,6 +43,16 @@
     magenta:  { city: ['#00E5FF', '#66EFFF', '#B3F7FF'], farm: ['#6E8F00', '#C6FF00'] },
     spectrum: { city: ['#FFFFFF', '#C8C8C8', '#8E8E8E'], farm: ['#4A4A4A', '#7A7A7A'] }
   };
+  /* the cell palettes: [urban, rural] */
+  var CELLS = [
+    { key: 'C',    en: 'C · Productive territory', zh: 'C · 生产领地', u: '#E3B47B', r: '#9EBE7A' },
+    { key: 'A',    en: 'A · Research core',        zh: 'A · 研究核心', u: '#A89CE6', r: '#8FBFAE' },
+    { key: 'B',    en: 'B · Hydrological field',   zh: 'B · 水文场',   u: '#7EB6FF', r: '#5EC7B7' },
+    { key: 'D',    en: 'D · Adaptive network',     zh: 'D · 适应网络', u: '#D6A4FF', r: '#6CC2C4' },
+    { key: 'orig', en: 'Original',                 zh: '原始',         u: '#E8684A', r: '#7A965C', orig: true }
+  ];
+  var cellKey = 'C', cellRow = null;
+  var mix = function (c, t, f) { return [0, 1, 2].map(function (i) { return Math.round(c[i] + (t[i] - c[i]) * f); }); };
   var hx = function (h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; };
   var rgba = function (h, a) { var c = hx(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; };
 
@@ -101,11 +118,22 @@
   }
   function apply() {
     keep();
-    var F = darkInk(), on = !!(sw && sw.checked) && !(window.RV2 && RV2.light), P = on ? PAIR[LOOKS.cur] : null, k;
+    var light = !!(window.RV2 && RV2.light);
+    var F = darkInk(), on = !!(sw && sw.checked) && !light, P = on ? PAIR[LOOKS.cur] : null, k;
+    var Q = light ? null : CELLS.filter(function (c) { return c.key === cellKey; })[0];
+    if (Q && Q.orig) Q = null;
     for (k in base.F) F[k] = base.F[k].slice();
     if (typeof V5 !== 'undefined' && V5.FILL && V5.LINE) {
       for (k in base.fill) V5.FILL[k] = base.fill[k];
       for (k in base.line) V5.LINE[k] = base.line[k];
+    }
+    if (Q) {                                              // the cell palette; a pairing, below, goes over it
+      var u = hx(Q.u), r0 = hx(Q.r), W = [255, 255, 255], K = [0, 0, 0];
+      F[1] = u; F[2] = mix(u, W, 0.32); F[3] = mix(u, W, 0.62); F[4] = mix(r0, K, 0.38); F[5] = mix(r0, W, 0.22);
+      if (typeof V5 !== 'undefined' && V5.FILL && V5.LINE) {
+        V5.FILL.urban = rgba(Q.u, 0.40); V5.LINE.urban = Q.u;
+        V5.FILL.agricultural = rgba(Q.r, 0.36); V5.LINE.agricultural = Q.r;
+      }
     }
     if (P) {
       F[3] = hx(P.city[0]); F[2] = hx(P.city[1]); F[1] = hx(P.city[2]); F[4] = hx(P.farm[0]); F[5] = hx(P.farm[1]);
@@ -116,14 +144,15 @@
     }
     S.growthY = null; S.growthBuiltFor = null; S.dirty = true;
     /* the key and the readout say the same as the map */
-    var city = P ? P.city[0] : null, farm = P ? P.farm[1] : null;
+    var city = P ? P.city[0] : Q ? Q.u : null, farm = P ? P.farm[1] : Q ? Q.r : null;
     var lg = document.querySelectorAll('.v5legend i');
     if (lg[0]) lg[0].style.background = city ? rgba(city, 0.75) : String(base.fill.urban || '').replace('.30', '.75');
     if (lg[1]) lg[1].style.background = farm ? rgba(farm, 0.8) : String(base.fill.agricultural || '').replace('.34', '.8');
     name();
     var rd = document.querySelectorAll('.lc-tab .lc-sw');
-    if (rd[0]) rd[0].style.background = P ? P.city[1] : '#EFA65C';
-    if (rd[1]) rd[1].style.background = P ? P.farm[1] : '#A9B57F';
+    if (rd[0]) rd[0].style.background = P ? P.city[1] : Q ? Q.u : '#EFA65C';
+    if (rd[1]) rd[1].style.background = P ? P.farm[1] : Q ? Q.r : '#A9B57F';
+    if (cellRow) [].forEach.call(cellRow.children, function (b) { b.classList.toggle('on', b.dataset.cell === cellKey); });   // LOOKS.set clears every .lookBtn
   }
 
   /* the ink's name beside its slider, in the page's language */
@@ -141,12 +170,32 @@
     row.after(lab);
     var note = document.createElement('p');
     note.className = 'hint'; note.setAttribute('translate', 'no');
-    note.dataset.en = 'For the five colour looks, on the dark map. Off: the city stays orange and the farming green.';
-    note.dataset.zh = '对五种彩色外观、在深色地图上生效。关闭时城市保持橙红、农田保持绿色。';
+    note.dataset.en = 'For the five colour looks, on the dark map. Off: the city and the cells take the cell palette below.';
+    note.dataset.zh = '对五种彩色外观、在深色地图上生效。关闭时城市与单元用下面选的单元配色。';
     note.textContent = isZh() ? note.dataset.zh : note.dataset.en;
     lab.after(note);
     sw = inp;
     sw.addEventListener('change', apply);
+
+    /* ---- the cell palettes */
+    var ch = document.createElement('div'), cn = document.createElement('p');
+    ch.className = 'lc-h2'; ch.id = 'lcCellHead'; ch.setAttribute('translate', 'no'); ch.dataset.en = 'Cell palette'; ch.dataset.zh = '单元配色';
+    ch.textContent = isZh() ? ch.dataset.zh : ch.dataset.en;
+    cellRow = document.createElement('div'); cellRow.className = 'lookRow'; cellRow.id = 'lcCellRow';
+    CELLS.forEach(function (c) {
+      var b = document.createElement('button'), i = document.createElement('i'), s = document.createElement('span');
+      b.type = 'button'; b.className = 'lookBtn'; b.dataset.cell = c.key;
+      i.style.background = 'linear-gradient(90deg,' + c.u + ' 50%,' + c.r + ' 50%)';
+      s.setAttribute('translate', 'no'); s.dataset.en = c.en; s.dataset.zh = c.zh; s.textContent = isZh() ? c.zh : c.en;
+      b.appendChild(i); b.appendChild(s);
+      b.onclick = function () { cellKey = c.key; apply(); };
+      cellRow.appendChild(b);
+    });
+    cn.className = 'hint'; cn.id = 'lcCellNote'; cn.setAttribute('translate', 'no');
+    cn.dataset.en = 'Urban and rural: the cells, the city and the farming. Cells that are neither stay grey. On the dark map.';
+    cn.dataset.zh = '城市与乡村两色：单元、城市生长和农田一起换。两者都不是的单元保持灰色。在深色地图上生效。';
+    cn.textContent = isZh() ? cn.dataset.zh : cn.dataset.en;
+    note.after(ch); ch.after(cellRow); cellRow.after(cn);
   }
 
   /* ---- every visit starts on Frost, with the switch off; the look is not remembered */
@@ -164,7 +213,7 @@
   if (!(window.RV2 && RV2.light)) LOOKS.set('frost'); else if (window.RV2) RV2.prevLook = 'frost';
 
   function relabel() {
-    document.querySelectorAll('.lookBtn span[data-en], #lcPairRow span[data-en], #lcPairRow + p[data-en]').forEach(function (e) {
+    document.querySelectorAll('.lookBtn span[data-en], #lcPairRow span[data-en], #lcPairRow + p[data-en], #lcCellHead, #lcCellNote').forEach(function (e) {
       var s = isZh() ? e.dataset.zh : e.dataset.en; if (e.textContent !== s) e.textContent = s;
     });
     name();
@@ -173,5 +222,5 @@
   if (typeof lang0 === 'function') window.setLang = function () { var r = lang0.apply(this, arguments); relabel(); return r; };
   if ($('langbar')) $('langbar').addEventListener('click', function () { setTimeout(relabel, 0); setTimeout(relabel, 300); });
   relabel(); setTimeout(function () { relabel(); apply(); }, 900);
-  window.LC_COLOURS = { apply: apply, PAIR: PAIR };
+  window.LC_COLOURS = { apply: apply, PAIR: PAIR, CELLS: CELLS, cell: function (k) { if (k && CELLS.some(function (c) { return c.key === k; })) { cellKey = k; apply(); } return cellKey; } };
 })();
