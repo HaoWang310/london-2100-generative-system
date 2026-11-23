@@ -218,7 +218,14 @@ export function createAppView(root, { items: loadItems } = {}) {
       frameWrap.append(iframe);
       setTimeout(poll, 100);
       nested.clear();
-      followPages(frame, () => frame === iframe, doc => watchApps(doc, () => frame === iframe, 1));
+      // As soon as the app's own page has a <head>: hide its switch and give it the language. Doing this only at
+      // "reveal" and at `load` left a gap on a slow connection: reveal can fire (after 2.5 s) while the frame is still
+      // about:blank, and `load` waits for the app's pictures, so its own EN / 中文 switch stood there until then.
+      followPages(frame, () => frame === iframe, doc => {
+        embed(frame, item);
+        pushLanguage(frame, item);
+        watchApps(doc, () => frame === iframe, 1);
+      });
 
       root.hidden = false;
       root.classList.add('is-open');
