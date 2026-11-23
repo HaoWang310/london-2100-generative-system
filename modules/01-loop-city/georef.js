@@ -1,4 +1,4 @@
-// 07 · Loop City step 1 — where the model's frame sits on the map.
+// 01 · Loop City step 1 — where the model's frame sits on the map.
 //
 // The step 1 page works in British National Grid (EPSG:27700): its sheet, the
 // mould's grid and the growth grid are all north-up in grid metres, inside one

@@ -1,4 +1,4 @@
-// 07 · Loop City step 1 — the inspector panel.
+// 01 · Loop City step 1 — the inspector panel.
 // Run the century, read the figures, choose what the map shows, and move the
 // sliders the engine page itself names as its contract (LoopCityEngine.sliders).
 // Playback is the workspace's timeline; this panel shows the year it is at.
@@ -86,19 +86,19 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
     for (const k of Object.keys(SL)) delete SL[k];
 
     // run
-    el.run = h('button', { type: 'button', class: 'btn primary lc07-run', onclick: () => onRun() }, T('Run the century'));
-    el.status = h('p', { class: 'muted small lc07-status' });
+    el.run = h('button', { type: 'button', class: 'btn primary lc01-run', onclick: () => onRun() }, T('Run the century'));
+    el.status = h('p', { class: 'muted small lc01-status' });
     el.bar = h('i');
-    container.append(h('div', { class: 'lc07-sec' }, h('div', { class: 'eyebrow' }, T('Run')), el.run, el.status, h('div', { class: 'lc07-prog' }, el.bar),
-      h('p', { class: 'lc07-note small' }, T('Every run is different: the mould has no fixed random seed.'))));
+    container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Run')), el.run, el.status, h('div', { class: 'lc01-prog' }, el.bar),
+      h('p', { class: 'lc01-note small' }, T('Every run is different: the mould has no fixed random seed.'))));
 
     // figures
-    el.year = h('div', { class: 'lc07-year' });
-    el.when = h('p', { class: 'lc07-note small' });
+    el.year = h('div', { class: 'lc01-year' });
+    el.when = h('p', { class: 'lc01-note small' });
     el.v = {};
-    const row = (key, label, sw) => { el.v[key] = h('td', { class: 'n' }); return h('tr', {}, h('td', {}, sw ? h('i', { class: 'lc07-sw', style: `background:${sw}` }) : null, label), el.v[key]); };
-    container.append(h('div', { class: 'lc07-sec' }, h('div', { class: 'eyebrow' }, T('Figures')), el.year, el.when,
-      h('table', { class: 'lc07-tab' },
+    const row = (key, label, sw) => { el.v[key] = h('td', { class: 'n' }); return h('tr', {}, h('td', {}, sw ? h('i', { class: 'lc01-sw', style: `background:${sw}` }) : null, label), el.v[key]); };
+    container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Figures')), el.year, el.when,
+      h('table', { class: 'lc01-tab' },
         row('road', T('Road drawn by the mould')), row('built', T('Built'), USE_COLOUR.urban), row('farm', T('Farmed'), USE_COLOUR.agricultural),
         row('cells', T('Cells')), row('hw', T('Highways')), row('link', T('Links')), row('st', T('Stations in a cell')))));
 
@@ -110,10 +110,10 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
     };
     const op = h('input', { type: 'range', min: 0.2, max: 1, step: 0.05, value: display.opacity });
     op.addEventListener('input', () => onDisplay({ opacity: +op.value }));
-    container.append(h('div', { class: 'lc07-sec' }, h('div', { class: 'eyebrow' }, T('Display')),
+    container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Display')),
       sw('mould', T('Slime mould')), sw('growth', T('City growth')), sw('highways', T('Highways and links')), sw('cells', T('Cells, by use')), sw('rails', T('Rail and stations')),
-      h('div', { class: 'lc07-key' }, ['urban', 'agricultural', 'open'].map(k => h('span', {}, h('i', { class: 'lc07-sw', style: `background:${USE_COLOUR[k]}` }), T(k)))),
-      h('p', { class: 'lc07-note small' }, T('The highways and the cells are read when the century ends, so they are shown at 2100.')),
+      h('div', { class: 'lc01-key' }, ['urban', 'agricultural', 'open'].map(k => h('span', {}, h('i', { class: 'lc01-sw', style: `background:${USE_COLOUR[k]}` }), T(k)))),
+      h('p', { class: 'lc01-note small' }, T('The highways and the cells are read when the century ends, so they are shown at 2100.')),
       h('div', { class: 'param' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T('Opacity'))), op),
       sw('background', T('Keep as background on the other levels'))));
 
@@ -131,11 +131,11 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
         const inp = h('input', { type: 'range', min: m.min, max: m.max, step: m.step, value: m.value });
         inp.addEventListener('input', () => { engine.setParam(m.key, +inp.value); showSlider(m.key); status(); });
         SL[m.key] = { inp, val };
-        return h('div', { class: 'param lc07-sl' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, label), val), inp);
+        return h('div', { class: 'param lc01-sl' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, label), val), inp);
       });
       el.reset = h('button', { type: 'button', class: 'btn', onclick: () => { engine.resetParams(); for (const k of Object.keys(SL)) showSlider(k); status(); } }, T('Back to the defaults'));
-      container.append(h('div', { class: 'lc07-sec' }, h('div', { class: 'eyebrow' }, T('Settings')),
-        h('p', { class: 'muted small' }, T('Each of these changes the run. Move one, then run the century again.')), rows, h('div', { class: 'lc07-acts' }, el.reset)));
+      container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Settings')),
+        h('p', { class: 'muted small' }, T('Each of these changes the run. Move one, then run the century again.')), rows, h('div', { class: 'lc01-acts' }, el.reset)));
       for (const k of Object.keys(SL)) showSlider(k);
     }
     status(); readout();
@@ -154,22 +154,22 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
 }
 
 export const PANEL_CSS = `
-.lc07-sec { padding: 12px 0; border-bottom: 1px solid var(--hairline); }
-.lc07-sec:last-child { border-bottom: 0; }
-.lc07-sec > .eyebrow { margin-bottom: 8px; }
-.lc07-sec .muted.small, .lc07-note.small { font-size: 12px; margin: 2px 0 8px; }
-.lc07-note { color: var(--text-3); }
-.lc07-run { width: 100%; height: 34px; }
-.lc07-status { min-height: 18px; margin: 8px 0 6px !important; }
-.lc07-status.err { color: #F2555A; }
-.lc07-prog { height: 2px; background: var(--surface-3); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
-.lc07-prog i { display: block; height: 2px; width: 0; background: #fff; transition: width .2s; }
-.lc07-year { font: 700 34px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-bottom: 8px; }
-.lc07-tab { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }
-.lc07-tab td { padding: 4px 0; border-bottom: 1px solid var(--hairline); } .lc07-tab td.n { text-align: right; }
-.lc07-tab tr:last-child td { border-bottom: 0; }
-.lc07-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
-.lc07-key { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); padding: 8px 0 2px; }
-.lc07-sl .param-value { color: #fff; } .lc07-sl .param-value.def { color: var(--text-3); }
-.lc07-acts { margin-top: 10px; } .lc07-acts .btn { width: 100%; }
+.lc01-sec { padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.lc01-sec:last-child { border-bottom: 0; }
+.lc01-sec > .eyebrow { margin-bottom: 8px; }
+.lc01-sec .muted.small, .lc01-note.small { font-size: 12px; margin: 2px 0 8px; }
+.lc01-note { color: var(--text-3); }
+.lc01-run { width: 100%; height: 34px; }
+.lc01-status { min-height: 18px; margin: 8px 0 6px !important; }
+.lc01-status.err { color: #F2555A; }
+.lc01-prog { height: 2px; background: var(--surface-3); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.lc01-prog i { display: block; height: 2px; width: 0; background: #fff; transition: width .2s; }
+.lc01-year { font: 700 34px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -.02em; margin-bottom: 8px; }
+.lc01-tab { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }
+.lc01-tab td { padding: 4px 0; border-bottom: 1px solid var(--hairline); } .lc01-tab td.n { text-align: right; }
+.lc01-tab tr:last-child td { border-bottom: 0; }
+.lc01-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
+.lc01-key { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); padding: 8px 0 2px; }
+.lc01-sl .param-value { color: #fff; } .lc01-sl .param-value.def { color: var(--text-3); }
+.lc01-acts { margin-top: 10px; } .lc01-acts .btn { width: 100%; }
 `;

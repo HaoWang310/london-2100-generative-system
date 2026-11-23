@@ -1,4 +1,4 @@
-// 07 · Loop City step 1 — the whole loop, the slime mould and the city grown together,
+// 01 · Loop City step 1 — the whole loop, the slime mould and the city grown together,
 // 2025-2100, drawn on the real OSM map at its true position.
 //
 // The model itself is the incubator app incubator/loop-city-mould-growth (engine.js
@@ -6,7 +6,7 @@
 // workspace. See README.md.
 //
 // For the app: createLoopCityTool(viewer, {onState}) builds the engine, the map
-// overlay and the inspector panel, with the same shape as 01's tool. run() returns
+// overlay and the inspector panel, with the same shape as the growth simulator's tool (modules/01-growth-simulator). run() returns
 // a ScaleBundle describing the loop's frame, for export and for later modules.
 
 import { createBundle } from '../../shared/schemas/index.js';
@@ -16,7 +16,7 @@ import { createPanel, PANEL_CSS } from './panel.js';
 import { FRAME, frameRing } from './georef.js';
 
 const mod = {
-  id: '07-loop-city',
+  id: '01-loop-city',
   level: 'london',
   version: '0.1.0',
   title: { zh: 'Loop City · 黏菌与生长', en: 'Loop City · mould and growth' },
@@ -44,7 +44,7 @@ const mod = {
       id: 'loop-city:step1',
       level: 'london',
       boundary: frameRing(frame),
-      nodes: stations.map(f => ({ id: `lc07:${f.properties.id}`, xy: [f.geometry.coordinates[0], f.geometry.coordinates[1]],
+      nodes: stations.map(f => ({ id: `lc01:${f.properties.id}`, xy: [f.geometry.coordinates[0], f.geometry.coordinates[1]],
         kind: f.properties.kind === 'primary' ? 'primary-station' : f.properties.kind === 'airport' ? 'absorbed-town' : 'secondary-station' })),
       context: { source: SOURCE_PATH, frame: { ...frame } },
       algorithm: { module: mod.id, id: 'mould-and-growth', version: mod.version },

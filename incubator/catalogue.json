@@ -551,8 +551,8 @@
       "parked": {
         "since": "2026-11-22",
         "by": "HaoWang310",
-        "zh": "暂不在目录显示，文件夹保留：主程序的「城市生长」模块（modules/01-growth-simulator）读这里的引擎、设置和数据，不能删除。城市生长与调规则的滑块在 Loop City · 1 整环里也有；本 app 独有的是固定可复现的发布结果（种子 42）、变体与最终结果的对比、生成流程的分步讲解。直接链接仍可打开。",
-        "en": "Not shown in the catalogue for now; the folder stays: the main program's growth module (modules/01-growth-simulator) reads the engine, settings and data here, so it must not be deleted. City growth and its rule sliders are also in Loop City · 1 whole loop; what only this app has is the fixed, repeatable release run (seed 42), the comparison of a variation with the final, and the step-by-step account of how the city is made. It still opens by its direct link."
+        "zh": "暂不在目录显示，文件夹保留：「城市生长」模块（modules/01-growth-simulator）读这里的引擎、设置和数据，不能删除。该模块 2026-11-23 起不再出现在主程序导航中（由 Loop City 第 1 步取代），代码和测试仍在仓库里。城市生长与调规则的滑块在 Loop City · 1 整环里也有；本 app 独有的是固定可复现的发布结果（种子 42）、变体与最终结果的对比、生成流程的分步讲解。直接链接仍可打开。",
+        "en": "Not shown in the catalogue for now; the folder stays: the growth module (modules/01-growth-simulator) reads the engine, settings and data here, so it must not be deleted. Since 2026-11-23 that module is no longer in the main program's nav (Loop City step 1 took its place); its code and tests are still in the repository. City growth and its rule sliders are also in Loop City · 1 whole loop; what only this app has is the fixed, repeatable release run (seed 42), the comparison of a variation with the final, and the step-by-step account of how the city is made. It still opens by its direct link."
       }
     }
   ]

@@ -1,6 +1,6 @@
 // London 2100 unified app shell.
 // London → Region → Wool → Tensor, with 05 integration / 06 export tools,
-// and 01 Growth simulator beside the chain (open at any level, a background elsewhere).
+// and the simulations of app/registry.js beside the chain (01 Loop City: open at any level, a background elsewhere).
 //
 // Rules this shell guarantees:
 //  - Zooming/panning the map never touches the workspace (no clearing, no regeneration).
@@ -29,7 +29,7 @@ const storage = (() => { try { localStorage.setItem('l2100.t', '1'); return loca
 const store = createWorkspaceStore({ storage, key: BUILD.releasePath ? `l2100.workspace@${BUILD.releasePath}` : 'l2100.workspace' });
 
 let viewer = null;
-let activeTool = null;          // null | 'integration' | 'export' | a simulation's key ('growth', 'loop')
+let activeTool = null;          // null | 'integration' | 'export' | a simulation's key ('loop')
 const simTools = {};            // key -> a simulation's tool, created the first time it is opened
 let progress = 1;               // timeline position for the current result
 let playing = null;             // requestAnimationFrame id
@@ -180,7 +180,7 @@ async function runTool(entry) {
   render();
 }
 
-// ------------------------------------------------------------------ 01 growth simulator
+// ------------------------------------------------------------------ the simulations (01 Loop City)
 
 const isSim = key => SIMULATIONS.some(x => x.key === key);
 const simOf = key => SIMULATIONS.find(x => x.key === key);
@@ -199,7 +199,7 @@ function openSim(key) {
       if (what === 'loaded') { if (on) { viewer.fit(tool.ring()); setProgress(tool.state.year / years); } render(); }
       if (what === 'ran' && on && tool.state.variation && !tool.stepping) play(0);   // as the incubator: a new variation plays from 2025 (the steps play their own)
       if (what === 'mode' || what === 'error' || what === 'running' || what === 'ran') renderChrome();
-      // the tool moves the year itself (01's 生成流程, a century running in 07): keep the timeline with it
+      // the tool moves the year itself (01's 生成流程, a century running in Loop City): keep the timeline with it
       if (what === 'year' && on && Math.round(progress * years) !== tool.state.year) setProgress(tool.state.year / years);
     } });
   }
@@ -519,7 +519,7 @@ function renderLegend(scene) {
 // ------------------------------------------------------------------ workspace files
 
 // ---------------------------------------------------------------- phones: the scales above the parameters
-// Below 760 px the module list is hidden. Its entries (00 London, 01 growth, the tools) come here as a row of chips
+// Below 760 px the module list is hidden. Its entries (00 London, the simulations, the tools) come here as a row of chips
 // that scrolls sideways and stays at the top of the parameters; ⋯ holds save, open and the build.
 function renderPhoneScales() {
   const row = $('phoneScales');

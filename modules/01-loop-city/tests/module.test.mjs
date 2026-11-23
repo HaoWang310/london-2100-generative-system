@@ -1,4 +1,4 @@
-// 07 · Loop City step 1. These tests read the incubator page's own file, so they also
+// 01 · Loop City step 1. These tests read the incubator page's own file, so they also
 // guard the link: if the page changes in a way the workspace cannot follow (its frame,
 // its stations, the engine contract), they fail in CI.
 import test from 'node:test';
@@ -41,8 +41,8 @@ test('the incubator page still offers what the workspace reads', () => {
   const block = PAGE.slice(PAGE.indexOf('window.LoopCityEngine ='));
   for (const k of CONTRACT) assert.match(block, new RegExp(`(get\\s+${k}\\s*\\(|\\b${k}\\s*\\(|\\b${k}\\s*:)`), `LoopCityEngine.${k}`);
   assert.equal(CFG.map.nodes.length, 17);
-  assert.ok(sourceBase('https://x.test/releases/v1/modules/07-loop-city/engine.js').endsWith(`/${SOURCE_PATH}`));
-  assert.ok(!sourceBase('https://x.test/releases/v1/modules/07-loop-city/engine.js').includes('/releases/'));
+  assert.ok(sourceBase('https://x.test/releases/v1/modules/01-loop-city/engine.js').endsWith(`/${SOURCE_PATH}`));
+  assert.ok(!sourceBase('https://x.test/releases/v1/modules/01-loop-city/engine.js').includes('/releases/'));
   assert.equal(YEARS, 75);
 });
 

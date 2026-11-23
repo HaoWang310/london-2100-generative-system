@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>07 Loop City overlay: position check of the WebGL picture layer</title>
+<title>01 Loop City overlay: position check of the WebGL picture layer</title>
 <!-- Draws the real picture layer with a stand-in for MapLibre's camera (the same world-pixel matrix MapLibre 6 hands to
      custom layers) and reads the picture back. The picture is a test card on the mould's own grid (1620 x 1328 cells of
      92.6 m), every cell its own colour. Round each sampled cell, the points 2 m inside its four edges must show the
@@ -25,7 +25,7 @@ const W = 1024, H = 768, cv = document.createElement('canvas'); cv.width = W; cv
 const gl = cv.getContext('webgl2', { premultipliedAlpha: true, preserveDrawingBuffer: true }) || cv.getContext('webgl', { preserveDrawingBuffer: true });
 let zoom = 15;
 const map = { getZoom: () => zoom, triggerRepaint() {} };
-const pic = createImageLayer('lc07-check');
+const pic = createImageLayer('lc01-check');
 pic.layer.onAdd(map, gl);
 // ?shift=5 moves the picture 5 m east: a control, which must fail
 const SHIFT = +new URLSearchParams(location.search).get('shift') || 0;
