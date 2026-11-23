@@ -8858,6 +8858,7 @@ function classifyMap(img, onProgress){
     }
   }
   onProgress && onProgress(0.9);
+  cv.width = cv.height = 0;                    // 23 Nov 2026: the sheet-sized canvas was only read; a phone does not give it back by itself
   return {cls, SW, SH, W0, H0};
 }
 
@@ -9497,6 +9498,7 @@ const BASEC = {
   },
   keep(){
     if(this.off || vx.canvas !== view) return;
+    if(typeof LITE !== "undefined" && LITE.pending){ LITE.pending = false; this.seen = ""; return; }   // layers still arriving: not a frame to keep
     const k = this.now;
     if(k && k === this.seen){
       if(!this.cv){ this.cv = document.createElement("canvas"); this.cx = this.cv.getContext("2d"); }
@@ -9608,7 +9610,7 @@ function frame(){
      of the preparation. Nothing is lost: anything else that changes shows within half a second. */
   if(S.prepBusy){
     const v = S.view, now0 = performance.now(), sig = v.k + "," + v.x + "," + v.y + "," + view.width + "," + view.height;
-    if(sig === S._prepSig && now0 - (S._prepAt || 0) < 500){ requestAnimationFrame(frame); return; }
+    if(sig === S._prepSig && now0 - (S._prepAt || 0) < 500 && !(typeof LITE !== "undefined" && LITE.more)){ requestAnimationFrame(frame); return; }
     S._prepSig = sig; S._prepAt = now0;
   }
   // The whole loop is wrapped so one bad frame can never kill the animation
@@ -10793,7 +10795,9 @@ function loadMaskImage(src){
       const d = cx.getImageData(0, 0, im.width, im.height).data;
       const a = new Uint8Array(im.width*im.height);
       for(let i=0,p=0;i<a.length;i++,p+=4) a[i] = d[p];
-      ok({w:im.width, h:im.height, a:a});
+      const mw = im.width, mh = im.height;
+      cv.width = cv.height = 0;               // 23 Nov 2026: read, and given back
+      ok({w:mw, h:mh, a:a});
     };
     im.onerror = () => no(new Error("could not read a growth mask"));
     im.src = src;
@@ -14351,6 +14355,7 @@ function buildExistingRoads(){
   const c = cv.getContext("2d", {willReadFrequently:true});
   layers.forEach(L => c.drawImage(L.img, 0, 0, S.mapW, S.mapH));
   const d = c.getImageData(0, 0, S.mapW, S.mapH).data;
+  cv.width = cv.height = 0;                    // 23 Nov 2026: read, and given back
 
   const m = new Uint8Array(n);
   const sx = S.mapW/SW, sy = S.mapH/SH;
@@ -14439,6 +14444,24 @@ function buildExistingRoads(){
    The road hierarchy is the point of it: motorway and trunk, A and B, and local are three
    different layers and you can have any of them. Local is off to begin with, because 279,255
    lanes over a quadrant is a grey wash that hides everything you are trying to design. */
+/* 23 Nov 2026: the page on a phone or a tablet. Ready to run, the page held about 1.6 GB: eight layers each kept as a
+   tinted canvas the size of the whole sheet (4286 x 3514, 60 MB apiece), fifteen pictures of that size to decode, and
+   the model's own arrays. An iPhone gives one page far less and closed it ("a problem repeatedly occurred").
+   On a touch device (LITE.on) the pictures that are only LOOKED at are taken at half size: the dark and the light
+   base, and each layer's tinted copy, from the files in img/half/ (the same pictures halved; if one is missing the
+   full one is drawn down instead). The tinted copies are made one a frame, so the device never decodes eight
+   sheets at once, and a layer's copy in the other theme's colour is let go when the theme changes. What the MODEL
+   reads is untouched and full size: the light sheet it classifies, the two road layers the mould reads, and the
+   layers cut out for the cell package. On a desk nothing changes. #lite and #nolite in the address force it. */
+const LITE = (function(){
+  let on = false;
+  try {
+    const h = location.hash || "";
+    on = /[#&]lite\b/.test(h) ? true : /[#&]nolite\b/.test(h) ? false
+       : ((navigator.maxTouchPoints || 0) > 0 && !!window.matchMedia && matchMedia("(pointer: coarse)").matches);
+  } catch(e){ on = false; }
+  return { on: on, dir: "img/half/", built: false, pending: false, more: false };
+})();
 const BASE_LAYERS = [];                 // filled from layers.json at boot
 
 function loadBaseLayers(){
@@ -14491,10 +14514,26 @@ const TINT_CACHE = {};
 function tintedLayer(L, hex){
   const key = L.id + "|" + hex;
   if(TINT_CACHE[key]) return TINT_CACHE[key];
+  let src = L.img, w = L.img.naturalWidth || S.mapW, h = L.img.naturalHeight || S.mapH;
+  if(LITE.on){
+    if(LITE.built){ LITE.pending = LITE.more = true; return null; }           // one a frame
+    if(L.lite === undefined){                                                 // its half-size picture, asked for once
+      const im = new Image(); L.lite = im; L.liteOk = false;
+      im.onload = () => { L.liteOk = true; S.dirty = true; };
+      im.onerror = () => { L.lite = null; S.dirty = true; };
+      im.src = LITE.dir + L.id + ".webp";
+    }
+    if(L.lite && !L.liteOk){ LITE.pending = LITE.more = true; return null; }  // on its way
+    if(L.lite){ src = L.lite; w = src.naturalWidth; h = src.naturalHeight; }
+    else { w = Math.round(w/2); h = Math.round(h/2); }                        // no half-size file: the full one, drawn down
+    LITE.built = true;
+    Object.keys(TINT_CACHE).forEach(k => {                                    // this layer in another colour: let it go
+      if(k.indexOf(L.id + "|") === 0){ const o = TINT_CACHE[k]; o.width = o.height = 0; delete TINT_CACHE[k]; } });
+  }
   const c = document.createElement("canvas");
-  c.width = L.img.naturalWidth || S.mapW; c.height = L.img.naturalHeight || S.mapH;
+  c.width = w; c.height = h;
   const g = c.getContext("2d");
-  g.drawImage(L.img, 0, 0);
+  if(LITE.on) g.drawImage(src, 0, 0, w, h); else g.drawImage(L.img, 0, 0);
   g.globalCompositeOperation = "source-in";
   g.fillStyle = hex; g.fillRect(0, 0, c.width, c.height);
   TINT_CACHE[key] = c;
@@ -14521,6 +14560,7 @@ const ROADVIEW = {
 
 function drawBaseLayers(){
   if(!BASE_LAYERS.length) return;
+  LITE.built = false; LITE.more = false;
   const roadView = typeof iRoadView !== "undefined" && iRoadView && iRoadView.checked;
   for(let i=0;i<BASE_LAYERS.length;i++){
     const L = BASE_LAYERS[i];
@@ -14531,6 +14571,7 @@ function drawBaseLayers(){
     vx.globalAlpha = (rv ? rv.op : L.op)/100*((window.RV2 && RV2.fade) ? RV2.fade() : 1);
     vx.imageSmoothingEnabled = true;
     const img = tintedLayer(L, (rv && rv.tint) || (window.RV2 && RV2.tint(L.id)) || DARK_TINT[L.id] || "#444444");   // dark: every layer in the dark palette
+    if(!img){ vx.restore(); continue; }        // a touch device: this layer's copy comes in a later frame
     vx.drawImage(img, 0, 0, S.mapW, S.mapH);
     if(rv && rv.bold){
       const d = rv.bold;
@@ -15608,7 +15649,9 @@ function loopInterior(f){
   return pointInFlatRing(cx, cy, f.ring);
 }
 /* dark (15 Nov): the map is drawn on the City Growth dark base, the model still reads the light sheet */
-const DARK_BASE = new Image(); DARK_BASE.src = "img/base_dark.webp";
+const DARK_BASE = new Image();
+DARK_BASE.onerror = () => { if(LITE.on && !DARK_BASE._full){ DARK_BASE._full = true; DARK_BASE.src = "img/base_dark.webp"; } };   // no half-size file: the full one
+DARK_BASE.src = LITE.on ? LITE.dir + "base_dark.webp" : "img/base_dark.webp";
 const DARK_TINT = {"nationalparks":"#2C2C2C", "greenbelt":"#16201A", "greenbelt_edge":"#7C7C7C", "aonb":"#2C2C2C", "water":"#3A4046", "woodland":"#1E2620", "greenspace":"#1A2119", "urban":"#2B2B2B", "roads_local":"#2E2E2E", "roads_regional":"#3E3E3E", "roads_national":"#444444", "rail":"#BDBDBD"};
 function darkBase(){ return (S.img === startImg && DARK_BASE.complete && DARK_BASE.naturalWidth) ? DARK_BASE : S.img; }
 /* 23 Nov 2026: while the dark base is still on its way the map stays black; the light sheet the model reads is no longer drawn in its place.
@@ -18129,8 +18172,16 @@ try { RV2.init(); } catch (e) { console.error("roads v2:", e); window.RV2_ERROR 
     R.MAP["#d1cec9"] = "#2A2724";
     R.LIGHT_IMG = new Image();
     R.LIGHT_IMG.onload = () => { S.dirty = true; };
-    /* 22 Nov 2026: fetched after the page is up (it is only drawn in the light map) */ (function(){ var go=function(){ R.LIGHT_IMG.src = "img/base_light_frame.webp"; }; var w=function(){ var l=document.getElementById("loading"); if(!l||l.style.display==="none") go(); else setTimeout(w,400); }; setTimeout(w,1500); })();
-    R.lightBase = function () { const im = this.LIGHT_IMG; return (im.complete && im.naturalWidth) ? im : S.img; };
+    /* 22 Nov 2026: fetched after the page is up (it is only drawn in the light map) */ (function(){ var go=function(){ if(typeof LITE !== "undefined" && LITE.on) return; /* a touch device asks for it when the light map is first shown */ R.LIGHT_IMG.src = "img/base_light_frame.webp"; }; var w=function(){ var l=document.getElementById("loading"); if(!l||l.style.display==="none") go(); else setTimeout(w,400); }; setTimeout(w,1500); })();
+    R.lightBase = function () {
+      const im = this.LIGHT_IMG;
+      if (typeof LITE !== "undefined" && LITE.on && !im._asked) {              // a touch device: the half-size one, when first wanted
+        im._asked = true;
+        im.onerror = () => { if (!im._full) { im._full = true; im.src = "img/base_light_frame.webp"; } };
+        im.src = LITE.dir + "base_light_frame.webp";
+      }
+      return (im.complete && im.naturalWidth) ? im : S.img;
+    };
     R.baseOn = function () { return typeof iBakedBase === "undefined" || !iBakedBase || iBakedBase.checked; };
     R.skipLayer = function (id) { return this.light && this.INBASE[id] === 1 && this.baseOn(); };
     R.nodeFill = function (n) { return n.t === "P" ? "#ffffff" : ((n.id || "").charAt(0) === "A" ? "#A8242C" : "#E9A23B"); };
