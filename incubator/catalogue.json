@@ -169,9 +169,9 @@
       "owner": "HaoWang310",
       "embed": {
         "langStorageKey": "woolAppsLang",
-        "langButton": "#{lang}",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
         "hide": [
-          ".lang"
+          "#langbar"
         ]
       }
     },
@@ -205,9 +205,9 @@
       "owner": "HaoWang310",
       "embed": {
         "langStorageKey": "woolAppsLang",
-        "langButton": "#{lang}",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
         "hide": [
-          ".lang"
+          "#langbar"
         ]
       }
     },
@@ -241,9 +241,9 @@
       "owner": "HaoWang310",
       "embed": {
         "langStorageKey": "woolAppsLang",
-        "langButton": "#{lang}",
+        "langButton": "#langbar button[data-lang=\"{lang}\"]",
         "hide": [
-          ".lang"
+          "#langbar"
         ]
       }
     },
