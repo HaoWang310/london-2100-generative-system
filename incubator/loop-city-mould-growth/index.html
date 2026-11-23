@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("lcskin");</script><link rel="stylesheet" href="skin.css?v=4"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/base_dark.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
+<head><script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("lcskin");</script><link rel="stylesheet" href="skin.css?v=5"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/base_dark.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9338,7 +9338,7 @@ function draw(){
 
   vx.save();
   vx.globalAlpha = parseFloat(iMapOp.value)/100*((window.RV2 && RV2.fade) ? RV2.fade() : 1);
-  if(S.img && (!iBakedBase || iBakedBase.checked)) vx.drawImage((window.RV2 && RV2.light) ? (RV2.lightBase ? RV2.lightBase() : S.img) : darkBase(), 0,0, S.mapW, S.mapH);   // dark: the dark base
+  if(S.img && (!iBakedBase || iBakedBase.checked) && ((window.RV2 && RV2.light) || !darkPending())) vx.drawImage((window.RV2 && RV2.light) ? (RV2.lightBase ? RV2.lightBase() : S.img) : darkBase(), 0,0, S.mapW, S.mapH);   // dark: the dark base, and black until it has arrived
   vx.restore();
   drawBaseLayers();
 
@@ -15365,6 +15365,9 @@ function loopInterior(f){
 const DARK_BASE = new Image(); DARK_BASE.src = "img/base_dark.webp";
 const DARK_TINT = {"nationalparks":"#2C2C2C", "greenbelt":"#16201A", "greenbelt_edge":"#7C7C7C", "aonb":"#2C2C2C", "water":"#3A4046", "woodland":"#1E2620", "greenspace":"#1A2119", "urban":"#2B2B2B", "roads_local":"#2E2E2E", "roads_regional":"#3E3E3E", "roads_national":"#444444", "rail":"#BDBDBD"};
 function darkBase(){ return (S.img === startImg && DARK_BASE.complete && DARK_BASE.naturalWidth) ? DARK_BASE : S.img; }
+/* 23 Nov 2026: while the dark base is still on its way the map stays black; the light sheet the model reads is no longer drawn in its place.
+   If the dark base fails to load, complete is true and the light sheet is drawn as before. draw() runs every frame, so it appears when it lands. */
+function darkPending(){ return S.img === startImg && !DARK_BASE.complete; }
 
 /* ==================================================================== v5 (16 Nov): the clean version
    Nothing below changes the model. The cells are filled by use, the four drawn layers get an opacity, and the two
