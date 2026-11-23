@@ -9584,10 +9584,21 @@ view.addEventListener("pointerup", e => {
   // Seeding by hand is for setting a run up, not for interfering with one. Mid-century the
   // agents are the only thing carrying the road's history, so a click that adds or removes a
   // release point halfway through 2063 is a silent change to the result.
+  /* 23 Nov 2026: under the new interface (skin.js sets window.LCEGG) a click on empty ground does nothing, so no
+     stray release point is left on the map; it places one only inside the free mould, which Space starts. The
+     page as it was (#noskin) seeds on a click as before. */
+  if(window.LCEGG){ LCEGG.click(mx, my, e.shiftKey); return; }
   if(S.year != null && S.year > YEAR0){ note("Seeds are fixed once the years are running. Reset to change them."); return; }
   if(e.shiftKey) removeNearestSeed(mx,my); else addSeed(mx,my);
 });
 window.addEventListener("keydown", e => {
+  /* 23 Nov 2026: under the new interface Space and Escape belong to the free mould (skin.js, window.LCEGG): Space
+     no longer starts a loose mould in the middle of a century, where it added steps to the run without a word.
+     They are heard from a slider too, which is where the focus is left after one has been moved. */
+  if(window.LCEGG){
+    if(e.key === "Escape" && LCEGG.on){ LCEGG.exit(); return; }
+    if(e.code === "Space" && !e.repeat && e.target.tagName === "INPUT" && e.target.type === "range"){ if(LCEGG.space(e)) e.preventDefault(); return; }
+  }
   const tg = e.target.tagName; if(tg==="INPUT" || tg==="SELECT" || tg==="TEXTAREA") return;
   // "r" used to call resetSim() here. In an app where a run is seventy-five years of coupled
   // history, one stray keypress threw the century away with no warning and the button simply
@@ -9603,9 +9614,12 @@ window.addEventListener("keydown", e => {
     if(e.key==="m"||e.key==="M"){ e.preventDefault(); startMergeInto(); return; }
     if(e.key==="k"||e.key==="K"){ e.preventDefault(); toggleKeepSelected(); return; }
   }
-  if(e.code==="Space"){ e.preventDefault(); toggleRun(); }
+  if(e.code==="Space"){
+    if(window.LCEGG){ if(!e.repeat && LCEGG.space(e)) e.preventDefault(); }
+    else { e.preventDefault(); toggleRun(); }
+  }
   if(e.key==="f"||e.key==="F") fitView();
-  if(e.key==="e"||e.key==="E") extractCells();
+  if((e.key==="e"||e.key==="E") && !window.LCEGG) extractCells();   // the older method's extraction: not under the new interface
 });
 window.addEventListener("resize", resize);
 
@@ -18626,6 +18640,6 @@ window.zhOf = zhOf; window.setLang = setLang;
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
 <script src="colours.js?v=1"></script>
-<script src="skin.js?v=5"></script>
+<script src="skin.js?v=6"></script>
 </body>
 </html>

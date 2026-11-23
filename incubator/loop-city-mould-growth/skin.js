@@ -124,12 +124,16 @@
   var was = { running: false, ran: false, cells: 0, sel: false };
   function tick() {
     var cells = 0; try { cells = (typeof HW !== 'undefined' && HW.cells || []).length; } catch (e) { cells = 0; }
-    var running = $('btnRun').classList.contains('running'), sel = !$('btnLiveOpen').disabled;
+    /* 23 Nov 2026: a century in progress is the Run button held after the model is ready. The class this read
+       before is only set by the loose mould, so through a century the note went on saying "press Run". */
+    var running = $('btnRun').classList.contains('running') || !!(window.__LC_READY__ === true && $('btnRun').disabled && !(typeof S !== 'undefined' && S.prepBusy));
+    var sel = !$('btnLiveOpen').disabled;
     big.textContent = (txt('cRoad1') || '0') + ' km';
     vBuilt.textContent = (txt('cBuilt') || '0') + ' km²'; vFarm.textContent = (txt('cFarm') || '0') + ' km²';
     vCells.textContent = cells ? String(cells) : '–';
     var yr = txt('vYear') || '2025', zh = isZh();
-    pill.textContent = running ? (zh ? '正在生长 · ' : 'Growing · ') + yr
+    var egg = window.LCEGG && window.LCEGG.text ? window.LCEGG.text(zh) : '';
+    pill.textContent = egg ? egg : running ? (zh ? '正在生长 · ' : 'Growing · ') + yr
       : cells ? yr + (zh ? ' · ' + cells + ' 个单元' : ' · ' + cells + ' cells')
       : (zh ? yr + ' · 点「运行百年」开始' : yr + ' · press Run the century');
     if (was.running && !running) was.ran = true;
@@ -320,6 +324,130 @@
       if (note.textContent !== t) note.textContent = t;
     }
     baseState(); setInterval(baseState, 400);
+  })();
+
+  /* ------------------------------------------------------------------ the free mould, kept as a find (23 Nov 2026)
+     The page still had the loose mould of the app it grew from: a click left a release point, and Space set the
+     mould going from it with no years and no city. Under this interface that was a trap, not a feature. A click
+     left a dot that Run then threw away; Space rewrote the Run button, and pressed in the middle of a century it
+     added steps to the run without a word. It is kept, as something to find, and kept apart from the century:
+       Space      before a run (or after Reset): the mould grows from the stations, free. Space again: pause, go on.
+       a click    while it is on: one more release point (shift-click takes the nearest away and starts over).
+       Escape     clears it and leaves. Run and Reset clear it too.
+     During a century, and with a century's result on the screen, Space does nothing. While it is on the cells
+     cannot be read from it (it is not a century). It stops by itself after three minutes. The growth model is
+     not touched, so the first pass kept for the first Run still holds. index.html asks window.LCEGG what a
+     click and Space mean; without this file (#noskin) the page is as it was. */
+  (function () {
+    var CAP = 40, LIMIT = 180000;                                // release points in all; ms of running before it pauses
+    var E = window.LCEGG = { on: false };
+    var result = false;                                          // a century has been started and not reset
+    var hint = '', hintTill = 0, ranMs = 0, last = 0, auto = false, sw = null;
+    function say(zh, en, ms) { hint = [zh, en]; hintTill = performance.now() + (ms || 2600); }
+    function ready() { return window.__LC_READY__ === true && !S.prepBusy && S.trail && !$('btnRun').disabled; }
+    function smoke(on) {                                         // the mould has to be on show while it plays
+      var RV = window.RV2;
+      if (on) {
+        sw = { m: $('iMouldOn') ? $('iMouldOn').checked : true, n: $('iShowNet') ? $('iShowNet').checked : true };
+        if (RV) { RV.setCb('iMouldOn', true); RV.setCb('iShowNet', true); }
+      } else if (sw) {
+        if (RV) { RV.setCb('iMouldOn', sw.m); RV.setCb('iShowNet', sw.n); }
+        sw = null;
+      }
+    }
+    function wipe() {
+      S.running = false; S.n = 0; S.seeds = []; S.step = 0;
+      if (S.trail) S.trail.fill(0);
+      if (S.next) S.next.fill(0);
+      S.dirty = true;
+      try { if (typeof updateChips === 'function') updateChips(); } catch (e) { /* the figures follow on the next step */ }
+    }
+    E.enter = function () {
+      if (E.on) return true;
+      if (!ready()) return false;
+      if (result) { say('自由黏菌：先点「重置」', 'Free mould: press Reset first'); return false; }
+      wipe(); smoke(true);
+      if (typeof seedNodes === 'function') seedNodes();
+      E.on = true; S.running = true; ranMs = 0; last = performance.now(); auto = false;
+      return true;
+    };
+    E.exit = function (keep) {                                   // keep: Run or Reset is about to clear the sheet itself
+      if (!E.on) return;
+      E.on = false; S.running = false;
+      if (!keep) wipe();
+      smoke(false); hintTill = 0;
+    };
+    /* which control holds the focus because it was clicked or touched (the browser's own :focus-visible turns true
+       for a clicked button as soon as any key goes down, so it cannot tell the two apart here) */
+    var ptrAt = -1e9, byPointer = null;
+    document.addEventListener('pointerdown', function () { ptrAt = performance.now(); }, true);
+    document.addEventListener('focusin', function (ev) { byPointer = (performance.now() - ptrAt < 700) ? ev.target : null; }, true);
+    /* Space. True when the key was taken (the page then stops the browser's own use of it). A button reached with
+       the keyboard keeps Space for itself; one that only holds the focus because it was clicked gives it up. */
+    E.space = function (ev) {
+      var a = document.activeElement;
+      if (a && a !== document.body && a.tagName !== 'INPUT') {
+        if (a !== byPointer) return false;
+        if (a.blur) a.blur();
+      }
+      if (!E.on) { E.enter(); return true; }
+      S.running = !S.running; auto = false; last = performance.now();
+      return true;
+    };
+    E.click = function (mx, my, shift) {
+      if (!E.on) return;
+      if (shift) { if (typeof removeNearestSeed === 'function') removeNearestSeed(mx, my); return; }
+      if (S.seeds.length >= CAP) { say('种子点已满（' + CAP + ' 个）', 'No more release points (' + CAP + ')'); return; }
+      if (typeof addSeed === 'function') addSeed(mx, my);
+    };
+    E.text = function (zh) {
+      var now = performance.now();
+      if (E.on && S.running) { ranMs += now - last; if (ranMs > LIMIT) { S.running = false; auto = true; ranMs = 0; } }
+      last = now;
+      if (now < hintTill) return zh ? hint[0] : hint[1];
+      if (!E.on) return '';
+      if (S.running) return zh ? '自由黏菌 · 空格暂停 · Esc 退出' : 'Free mould · Space pause · Esc exit';
+      return auto ? (zh ? '已自动暂停 · 空格继续 · Esc 退出' : 'Paused itself · Space · Esc exit')
+                  : (zh ? '已暂停 · 空格继续 · Esc 退出' : 'Paused · Space resume · Esc exit');
+    };
+
+    /* the century and Reset clear the sheet themselves; the free mould only has to step aside first */
+    var run0 = window.runCentury, reset0 = window.resetSim;
+    if (typeof run0 === 'function') window.runCentury = function () { E.exit(true); result = true; return run0.apply(this, arguments); };
+    if (typeof reset0 === 'function') {
+      /* Reset, after a century, used to clear the mould and the cells and leave the rest: the year still read 2100,
+         the city of 2100 stayed on the map, the figures kept the last run's, and step 1 stayed ticked. With no
+         century in progress it now also clears what the run made (the page's own clearRunState, as Run does
+         before it starts) and shows 2025, so the page is where it was when it opened. */
+      window.resetSim = function () {
+        E.exit(true);
+        var r = reset0.apply(this, arguments);
+        if (ready()) {
+          result = false;
+          try {
+            if (S.year != null) {
+              if (typeof clearRunState === 'function') clearRunState();
+              if (typeof REPLAY !== 'undefined' && REPLAY) { REPLAY.snaps = {}; REPLAY.last = null; }   // the last run's mould, year by year
+              S.year = null;
+              if (typeof showYear === 'function' && typeof YEAR0 !== 'undefined') showYear(YEAR0);
+              if (typeof updateChips === 'function') updateChips();
+              if ($('yearNote')) $('yearNote').textContent = '';
+            }
+            was.ran = false;
+          } catch (e) { /* the page's own reset has been done */ }
+        }
+        return r;
+      };
+      if ($('btnReset')) $('btnReset').onclick = function () { window.resetSim(); };   // the page had bound the function itself
+    }
+    /* the cells are read from a century's trail, never from this */
+    if (typeof HW !== 'undefined' && HW && typeof HW.extract === 'function') {
+      var ex0 = HW.extract;
+      HW.extract = function () {
+        if (E.on) { say('自由黏菌里不能提取单元', 'No cells from the free mould'); return; }
+        return ex0.apply(this, arguments);
+      };
+    }
   })();
 
   /* ------------------------------------------------------------------ language */
