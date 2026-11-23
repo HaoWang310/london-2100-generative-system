@@ -18,7 +18,8 @@
     if (en !== undefined) { T.push([e, en, zh]); e.textContent = isZh() ? zh : en; }
     return e;
   }
-  function relabel() { T.forEach(function (t) { t[0].textContent = isZh() ? t[2] : t[1]; }); }
+  var rzTips = null;
+  function relabel() { T.forEach(function (t) { t[0].textContent = isZh() ? t[2] : t[1]; }); if (rzTips) rzTips(); }
   function add(p) { for (var i = 1; i < arguments.length; i++) if (arguments[i]) p.appendChild(arguments[i]); return p; }
   function row() { var r = el('div', 'row'); for (var i = 0; i < arguments.length; i++) if (arguments[i]) r.appendChild(arguments[i]); return r; }
   function colBtn(panel) {
@@ -145,6 +146,102 @@
   openOnly(0);
   if (window.innerWidth <= 600) { PR.classList.add('lc-col'); var cb = hr.querySelector('.lc-icon'); if (cb) cb.textContent = '+'; }
   setInterval(tick, 400); tick();
+
+  /* ------------------------------------------------------------------ the panels' width, by dragging (23 Nov 2026)
+     A handle on the inner edge of each panel: drag it (mouse, pen or finger) to make the panel wider or narrower,
+     double-click it to go back to the width the page opens with; the arrow keys move it too. The two widths are
+     kept for the next visit. Not on narrow screens, where the panels sit above and below the map.
+     The map: if it was fitted to its frame it stays fitted as the frame changes; if you had zoomed or moved it,
+     it stays where it is on the screen and the panel slides over it. View only: nothing in a run changes. */
+  (function () {
+    var root = document.documentElement, KEY = 'loopCityPanelW';
+    var DEF = { l: 372, r: 316 }, MIN = { l: 280, r: 240 }, MAX = 720, MAP = 360;   // MAP: what is always left for the map
+    var want = { l: DEF.l, r: DEF.r }, W = { l: DEF.l, r: DEF.r };                  // what was asked for; what fits now
+    try { var sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv) { if (sv.l > 0) want.l = +sv.l; if (sv.r > 0) want.r = +sv.r; } } catch (e) { /* no storage: the widths last for this visit */ }
+    function room() { return window.innerWidth - 40 - MAP; }                        // both panels together
+    function fit() {                                                                // a small window: both give way, in proportion
+      var l = Math.max(MIN.l, Math.min(MAX, want.l)), r = Math.max(MIN.r, Math.min(MAX, want.r)), over = l + r - room();
+      if (over > 0) {
+        var gl = l - MIN.l, gr = r - MIN.r, g = gl + gr, k = g > 0 ? Math.min(1, over / g) : 0;
+        l -= gl * k; r -= gr * k;
+      }
+      W.l = Math.round(l); W.r = Math.round(r);
+    }
+    function most(side) { return Math.max(MIN[side], Math.min(MAX, room() - (side === 'l' ? W.r : W.l))); }
+    function put() {
+      root.style.setProperty('--lc-wl', W.l + 'px'); root.style.setProperty('--lc-wr', W.r + 'px');
+      hs.forEach(function (h) {
+        h.e.setAttribute('aria-valuenow', W[h.side]); h.e.setAttribute('aria-valuemin', MIN[h.side]); h.e.setAttribute('aria-valuemax', most(h.side));
+      });
+    }
+    function set(side, v) {                                                         // by hand: the other panel keeps the width it shows
+      want.l = W.l; want.r = W.r;
+      want[side] = Math.round(Math.max(MIN[side], Math.min(most(side), v)));
+      follow(); fit(); put();
+    }
+    function keep() { try { localStorage.setItem(KEY, JSON.stringify(want)); } catch (e) { /* as above */ } }
+
+    /* the map under a moving frame */
+    var cv = $('view'), wrap = cv && cv.parentElement, F = null, Ft = 0;
+    function mapOk() { return wrap && typeof S !== 'undefined' && S && S.view && S.mapW > 0 && typeof fitView === 'function' && cv.width > 0; }
+    function follow() {
+      clearTimeout(Ft); Ft = setTimeout(function () { F = null; }, 400);
+      if (F) return;
+      try {
+        if (!mapOk()) return;
+        var w = cv.width, h = cv.height, k = Math.min(w / S.mapW, h / S.mapH) * 0.94, v = S.view;
+        var fitted = Math.abs(v.k - k) < 1e-4 * k && Math.abs(v.x - (w - S.mapW * k) / 2) < 1.5 && Math.abs(v.y - (h - S.mapH * k) / 2) < 1.5;
+        F = { fitted: fitted, left: wrap.getBoundingClientRect().left };
+      } catch (e) { F = null; }
+    }
+    if (wrap && window.ResizeObserver) new ResizeObserver(function () {          // made after the page's own, so it runs after resize()
+      if (!F) return;
+      try {
+        if (!mapOk()) return;
+        var left = wrap.getBoundingClientRect().left;
+        if (F.fitted) fitView();
+        else { var r = wrap.clientWidth > 0 ? cv.width / wrap.clientWidth : 1; S.view.x -= (left - F.left) * r; }
+        F.left = left;
+      } catch (e) { /* the map keeps the page's own behaviour */ }
+    }).observe(wrap);
+
+    var hs = [];
+    function handle(side, panel) {
+      var h = document.createElement('div');
+      h.className = 'lc-rz lc-rz-' + side; h.tabIndex = 0;
+      h.setAttribute('role', 'separator'); h.setAttribute('aria-orientation', 'vertical'); h.setAttribute('translate', 'no');
+      h.appendChild(document.createElement('i'));
+      if (side === 'l') panel.after(h); else panel.before(h);
+      var x0 = 0, w0 = 0, on = false;
+      h.addEventListener('pointerdown', function (ev) {
+        if (ev.button > 0) return;
+        on = true; x0 = ev.clientX; w0 = W[side];
+        try { h.setPointerCapture(ev.pointerId); } catch (e) { /* older browsers */ }
+        h.classList.add('on'); root.classList.add('lc-rzing'); ev.preventDefault();
+      });
+      h.addEventListener('pointermove', function (ev) {
+        if (!on) return;
+        var d = ev.clientX - x0;
+        set(side, w0 + (side === 'l' ? d : -d));
+      });
+      function end() { if (!on) return; on = false; h.classList.remove('on'); root.classList.remove('lc-rzing'); keep(); }
+      h.addEventListener('pointerup', end); h.addEventListener('pointercancel', end); h.addEventListener('lostpointercapture', end);
+      h.addEventListener('dblclick', function () { set(side, DEF[side]); keep(); });
+      h.addEventListener('keydown', function (ev) {
+        var k = ev.key, d = k === 'ArrowLeft' ? -16 : k === 'ArrowRight' ? 16 : 0;
+        if (!d) return;
+        set(side, W[side] + (side === 'l' ? d : -d)); keep(); ev.preventDefault();
+      });
+      hs.push({ e: h, side: side });
+    }
+    handle('l', PL); handle('r', PR);
+    rzTips = function () {
+      var t = isZh() ? '拖动调整宽度 · 双击复原' : 'Drag to resize · double-click to reset';
+      hs.forEach(function (h) { h.e.title = t; h.e.setAttribute('aria-label', t); });
+    };
+    fit(); put(); rzTips();
+    window.addEventListener('resize', function () { var l = W.l, r = W.r; fit(); if (l !== W.l || r !== W.r) put(); });
+  })();
 
   /* ------------------------------------------------------------------ language */
   var old = window.setLang;

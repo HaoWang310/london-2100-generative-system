@@ -188,3 +188,22 @@ html.lcskin #lcPairRow { margin:12px 0 4px; }
 
 /* The older parcel method (parcels from the yearly roads) and its four sliders in The network are not shown: their code and controls stay on the page, and #noskin shows them. */
 html.lcskin #c8Old, html.lcskin .lc-old { display:none; }
+
+/* ==== the panels' width, by dragging (23 Nov 2026) ====
+   skin.js puts a handle on the inner edge of each panel and keeps the two widths in --lc-wl and --lc-wr.
+   The handle takes no room of its own: it lies over the first few pixels of the map, clear of the panels' scrollbars. */
+html.lcskin .lc-rz { display:none; }
+@media (min-width:901px) {
+  html.lcskin #panelL { flex-basis:var(--lc-wl, 372px); }
+  html.lcskin #panel { flex-basis:var(--lc-wr, 316px); }
+  html.lcskin .lc-rz { display:block; flex:0 0 0; width:0; align-self:stretch; margin:20px 0; position:relative; z-index:61; cursor:col-resize; touch-action:none; outline:0; -webkit-tap-highlight-color:transparent; }
+  html.lcskin .lc-rz-r { margin-bottom:84px; }
+  html.lcskin .lc-rz::before { content:""; position:absolute; top:0; bottom:0; left:-4px; width:16px; }
+  html.lcskin .lc-rz-r::before { left:auto; right:-4px; }
+  html.lcskin .lc-rz i { position:absolute; top:50%; left:5px; width:4px; height:44px; margin-top:-22px; border-radius:2px; background:rgba(255,255,255,.3); transition:background .15s, height .15s, margin-top .15s; pointer-events:none; }
+  html.lcskin .lc-rz-r i { left:auto; right:5px; }
+  html.lcskin .lc-rz:hover i, html.lcskin .lc-rz:focus-visible i { background:rgba(255,255,255,.75); }
+  html.lcskin .lc-rz.on i { background:#fff; height:64px; margin-top:-32px; }
+  html.lcskin #panelL.lc-col + .lc-rz, html.lcskin .lc-rz:has(+ #panel.lc-col) { display:none; }
+  html.lcskin.lc-rzing, html.lcskin.lc-rzing * { cursor:col-resize !important; user-select:none; -webkit-user-select:none; }
+}
