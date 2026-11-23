@@ -16817,18 +16817,24 @@ const HW = {
   },
 
   /* ------------------------------------------------------------ the drawing (inside draw(), the view's transform on) */
+  /* 23 Nov 2026: the cells belong to the year the century ended. They were drawn whatever year was on show, so a replay
+     put the 117 cells of 2100 over the city of 2053. Now the highways, the cells and the chosen cell are drawn, and
+     can be clicked, only when the year on show is the year they were read from; through a replay, and at any earlier
+     year the bar is dragged to, the map is the mould and the city alone, as it was the first time. The railway is not
+     a result of the run and stays. The choice of cell is kept and is back with the cells. */
+  shown() { return !S.playing && (S.year == null || S.showY == null || S.showY >= S.year); },
   draw() {
     if (!this.res || !this.paths) return;
-    const k = S.view.k, z = k > 1.0 ? 1.35 : 1.0, px = v => v / k;
+    const k = S.view.k, z = k > 1.0 ? 1.35 : 1.0, px = v => v / k, here = this.shown();
     vx.save();
     vx.lineJoin = "round"; vx.lineCap = "round";
-    if (this.on.cells) {
+    if (here && this.on.cells) {
       vx.globalAlpha = this.op.cells / 100;
       this.cells.forEach(c => { vx.fillStyle = V5.cellFill(c); vx.fill(c.path, "evenodd"); });
       vx.globalAlpha = 1;
     }
     const stroke = (key, col, w, dash) => {
-      if (!this.on[key]) return;
+      if (!here || !this.on[key]) return;
       vx.globalAlpha = this.op[key] / 100; vx.strokeStyle = col; vx.lineWidth = px(w * z);
       vx.setLineDash(dash ? dash.map(d => px(d)) : []);
       vx.stroke(this.paths[key === "hw" ? "highway" : key]);
@@ -16839,7 +16845,7 @@ const HW = {
     vx.setLineDash([]);
     if (this.on.rail) this.drawRail(k);
     vx.globalAlpha = 1;
-    const c = this.cells[this.sel];
+    const c = here ? this.cells[this.sel] : null;
     if (c) {
       vx.strokeStyle = this.SAND; vx.lineWidth = px(2.4 * z); vx.stroke(c.path);
       if (this.on.frame) {
@@ -16882,7 +16888,7 @@ const HW = {
     return hit;
   },
   click(mx, my) {
-    if (!this.res || !this.on.cells) return false;
+    if (!this.res || !this.on.cells || !this.shown()) return false;
     const q = this.toBNG(mx, my), i = this.cellAt(q[0], q[1]);
     if (i < 0) { if (this.sel >= 0) { this.select(-1); return true; } return false; }
     this.select(i); this.zoomTo(i); return true;
@@ -17118,7 +17124,7 @@ const LIVE = {
   },
   /* a click picks the cell and, unless a second click follows, goes to its tile; a double-click opens the wool */
   click(mx, my) {
-    if (!HW.res || !HW.on.cells) return false;
+    if (!HW.res || !HW.on.cells || !HW.shown()) return false;
     const q = HW.toBNG(mx, my), i = HW.cellAt(q[0], q[1]);
     clearTimeout(this.zoomT);
     if (i < 0) { if (HW.sel >= 0) { HW.select(-1); return true; } return false; }
@@ -17127,7 +17133,7 @@ const LIVE = {
     return true;
   },
   dblclick(e) {
-    if (!HW.res || !HW.on.cells) return;
+    if (!HW.res || !HW.on.cells || !HW.shown()) return;
     clearTimeout(this.zoomT);
     const r = view.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
     const mx = ((e.clientX - r.left) * dpr - S.view.x) / S.view.k, my = ((e.clientY - r.top) * dpr - S.view.y) / S.view.k;
@@ -17437,7 +17443,7 @@ const MULTI = {
     if (s.length > 1) HW.note(s.length + " cells chosen. Double-click one of them: the wool opens on all " + s.length + ".");
   },
   click(mx, my) {
-    if (!HW.res || !HW.on.cells) return false;
+    if (!HW.res || !HW.on.cells || !HW.shown()) return false;
     const q = HW.toBNG(mx, my), i = HW.cellAt(q[0], q[1]);
     clearTimeout(LIVE.zoomT); clearTimeout(this.pendT);
     if (this.shift) { if (i >= 0) { this.toggle(i); return true; } return false; }
@@ -17451,7 +17457,7 @@ const MULTI = {
     return true;
   },
   dblclick(e) {
-    if (!HW.res || !HW.on.cells) return;
+    if (!HW.res || !HW.on.cells || !HW.shown()) return;
     clearTimeout(LIVE.zoomT); clearTimeout(this.pendT);
     const r = view.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
     const mx = ((e.clientX - r.left) * dpr - S.view.x) / S.view.k, my = ((e.clientY - r.top) * dpr - S.view.y) / S.view.k;
@@ -17481,7 +17487,7 @@ const MULTI = {
 
   /* ---------------------------------------------------------------- the drawing and the panel */
   draw() {
-    if (this.sel.length < 2 || !HW.res) return;
+    if (this.sel.length < 2 || !HW.res || !HW.shown()) return;
     if (this.cellsRef !== HW.cells || this.sel.some(i => !HW.cells[i])) { this.sel = []; return; }   // a new run: old choice gone
     const k = S.view.k, z = k > 1.0 ? 1.35 : 1.0, px = v => v / k;
     vx.save();
@@ -18930,6 +18936,6 @@ window.zhOf = zhOf; window.setLang = setLang;
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
 <script src="colours.js?v=1"></script>
-<script src="skin.js?v=8"></script>
+<script src="skin.js?v=9"></script>
 </body>
 </html>

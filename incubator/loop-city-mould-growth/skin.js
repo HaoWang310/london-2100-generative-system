@@ -130,11 +130,17 @@
     var sel = !$('btnLiveOpen').disabled;
     big.textContent = (txt('cRoad1') || '0') + ' km';
     vBuilt.textContent = (txt('cBuilt') || '0') + ' km²'; vFarm.textContent = (txt('cFarm') || '0') + ' km²';
-    vCells.textContent = cells ? String(cells) : '–';
+    /* 23 Nov 2026: the cells are of the year the century ended (HW.shown in the page). At an earlier year, and through
+       a replay, they are not on the map, so they are not counted here either and the note says why. */
+    var playing = false, hid = false, endY = 2100;
+    try { playing = !!S.playing; hid = cells > 0 && typeof HW.shown === 'function' && !HW.shown(); if (S.year != null) endY = S.year; } catch (e) { playing = hid = false; }
+    vCells.textContent = cells && !hid ? String(cells) : '–';
     var yr = txt('vYear') || '2025', zh = isZh();
     var egg = window.LCEGG && window.LCEGG.text ? window.LCEGG.text(zh) : '';
     var reading = false; try { reading = typeof HW !== 'undefined' && !!HW.busy; } catch (e) { reading = false; }
     pill.textContent = egg ? egg : reading ? (zh ? '正在提取单元…' : 'Reading the cells…') : running ? (zh ? '正在生长 · ' : 'Growing · ') + yr
+      : playing ? (zh ? '正在回放 · ' : 'Replaying · ') + yr
+      : hid ? yr + (zh ? ' · 单元在 ' + endY + ' 年' : ' · the cells are at ' + endY)
       : cells ? yr + (zh ? ' · ' + cells + ' 个单元' : ' · ' + cells + ' cells')
       : (zh ? yr + ' · 点「运行百年」开始' : yr + ' · press Run the century');
     if (was.running && !running) was.ran = true;
@@ -153,6 +159,8 @@
   openOnly(0);
   if (window.innerWidth <= 600) { PR.classList.add('lc-col'); var cb = hr.querySelector('.lc-icon'); if (cb) cb.textContent = '+'; }
   setInterval(tick, 400); tick();
+  /* the note keeps the year of the big figure, through a run and a replay (it was up to one tick, a year at 2x, behind) */
+  if (typeof window.showYear === 'function') { var sy0 = window.showYear; window.showYear = function () { var r = sy0.apply(this, arguments); try { tick(); } catch (e) { /* next tick */ } return r; }; }
 
   /* ------------------------------------------------------------------ the panels' width, by dragging (23 Nov 2026)
      A handle on the inner edge of each panel: drag it (mouse, pen or finger) to make the panel wider or narrower,
