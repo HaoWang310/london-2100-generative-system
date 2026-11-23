@@ -215,3 +215,58 @@ html.lcskin .lc-basenote { margin:8px 0 10px; }
 html.lcskin #baseLayers > div.lc-na { opacity:.35; }
 html.lcskin #baseLayers > div.lc-na input { cursor:default; }
 
+/* ==== the phone (23 Nov 2026) ====
+   html.lcphone is set by skin.js on a touch screen whose short side is under 600 px. The map fills the screen, the
+   working panel is a sheet along the bottom, Display is a button at the top left that opens the display panel across
+   the top. Heights follow the screen (dvh), so a small phone shows less of a panel and scrolls the rest inside it. */
+html.lcskin.lcphone body { display:block; }
+html.lcskin.lcphone #stage { position:fixed; inset:0; min-height:0; }
+html.lcskin.lcphone .lc-rz, html.lcskin.lcphone #lcPill, html.lcskin.lcphone #scalebar, html.lcskin.lcphone #hwNorth, html.lcskin.lcphone #zoombar .lab { display:none !important; }
+
+/* the sheet */
+html.lcskin.lcphone #panelL { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:70; margin:0; width:auto; height:auto; max-height:72vh; max-height:72dvh; flex:none; display:flex; flex-direction:column; align-self:auto; border-width:1px 0 0; border-radius:22px 22px 0 0; padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -12px 40px rgba(0,0,0,.6); }
+html.lcskin.lcphone .lcph-handle { all:unset; display:block; flex:none; position:relative; height:21px; cursor:grab; touch-action:none; -webkit-tap-highlight-color:transparent; }
+html.lcskin.lcphone .lcph-handle::before { content:""; position:absolute; left:50%; top:8px; width:40px; height:5px; margin-left:-20px; border-radius:3px; background:rgba(255,255,255,.4); }
+html.lcskin.lcphone #panelL .lc-head { flex:none; flex-wrap:nowrap; align-items:center; gap:10px; min-height:44px; padding:0 16px; }
+html.lcskin.lcphone .lcph-title { flex:1 1 auto; min-width:0; }
+html.lcskin.lcphone #panelL .lc-head h1 { flex:none; padding:0; font-size:18px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html.lcskin.lcphone .lcph-status { margin-top:2px; font-size:12.5px; color:rgba(255,255,255,.62); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html.lcskin.lcphone #panelL .lc-icon { width:44px; height:44px; flex:none; }
+html.lcskin.lcphone:not(.lcph-open) #langbar { display:none; }
+html.lcskin.lcphone #langbar button { min-height:36px; min-width:44px; }
+html.lcskin.lcphone .lcph-quick { flex:none; padding:12px 16px 16px; }
+html.lcskin.lcphone .lcph-quick .row { margin:0; gap:8px; }
+html.lcskin.lcphone .lcph-quick button.btn { height:44px; padding:0 12px; font-size:15px; }
+html.lcskin.lcphone .lcph-quick #btnReset { flex:0 0 92px; }
+html.lcskin.lcphone #panelScrollL { display:none; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 16px 16px; }
+html.lcskin.lcphone.lcph-open #panelScrollL { display:block; }
+html.lcskin.lcphone .lc-sh { min-height:58px; align-items:center; }
+
+/* Display: the button, and the panel across the top */
+html.lcskin.lcphone .lcph-disp { position:fixed; left:12px; top:12px; z-index:72; height:44px; box-sizing:border-box; padding:0 16px 0 12px; display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.22); border-radius:14px; background:#000; color:#fff; font:600 15px/1 'DM Sans',-apple-system,'PingFang SC',system-ui,sans-serif; box-shadow:0 8px 24px rgba(0,0,0,.5); -webkit-tap-highlight-color:transparent; }
+html.lcskin.lcphone .lcph-disp[aria-expanded="true"] { background:#fff; border-color:#fff; color:#000; }
+html.lcskin.lcphone #panel { position:fixed; left:12px; right:12px; top:64px; bottom:auto; z-index:71; margin:0; width:auto; height:auto; max-height:min(56vh, calc(100vh - 64px - 141px - 24px)); max-height:min(56dvh, calc(100dvh - 64px - 141px - 24px - env(safe-area-inset-bottom))); flex:none; display:none; flex-direction:column; align-self:auto; border-radius:20px; box-shadow:0 18px 50px rgba(0,0,0,.7); }
+html.lcskin.lcphone.lcph-disp-open #panel { display:flex; }
+html.lcskin.lcphone #panel .lc-head { display:none; }
+html.lcskin.lcphone #panelScroll { display:block; flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:12px 14px 14px; }
+html.lcskin.lcphone #panel .lc-sec { padding:12px 0 6px; }
+html.lcskin.lcphone #panel .lc-sec:first-child { padding-top:0; }
+html.lcskin.lcphone #btnPlay, html.lcskin.lcphone #btnRewind { height:44px; }
+html.lcskin.lcphone .lc-spd button { min-height:44px; }
+html.lcskin.lcphone #vYear { font-size:30px; }
+html.lcskin.lcphone .lc-big { font-size:18px; margin-top:6px; }
+html.lcskin.lcphone .lc-tab td { padding:5px 0; }
+html.lcskin.lcphone .rv2seg button, html.lcskin.lcphone #rv2View .rv2seg button { min-height:44px; }
+html.lcskin.lcphone select { min-height:44px; }
+html.lcskin.lcphone .lookBtn { min-height:44px; }
+html.lcskin.lcphone details.grp > summary { min-height:44px; }
+html.lcskin.lcphone .v5lay .v5l, html.lcskin.lcphone #baseLayers > div { min-height:40px; }
+
+/* the zoom buttons: top right, down the side; in a row while the display panel is open */
+html.lcskin.lcphone #zoombar { left:auto; right:12px; top:12px; bottom:auto; z-index:69; display:flex; flex-direction:column; gap:8px; }
+html.lcskin.lcphone.lcph-disp-open #zoombar { flex-direction:row; }
+html.lcskin.lcphone #zoombar button { width:44px; min-width:44px; height:44px; padding:0; border-radius:14px; }
+
+/* the notes that sat at the foot of the screen: above the sheet */
+html.lcskin.lcphone #lcPrep { left:50%; right:auto; top:auto; bottom:calc(141px + 12px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:69; height:44px; }
+

@@ -147,7 +147,9 @@
     if (sel && !was.sel) openOnly(3);
     if (!cells && was.cells) openOnly(0);
     was.running = running; was.cells = cells; was.sel = sel;
+    if (phStatus) phStatus.textContent = pill.textContent;      // the phone's sheet says where the page is
   }
+  var phStatus = null;
   openOnly(0);
   if (window.innerWidth <= 600) { PR.classList.add('lc-col'); var cb = hr.querySelector('.lc-icon'); if (cb) cb.textContent = '+'; }
   setInterval(tick, 400); tick();
@@ -451,6 +453,77 @@
         return r;
       };
     }
+  })();
+
+  /* ------------------------------------------------------------------ the phone (23 Nov 2026)
+     One layout for every app on a phone, after the London map's: the map fills the screen; Display is a button at the
+     top left that opens the display panel across the top half; the working panel is a sheet along the bottom.
+     Folded, the sheet shows the title, where the page is, and Run and Reset; its handle (tap, or drag up and down) or
+     the + opens it over at most 72 % of the height, the steps scrolling inside. Opening one folds the other. The
+     zoom buttons stand at the top right. Heights follow the screen (dvh), so the small iPhones get the same layout
+     with less of each panel showing and the rest scrolling inside it; nothing is made smaller than 44 px.
+     A phone is a touch screen whose short side is under 600 px (as the London map decides it); #phone and #nophone
+     in the address force it. iPads and computers keep the two floating panels. Interface only. */
+  (function () {
+    var root = document.documentElement, FOLDED = 141;
+    if (!root.classList.contains('lcphone')) return;      // decided in the page's head, before anything is laid out
+    PL.classList.remove('lc-col'); PR.classList.remove('lc-col');
+
+    /* the sheet */
+    var handle = el('button', 'lcph-handle'); handle.type = 'button';
+    PL.insertBefore(handle, PL.firstChild);
+    var h1 = hl.querySelector('h1'), tw = el('div', 'lcph-title');
+    phStatus = el('div', 'lcph-status');
+    hl.insertBefore(tw, hl.firstChild); if (h1) tw.appendChild(h1); tw.appendChild(phStatus);
+    var quick = el('div', 'lcph-quick'), runRow = $('btnRun').parentElement;
+    quick.appendChild(runRow); PL.insertBefore(quick, L);
+    var fold = hl.querySelector('.lc-icon');
+    function sheet(open) {
+      root.classList.toggle('lcph-open', !!open);
+      if (open) display(false);
+      if (fold) { fold.textContent = open ? '–' : '+'; }
+      tips();
+    }
+    if (fold) fold.onclick = function () { sheet(!root.classList.contains('lcph-open')); };
+    var drag = null;
+    handle.addEventListener('pointerdown', function (ev) { drag = { id: ev.pointerId, y: ev.clientY }; try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* older browsers */ } });
+    function dragEnd(ev) {
+      if (!drag || ev.pointerId !== drag.id) return;
+      var dy = ev.clientY - drag.y; drag = null;
+      if (Math.abs(dy) < 8) sheet(!root.classList.contains('lcph-open'));      // a tap
+      else sheet(dy < 0);                                                       // dragged up: open; down: fold
+    }
+    handle.addEventListener('pointerup', dragEnd);
+    handle.addEventListener('pointercancel', function () { drag = null; });
+
+    /* Display */
+    var db = el('button', 'lcph-disp'); db.type = 'button';
+    db.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 2 5.6 9 9.2l7-3.6L9 2Z"></path><path d="m2 9.2 7 3.6 7-3.6"></path><path d="m2 12.6 7 3.6 7-3.6"></path></svg>';
+    var dbt = el('span', '', 'Display', '显示'); db.appendChild(dbt);
+    document.body.appendChild(db);
+    function display(open) {
+      root.classList.toggle('lcph-disp-open', !!open);
+      db.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) { root.classList.remove('lcph-open'); if (fold) fold.textContent = '+'; tips(); }
+    }
+    db.onclick = function () { display(!root.classList.contains('lcph-disp-open')); };
+    function tips() {
+      var zh = isZh(), open = root.classList.contains('lcph-open');
+      var t = open ? (zh ? '收起功能面板' : 'Fold the panel') : (zh ? '展开功能面板' : 'Open the panel');
+      handle.setAttribute('aria-label', t); if (fold) { fold.title = t; fold.setAttribute('aria-label', t); }
+    }
+    var rz0 = rzTips; rzTips = function () { if (rz0) rz0(); tips(); };      // relabel() calls this when the language changes
+    sheet(false); display(false);
+
+    /* the map is fitted to the part of the screen above the folded sheet */
+    var fit0 = window.fitView;
+    if (typeof fit0 === 'function') window.fitView = function () {
+      var r = fit0.apply(this, arguments);
+      try { if (r && typeof S !== 'undefined' && S.view) S.view.y -= Math.round(FOLDED / 2 * Math.min(2, window.devicePixelRatio || 1)) - Math.round(28 * Math.min(2, window.devicePixelRatio || 1)); } catch (e) { /* fitted as the page fits it */ }
+      return r;
+    };
+    /* the page may have fitted the map before this file ran: once more, now the sheet is known */
+    try { if (typeof S !== 'undefined' && S.mapW && S._fitted && typeof resize === 'function') { resize(); window.fitView(); } } catch (e) { /* fitted when the map arrives */ }
   })();
 
   /* ------------------------------------------------------------------ language */
