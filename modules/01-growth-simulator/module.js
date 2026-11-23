@@ -62,7 +62,7 @@ function injectCss() {
 export function createGrowthTool(viewer, { onState = () => {} } = {}) {
   injectCss();
   const display = { show: true, rails: true, grain: true, fill: true, edges: false, opacity: 0.9, background: true };
-  let active = false, overlay = null, panel = null;
+  let active = false, suspended = false, overlay = null, panel = null;
   // the step of 生成流程 open in the panel (null: none), and what it shows on the map
   let magnetT = 0, step = null, pass1Cells = null, ground = null, magnet = null, magnetKey = '', edgeFor = null, edge = null;
   const container = globalThis.document ? document.createElement('div') : null;
@@ -78,7 +78,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     }
   });
 
-  const visible = () => display.show && (active || display.background);
+  const visible = () => !suspended && display.show && (active || display.background);
   function attachOverlay() {
     if (overlay || !viewer) return;
     const s = growth.state;
@@ -144,7 +144,7 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
     get stepping() { return Boolean(panel?.stepping?.()); },
     ring: () => (growth.state.loaded ? gridRing(growth.state.D.meta) : null),
     async open() {
-      active = true;
+      active = true; suspended = false;
       panel?.build();
       overlay?.sync(); viewer.redraw?.();
       await growth.load();
@@ -152,6 +152,8 @@ export function createGrowthTool(viewer, { onState = () => {} } = {}) {
       return growth.state;
     },
     close() { active = false; showStep(); },
+    /** Another simulation is open on the map: keep out of its way until it closes (true), or come back (false). */
+    suspend(on) { suspended = Boolean(on); overlay?.sync(); viewer.redraw?.(); },
     setYear: y => growth.setYear(y),
     relang: () => panel?.update('lang'),
     resize: () => panel?.resize()

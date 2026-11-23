@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>07 Loop City overlay: position check of the WebGL picture layer</title>
+<!-- Draws the real picture layer with a stand-in for MapLibre's camera (the same world-pixel matrix MapLibre 6 hands to
+     custom layers) and reads the picture back. The picture is a test card on the mould's own grid (1620 x 1328 cells of
+     92.6 m), every cell its own colour. Round each sampled cell, the points 2 m inside its four edges must show the
+     cell's colour and the points 2 m outside must show the neighbour's, at the screen positions their exact
+     EPSG:27700 -> Web Mercator projection predicts. So a pass means the layer is within 2 m everywhere it was sampled.
+     Open over a local server; result in window.RESULT. -->
+<body style="background:#111;color:#ddd;font:13px monospace">
+<pre id="out">running…</pre>
+<script type="module">
+import { createImageLayer } from '../overlay.js';
+import { FRAME, toMerc } from '../georef.js';
+import { toWGS84 } from '../../../shared/geo-core/index.js';
+
+const NX = 1620, NY = 1328, CE = (FRAME.e1 - FRAME.e0) / NX, CN = (FRAME.n1 - FRAME.n0) / NY;
+const colour = (i, j) => [40 + (j * 53 + i * 17) % 200, 40 + (j * 29 + i * 71) % 200, 40 + (j * 7 + i * 131) % 200];
+const card = document.createElement('canvas'); card.width = NX; card.height = NY;
+{ const cx = card.getContext('2d'), img = cx.createImageData(NX, NY);
+  for (let i = 0; i < NY; i++) for (let j = 0; j < NX; j++) { const o = (i * NX + j) * 4, c = colour(i, j); img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255; }
+  cx.putImageData(img, 0, 0); }
+
+const W = 1024, H = 768, cv = document.createElement('canvas'); cv.width = W; cv.height = H; document.body.append(cv);
+const gl = cv.getContext('webgl2', { premultipliedAlpha: true, preserveDrawingBuffer: true }) || cv.getContext('webgl', { preserveDrawingBuffer: true });
+let zoom = 15;
+const map = { getZoom: () => zoom, triggerRepaint() {} };
+const pic = createImageLayer('lc07-check');
+pic.layer.onAdd(map, gl);
+// ?shift=5 moves the picture 5 m east: a control, which must fail
+const SHIFT = +new URLSearchParams(location.search).get('shift') || 0;
+pic.setImage(card, { ...FRAME, e0: FRAME.e0 + SHIFT, e1: FRAME.e1 + SHIFT }, { alpha: 1, nearest: true });
+
+const GAP = 2;                                           // metres inside / outside an edge
+function check(centre, z) {
+  zoom = z;
+  const ws = 512 * 2 ** z, c = toMerc(toWGS84(centre)).map(v => v * ws);
+  const mvp = new Float64Array([2 / W, 0, 0, 0, 0, -2 / H, 0, 0, 0, 0, 1, 0, -2 * c[0] / W, 2 * c[1] / H, 0, 1]);
+  gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  pic.layer.render(gl, { modelViewProjectionMatrix: mvp });
+  const px = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  const at = (E, N) => { const m = toMerc(toWGS84([E, N])); const sx = Math.round(m[0] * ws - c[0] + W / 2 - 0.5), sy = Math.round(m[1] * ws - c[1] + H / 2 - 0.5);
+    if (sx < 1 || sy < 1 || sx >= W - 1 || sy >= H - 1) return null; const o = ((H - 1 - sy) * W + sx) * 4; return [px[o], px[o + 1], px[o + 2]]; };
+  const same = (a, b) => a && Math.abs(a[0] - b[0]) <= 2 && Math.abs(a[1] - b[1]) <= 2 && Math.abs(a[2] - b[2]) <= 2;
+  const j0 = Math.floor((centre[0] - FRAME.e0) / CE), i0 = Math.floor((FRAME.n1 - centre[1]) / CN);
+  let n = 0, bad = 0; const first = [];
+  for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) {
+    const i = i0 + di, j = j0 + dj; if (i < 1 || j < 1 || i >= NY - 1 || j >= NX - 1) continue;
+    const w = FRAME.e0 + j * CE, e = w + CE, nn = FRAME.n1 - i * CN, s = nn - CN, me = (w + e) / 2, mn = (nn + s) / 2;
+    const tests = [[me, mn, i, j], [w + GAP, mn, i, j], [w - GAP, mn, i, j - 1], [e - GAP, mn, i, j], [e + GAP, mn, i, j + 1],
+      [me, nn - GAP, i, j], [me, nn + GAP, i - 1, j], [me, s + GAP, i, j], [me, s - GAP, i + 1, j]];
+    for (const [E, N, ti, tj] of tests) { const got = at(E, N); if (!got) continue; n++;
+      if (!same(got, colour(ti, tj))) { bad++; if (first.length < 3) first.push({ i, j, E: Math.round(E), N: Math.round(N), got, want: colour(ti, tj) }); } }
+  }
+  return { z, points: n, wrong: bad, first };
+}
+const f = FRAME, places = { 'NW corner': [f.e0 + 3000, f.n1 - 3000], 'NE corner': [f.e1 - 3000, f.n1 - 3000], 'SW corner': [f.e0 + 3000, f.n0 + 3000], 'SE corner': [f.e1 - 3000, f.n0 + 3000],
+  centre: [(f.e0 + f.e1) / 2, (f.n0 + f.n1) / 2], 'north edge': [(f.e0 + f.e1) / 2, f.n1 - 3000], 'east edge': [f.e1 - 3000, (f.n0 + f.n1) / 2],
+  P1: [473624.2, 218688.1], P2: [518974.7, 237670.2], 'Charing Cross': [530028.7, 180380.1] };
+// and a scatter of 30 more, the same every time
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (let k = 0; k < 30; k++) places[`scatter ${k + 1}`] = [f.e0 + 2000 + rnd() * (f.e1 - f.e0 - 4000), f.n0 + 2000 + rnd() * (f.n1 - f.n0 - 4000)];
+const out = [];
+for (const [name, p] of Object.entries(places)) for (const z of [16, 17]) out.push({ place: name, ...check(p, z) });
+window.RESULT = { shiftM: SHIFT, webgl: gl instanceof WebGL2RenderingContext ? 2 : 1, gapM: GAP, places: Object.keys(places).length, points: out.reduce((s, r) => s + r.points, 0), wrong: out.reduce((s, r) => s + r.wrong, 0),
+  failed: out.filter(r => r.wrong).slice(0, 5) };
+document.getElementById('out').textContent = JSON.stringify(window.RESULT, null, 1);
+</script>

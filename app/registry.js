@@ -2,6 +2,7 @@
 // import each other (enforced by tools/check-isolation.mjs).
 import london from '../modules/00-london-map/module.js';
 import growth, { createGrowthTool } from '../modules/01-growth-simulator/module.js';
+import loopCity, { createLoopCityTool } from '../modules/07-loop-city/module.js';
 import region from '../modules/02-region-planning/module.js';
 import wool from '../modules/03-wool-network/module.js';
 import tensor from '../modules/04-tensor-roads/module.js';
@@ -30,8 +31,10 @@ export const TOOLS = [
 
 // Simulations that stand beside the scale chain: open at any level, drawn on the map,
 // kept as a background while working at other levels. Listed after London in the nav.
+// One simulation is open at a time; the others keep off the map while it is.
 export const SIMULATIONS = [
-  { key: 'growth', module: growth, create: createGrowthTool }
+  { key: 'growth', module: growth, create: createGrowthTool },
+  { key: 'loop', module: loopCity, create: createLoopCityTool }   // Loop City step 1, beside 01 until it replaces it
 ];
 
 export const exporters = { toGeoJSON, toBNGGeoJSON };

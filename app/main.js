@@ -29,8 +29,8 @@ const storage = (() => { try { localStorage.setItem('l2100.t', '1'); return loca
 const store = createWorkspaceStore({ storage, key: BUILD.releasePath ? `l2100.workspace@${BUILD.releasePath}` : 'l2100.workspace' });
 
 let viewer = null;
-let activeTool = null;          // null | 'integration' | 'export' | 'growth'
-let growthTool = null;          // created the first time 01 is opened
+let activeTool = null;          // null | 'integration' | 'export' | a simulation's key ('growth', 'loop')
+const simTools = {};            // key -> a simulation's tool, created the first time it is opened
 let progress = 1;               // timeline position for the current result
 let playing = null;             // requestAnimationFrame id
 let runToken = 0;
@@ -85,7 +85,7 @@ async function runEntry(entry, { animate = true } = {}) {
 }
 
 function enterLevel(level, input) {
-  leaveGrowth();
+  leaveSim();
   const parent = store.current();
   const scale = scaleOf(level);
   const entry = store.enter(level, input, defaultParams(scale.module), parent?.result?.createdAt ?? null);
@@ -113,7 +113,7 @@ function enterNext(childId) {
 
 function goTo(index) {
   stop();
-  leaveGrowth();
+  leaveSim();
   activeTool = null;
   const e = store.goTo(index);
   progress = 1;
@@ -122,7 +122,7 @@ function goTo(index) {
 }
 
 function goBack() {
-  if (activeTool) { leaveGrowth(); activeTool = null; progress = 1; render(); return; }
+  if (activeTool) { leaveSim(); activeTool = null; progress = 1; render(); return; }
   const path = store.getState().path;
   if (path.length > 1) goTo(path.length - 2);
 }
@@ -150,7 +150,7 @@ function openTool(key) {
   if (!shownTools().some(x => x.key === key)) return;
   if (!toolAvailable()) { toast(t('hint.needWool')); return; }
   stop();
-  leaveGrowth();
+  leaveSim();
   activeTool = key;
   progress = 1;
   if (key === 'integration') {
@@ -182,31 +182,38 @@ async function runTool(entry) {
 
 // ------------------------------------------------------------------ 01 growth simulator
 
-const GROWTH = SIMULATIONS.find(x => x.key === 'growth');
 const isSim = key => SIMULATIONS.some(x => x.key === key);
-const GROWTH_PLAY_MS = 75 / 7 * 1000;           // the incubator's normal speed: 7 years a second
+const simOf = key => SIMULATIONS.find(x => x.key === key);
+const simYears = () => simOf(activeTool)?.module.years || 75;
+const SIM_PLAY_MS = 75 / 7 * 1000;              // the incubator's normal speed: 7 years a second
 
-function openGrowth() {
-  if (!viewer) return;
+function openSim(key) {
+  const sim = simOf(key);
+  if (!viewer || !sim) return;
   stop();
-  const first = !growthTool;
-  if (first) {
-    growthTool = GROWTH.create(viewer, { onState: what => {
-      if (what === 'loaded') { if (activeTool === 'growth') { viewer.fit(growthTool.ring()); setProgress(growthTool.state.year / GROWTH.module.years); } render(); }
-      if (what === 'ran' && activeTool === 'growth' && growthTool.state.variation && !growthTool.stepping) play(0);   // as the incubator: a new variation plays from 2025 (the steps play their own)
-      if (what === 'mode' || what === 'error') renderChrome();
-      // the panel's 生成流程 moves the year itself: keep the timeline with it
-      if (what === 'year' && activeTool === 'growth' && Math.round(progress * GROWTH.module.years) !== growthTool.state.year) setProgress(growthTool.state.year / GROWTH.module.years);
+  leaveSim();
+  if (!simTools[key]) {
+    const years = sim.module.years;
+    simTools[key] = sim.create(viewer, { onState: what => {
+      const tool = simTools[key], on = activeTool === key;
+      if (what === 'loaded') { if (on) { viewer.fit(tool.ring()); setProgress(tool.state.year / years); } render(); }
+      if (what === 'ran' && on && tool.state.variation && !tool.stepping) play(0);   // as the incubator: a new variation plays from 2025 (the steps play their own)
+      if (what === 'mode' || what === 'error' || what === 'running' || what === 'ran') renderChrome();
+      // the tool moves the year itself (01's 生成流程, a century running in 07): keep the timeline with it
+      if (what === 'year' && on && Math.round(progress * years) !== tool.state.year) setProgress(tool.state.year / years);
     } });
   }
-  activeTool = 'growth';
-  growthTool.open().catch(err => toast(t('run.failed', { msg: err.message || err }), { kind: 'error' }));
-  if (growthTool.state.loaded) viewer.fit(growthTool.ring());
-  setProgress((growthTool.state.year || 0) / GROWTH.module.years);
+  const tool = simTools[key];
+  // one simulation on the map at a time: the others step aside until this one is left
+  for (const [k, other] of Object.entries(simTools)) if (k !== key) other.suspend?.(true);
+  activeTool = key;
+  tool.open().catch(err => toast(t('run.failed', { msg: err.message || err }), { kind: 'error' }));
+  if (tool.state.loaded) viewer.fit(tool.ring());
+  setProgress((tool.state.year || 0) / sim.module.years);
   render();
 }
 
-function leaveGrowth() { if (activeTool === 'growth') growthTool?.close(); }
+function leaveSim() { if (isSim(activeTool)) simTools[activeTool]?.close(); }
 
 // ------------------------------------------------------------------ scene
 
@@ -251,9 +258,9 @@ function sceneFor(entry) {
 function setProgress(p) {
   progress = Math.max(0, Math.min(1, p));
   $('scrub').value = Math.round(progress * 1000);
-  if (activeTool === 'growth') {               // the timeline is the years 2025-2100
-    const y = Math.round(progress * GROWTH.module.years);
-    if (growthTool && growthTool.state.year !== y) growthTool.setYear(y);
+  if (isSim(activeTool)) {                     // the timeline is the years 2025-2100
+    const y = Math.round(progress * simYears()), tool = simTools[activeTool];
+    if (tool && tool.state.year !== y) tool.setYear(y);
     $('tlLabel').textContent = t('tl.year', { y: 2025 + y });
     return;
   }
@@ -263,7 +270,7 @@ function setProgress(p) {
 
 function play(from = progress >= 1 ? 0 : progress) {
   stop();
-  const duration = activeTool === 'growth' ? GROWTH_PLAY_MS : 2400;
+  const duration = isSim(activeTool) ? SIM_PLAY_MS : 2400;
   const t0 = performance.now() - from * duration;
   const step = now => {
     const p = (now - t0) / duration;
@@ -291,7 +298,7 @@ function renderPlayButton() {
 // The time bar is shown only where it does something: in 01 (the years 2025-2100) or on a scale whose result grows
 // roads (its replay). 00 London map draws the study circle only, so there it is hidden and the map gets the row.
 function renderTimeline(scene) {
-  const show = activeTool === 'growth' || Boolean(scene?.roads?.some(r => !r.static));
+  const show = isSim(activeTool) || Boolean(scene?.roads?.some(r => !r.static));
   const app = $('app');
   if (app.classList.contains('no-timeline') !== !show) {
     if (!show) stop();
@@ -307,8 +314,8 @@ function render() {
   renderTimeline(scene);
   if (entry && viewer) {
     viewer.setScene(scene);
-    viewer.setProgress(activeTool === 'growth' ? 1 : progress);
-    viewer.setPanelDocked?.(activeTool === 'growth');      // in 01 the map display panel hugs the map's right edge
+    viewer.setProgress(isSim(activeTool) ? 1 : progress);
+    viewer.setPanelDocked?.(isSim(activeTool));            // in a simulation the map display panel hugs the map's right edge
   }
 }
 
@@ -351,13 +358,13 @@ function renderChrome() {
     if (i === 0) {
       // 01 sits right after London: the workspace's first simulation, open at any level.
       for (const sim of SIMULATIONS) {
-        const st = sim.key === 'growth' && growthTool ? (growthTool.state.running ? 'running' : growthTool.state.loaded ? 'done' : '') : '';
+        const tl = simTools[sim.key], st = tl ? (tl.state.running ? 'running' : tl.state.loaded ? 'done' : '') : '';
         scaleList.append(h('li', {}, h('button', {
           class: 'mod', disabled: !viewer, 'aria-current': activeTool === sim.key ? 'true' : 'false',
-          onclick: () => openGrowth()
+          onclick: () => openSim(sim.key)
         },
           h('span', { class: 'num' }, sim.module.id.slice(0, 2)),
-          h('span', {}, h('span', { class: 'name' }, pick(sim.module.title)), h('span', { class: 'sub' }, t(`nav.hint.${sim.key}`))),
+          h('span', {}, h('span', { class: 'name' }, pick(sim.module.title)), h('span', { class: 'sub' }, sim.module.navHint ? pick(sim.module.navHint) : t(`nav.hint.${sim.key}`))),
           h('span', { class: `dot ${st}` }))));
       }
     }
@@ -376,7 +383,7 @@ function renderChrome() {
 
   renderPhoneScales();
 
-  if (activeTool === 'growth') renderGrowthInspector();
+  if (isSim(activeTool)) renderSimInspector();
   else if (activeTool) renderToolInspector(); else renderScaleInspector(entry);
 
   // map hint + timeline status
@@ -385,8 +392,8 @@ function renderChrome() {
   hint.hidden = Boolean(activeTool) || !(next?.needsSelection && entry.result);
   hint.textContent = t(`hint.select.${entry.level}`);
   $('tlStatus').textContent = activeTool ? '' : statusText(entry);
-  $('tlLabel').textContent = activeTool === 'growth'
-    ? t('tl.year', { y: 2025 + Math.round(progress * GROWTH.module.years) })
+  $('tlLabel').textContent = isSim(activeTool)
+    ? t('tl.year', { y: 2025 + Math.round(progress * simYears()) })
     : t('tl.growth', { pct: Math.round(progress * 100) });
 }
 
@@ -439,19 +446,22 @@ function renderScaleInspector(entry) {
   renderLegend(sceneFor(entry));
 }
 
-function renderGrowthInspector() {
-  const mod = GROWTH.module;
+function renderSimInspector() {
+  const mod = simOf(activeTool).module, tool = simTools[activeTool];
   $('inspCode').textContent = `${mod.id} · v${mod.version}`;
   $('inspTitle').textContent = pick(mod.title);
   $('inspDesc').textContent = pick(mod.description);
-  $('inspBadges').replaceChildren(h('span', { class: 'badge' }, 'EPSG:27700'), h('span', { class: 'badge' }, '50 m'));
+  $('inspBadges').replaceChildren(...(mod.badges || ['EPSG:27700', '50 m']).map(b => h('span', { class: 'badge' }, b)));
   $('inspActions').replaceChildren(h('button', { class: 'btn', onclick: goBack }, t('act.backToScale')));
   const host = $('inspParams');
-  if (growthTool && host.firstChild !== growthTool.container) host.replaceChildren(growthTool.container);
+  if (tool && host.firstChild !== tool.container) host.replaceChildren(tool.container);
   $('inspStats').replaceChildren();
-  $('inspAlgo').textContent = t('growth.source');
+  $('inspAlgo').textContent = mod.source ? pick(mod.source) : t('growth.source');
   const el = $('legend');
-  el.replaceChildren(...[3, 2, 1, 4, 5].map(k => h('div', { class: 'legend-row' },
+  // a module's own legend ([colour, {zh, en}] rows), else 01's five classes
+  if (mod.legend) el.replaceChildren(...mod.legend.map(([colour, label]) => h('div', { class: 'legend-row' },
+    h('i', { style: `border-top-width:8px;border-top-color:${colour}` }), pick(label))));
+  else el.replaceChildren(...[3, 2, 1, 4, 5].map(k => h('div', { class: 'legend-row' },
     h('i', { style: `border-top-width:8px;border-top-color:${mod.palette[k]}` }), t(`growth.legend.${k}`))));
 }
 
@@ -551,7 +561,7 @@ $('importWorkspace').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await file.text());
     store.importJSON(data.workspace || data);
-    leaveGrowth();
+    leaveSim();
     activeTool = null;
     const cur = store.current();
     viewer?.fit(cur?.input?.boundary || cur?.result?.boundary);
@@ -591,7 +601,7 @@ document.addEventListener('click', e => {
 
 // ------------------------------------------------------------------ wiring
 
-onLangChange(() => { render(); growthTool?.relang(); });
+onLangChange(() => { render(); for (const tool of Object.values(simTools)) tool.relang(); });
 $('playButton').addEventListener('click', () => (playing ? stop() : play()));
 $('scrub').addEventListener('input', e => { stop(); setProgress(e.target.value / 1000); });
 for (const [id, on] of [['view2d', false], ['view3d', true]]) {
@@ -606,7 +616,7 @@ document.addEventListener('keydown', e => {
   if (!$('intro').hidden || !$('catalogue').hidden || !$('appview').hidden) return;   // shortcuts belong to the workspace only
   if (e.target.closest('input, select, textarea')) return;
   if (e.key === 'Escape') goBack();
-  if (e.key === 'Enter' && activeTool !== 'growth') enterNext();
+  if (e.key === 'Enter' && !isSim(activeTool)) enterNext();
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
 });
 

@@ -6,6 +6,7 @@
 |---|---|---|---|---|
 | `london` | 00-london-map | 无 | — | — |
 | 模拟（任意层级可开） | 01-growth-simulator | 无（读取孵化区的模拟器） | — | — |
+| 模拟（任意层级可开） | 07-loop-city | 无（在后台打开孵化区的 Loop City 第 1 步页面） | — | — |
 | `region` | 02-region-planning | 伦敦研究范围 | 规划区域 | `region-link` |
 | `wool` | 03-wool-network | 选中的区域 | 局部区域 | `primary`、`branch` |
 | `tensor` | 04-tensor-roads | 选中的局部区域 + Wool 主路约束 | — | `secondary`、`local` |
