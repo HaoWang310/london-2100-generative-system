@@ -98,7 +98,9 @@ export function createImageLayer(id) {
   };
 }
 
-export const USE_COLOUR = { urban: '#E8684A', agricultural: '#9DB574', open: '#8C8C8C' };
+// 23 Nov 2026: palette C of the incubator page (Productive territory), which is what that page opens on. The published
+// result's growth palette (result/result.json) was set to the same five tints by hand: same run, new colours.
+export const USE_COLOUR = { urban: '#E3B47B', agricultural: '#9EBE7A', open: '#8C8C8C' };
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
 /**

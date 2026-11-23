@@ -19,6 +19,7 @@ The slime mould and the city grown together round the whole 412 km loop, 2025–
 
 - **存了什么 · What is stored**：城市生长是 2025 年的整张图加上此后每年变化的格子（`growth.bin.gz`，逐年精确）；黏菌每 5 年存一张图，中间年份由前后两张按比例叠加；干道、单元、车站、铁路是国家格网米的线（`result.json`）。图和颜色都是从孵化区页面自己的画布上读下来的，所以这里不含任何模型知识。
 - **重新发布 · Publish again**：`node modules/01-loop-city/tools/publish-result.mjs`（需要 Playwright 和 Chrome；一两分钟）。孵化区的算法或配色改了以后要重新发布，否则打开看到的还是旧的那次运行。面板上写着这份结果的运行日期；`node --test` 会在孵化区页面比发布时新的情况下给出一行提醒（不算失败）。
+- **配色 · Colours (23 Nov 2026)**：孵化区页面的默认配色改成了色板的 C 方案（城市 `#E3B47B`、乡村 `#9EBE7A`）。这份发布结果没有重跑：只把 `result.json` 里城市生长的 5 个颜色换成了 C 的五档（低层 227,180,123 · 地面农田 98,118,76 · 中层 236,204,165 · 垂直农场 179,204,151 · 高层 244,227,205），单元的颜色在 `overlay.js` 的 `USE_COLOUR`。下次重新发布时颜色会自动从页面读到，不需要再手改。 The incubator page now opens on palette C; this result was not grown again, only its five growth colours were set to C's tints, and the cells' colours are `USE_COLOUR` in `overlay.js`.
 - **是某一次运行 · It is one run**：黏菌没有固定随机种子，所以发布的是"挑出来的一次"，不是可以重现的标准结果。
 - 没有发布结果、或浏览器打不开它时，退回到原来的做法：打开时直接载入引擎。
 
