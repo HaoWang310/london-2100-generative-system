@@ -27,7 +27,7 @@ body{
    map is sized to the stage including the bar, and slides under it. */
 #stage{flex:1 1 auto; display:flex; flex-direction:column; overflow:hidden; background:var(--paper)}
 #canvasWrap{flex:1 1 auto; position:relative; overflow:hidden; min-height:0}
-#view{position:absolute; inset:0; cursor:crosshair; display:block}
+#view{position:absolute; inset:0; cursor:crosshair; display:block; touch-action:none}   /* 23 Nov 2026: the map takes the finger: without this a phone took the drag for scrolling the page and cut it off */
 
 /* ---------------------------------------------------------------- year bar */
 #yearbar{
@@ -9367,6 +9367,7 @@ function draw(){
   // buffer, and since requestAnimationFrame sits at the end of frame() the loop never
   // reschedules - the canvas then stays blank forever.
   if(!S.trailCv) return;
+  if(MOVE.carry()){ updateScaleBarV3(); return; }      // the hand is moving the map: the picture already drawn, carried along
   const V=S.view;
   vx.setTransform(V.k,0,0,V.k,V.x,V.y);
 
@@ -9420,7 +9421,48 @@ function draw(){
 
   vx.setTransform(1,0,0,1,0,0);
   updateScaleBarV3();
+  MOVE.drawn();
 }
+
+/* 23 Nov 2026: the map under the hand. While the map is being dragged, pinched or wheeled, every frame drew the
+   whole sheet again (the kept base above is no help: the view differs every frame), 40 ms a frame on a desk and
+   over 80 on a phone, so the map trailed behind the finger. Now, when a move begins, the picture on the canvas
+   is copied aside with the view it was drawn for; while the move goes on, each frame pastes that copy shifted
+   and scaled to the view of the moment (one picture the size of the screen); 140 ms after the hand stops, the
+   frame is drawn in full again, sharp, and that is the picture the next move carries. Ground the copy does not
+   hold shows as paper until then. Only when nothing on the map is changing by itself: not through a century,
+   a replay or the free mould, which draw as before. MOVE.off = true draws every frame in full. */
+const MOVE = {
+  cv: null, cx: null, v: null, full: null, until: 0, off: false,
+  busy(){ return !!(S.running || S.playing || (window.__LC_READY__ === true && !S.prepBusy && $("btnRun") && $("btnRun").disabled)); },
+  /* the hand has moved the map (called before the view is changed) */
+  touch(){
+    if(this.off) return;
+    const now = performance.now();
+    if(now > this.until && this.full && view.width > 0){
+      if(!this.cv){ this.cv = document.createElement("canvas"); this.cx = this.cv.getContext("2d"); }
+      if(this.cv.width !== view.width || this.cv.height !== view.height){ this.cv.width = view.width; this.cv.height = view.height; }
+      this.cx.globalCompositeOperation = "copy";
+      this.cx.drawImage(view, 0, 0);
+      this.v = { k: this.full.k, x: this.full.x, y: this.full.y, w: view.width, h: view.height };
+    }
+    this.until = now + 140;
+  },
+  carry(){
+    if(this.off || !this.v || vx.canvas !== view || performance.now() > this.until) return false;
+    if(this.v.w !== view.width || this.v.h !== view.height || this.busy()) return false;
+    const V = S.view, s = V.k / this.v.k;
+    if(!(s > 0.04 && s < 25)) return false;
+    vx.save();
+    vx.setTransform(s, 0, 0, s, V.x - this.v.x * s, V.y - this.v.y * s);
+    vx.imageSmoothingEnabled = true; vx.globalAlpha = 1; vx.globalCompositeOperation = "source-over";
+    vx.drawImage(this.cv, 0, 0);
+    vx.restore();
+    this.full = null;                                   // the canvas no longer holds a frame drawn in full
+    return true;
+  },
+  drawn(){ if(vx.canvas === view){ const V = S.view; this.full = { k: V.k, x: V.x, y: V.y }; } }
+};
 
 /* 23 Nov 2026: the base, kept between frames. The paper, the base picture and the QGIS layers over it were drawn
    afresh every frame: nine pictures of the whole sheet, 40 to 60 ms of each frame, also while nothing about them
@@ -9614,24 +9656,64 @@ view.addEventListener("wheel", e => {
   const f = e.deltaY<0 ? 1.12 : 1/1.12;
   const nk = clamp(S.view.k*f, 0.05, 40);
   const kf = nk/S.view.k;
+  MOVE.touch();
   S.view.x = mx - (mx-S.view.x)*kf;
   S.view.y = my - (my-S.view.y)*kf;
   S.view.k = nk;
   $("zoomLab").textContent = Math.round(nk*100)+"%";
 }, {passive:false});
 
+/* 23 Nov 2026: fingers. One pointer drags the map as before; two pinch it (the point between the fingers stays
+   under them, and the pair can carry the map as they go). A touch the system takes away (pointercancel) ends the
+   drag: it used to leave the drag standing. Lifting one of two fingers leaves the other dragging; none of that
+   counts as a click. */
+const PTR = new Map();
+function pinchFrom(){
+  const a = [...PTR.values()], r = view.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio||1);
+  const mx = ((a[0].x + a[1].x)/2 - r.left)*dpr, my = ((a[0].y + a[1].y)/2 - r.top)*dpr;
+  return { d: Math.max(1, Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y)), mx: mx, my: my };
+}
 view.addEventListener("pointerdown", e => {
-  view.setPointerCapture(e.pointerId);
-  S.drag = {x:e.clientX, y:e.clientY, ox:S.view.x, oy:S.view.y, moved:0};
+  try { view.setPointerCapture(e.pointerId); } catch(err) { }
+  PTR.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(PTR.size === 2){
+    const p = pinchFrom();
+    S.pinch = { d:p.d, k:S.view.k, px:(p.mx - S.view.x)/S.view.k, py:(p.my - S.view.y)/S.view.k };   // the map point between the fingers
+    S.drag = null;
+    return;
+  }
+  if(PTR.size > 2) return;
+  S.pinch = null;
+  S.drag = {id:e.pointerId, x:e.clientX, y:e.clientY, ox:S.view.x, oy:S.view.y, moved:0};
 });
 view.addEventListener("pointermove", e => {
-  if(!S.drag) return;
+  if(PTR.has(e.pointerId)) PTR.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(S.pinch && PTR.size >= 2){
+    const p = pinchFrom(), nk = clamp(S.pinch.k * p.d / S.pinch.d, 0.05, 40);
+    MOVE.touch();
+    S.view.k = nk; S.view.x = p.mx - S.pinch.px*nk; S.view.y = p.my - S.pinch.py*nk;
+    $("zoomLab").textContent = Math.round(nk*100)+"%";
+    return;
+  }
+  if(!S.drag || (S.drag.id != null && S.drag.id !== e.pointerId)) return;
   const dpr = Math.min(2, window.devicePixelRatio||1);
   const dx = (e.clientX-S.drag.x)*dpr, dy = (e.clientY-S.drag.y)*dpr;
   S.drag.moved = Math.max(S.drag.moved, Math.abs(dx)+Math.abs(dy));
+  if(S.drag.moved > 0) MOVE.touch();
   S.view.x = S.drag.ox + dx; S.view.y = S.drag.oy + dy;
 });
+view.addEventListener("pointercancel", e => { PTR.delete(e.pointerId); if(PTR.size < 2) S.pinch = null; S.drag = null; });
+view.addEventListener("gesturestart", e => e.preventDefault());      // Safari: the page itself is not what two fingers zoom
 view.addEventListener("pointerup", e => {
+  PTR.delete(e.pointerId);
+  if(S.pinch){
+    if(PTR.size < 2){
+      S.pinch = null;
+      const rest = [...PTR.entries()][0];                                // one finger still down: it goes on dragging
+      S.drag = rest ? {id:rest[0], x:rest[1].x, y:rest[1].y, ox:S.view.x, oy:S.view.y, moved:1e9} : null;
+    }
+    return;
+  }
   const d = S.drag; S.drag = null;
   if(!d || d.moved > 5) return;
   const r = view.getBoundingClientRect();
