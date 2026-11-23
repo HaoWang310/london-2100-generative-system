@@ -23,7 +23,7 @@
 | 路径 | 用途 |
 |---|---|
 | `app/` | 统一 App 外壳：左侧模块导航、中央地图、右侧参数面板、底部时间轴 |
-| `modules/00-london-map` … `06-catalogue-export` | 功能模块，每个可独立运行、预览和测试（`01-growth-simulator` 直连孵化区的城市生长模拟；`07-loop-city` 直连孵化区的 Loop City 第 1 步） |
+| `modules/00-london-map` … `06-catalogue-export` | 功能模块，每个可独立运行、预览和测试（`01-loop-city` 直连孵化区的 Loop City 第 1 步；`01-growth-simulator` 是它取代的旧版城市生长模拟，代码保留，不在导航中） |
 | `shared/geo-core` | EPSG:27700 坐标转换与几何计算 |
 | `shared/schemas` | 模块之间的标准数据接口 `ScaleBundle` |
 | `shared/state` | 多尺度工作空间状态（逐级进入 / 返回，保留各级结果） |

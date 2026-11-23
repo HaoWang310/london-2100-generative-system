@@ -1,11 +1,11 @@
-# 07 · Loop City step 1 · 黏菌与生长
+# 01 · Loop City step 1 · 黏菌与生长
 
 整条 412 km 环线上黏菌与城市共同生长（2025–2100 年），百年结束后从黏菌的干道读出单元；按真实位置画在 OSM 地图上。
 The slime mould and the city grown together round the whole 412 km loop, 2025–2100; when the century ends the cells are read from the mould's highways. Drawn on the OSM map at its true position.
 
-- **在导航中 · In the nav**：`07`，排在 `01 城市生长模拟` 后面，任何层级都能打开。两个模拟同时只在地图上显示一个：打开一个，另一个让开。23 Nov 2026：先与 01 并排，核对无误后再替换 01。
+- **在导航中 · In the nav**：`01`，任何层级都能打开，离开后默认留作背景。23 Nov 2026 起它取代了原来的 `01 城市生长模拟`（`modules/01-growth-simulator`，代码保留在仓库里，不再出现在导航中；找回办法见该模块的 README）。此前一天它以 `07` 的编号与旧版并排放过。
 - **输出 · Output**：`ScaleBundle` level `london`，边界是模型的范围，车站为 `nodes`。
-- 预览 · Preview：`preview.html`；测试 · Tests：`node --test modules/07-loop-city/tests/module.test.mjs`；位置检查 · Position check：`tests/overlay-check.html`（在浏览器里打开）。
+- 预览 · Preview：`preview.html`；测试 · Tests：`node --test modules/01-loop-city/tests/module.test.mjs`；位置检查 · Position check：`tests/overlay-check.html`（在浏览器里打开）。
 
 ## 与孵化区是同一份 · One source with the incubator
 
@@ -30,7 +30,7 @@ The slime mould and the city grown together round the whole 412 km loop, 2025–
 - **每次运行结果都不同**：黏菌没有固定的随机种子。主程序里没有固定的"最终结果"，打开后要点「运行百年」。
 - **运行期间地图响应会变慢**：引擎页面与主程序在同一个线程上，百年运行按 120 ms 的片段进行。
 - **干道和单元只在 2100 年显示**：它们在百年结束后才读出。拖动时间轴回放时，显示的是那一年的黏菌和城市。
-- **车站位置以孵化区第 1 步页面为准**，与 01 的车站相差最多约 360 m（两个 app 的数据不同）。
+- **车站位置以孵化区第 1 步页面为准**，与旧版城市生长模拟的车站相差最多约 360 m（两个 app 的数据不同）。
 - **参数**：面板上是引擎页面自己列为接口的九个滑块和开关（`LoopCityEngine.sliders`）；其余参数在孵化区页面里调。
 
 ## 文件 · Files

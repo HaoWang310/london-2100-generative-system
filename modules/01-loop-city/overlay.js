@@ -1,4 +1,4 @@
-// 07 · Loop City step 1 — drawing the model on the map.
+// 01 · Loop City step 1 — drawing the model on the map.
 //
 // MapLibre: the growth and the mould are two pictures (the engine's own canvases,
 // copied each year), each drawn by a WebGL custom layer through the exact mesh of
@@ -106,11 +106,11 @@ const EMPTY = { type: 'FeatureCollection', features: [] };
  *            base {stations, rails}, on: {growth, mould, highways, cells, rails}, opacity, final (the year on show is 2100) }
  */
 export function createLoopOverlay({ get }) {
-  const growthL = createImageLayer('lc07-growth'), mouldL = createImageLayer('lc07-mould');
+  const growthL = createImageLayer('lc01-growth'), mouldL = createImageLayer('lc01-mould');
   let map = null, seen = -1, seenVec = -1, seenKey = '', baseSet = false, ll = { cells: EMPTY, highways: EMPTY };
 
-  const LAYERS = ['lc07-names', 'lc07-stations', 'lc07-rails-line', 'lc07-highways-line', 'lc07-cells-line', 'lc07-cells-fill', 'lc07-mould', 'lc07-growth'];
-  const SOURCES = ['lc07-cells', 'lc07-highways', 'lc07-rails', 'lc07-stations'];
+  const LAYERS = ['lc01-names', 'lc01-stations', 'lc01-rails-line', 'lc01-highways-line', 'lc01-cells-line', 'lc01-cells-fill', 'lc01-mould', 'lc01-growth'];
+  const SOURCES = ['lc01-cells', 'lc01-highways', 'lc01-rails', 'lc01-stations'];
   const useColour = ['match', ['get', 'use'], 'urban', USE_COLOUR.urban, 'agricultural', USE_COLOUR.agricultural, USE_COLOUR.open];
 
   function attachMapLibre(m, before, { ground = before } = {}) {
@@ -119,21 +119,21 @@ export function createLoopOverlay({ get }) {
     map.addLayer(growthL.layer, under);
     map.addLayer(mouldL.layer, under);                     // the mould over the growth
     for (const id of SOURCES) map.addSource(id, { type: 'geojson', data: EMPTY });
-    map.addLayer({ id: 'lc07-cells-fill', type: 'fill', source: 'lc07-cells', paint: { 'fill-color': useColour, 'fill-opacity': 0.16 } }, before);
-    map.addLayer({ id: 'lc07-cells-line', type: 'line', source: 'lc07-cells', layout: { 'line-join': 'round' },
+    map.addLayer({ id: 'lc01-cells-fill', type: 'fill', source: 'lc01-cells', paint: { 'fill-color': useColour, 'fill-opacity': 0.16 } }, before);
+    map.addLayer({ id: 'lc01-cells-line', type: 'line', source: 'lc01-cells', layout: { 'line-join': 'round' },
       paint: { 'line-color': useColour, 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 2.4] } }, before);
-    map.addLayer({ id: 'lc07-highways-line', type: 'line', source: 'lc07-highways', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    map.addLayer({ id: 'lc01-highways-line', type: 'line', source: 'lc01-highways', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#ffffff',
         'line-opacity': ['match', ['get', 'class'], 'highway', 0.95, 'link', 0.7, 0.4],
         'line-width': ['interpolate', ['linear'], ['zoom'], 8, ['match', ['get', 'class'], 'highway', 2.4, 'link', 1.1, 0.6], 14, ['match', ['get', 'class'], 'highway', 6, 'link', 3, 1.6]] } }, before);
-    map.addLayer({ id: 'lc07-rails-line', type: 'line', source: 'lc07-rails', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    map.addLayer({ id: 'lc01-rails-line', type: 'line', source: 'lc01-rails', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#9a9a9f', 'line-opacity': 0.9,
         'line-width': ['interpolate', ['linear'], ['zoom'], 8, ['match', ['get', 'kind'], 'orbital', 1.8, 1], 14, ['match', ['get', 'kind'], 'orbital', 4, 2.4]],
         'line-dasharray': ['match', ['get', 'kind'], 'high_speed', ['literal', [2, 1.5]], ['literal', [1, 0]]] } }, before);
-    map.addLayer({ id: 'lc07-stations', type: 'circle', source: 'lc07-stations',
+    map.addLayer({ id: 'lc01-stations', type: 'circle', source: 'lc01-stations',
       paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['match', ['get', 'kind'], 'primary', 4.5, 3], 14, ['match', ['get', 'kind'], 'primary', 9, 6]],
         'circle-color': ['match', ['get', 'kind'], 'airport', '#E8463A', '#ffffff'], 'circle-stroke-color': '#000', 'circle-stroke-width': 1.2 } }, before);
-    map.addLayer({ id: 'lc07-names', type: 'symbol', source: 'lc07-stations', minzoom: 8.5,
+    map.addLayer({ id: 'lc01-names', type: 'symbol', source: 'lc01-stations', minzoom: 8.5,
       layout: { 'text-field': ['get', 'id'], 'text-size': 12, 'text-offset': [0.9, -0.6], 'text-anchor': 'left', 'text-allow-overlap': true },
       paint: { 'text-color': '#e6e6e6', 'text-halo-color': 'rgba(0,0,0,.85)', 'text-halo-width': 1.2 } }, before);
     seen = -1; seenVec = -1; seenKey = ''; baseSet = false;
@@ -151,7 +151,7 @@ export function createLoopOverlay({ get }) {
     if (seenVec === g.vectorVersion) return;
     ll = g.vectors ? { cells: toLonLat(g.vectors.cells), highways: toLonLat(g.vectors.highways) } : { cells: EMPTY, highways: EMPTY };
     seenVec = g.vectorVersion;
-    if (map) { map.getSource('lc07-cells')?.setData(ll.cells); map.getSource('lc07-highways')?.setData(ll.highways); }
+    if (map) { map.getSource('lc01-cells')?.setData(ll.cells); map.getSource('lc01-highways')?.setData(ll.highways); }
   }
 
   function sync() {
@@ -159,8 +159,8 @@ export function createLoopOverlay({ get }) {
     if (!map) { if (g.frame) project(g); return; }
     if (!g.frame) return;
     if (!baseSet && g.base) {
-      map.getSource('lc07-rails')?.setData(toLonLat(g.base.rails));
-      map.getSource('lc07-stations')?.setData(toLonLat(g.base.stations));
+      map.getSource('lc01-rails')?.setData(toLonLat(g.base.rails));
+      map.getSource('lc01-stations')?.setData(toLonLat(g.base.stations));
       baseSet = true;
     }
     project(g);
@@ -172,9 +172,9 @@ export function createLoopOverlay({ get }) {
     }
     const vis = v => (g.show && v ? 'visible' : 'none');
     const set = (id, v) => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis(v)); };
-    set('lc07-cells-fill', g.on.cells && g.final); set('lc07-cells-line', g.on.cells && g.final);
-    set('lc07-highways-line', g.on.highways && g.final);
-    set('lc07-rails-line', g.on.rails); set('lc07-stations', g.on.rails); set('lc07-names', g.on.rails);
+    set('lc01-cells-fill', g.on.cells && g.final); set('lc01-cells-line', g.on.cells && g.final);
+    set('lc01-highways-line', g.on.highways && g.final);
+    set('lc01-rails-line', g.on.rails); set('lc01-stations', g.on.rails); set('lc01-names', g.on.rails);
     map.triggerRepaint();
   }
 
@@ -218,7 +218,7 @@ export function createLoopOverlay({ get }) {
     ctx.restore();
   }
 
-  return { id: 'lc07', attachMapLibre, detachMapLibre, drawCanvas, sync,
+  return { id: 'lc01', attachMapLibre, detachMapLibre, drawCanvas, sync,
     /** The highways and cells as last projected to lon/lat (for tests and export). */
     get lonLat() { return ll; } };
 }

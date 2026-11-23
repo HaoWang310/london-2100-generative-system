@@ -1,5 +1,9 @@
 # 01 · Growth simulator 城市生长模拟
 
+> **已停用 · Retired from the workspace (23 Nov 2026).** 主程序导航里的 `01` 现在是 Loop City 第 1 步（`modules/01-loop-city`：黏菌与城市共同生长）。本模块的代码、预览和测试都保留在仓库里，只是不再被主程序加载。
+> 找回办法：在 `app/registry.js` 里重新 `import growth, { createGrowthTool } from '../modules/01-growth-simulator/module.js'`，并把 `{ key: 'growth', module: growth, create: createGrowthTool }` 加回 `SIMULATIONS`。
+> This module is no longer loaded by the main program; Loop City step 1 (`modules/01-loop-city`) is `01` in the nav now. Its code, preview and tests stay. To bring it back, import it in `app/registry.js` and add it to `SIMULATIONS` again.
+
 整条 412 km 环线 2025–2100 年的城市生长（50 m 地块），按真实位置画在 OSM 地图上；主程序的第一个模拟。
 City growth along the whole 412 km loop, 2025–2100, on 50 m parcels, drawn on the OSM map at its true position.
 
