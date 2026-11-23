@@ -15788,7 +15788,39 @@ const P4RING = {
 };
 const startImg = new Image();
 startImg.onload = () => boot(startImg, CFG.map.name);
-startImg.onerror = () => fail("The embedded base map could not be decoded.");
+/* 23 Nov 2026: when the base map does not open. The one line this used to show ("could not be decoded") was the
+   same for a download that broke off and for a picture the device could not open, and said nothing to go on.
+   Now the page tries again by another road: it fetches the file afresh, past the cache, and opens it from memory.
+   If that works the page starts as usual. If not, it says what it found: the download (status, size), what the
+   device says when asked to open it, whether the other pictures of the sheet open (a full-size one, a half-size
+   one), and what device this is. That line is what to send. */
+startImg.onerror = () => { baseAgain().catch(e => fail("The base map could not be opened. " + (e && e.message ? e.message : e))); };
+async function baseAgain(){
+  const info = [];
+  const opens = (src) => new Promise(ok => { const im = new Image(); im.onload = () => ok(im.naturalWidth + "x" + im.naturalHeight); im.onerror = () => ok("no"); im.src = src; });
+  let blob = null;
+  try {
+    const r = await fetch(BASEMAP_SRC, { cache: "reload" });
+    info.push("download " + r.status);
+    blob = await r.blob();
+    info.push(Math.round(blob.size/1024) + " KB " + (blob.type || "?"));
+  } catch(e){ info.push("download failed: " + (e && e.message ? e.message : e)); }
+  if(blob && blob.size > 1000){
+    const u = URL.createObjectURL(blob);
+    const ok = await new Promise(res => { startImg.onload = () => res(true); startImg.onerror = () => res(false); startImg.src = u; });
+    if(ok){ boot(startImg, CFG.map.name); return; }
+    info.push("from memory: no");
+    try { const bm = await createImageBitmap(blob); info.push("bitmap " + bm.width + "x" + bm.height); if(bm.close) bm.close(); }
+    catch(e){ info.push("bitmap: " + (e && e.name ? e.name + " " : "") + (e && e.message ? e.message : e)); }
+  }
+  info.push("dark base " + await opens("img/base_dark.webp"));
+  info.push("a layer " + await opens("img/nationalparks.webp"));
+  info.push("half size " + await opens("img/m_zone.webp"));
+  const ua = navigator.userAgent || "", os = /OS (\d+[_\d]*) like Mac/.exec(ua) || /Android [\d.]+/.exec(ua) || /Mac OS X [\d_]+/.exec(ua) || /Windows NT [\d.]+/.exec(ua);
+  info.push((os ? os[0].replace(/_/g, ".") : "?") + (/CriOS|FxiOS|EdgiOS/.test(ua) ? " (not Safari)" : "") + ", screen " + screen.width + "x" + screen.height + " @" + (window.devicePixelRatio || 1) +
+    (navigator.deviceMemory ? ", " + navigator.deviceMemory + " GB" : "") + (window.top !== window ? ", in a frame" : ""));
+  fail("The base map could not be opened. " + info.join(" · "));
+}
 startImg.src = BASEMAP_SRC;
 requestAnimationFrame(frame);
 </script>
