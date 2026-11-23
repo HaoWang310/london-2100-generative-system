@@ -7935,12 +7935,18 @@ window.GROWTH_DATA = {"crs":"EPSG:27700","mPerPx":35.0,"size":[4286,3514],"corne
     // ever ran the model once per page; running a second variant in the same page is what
     // finds it. Return the entry itself.
     for (var i = 0; i < this.noiseCache.length; i++) if (this.noiseCache[i].seed === seed) return this.noiseCache[i];
-    var w = this.w, h = this.h, N = this.N, C = this.C, rng = sfc32(seed), j;
-    var box = Math.max(3, Math.round(1050 / C) | 1);        // v8: 21 cells of 50 m
-    var Fb = boxFilter(normals(rng, N), box, w, h), lo = 1e9, hi = -1e9;
-    for (j = 0; j < N; j++) { if (Fb[j] < lo) lo = Fb[j]; if (Fb[j] > hi) hi = Fb[j]; }
-    var F = new Float32Array(N);
-    for (j = 0; j < N; j++) F[j] = (Fb[j] - lo) / (hi - lo + 1e-9);
+    var parts = this.noiseParts(seed);
+    for (i = 0; i < parts.length; i++) parts[i]();
+    return this.noiseCache[this.noiseCache.length - 1];
+  };
+  /* 23 Nov 2026: the same fields, made in five parts so the page can breathe between them while it prepares.
+     The arithmetic and its order are as they were (the four draws from the one generator: the box field, then
+     the three ridged fields), so the fields are the same to the last bit. noise() runs the parts one after
+     another; the page's soft start runs them with a pause between. Empty when the seed is already held. */
+  World.prototype.noiseParts = function (seed) {
+    for (var i = 0; i < this.noiseCache.length; i++) if (this.noiseCache[i].seed === seed) return [];
+    var self = this, w = this.w, h = this.h, N = this.N, C = this.C, rng = sfc32(seed), j;
+    var F, r1, r2, r3;
     function ridged(sigmaM, pw) {
       var a = gaussFilter(normals(rng, N), sigmaM / C, w, h), mean = 0, sd = 0, q;
       for (q = 0; q < N; q++) mean += a[q];
@@ -7950,15 +7956,28 @@ window.GROWTH_DATA = {"crs":"EPSG:27700","mPerPx":35.0,"size":[4286,3514],"corne
       for (q = 0; q < N; q++) { var t = 1 - Math.abs((a[q] - mean) / sd); a[q] = t <= 0 ? 0 : Math.pow(t, pw); }
       return a;
     }
-    var r1 = ridged(400, 2.2), r2 = ridged(950, 2.0), r3 = ridged(1900, 1.8), V = new Float32Array(N), vmax = 0;
-    for (j = 0; j < N; j++) { V[j] = 0.45 * r1[j] + 0.35 * r2[j] + 0.20 * r3[j]; if (V[j] > vmax) vmax = V[j]; }
-    for (j = 0; j < N; j++) V[j] /= (vmax + 1e-9);
-    var JIT = new Float32Array(N);
-    for (j = 0; j < N; j++) JIT[j] = (0.70 + 0.60 * F[j]) * (0.80 + 0.40 * V[j]);
-    var Z = { seed: seed, F: F, V: V, JIT: JIT };
-    this.noiseCache.push(Z);
-    if (this.noiseCache.length > 2) this.noiseCache.shift();
-    return Z;
+    return [
+      function () {
+        var box = Math.max(3, Math.round(1050 / C) | 1);        // v8: 21 cells of 50 m
+        var Fb = boxFilter(normals(rng, N), box, w, h), lo = 1e9, hi = -1e9;
+        for (j = 0; j < N; j++) { if (Fb[j] < lo) lo = Fb[j]; if (Fb[j] > hi) hi = Fb[j]; }
+        F = new Float32Array(N);
+        for (j = 0; j < N; j++) F[j] = (Fb[j] - lo) / (hi - lo + 1e-9);
+      },
+      function () { r1 = ridged(400, 2.2); },
+      function () { r2 = ridged(950, 2.0); },
+      function () { r3 = ridged(1900, 1.8); },
+      function () {
+        var V = new Float32Array(N), vmax = 0;
+        for (j = 0; j < N; j++) { V[j] = 0.45 * r1[j] + 0.35 * r2[j] + 0.20 * r3[j]; if (V[j] > vmax) vmax = V[j]; }
+        for (j = 0; j < N; j++) V[j] /= (vmax + 1e-9);
+        var JIT = new Float32Array(N);
+        for (j = 0; j < N; j++) JIT[j] = (0.70 + 0.60 * F[j]) * (0.80 + 0.40 * V[j]);
+        var Z = { seed: seed, F: F, V: V, JIT: JIT };
+        self.noiseCache.push(Z);
+        if (self.noiseCache.length > 2) self.noiseCache.shift();
+      }
+    ];
   };
 
   // ------------------------------------------------------------------ a run
@@ -8325,7 +8344,22 @@ window.GROWTH_DATA = {"crs":"EPSG:27700","mPerPx":35.0,"size":[4286,3514],"corne
     return K.EMPTY;
   }
 
-  window.GrowthSim = { World: World, run: run, PARAMS: PARAMS, K: K, classAt: classAt, PPK: PPK, Y0: Y0, Y1: Y1 };
+  /* 23 Nov 2026: the seed exactly as run() reads it from the settings, and the settings as run() reads them, as one
+     string: two runs with the same string start from the same first pass. */
+  function settingsOf(Pin) {
+    var P = {};
+    PARAMS.forEach(function (d) {
+      var v = Pin && Pin[d.id] !== undefined ? +Pin[d.id] : d.def;
+      P[d.id] = isFinite(v) ? Math.max(d.min, Math.min(d.max, v)) : d.def;
+    });
+    P.seed = Math.round(P.seed) | 0;
+    return P;
+  }
+  function keyOf(Pin) { var P = settingsOf(Pin); return PARAMS.map(function (d) { return d.id + "=" + P[d.id]; }).join(";"); }
+  function noiseParts(world, Pin) { return world.noiseParts(settingsOf(Pin).seed); }
+
+  window.GrowthSim = { World: World, run: run, PARAMS: PARAMS, K: K, classAt: classAt, PPK: PPK, Y0: Y0, Y1: Y1,
+                       keyOf: keyOf, noiseParts: noiseParts };
 })();
 
 </script>
@@ -9479,6 +9513,14 @@ window.addEventListener("error", e => fail((e.message || "script error") +
   (e.lineno ? "  (line " + e.lineno + ")" : "")));
 
 function frame(){
+  /* 23 Nov 2026: while the growth model is being prepared (S.prepBusy) the map is drawn when the view or the
+     canvas has changed, and otherwise twice a second: drawing the whole sheet every frame took about a fifth
+     of the preparation. Nothing is lost: anything else that changes shows within half a second. */
+  if(S.prepBusy){
+    const v = S.view, now0 = performance.now(), sig = v.k + "," + v.x + "," + v.y + "," + view.width + "," + view.height;
+    if(sig === S._prepSig && now0 - (S._prepAt || 0) < 500){ requestAnimationFrame(frame); return; }
+    S._prepSig = sig; S._prepAt = now0;
+  }
   // The whole loop is wrapped so one bad frame can never kill the animation
   // permanently, and requestAnimationFrame stays outside so it always reschedules.
   try{
@@ -10672,18 +10714,39 @@ async function startGrowthSoft(params){
   note.style.cssText = "position:fixed;z-index:70;right:20px;bottom:20px;padding:10px 18px;border-radius:999px;background:rgba(11,11,13,.94);border:1px solid #2a2a2e;color:#f5f5f7;font:600 12.5px/1.3 'DM Sans',-apple-system,'PingFang SC',system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5)";
   document.body.appendChild(note);
   held.forEach(b => { b.disabled = true; });
-  const say = k => { note.textContent = (zh ? "正在准备生长模型 " : "Preparing the growth model ") + Math.min(99, Math.round(k/76*100)) + " %"; };
-  const done = () => { held.forEach(b => { b.disabled = false; }); note.remove(); window.__LC_READY__ = true; };
+  /* 23 Nov 2026: the figure now runs through the whole of the preparation, not only the 76 years. It used to
+     stand at 0 % for the first half, while the model's fields were made in one piece and the page could not
+     answer. The fields are made a part at a time (GrowthSim.noiseParts: the same fields), then the model is
+     set up, then the 76 years. The shares are the time each took when measured: fields about a third, the
+     setting up a quarter, the years the rest. While this goes on the map is drawn only when it has to be
+     (S.prepBusy, read in frame()), which leaves that time to the model. */
+  const say = v => { note.textContent = (zh ? "正在准备生长模型 " : "Preparing the growth model ") + Math.max(0, Math.min(99, Math.round(v))) + " %"; };
+  // the figure is on the screen before the next piece of work; the timer is for a page that is not being shown
+  // (a background tab, or the frame the workspace keeps out of sight), where no frame comes
+  const shown = () => new Promise(ok => { let d = false; const go = () => { if(!d){ d = true; ok(); } };
+    requestAnimationFrame(() => setTimeout(go, 0)); setTimeout(go, 120); });
+  const done = () => { S.prepBusy = false; held.forEach(b => { b.disabled = false; }); note.remove(); window.__LC_READY__ = true; };
   try{
     say(0);
     await new Promise(ok => requestAnimationFrame(() => setTimeout(ok, 60)));   // let the map be painted first
     if(S.gdrv !== before){ done(); return false; }
+    S.prepBusy = true;
+    const parts = (typeof GrowthSim.noiseParts === "function") ? GrowthSim.noiseParts(S.world, P) : [];
+    const A = parts.length ? 34 : 0, B = parts.length ? 59 : 38;            // where the fields end, where the years begin
+    for(let i=0;i<parts.length;i++){
+      parts[i]();
+      say(A*(i+1)/parts.length);
+      await shown();
+      if(S.gdrv !== before){ done(); return false; }
+    }
     const drv = GrowthSim.run(S.world, P), out = drv.out;
+    say(B); await shown();
+    if(S.gdrv !== before){ done(); return false; }
     let guard = 0, t = performance.now();
     while(out.pass === 1 && guard++ < 400){
       drv.step();
       if(performance.now() - t > 110){
-        say(guard);
+        say(B + (100-B)*guard/76);
         await new Promise(ok => setTimeout(ok, 0));
         t = performance.now();
         if(S.gdrv !== before){ done(); return false; }      // something else started a driver meanwhile
@@ -10691,6 +10754,9 @@ async function startGrowthSoft(params){
     }
     if(out.pass !== 2) throw new Error("the growth model never reached pass 2");
     S.gdrv = drv; S.gout = out;
+    /* kept for the first Run: this driver stands at the start of pass 2 and nothing has stepped it, which is
+       exactly what Run would make again from the same settings. runCentury() takes it if the settings still match. */
+    S.gfresh = { drv: drv, key: (typeof GrowthSim.keyOf === "function") ? GrowthSim.keyOf(P) : null };
     done(); return true;
   }catch(e){ done(); throw e; }
 }
@@ -11398,7 +11464,20 @@ function runCentury(){
   if(!S.world){ note("The growth model is not ready yet."); return; }
   clearRunState();
   seedNodes();
-  startGrowth(growthParams());                   // a fresh driver, with the panel's settings
+  /* 23 Nov 2026: the first pass made while the page opened is the first pass this would make again, if the
+     settings have not moved: same ground, same settings, no roads yet, and the model draws its chance from the
+     seed, the year and the cell, not from what came before. So that driver is taken as it stands, untouched
+     at the start of pass 2, and the page no longer stops for the first pass a second time. Any change to a
+     growth setting, and every later run, makes a new one as before. */
+  const gp = growthParams(), kept = S.gfresh;
+  S.gfresh = null;
+  if(kept && kept.key && kept.drv === S.gdrv && S.gout === kept.drv.out && S.gout.pass === 2 && !S.gout.done &&
+     typeof GrowthSim.keyOf === "function" && GrowthSim.keyOf(gp) === kept.key){
+    S.pass1Reused = true;
+  } else {
+    S.pass1Reused = false;
+    startGrowth(gp);                             // a fresh driver, with the panel's settings
+  }
   const t0 = performance.now();
   S.year = YEAR0;
   const stopAt = YEAR1;
