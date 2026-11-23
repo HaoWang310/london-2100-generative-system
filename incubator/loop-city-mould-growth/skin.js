@@ -243,6 +243,85 @@
     window.addEventListener('resize', function () { var l = W.l, r = W.r; fit(); if (l !== W.l || r !== W.r) put(); });
   })();
 
+  /* ------------------------------------------------------------------ Layers, tidied (23 Nov 2026)
+     Every switch and slider in Layers was flipped in turn, in each view, and the map compared before and after.
+     1. Six switches (and three sliders) never changed a pixel: they draw the older parcel method, whose buttons this
+        interface does not show, so their data is never made. They stay on the page, not shown (`#noskin` has them).
+     2. "Colour by use" and its key colour the cells of the highways, so they sit under that row now.
+     3. The two shortcuts set the layers of the method in use: "Show everything" is the Everything view with the base
+        map and its usual layers; "Roads and mould only" is the mould, its highways, links and spurs, and the existing
+        roads and rail, with the cells, the growth and the base picture off.
+     4. The base picture already holds some of the single layers, so a line says what the switches below it do, and
+        the ones that do nothing (light map, base on) are greyed. View only: nothing in a run changes. */
+  (function () {
+    if (!layers) return;
+    var RV = window.RV2 || null;
+    function rowOf(id) { var e = $(id); return e ? (e.closest('.v5l') || e.closest('.sw')) : null; }
+
+    /* 1 */
+    ['iShowRoad1', 'iShowJunctions', 'iShowUnbound', 'iShowRoad2', 'iShowCells', 'iCellLabels'].forEach(function (id) { var r = rowOf(id); if (r) r.classList.add('lc-old'); });
+    var net = rowOf('iShowNet'), h = net;
+    while (h && !(h.classList && h.classList.contains('v5h'))) h = h.previousElementSibling;
+    if (h) { h.setAttribute('translate', 'no'); T.push([h, 'The slime mould', '黏菌']); }
+
+    /* 2 */
+    var cellsCb = RV && RV.hwCb && RV.hwCb.cells, cellsRow = cellsCb ? cellsCb.closest('.v5l') : null;
+    var useRow = rowOf('iV5ByUse'), key = layers.querySelector('.v5legend');
+    if (cellsRow && useRow) { cellsRow.after(useRow); if (key) useRow.after(key); }
+
+    /* 3 */
+    function base(fn) {
+      if (typeof BASE_LAYERS === 'undefined' || typeof buildBaseLayerPanel !== 'function') return;
+      var light = !!(RV && RV.light && RV.layersDone && RV.LIGHT_OFF);
+      BASE_LAYERS.forEach(function (L) {
+        var v = !!fn(L, light);
+        if (light && RV.LIGHT_OFF.indexOf(L.id) >= 0) { RV.savedLayers = RV.savedLayers || {}; RV.savedLayers[L.id] = !!fn(L, false); }
+        L.on = v;
+      });
+      buildBaseLayerPanel();
+    }
+    function done() { try { S.growthY = null; S.dirty = true; if (typeof draw === 'function') draw(); } catch (e) { /* drawn on the next frame */ } baseState(); }
+    var bAll = $('btnAllOn'), bSolo = $('btnSolo');
+    if (RV && bAll) bAll.onclick = function () {
+      RV.setMode('all');
+      RV.setCb('iMouldOn', true); RV.setCb('iBakedBase', true);
+      base(function (L, light) { return typeof DEFAULT_ON !== 'undefined' && DEFAULT_ON.indexOf(L.id) >= 0 && !(light && RV.LIGHT_OFF.indexOf(L.id) >= 0); });
+      done();
+    };
+    if (RV && bSolo) bSolo.onclick = function () {
+      RV.setCb('iMouldOn', true); RV.setCb('iShowNet', true);
+      ['hw', 'link', 'spur'].forEach(function (k) { RV.setHw(k, true); }); RV.setHw('cells', false);
+      ['iShowBuilt', 'iShowFarm', 'iShowEdge', 'iBakedBase'].forEach(function (id) { RV.setCb(id, false); });
+      base(function (L) { return L.id.indexOf('roads') === 0 || L.id === 'rail'; });
+      done();
+    };
+
+    /* 4 */
+    var bl = $('baseLayers'), note = document.createElement('p');
+    note.className = 'hint lc-basenote'; note.setAttribute('translate', 'no');
+    if (bl && bl.parentNode === layers) layers.insertBefore(note, bl);
+    function baseState() {
+      if (!bl || typeof BASE_LAYERS === 'undefined') return;
+      var zh = isZh(), on = !RV || !RV.baseOn || RV.baseOn(), any = false;
+      BASE_LAYERS.forEach(function (L) {
+        var cb = $('bl_' + L.id), r = $('bl_' + L.id + '_op'), row = cb ? cb.closest('#baseLayers > div') : null;
+        if (!row) return;
+        var na = !!(RV && RV.skipLayer && RV.skipLayer(L.id));
+        if (na) any = true;
+        row.classList.toggle('lc-na', na);
+        if (cb.disabled !== na) cb.disabled = na;
+        if (r && r.disabled !== na) r.disabled = na;
+      });
+      var t = !on ? (zh ? '底图已关闭：下面每一层都是独立图层。' : 'The base map is off: each layer below stands on its own.')
+        : any ? (zh ? '浅色底图里已经画有变灰的几层，关掉「底图（一张图）」后才能单独开关；其余各层叠加在底图之上。'
+                    : 'The light base map already holds the greyed layers; turn "Base map (one picture)" off to switch them one by one. The others are drawn over the base.')
+        : (zh ? '底图这张图已含城区、水体、绿带边界、主要道路和铁路；下面的开关只是在它上面再叠一层着色。要单独开关，先关掉「底图（一张图）」。'
+              : 'The base picture already holds the built-up area, the water, the green belt edge, the main roads and the rail; the switches below only draw a tint over it. To switch them one by one, turn "Base map (one picture)" off first.');
+      if (note.textContent !== t) note.textContent = t;
+    }
+    baseState(); setInterval(baseState, 400);
+  })();
+
   /* ------------------------------------------------------------------ language */
   var old = window.setLang;
   if (typeof old === 'function') window.setLang = function () { var r = old.apply(this, arguments); relabel(); return r; };

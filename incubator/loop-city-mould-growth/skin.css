@@ -207,3 +207,11 @@ html.lcskin .lc-rz { display:none; }
   html.lcskin #panelL.lc-col + .lc-rz, html.lcskin .lc-rz:has(+ #panel.lc-col) { display:none; }
   html.lcskin.lc-rzing, html.lcskin.lc-rzing * { cursor:col-resize !important; user-select:none; -webkit-user-select:none; }
 }
+
+/* ==== Layers, tidied (23 Nov 2026) ====
+   The switches that draw nothing are hidden with .lc-old (above). A single base layer that the base picture already
+   holds, and so does nothing, is greyed; the line above the single layers says what they do. */
+html.lcskin .lc-basenote { margin:8px 0 10px; }
+html.lcskin #baseLayers > div.lc-na { opacity:.35; }
+html.lcskin #baseLayers > div.lc-na input { cursor:default; }
+
