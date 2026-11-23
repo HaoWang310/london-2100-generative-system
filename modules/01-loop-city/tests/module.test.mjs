@@ -90,3 +90,63 @@ test('GeoJSON in grid metres goes to lon/lat vertex by vertex, and back', () => 
   assert.ok(ll.features[1].geometry.coordinates[0][0] < 0 && ll.features[1].geometry.coordinates[0][1] > 51);   // west of Greenwich, north of 51
   assert.deepEqual(fromMerc(toMerc([-0.1278, 51.5074])).map(v => +v.toFixed(6)), [-0.1278, 51.5074]);
 });
+
+// ---------------------------------------------------------------- the published result (result/)
+import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { GrowthPlayer, mouldBetween, gunzip, RESULT_FORMAT } from '../result.js';
+
+const RESULT_DIR = fileURLToPath(new URL('../result/', import.meta.url));
+
+test('the growth player: any year, forwards and back, from the stored changes', () => {
+  // 3 x 2 cells, two colours and empty; year 1 changes cells 1 and 4, year 3 changes cell 4 again and cell 5
+  const g = { width: 3, height: 2, palette: [[0, 0, 0, 0], [232, 104, 74, 255], [157, 181, 116, 255]], events: 4, counts: Array(76).fill(0) };
+  g.counts[1] = 2; g.counts[3] = 2;
+  const N = 6, bytes = new Uint8Array(N + 4 * 5), dv = new DataView(bytes.buffer);
+  bytes.set([0, 0, 2, 0, 0, 0], 0);
+  [1, 3, 4, 1].forEach((v, k) => dv.setUint32(N + k * 4, v, true));            // steps from the previous changed cell, per year
+  bytes.set([1, 1, 2, 1], N + 16);
+  const p = new GrowthPlayer(bytes, g);
+  assert.deepEqual([...p.seek(0).cur], [0, 0, 2, 0, 0, 0]);
+  assert.deepEqual([...p.seek(1).cur], [0, 1, 2, 0, 1, 0]);
+  assert.deepEqual([...p.seek(2).cur], [0, 1, 2, 0, 1, 0]);
+  assert.deepEqual([...p.seek(75).cur], [0, 1, 2, 0, 2, 1]);
+  assert.deepEqual([...p.seek(1).cur], [0, 1, 2, 0, 1, 0], 'back again');
+  assert.equal(p.pixels[1], 0xff4a68e8, 'RGBA as a little-endian canvas holds it');
+  assert.equal(p.pixels[0], 0);
+  assert.throws(() => new GrowthPlayer(bytes.subarray(1), g), /bytes/);
+});
+
+test('the mould between two stored years', () => {
+  const of = { 2025: 'a', 2030: 'b', 2065: 'c', 2100: 'c' };
+  assert.deepEqual(mouldBetween(of, 2025), { a: 'a', b: 'a', t: 0 });
+  assert.deepEqual(mouldBetween(of, 2027), { a: 'a', b: 'b', t: 0.4 });
+  assert.deepEqual(mouldBetween(of, 2030), { a: 'b', b: 'b', t: 0 });
+  assert.deepEqual(mouldBetween(of, 2080), { a: 'c', b: 'c', t: 0 }, 'parked: the same picture, no blend');
+  assert.deepEqual(mouldBetween(of, 2100), { a: 'c', b: 'c', t: 0 });
+});
+
+test('the published result is whole and is of this frame', async t => {
+  const meta = JSON.parse(readFileSync(RESULT_DIR + 'result.json', 'utf8'));
+  assert.equal(meta.format, RESULT_FORMAT);
+  for (const k of ['e0', 'e1', 'n0', 'n1']) assert.equal(meta.frame[k], FRAME[k], `frame.${k}`);
+  const bytes = await gunzip(readFileSync(RESULT_DIR + meta.growth.file));
+  assert.equal(bytes.length, meta.growth.rawBytes);
+  const p = new GrowthPlayer(bytes, meta.growth);
+  const filled = y => { p.seek(y); let n = 0; for (let i = 0; i < p.N; i++) if (meta.growth.palette[p.cur[i]][3]) n++; return n; };
+  const at2025 = filled(0), at2060 = filled(35), at2100 = filled(75);
+  assert.ok(at2025 < at2060 && at2060 < at2100, `the painted cells grow: ${at2025}, ${at2060}, ${at2100}`);
+  assert.ok(p.colour.every(c => c < meta.growth.palette.length));
+  // the built and farmed ground of the figures, to within a few per cent of what is painted at 2100 (70 m cells)
+  const km2 = at2100 * 0.07 * 0.07, said = meta.stats.builtKm2 + meta.stats.farmKm2;
+  assert.ok(Math.abs(km2 - said) / said < 0.05, `painted ${km2.toFixed(0)} km2, figures ${said} km2`);
+  assert.equal(Object.keys(meta.mould.of).length >= 3, true);
+  for (const f of new Set(Object.values(meta.mould.of))) assert.ok(existsSync(RESULT_DIR + f), f);
+  assert.equal(meta.mould.of[2100] !== undefined && meta.mould.of[2025] !== undefined, true);
+  assert.equal(meta.base.stations.features.length, 17);
+  assert.equal(meta.vectors.cells.features.length, meta.stats.cells);
+  assert.ok(meta.vectors.highways.features.length > 100);
+  // a reminder, not a failure: the incubator page has changed since this result was grown
+  const now = createHash('sha256').update(readFileSync(fileURLToPath(new URL(`../../../${SOURCE_PATH}index.html`, import.meta.url)))).digest('hex').slice(0, 12);
+  if (now !== meta.pageHash) t.diagnostic(`the published result (${meta.publishedAt.slice(0, 10)}, page ${meta.pageCommit}) was grown from an earlier incubator page: node modules/01-loop-city/tools/publish-result.mjs publishes a new one`);
+});

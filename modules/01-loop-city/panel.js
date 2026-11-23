@@ -10,6 +10,14 @@ import { YEAR0, YEARS } from './engine.js';
 
 const ZH = {
   'Run': '运行', 'Run the century': '运行百年', 'Run again': '再次运行', 'Running…': '运行中…',
+  'Preparing…': '准备中…', 'Back to the published result': '回到发布的结果',
+  'Opening the published result…': '正在打开发布的结果…', 'The published result could not be opened.': '发布的结果无法打开。',
+  'On show: the published result, grown on': '现在显示的是发布的结果，运行于', 'On show: your own run. The century took': '现在显示的是你自己的这次运行，百年用时',
+  'Opening the engine page and preparing it… a quarter of a minute or so, then the century starts.': '正在打开引擎页面并做准备…… 大约十几秒，之后开始运行百年。',
+  'Run the century grows one of your own with the engine: a minute or more on a desk, longer and heavier on a phone. Every run is different: the mould has no fixed random seed.': '「运行百年」会用引擎自己算一次：电脑上一分钟以上，手机上更久、更吃内存。每次运行结果都不同：黏菌没有固定的随机种子。',
+  'The figures are those of the published result, at 2100.': '以下数据为发布结果在 2100 年的数值。',
+  'The published result was grown with these. To change them the engine has to be loaded.': '发布的结果是用以下参数算出来的。要修改参数，需要先载入引擎。',
+  'Open the settings (loads the engine)': '打开参数（需载入引擎）',
   'Opening the engine page…': '正在打开引擎页面…',
   'Ready. Press Run the century: the mould and the city grow together from 2025 to 2100.': '就绪。点「运行百年」：黏菌与城市从 2025 年共同生长到 2100 年。',
   'Growing': '正在生长', 'The map answers more slowly while the century runs.': '运行期间地图响应会变慢。',
@@ -37,33 +45,43 @@ const SLIDER_NAME = { roadTrail: 'Existing roads as a faint trail', readRoads: '
 const fmt = (v, d = 0) => Number(v || 0).toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
 const decimals = step => (step && step < 1 ? String(step).split('.')[1]?.length || 0 : 0);
 
-export function createPanel(container, engine, { display, onDisplay = () => {}, onRun = () => {} }) {
-  const s = engine.state;
+export function createPanel(container, ctl, { display, onDisplay = () => {} }) {
+  const { engine, result } = ctl;
+  const cur = () => (ctl.source() === 'result' ? result.state : engine.state);   // what the map is showing
   const T = str => (getLang() === 'zh' && ZH[str]) || str;
   const el = {}, SL = {};
   let dirty = false;
+  const day = iso => (iso ? String(iso).slice(0, 10) : '');
 
   function status() {
     if (!el.status) return;
+    const s = cur(), E = engine.state, published = ctl.source() === 'result';
     let msg = '';
-    if (s.error) msg = `${T('The engine could not be opened.')} ${s.error}`;
-    else if (!s.loaded) msg = T('Opening the engine page…');
-    else if (s.running) msg = `${T('Growing')} ${YEAR0 + s.year}… ${T('The map answers more slowly while the century runs.')}`;
+    if (E.error && !published) msg = `${T('The engine could not be opened.')} ${E.error}`;
+    else if (ctl.starting() || E.loading) msg = T('Opening the engine page and preparing it… a quarter of a minute or so, then the century starts.');
+    else if (E.running) msg = `${T('Growing')} ${YEAR0 + E.year}… ${T('The map answers more slowly while the century runs.')}`;
+    else if (published && !result.state.loaded) msg = result.state.error ? `${T('The published result could not be opened.')} ${result.state.error}` : T('Opening the published result…');
+    else if (published) msg = `${T('On show: the published result, grown on')} ${day(result.state.meta.publishedAt)}. ${T('Drag the timeline to replay the years.')}${dirty ? ` ${T('Settings changed: run the century again to grow with them.')}` : ''}`;
     else if (dirty && s.ran) msg = T('Settings changed: run the century again to grow with them.');
-    else if (s.ran) msg = `${T('The century took')} ${fmt(s.ms / 1000, 1)} s. ${T('Drag the timeline to replay the years.')}`;
+    else if (s.ran) msg = `${T('On show: your own run. The century took')} ${fmt(s.ms / 1000, 1)} s. ${T('Drag the timeline to replay the years.')}`;
+    else if (!E.loaded) msg = T('Opening the engine page…');
     else msg = T('Ready. Press Run the century: the mould and the city grow together from 2025 to 2100.');
     el.status.textContent = msg;
-    el.status.classList.toggle('err', Boolean(s.error));
-    el.run.disabled = !s.loaded || s.running;
-    el.run.textContent = s.running ? T('Running…') : s.ran ? T('Run again') : T('Run the century');
-    el.bar.style.width = s.running ? `${Math.round(s.year / YEARS * 100)}%` : '0';
-    for (const k of Object.keys(SL)) SL[k].inp.disabled = s.running;
-    if (el.reset) el.reset.disabled = s.running;
+    el.status.classList.toggle('err', Boolean(E.error && !published));
+    const busy = ctl.starting() || E.loading || E.running;
+    el.run.disabled = busy;
+    el.run.textContent = busy ? (E.running ? T('Running…') : T('Preparing…')) : (published ? T('Run the century') : s.ran ? T('Run again') : T('Run the century'));
+    el.bar.style.width = E.running ? `${Math.round(E.year / YEARS * 100)}%` : '0';
+    el.back.hidden = published || busy || !result.state.loaded;
+    el.cost.hidden = !published || busy;
+    for (const k of Object.keys(SL)) SL[k].inp.disabled = E.running;
+    if (el.reset) el.reset.disabled = E.running;
   }
   function readout() {
     if (!el.year) return;
+    const s = cur(), published = ctl.source() === 'result';
     el.year.textContent = YEAR0 + s.year;
-    el.when.textContent = s.running ? T('The figures so far, as the century runs.') : s.ran ? T('The figures are those of the finished run, at 2100.') : '';
+    el.when.textContent = s.running ? T('The figures so far, as the century runs.') : published && s.loaded ? T('The figures are those of the published result, at 2100.') : s.ran ? T('The figures are those of the finished run, at 2100.') : '';
     const st = s.stats || {}, dash = '–', after = v => (s.vectors ? v : dash);
     el.v.road.textContent = `${fmt(st.roadKm)} km`;
     el.v.built.textContent = `${fmt(st.builtKm2)} km²`;
@@ -74,7 +92,7 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
     el.v.st.textContent = after(`${fmt(st.stationsInCell)} ${T('of')} ${s.base ? s.base.stations.features.length : 0}`);
   }
   function showSlider(key) {
-    const d = SL[key], m = s.sliders.find(x => x.key === key); if (!d || !m) return;
+    const d = SL[key], m = engine.state.sliders.find(x => x.key === key); if (!d || !m) return;
     if (m.type === 'bool') { d.inp.checked = Boolean(m.value); return; }
     d.inp.value = m.value;
     d.val.textContent = fmt(m.value, decimals(m.step));
@@ -84,13 +102,15 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
   function build() {
     container.replaceChildren();
     for (const k of Object.keys(SL)) delete SL[k];
+    el.reset = null;
 
     // run
-    el.run = h('button', { type: 'button', class: 'btn primary lc01-run', onclick: () => onRun() }, T('Run the century'));
+    el.run = h('button', { type: 'button', class: 'btn primary lc01-run', onclick: () => ctl.run() }, T('Run the century'));
     el.status = h('p', { class: 'muted small lc01-status' });
     el.bar = h('i');
-    container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Run')), el.run, el.status, h('div', { class: 'lc01-prog' }, el.bar),
-      h('p', { class: 'lc01-note small' }, T('Every run is different: the mould has no fixed random seed.'))));
+    el.cost = h('p', { class: 'lc01-note small' }, T('Run the century grows one of your own with the engine: a minute or more on a desk, longer and heavier on a phone. Every run is different: the mould has no fixed random seed.'));
+    el.back = h('button', { type: 'button', class: 'btn lc01-back', onclick: () => ctl.showPublished() }, T('Back to the published result'));
+    container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Run')), el.run, el.status, h('div', { class: 'lc01-prog' }, el.bar), el.cost, el.back));
 
     // figures
     el.year = h('div', { class: 'lc01-year' });
@@ -117,9 +137,10 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
       h('div', { class: 'param' }, h('div', { class: 'param-head' }, h('span', { class: 'param-label' }, T('Opacity'))), op),
       sw('background', T('Keep as background on the other levels'))));
 
-    // settings: the engine's own sliders
-    if (s.sliders.length) {
-      const rows = s.sliders.map(m => {
+    // settings: the engine's own sliders, once the engine is here; before that, what the published result was grown with
+    const E = engine.state;
+    if (E.loaded && E.sliders.length) {
+      const rows = E.sliders.map(m => {
         const label = T(SLIDER_NAME[m.key] || m.key);
         if (m.type === 'bool') {
           const inp = h('input', { type: 'checkbox', role: 'switch', checked: Boolean(m.value) });
@@ -137,6 +158,13 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
       container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Settings')),
         h('p', { class: 'muted small' }, T('Each of these changes the run. Move one, then run the century again.')), rows, h('div', { class: 'lc01-acts' }, el.reset)));
       for (const k of Object.keys(SL)) showSlider(k);
+    } else {
+      const meta = result.state.meta, vals = meta ? Object.entries(meta.sliders || {}) : [];
+      const load = h('button', { type: 'button', class: 'btn', disabled: E.loading || ctl.starting(), onclick: () => { ctl.loadEngine(); status(); } }, E.loading ? T('Preparing…') : T('Open the settings (loads the engine)'));
+      container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Settings')),
+        h('p', { class: 'muted small' }, T('The published result was grown with these. To change them the engine has to be loaded.')),
+        vals.length ? h('table', { class: 'lc01-tab' }, vals.map(([k, v]) => h('tr', {}, h('td', {}, T(SLIDER_NAME[k] || k)), h('td', { class: 'n' }, typeof v === 'boolean' ? T(v ? 'on' : 'off') : fmt(v, Number.isInteger(v) ? 0 : 2))))) : null,
+        h('div', { class: 'lc01-acts' }, load)));
     }
     status(); readout();
   }
@@ -144,7 +172,7 @@ export function createPanel(container, engine, { display, onDisplay = () => {}, 
   return {
     build,
     update(what) {
-      if (!el.run || what === 'lang' || what === 'loaded') { build(); return; }
+      if (!el.run || what === 'lang' || what === 'loaded' || what === 'loading' || what === 'error') { build(); return; }
       if (what === 'params') { dirty = true; for (const k of Object.keys(SL)) showSlider(k); }
       if (what === 'running') dirty = false;
       status(); readout();
@@ -172,4 +200,5 @@ export const PANEL_CSS = `
 .lc01-key { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); padding: 8px 0 2px; }
 .lc01-sl .param-value { color: #fff; } .lc01-sl .param-value.def { color: var(--text-3); }
 .lc01-acts { margin-top: 10px; } .lc01-acts .btn { width: 100%; }
+.lc01-back { width: 100%; margin-top: 4px; } .lc01-back[hidden], .lc01-note[hidden] { display: none; }
 `;
