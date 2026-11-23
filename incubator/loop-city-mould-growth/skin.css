@@ -185,3 +185,6 @@ html.lcskin .lookRow { grid-template-columns:repeat(2,1fr); gap:8px; }
 html.lcskin .lookBtn { padding:8px 10px; border-radius:12px; border-color:rgba(255,255,255,.22); background:#000; font-size:12.5px; }
 html.lcskin .lookBtn.on { border-color:#fff; }
 html.lcskin #lcPairRow { margin:12px 0 4px; }
+
+/* The older parcel method (parcels from the yearly roads) and its four sliders in The network are not shown: their code and controls stay on the page, and #noskin shows them. */
+html.lcskin #c8Old, html.lcskin .lc-old { display:none; }
