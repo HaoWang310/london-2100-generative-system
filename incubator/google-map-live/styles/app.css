@@ -571,6 +571,7 @@ body.phoneUi .panelResizeHandle{display:none}
 #panel .sheetHandle::before{content:"";position:absolute;left:50%;top:9px;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:#5c5c61}
 body.phoneUi .coords{display:none}
 body.phoneUi .maplibregl-ctrl-bottom-right,body.phoneUi .maplibregl-ctrl-bottom-left{bottom:92px}
-body.phoneUi .dpToggle{top:12px;bottom:auto;right:8px}
-body.phoneUi.touchUi .displayPanel{top:60px;bottom:auto;right:8px;max-height:calc(100dvh - 180px)}
+/* 23 Nov 2026 · the one phone layout: Display at the top LEFT, its panel across the top half */
+body.phoneUi .dpToggle{top:12px;bottom:auto;left:8px;right:auto;height:44px}
+body.phoneUi.touchUi .displayPanel{top:64px;bottom:auto;left:8px;right:8px;width:auto;max-height:min(56dvh,calc(100dvh - 180px))}
 body.phoneUi .layerHintTooltip,body.phoneUi #layerHintTooltip{max-width:calc(100vw - 24px)}

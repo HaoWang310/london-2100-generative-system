@@ -126,4 +126,7 @@ html.l2ui #panel .layerInfo, html.l2ui .layerInfo { color:var(--l2-ink3); }
 html.l2ui #panel .layerInfo:active { background:rgba(255,255,255,0.1); }
 html.l2ui .dpToggle { border:1px solid var(--l2-bd); background:rgba(0,0,0,0.94); color:#fff; }
 html.l2ui .dpToggle[aria-expanded="true"] { background:#fff; border-color:#fff; color:#000; }
-html.l2ui #panel .sheetHandle::before { background:#000; color:#fff; }
+/* 23 Nov 2026: the sheet's handle is a small bar, not a button. The rule for the panel's buttons above gave it a
+   border (an empty outlined box across the sheet) and this one painted its bar black on black. */
+html.l2ui #panel .sheetHandle, html.l2ui #panel .sheetHandle:hover:not(:disabled) { background:none; border:0; }
+html.l2ui #panel .sheetHandle::before { background:rgba(255,255,255,.4); }
