@@ -1,5 +1,7 @@
 # Structure Studio · 结构工作室（Linear Farm 走廊）
 
+> **手机界面 · The phone (23 Nov 2026).** 手机上换成统一的手机布局（`shared/ui/phone.css`、`phone.js`，本 app 的接线在 `phone.js`）：模型铺满屏幕，左上角「显示」打开视图、视口、显示模式和图层（整宽、上半屏），功能面板成为底部的卡，收起时留名称、场地和「逐步生成 / 暂停 / 立即完成」；「室列表」按钮移到卡的上方，任一面板打开时隐藏。iPad 和电脑不变。布局只在手机模拟里验证过，三维画面在那里无法载入，需要在真机上看一次。 On a phone the page takes the shared phone layout (wired in this app's `phone.js`): Display (top left) opens the views, display modes and layers, the process panel is a sheet along the bottom that folds to its name, the site and the three run buttons, and the room-list button stands above the sheet. The layout was checked in phone emulation, where the 3D view could not load; it needs one look on a real phone.
+
 > **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`；本 app 的变量在 `skin.css` 里对应到共用变量。只改颜色、字体和圆角，控件和引擎都没动。颜色只留给图例和警告。网址加 `#noskin` 显示原来的界面。
 
 

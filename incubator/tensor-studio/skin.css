@@ -1,1 +1,7 @@
 /* Tensor Studio · what the shared studio layer (../../shared/ui/studio.css) does not cover (22 Nov 2026). */
+
+
+/* ==== the phone (23 Nov 2026): the one layout every app takes. This app already had the sheet along the bottom; here
+   Display moves from the top right to the top LEFT and its panel opens across the top half. */
+html.phoneUi .dpToggle { left:12px !important; right:auto !important; top:12px !important; height:44px !important; border-radius:14px !important; font-size:15px !important; display:inline-flex !important; align-items:center; gap:8px; }
+html.phoneUi .displayPanel { left:12px !important; right:12px !important; top:64px !important; width:auto !important; max-height:min(56vh, calc(100vh - 229px)) !important; max-height:min(56dvh, calc(100dvh - 229px - env(safe-area-inset-bottom))) !important; }

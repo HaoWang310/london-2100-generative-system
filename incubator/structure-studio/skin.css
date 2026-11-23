@@ -8,3 +8,18 @@ html.l2ui #busy, html.l2ui #dmBar, html.l2ui #dlbox, html.l2ui #cardBar, html.l2
 html.l2ui .displayPanel .dpLegend, html.l2ui .displayPanel .dpLegend span { color:var(--l2-ink2); }
 html.l2ui .displayPanel .dpNote { color:var(--l2-ink3); }
 html.l2ui .displayPanel label.dpSwitchRow { color:#fff; }
+
+
+/* ==== the phone (23 Nov 2026): the one layout (../../shared/ui/phone.css). The model already fills the screen. */
+html.l2ui.l2phone .l2ph-body { padding-top:4px; }
+html.l2ui.l2phone .l2ph-body .ts-head { padding:0 0 8px; justify-content:flex-end; }
+html.l2ui.l2phone .l2ph-quick button { font-size:14px; white-space:nowrap; }
+html.l2ui.l2phone .l2ph-panel { padding:0; }
+/* the app places what floats on the model by the widths of its two side panels (--pl, --pr): on a phone there are none */
+html.l2ui.l2phone { --pl:0px !important; --pr:0px !important; }
+html.l2ui.l2phone #vp { top:64px !important; left:14px !important; }
+html.l2ui.l2phone #axis { left:10px !important; bottom:calc(141px + 12px + env(safe-area-inset-bottom)) !important; }
+/* the list of rooms: its button and its bar stand above the folded sheet */
+html.l2ui.l2phone #cbShow { left:50% !important; bottom:calc(141px + 12px + env(safe-area-inset-bottom)) !important; min-height:44px; }
+html.l2ui.l2phone.l2ph-disp-open #cbShow, html.l2ui.l2phone.l2ph-open #cbShow { display:none !important; }
+html.l2ui.l2phone #cardBar { left:8px !important; right:8px !important; width:auto !important; bottom:calc(141px + 8px + env(safe-area-inset-bottom)) !important; }

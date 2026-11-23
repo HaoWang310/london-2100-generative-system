@@ -1,5 +1,7 @@
 # Tensor Studio · 张量场工作室
 
+> **手机界面 · The phone (23 Nov 2026).** 手机布局（v8.47 起本 app 自带）与其他 app 对齐：「显示」按钮从右上角移到左上角并带同一个图标，显示面板整宽、只占上半屏（`skin.css`）；打开底部的卡会收起显示面板，打开显示面板会收起卡（`phone.js`）。引擎和电脑上的界面不变。只在手机模拟里验证过。 The app's own phone layout (since v8.47) now matches the other apps: the Display button is at the top left with the same mark, the display panel is full width in the upper half (`skin.css`), and opening the sheet folds the display panel and the other way round (`phone.js`). Checked in phone emulation only.
+
 > **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`。只改颜色、字体和圆角，控件位置和 `app.js` 都没动。颜色只留给图例（显示面板里的色点、配色、图例）和警告。浅色外观只改地图，面板保持黑色。网址加 `#noskin` 显示原来的界面。
 
 

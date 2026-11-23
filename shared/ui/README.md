@@ -15,4 +15,8 @@
 
 每个 app 自己的 `skin.css` / `skin.js` 只做一件事：把这个 app 原有的控件对应到这些变量和这个布局上，不改它的引擎。
 
+**手机（2026-11-23）。** `phone.css` 和 `phone.js` 是所有 app 在手机上的同一个布局（手机 = 触屏且短边小于 600 像素，与伦敦地图的判断一致；iPad 和电脑不变）：地图或模型铺满屏幕；左上角「显示」按钮，点一下显示面板从它下面展开（整宽，只占上半屏）；功能面板是底部的一张卡，收起时只留名称、当前状态和最常用的一两个按钮，点把手或 + 展开。两个面板不会同时打开。按钮不小于 44 像素。app 在页面头部给 `<html>` 加 `l2phone`，再在自己的 `skin.js` 里调用 `L2Phone.init({ sheet, display, title, status, quick, hide })`；面板里的控件原样搬进去，不改引擎。Loop City 第 1 步、伦敦地图和张量场工作室各有自己更早的手机代码，位置和尺寸与这里一致。
+
 The tokens every app's interface layer reads. Black, white and white at lower opacity only; colour is kept for map keys and warnings. DM Sans. Floating panels: the process on the left, the display on the right. Each app's own `skin.css` / `skin.js` maps its controls onto these tokens and this layout and leaves its engine alone.
+
+**Phones (23 Nov 2026).** `phone.css` and `phone.js` are the one phone layout (a touch screen under 600 px on its short side; iPads and computers are unchanged): the map or model fills the screen, a Display button at the top left opens the display panel under it (full width, upper half), and the process panel is a sheet along the bottom that folds to its name, its state and one or two main buttons. Only one of the two is open at a time. An app sets `l2phone` on `<html>` in its head and calls `L2Phone.init(...)` from its own `skin.js`; the controls are moved as they are and the engine is left alone.

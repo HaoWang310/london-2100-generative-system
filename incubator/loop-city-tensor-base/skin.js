@@ -45,5 +45,16 @@
 
   new MutationObserver(relabel).observe(H, { attributes: true, attributeFilter: ['lang'] });
   relabel(); setTimeout(relabel, 1000);
+  /* ---- the phone (23 Nov 2026): the one layout of shared/ui/phone. The site panel is the sheet along the bottom:
+     folded it shows the name, the cells in hand, and the main action (save the site for the tensor field); the
+     display panel opens from the Display button at the top left. */
+  if (window.L2Phone && L2Phone.is()) {
+    L.classList.remove('l2-col'); R.classList.remove('l2-col');
+    L2Phone.init({
+      sheet: L, display: R, quick: [$('saveSite')], hide: [h1, hb.querySelector('.l2-icon'), colR, hr], zh: isZh,
+      title: function () { return h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : 'Loop City'; },
+      status: function () { var c = $('cellsLine'); return c ? c.textContent.replace(/\s+/g, ' ').trim() : ''; }
+    });
+  }
   try { window.dispatchEvent(new Event('resize')); } catch (e) { /* the map re-fits itself */ }
 })();

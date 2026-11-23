@@ -99,3 +99,13 @@ html.l2ui #lcSampleNote { display:none !important; }
 }
 @media (max-width:600px) { html.l2ui #left { max-height:34vh; } html.l2ui #right { max-height:30vh; } }
 html.l2ui .l2-head h1 { white-space:normal; font-size:20px; }
+
+
+/* ==== the phone (23 Nov 2026): the one layout (../../shared/ui/phone.css). Here only: the map fills the screen. */
+html.l2ui.l2phone #app { display:block; }
+html.l2ui.l2phone #wrap { position:fixed; inset:0; min-height:0; }
+html.l2ui.l2phone .l2ph-body .l2-head { position:static; padding:0 0 8px; }
+html.l2ui.l2phone .l2ph-quick button { border:1px solid var(--l2-bd); border-radius:var(--l2-r); background:#000; color:#fff; font:600 15px/1 var(--l2-font); }
+html.l2ui.l2phone .l2ph-quick button.nx { background:#fff; border-color:#fff; color:#000; }
+html.l2ui.l2phone .l2ph-quick button:disabled { opacity:.4; }
+html.l2ui.l2phone .l2ph-panel { padding:12px 14px 14px; }
