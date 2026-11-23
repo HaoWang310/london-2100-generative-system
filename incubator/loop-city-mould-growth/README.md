@@ -11,6 +11,8 @@
 > **黑与白 · Black and white (22 Nov 2026).** 界面只用黑、白和降低不透明度的白。颜色只留在给地图当图例的两处：「图层」里的色块和「黏菌外观」的选项。地图本身不变。 The interface uses black, white, and white at lower opacity only. Colour stays in the two places that are a key to the map: the swatches in Layers and the choices in Mould look. The map is untouched.
 >
 > **打开速度 · Loading (22 Nov 2026).** 18 张底图和图层原来写在网页里（20.1 MB），现在是 `img/` 里的无损 WebP（逐像素相同，共 7.8 MB），网页本身 1.7 MB；浅色底图在页面出现之后才下载。生长模型的第一遍（pass 1）改为页面显示之后分片计算，期间「运行百年」「重置」不可点。因此本页须通过网页服务器打开（GitHub Pages 或 `python3 -m http.server`），不能直接双击。 The 18 base images were inline (20.1 MB); they are now lossless WebP files in `img/` (pixel for pixel the same, 7.8 MB) and the page is 1.7 MB; the light map is fetched once the page is up. Pass 1 of the growth model now runs in slices after the page is shown; Run and Reset wait for it. The page must be served over http; it no longer opens from the disk.
+>
+> **加载时的闪现 · The flash while loading (23 Nov 2026).** 深色底图还没下载完时，地图保持黑色，不再先画出模型读取用的浅色图；字体下载期间文字先用系统字体显示（`font-display: swap`），不再是空白的按钮。模型没有改动。 While the dark base is still on its way the map stays black; the light sheet the model reads is no longer drawn in its place. While the font is on its way the text is shown in the system font, so the panels are no longer blank. The model is untouched.
 
 
 黏菌与城市生长在整条环线上同时运行（2025–2100），读取现有的高速公路和 A 级道路。百年结束后，从黏菌的主干道读出单元并按规则清理。点一个单元，或按住 Shift 选多个相邻单元，双击（或按「在毛线页面中打开」）进入第 2 步；也可以「保存单元（文件）」。
