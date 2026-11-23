@@ -133,7 +133,8 @@
     vCells.textContent = cells ? String(cells) : '–';
     var yr = txt('vYear') || '2025', zh = isZh();
     var egg = window.LCEGG && window.LCEGG.text ? window.LCEGG.text(zh) : '';
-    pill.textContent = egg ? egg : running ? (zh ? '正在生长 · ' : 'Growing · ') + yr
+    var reading = false; try { reading = typeof HW !== 'undefined' && !!HW.busy; } catch (e) { reading = false; }
+    pill.textContent = egg ? egg : reading ? (zh ? '正在提取单元…' : 'Reading the cells…') : running ? (zh ? '正在生长 · ' : 'Growing · ') + yr
       : cells ? yr + (zh ? ' · ' + cells + ' 个单元' : ' · ' + cells + ' cells')
       : (zh ? yr + ' · 点「运行百年」开始' : yr + ' · press Run the century');
     if (was.running && !running) was.ran = true;
@@ -445,7 +446,9 @@
       var ex0 = HW.extract;
       HW.extract = function () {
         if (E.on) { say('自由黏菌里不能提取单元', 'No cells from the free mould'); return; }
-        return ex0.apply(this, arguments);
+        var r = ex0.apply(this, arguments);
+        try { tick(); } catch (e) { /* the note follows on the next tick */ }      // "Reading the cells" at once
+        return r;
       };
     }
   })();
