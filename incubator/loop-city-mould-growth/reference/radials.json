@@ -1,0 +1,102 @@
+{
+  "about": "Loop City step 1 · the six radials: the official name of the line each follows, and the stations on it, checked against the operators' own sites on 24 Nov 2026. Line names are the infrastructure managers' (Network Rail, HS1 Ltd, HS2 Ltd); station names are the official ones (National Rail / Network Rail for National Rail stations, TfL for the DLR). Read by tools/build-radials-reference.py (the reference figure) and tools/build-intro.py (the opening story). Positions come from the OpenStreetMap stations in ../loop-city-real-map/assets, found by their OSM name ('osm') where it differs from the official one, or from 'at' (WGS84) for a station not yet in that extract.",
+  "checked": "2026-11-24",
+  "officialNames": {
+    "Stratford": "Stratford (London)",
+    "Queenstown Road": "Queenstown Road (Battersea)",
+    "Byfleet and New Haw": "Byfleet & New Haw",
+    "Harlington": "Harlington (Bedfordshire)",
+    "Hayes": "Hayes (Kent)",
+    "Poplar": "Poplar (DLR)"
+  },
+  "radials": {
+    "P1": {
+      "line": "High Speed 2", "abbr": "HS2", "zh": "高速二号线", "owner": "HS2 Ltd",
+      "status": "building", "statusEn": "under construction", "statusZh": "在建",
+      "londonEnd": "London Euston",
+      "stations": [
+        { "name": "London Euston" },
+        { "name": "Old Oak Common", "at": [51.5249, -0.2467], "key": true, "note": "HS2 station under construction, not yet in the OSM extract" }
+      ],
+      "passes": [],
+      "spansFrom": "hs2",
+      "after": { "en": "Next HS2 station: Interchange, beyond the map", "zh": "其后下一站：Interchange（图外）" },
+      "sources": [
+        "https://www.hs2.org.uk/building-hs2/stations/",
+        "https://www.hs2.org.uk/stations/london-euston/",
+        "https://en.wikipedia.org/wiki/Old_Oak_Common_railway_station"
+      ]
+    },
+    "P2": {
+      "line": "East Coast Main Line", "abbr": "ECML", "zh": "东海岸干线", "owner": "Network Rail · East Coast route",
+      "status": "open", "statusEn": "operational", "statusZh": "运营中",
+      "londonEnd": "London King's Cross",
+      "stations": [
+        { "name": "London King's Cross", "note": "Network Rail's spelling; National Rail Enquiries writes London Kings Cross (KGX)" },
+        { "name": "Finsbury Park", "key": true }, { "name": "Harringay" }, { "name": "Hornsey" }, { "name": "Alexandra Palace" },
+        { "name": "New Southgate" }, { "name": "Oakleigh Park" }, { "name": "New Barnet" }, { "name": "Hadley Wood" },
+        { "name": "Potters Bar" }, { "name": "Brookmans Park" }, { "name": "Welham Green" }, { "name": "Hatfield" },
+        { "name": "Welwyn Garden City" }, { "name": "Welwyn North" }, { "name": "Knebworth" }, { "name": "Stevenage" },
+        { "name": "Hitchin" }, { "name": "Arlesey" }
+      ],
+      "passes": [],
+      "sources": [
+        "https://www.networkrail.co.uk/running-the-railway/our-routes/east-coast/",
+        "https://www.networkrail.co.uk/communities/passengers/our-stations/london-kings-cross/",
+        "https://www.nationalrail.co.uk/stations/kgx/"
+      ]
+    },
+    "P3": {
+      "line": "New line", "abbr": "", "zh": "新线", "owner": "Loop City (proposed)",
+      "status": "proposed", "statusEn": "proposed", "statusZh": "规划",
+      "londonEnd": "Stratford (London)",
+      "stations": [ { "name": "Stratford (London)", "osm": "Stratford" } ],
+      "passes": [
+        { "name": "Maryland" }, { "name": "Forest Gate" }, { "name": "Woodgrange Park" }, { "name": "Manor Park" }, { "name": "Newbury Park" }
+      ],
+      "shared": { "from": "Stratford (London)", "to": "Manor Park", "en": "along the Great Eastern Main Line corridor", "zh": "沿 Great Eastern Main Line 走廊" },
+      "sources": [ "https://www.nationalrail.co.uk/stations/sra/" ]
+    },
+    "P4": {
+      "line": "High Speed 1", "abbr": "HS1", "zh": "高速一号线", "legalName": "Channel Tunnel Rail Link", "owner": "HS1 Ltd",
+      "status": "open", "statusEn": "operational", "statusZh": "运营中",
+      "londonEnd": "Stratford International",
+      "terminus": "St Pancras International",
+      "stations": [ { "name": "Stratford International" } ],
+      "passes": [ { "name": "Barking" }, { "name": "Dagenham Dock" }, { "name": "Rainham" } ],
+      "after": { "en": "HS1's London terminus: St Pancras International (7.8 km west of where this radial begins); next station: Ebbsfleet International (1.3 km south of P4)",
+                 "zh": "HS1 伦敦终点：St Pancras International（本线起点以西 7.8 km）；下一站：Ebbsfleet International（P4 以南 1.3 km）" },
+      "sources": [ "https://highspeed1.co.uk", "https://highspeed1.co.uk/our-stations" ]
+    },
+    "P5": {
+      "line": "New line", "abbr": "", "zh": "新线", "owner": "Loop City (proposed)",
+      "status": "proposed", "statusEn": "proposed", "statusZh": "规划",
+      "londonEnd": "Poplar (DLR)",
+      "stations": [ { "name": "Poplar (DLR)", "osm": "Poplar" } ],
+      "passes": [
+        { "name": "Canary Wharf" }, { "name": "Island Gardens" }, { "name": "Cutty Sark for Maritime Greenwich" },
+        { "name": "Hayes (Kent)", "osm": "Hayes" }, { "name": "Hurst Green" }
+      ],
+      "sources": [ "https://tfl.gov.uk/modes/dlr/" ]
+    },
+    "P6": {
+      "line": "South West Main Line", "abbr": "SWML", "zh": "西南干线", "owner": "Network Rail · Wessex route (ELR BML1)",
+      "status": "open", "statusEn": "operational", "statusZh": "运营中",
+      "londonEnd": "London Waterloo",
+      "stations": [
+        { "name": "London Waterloo" }, { "name": "Vauxhall" }, { "name": "Queenstown Road (Battersea)", "osm": "Queenstown Road" },
+        { "name": "Clapham Junction", "key": true }, { "name": "Earlsfield" }, { "name": "Wimbledon", "key": true }, { "name": "Raynes Park" },
+        { "name": "New Malden" }, { "name": "Berrylands" }, { "name": "Surbiton" }, { "name": "Esher" }, { "name": "Hersham" },
+        { "name": "Walton-on-Thames" }, { "name": "Weybridge" }, { "name": "Byfleet & New Haw", "osm": "Byfleet and New Haw" },
+        { "name": "West Byfleet" }, { "name": "Woking" }, { "name": "Brookwood" }, { "name": "Farnborough (Main)" }, { "name": "Fleet" },
+        { "name": "Winchfield" }
+      ],
+      "passes": [],
+      "after": { "en": "Next station: Hook (1.1 km south-west of P6)", "zh": "下一站：Hook（P6 西南方向 1.1 km）" },
+      "sources": [
+        "https://www.networkrail.co.uk/running-the-railway/our-routes/wessex/",
+        "https://www.nationalrail.co.uk/stations/qrb/"
+      ]
+    }
+  }
+}
