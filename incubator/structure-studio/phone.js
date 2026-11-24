@@ -11,7 +11,7 @@
   var head = panel.querySelector('.ts-head'), titleBox = head ? head.firstElementChild : null, name = panel.querySelector('.ts-title');
   panel.classList.remove('collapsed');
   L2Phone.init({
-    sheet: panel, display: dp,
+    sheet: panel, display: dp, lang: $('langSw'),
     quick: [$('runBtn'), $('runPause'), $('runNow')],
     hide: [titleBox, $('tsCollapse'), $('rszL'), $('rszR'), $('hud'), $('tsResize')],
     zh: function () { var b = document.querySelector('#langSw button.active, #langSw button[aria-pressed="true"]'); return b ? b.dataset.language === 'zh' : /^zh/i.test(document.documentElement.lang || ''); },

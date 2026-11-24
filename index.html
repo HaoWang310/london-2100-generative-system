@@ -7,12 +7,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>London 2100 · 多尺度城市生成系统</title>
   <meta name="description" content="London 2100 — Multi-Scale Generative Urban System">
+  <script>/* 24 Nov 2026: a phone is known before anything is laid out, as in the apps (shared/ui/phone.css; app/phone.js) */
+  try{var d0=document.documentElement,h0=location.hash||"";if(!/[?&]nophone\b/.test(location.search+h0)&&(/[?&]phone\b/.test(location.search+h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}</script>
   <link rel="stylesheet" href="./shared/ui/theme.css">
   <link rel="stylesheet" href="./app/app.css">
   <link rel="stylesheet" href="./app/intro.css">
   <link rel="stylesheet" href="./app/catalogue.css">
   <link rel="stylesheet" href="./app/appview.css">
   <link rel="stylesheet" href="./app/touch.css">
+  <link rel="stylesheet" href="./shared/ui/phone.css">
   <link rel="preload" as="image" href="./assets/intro/london.webp" fetchpriority="high">
 </head>
 <body>
@@ -142,6 +145,7 @@
     </div>
   </section>
 
+  <script src="./shared/ui/phone.js"></script>
   <script type="module" src="./app/main.js"></script>
   <script>
     // Safety net: if the app has not started after a few seconds (e.g. a stale

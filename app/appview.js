@@ -26,6 +26,9 @@ function prepareLanguage(item) {
 function embed(frame, item) {
   let doc;
   try { doc = frame.contentDocument; } catch { return; }
+  // On a phone (up to 760 px) the shell's language switch floats over the app's top right corner, level with the
+  // Display button at the top left (appview.css). An app keeps that corner free when its <html> has this class.
+  doc?.documentElement?.classList.add('l2-shell-lang');
   if (!doc?.head || doc.getElementById('l2100-embed')) return;
   const hide = item.embed?.hide || [];
   if (hide.length) {

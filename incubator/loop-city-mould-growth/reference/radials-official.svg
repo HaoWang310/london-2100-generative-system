@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1890" viewBox="0 0 2000 1890" font-family="DM Sans,-apple-system,PingFang SC,Noto Sans CJK SC,sans-serif">
+<rect width="2000" height="1890" fill="#000"/>
+<text x="60" y="70" fill="#fff" font-size="34" font-weight="600" letter-spacing="-0.5">六条放射线 · 英国官方线路名与沿线车站</text>
+<text x="60" y="108" fill="rgba(255,255,255,.45)" font-size="17">线路名：Network Rail、HS1 Ltd、HS2 Ltd 官方用名 · 站名：National Rail / Network Rail / TfL 官方站名（2026-11-24 核对）· 位置：OSM 车站沿本项目放射线量出的距离（km，从伦敦端起）</text>
+<line x1="470.0" y1="142" x2="470.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="470.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">0 km</text>
+<line x1="670.0" y1="142" x2="670.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="670.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">10 km</text>
+<line x1="870.0" y1="142" x2="870.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="870.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">20 km</text>
+<line x1="1070.0" y1="142" x2="1070.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="1070.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">30 km</text>
+<line x1="1270.0" y1="142" x2="1270.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="1270.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">40 km</text>
+<line x1="1470.0" y1="142" x2="1470.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="1470.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">50 km</text>
+<line x1="1670.0" y1="142" x2="1670.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="1670.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">60 km</text>
+<line x1="1870.0" y1="142" x2="1870.0" y2="1770" stroke="rgba(255,255,255,.07)"/>
+<text x="1870.0" y="134" fill="rgba(255,255,255,.45)" font-size="13" text-anchor="middle">70 km</text>
+<text x="60" y="202" fill="#fff" font-size="30" font-weight="700">P1</text>
+<text x="112" y="200" fill="#fff" font-size="21" font-weight="600">High Speed 2 <tspan fill="rgba(255,255,255,.45)" font-weight="500">(HS2)</tspan></text>
+<text x="112" y="228" fill="rgba(255,255,255,.75)" font-size="15">高速二号线</text>
+<text x="112" y="252" fill="rgba(255,255,255,.45)" font-size="14">HS2 Ltd</text>
+<text x="112" y="274" fill="rgba(255,255,255,.45)" font-size="14">在建 · under construction</text>
+<text x="112" y="300" fill="rgba(255,255,255,.45)" font-size="13">其后下一站：Interchange（图外）</text>
+<line x1="470.0" y1="315" x2="1895.5268951923676" y2="315" stroke="#fff" stroke-width="3"/>
+<line x1="495.0" y1="315" x2="640.0742763755203" y2="315" stroke="#000" stroke-width="3.2"/>
+<line x1="495.0" y1="315" x2="640.0742763755203" y2="315" stroke="#fff" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="567.5371381877601" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">隧道 tunnel</text>
+<line x1="675.2383301030102" y1="315" x2="944.9271553421429" y2="315" stroke="#000" stroke-width="3.2"/>
+<line x1="675.2383301030102" y1="315" x2="944.9271553421429" y2="315" stroke="#fff" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="810.0827427225765" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">隧道 tunnel</text>
+<text x="1024.1084369002735" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">高架 viaduct</text>
+<line x1="1092.8886242629667" y1="315" x2="1414.781381567716" y2="315" stroke="#000" stroke-width="3.2"/>
+<line x1="1092.8886242629667" y1="315" x2="1414.781381567716" y2="315" stroke="#fff" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1253.8350029153412" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">隧道 tunnel</text>
+<line x1="1545.346626419634" y1="315" x2="1567.3432496136688" y2="315" stroke="#000" stroke-width="3.2"/>
+<line x1="1545.346626419634" y1="315" x2="1567.3432496136688" y2="315" stroke="#fff" stroke-width="1.6" stroke-dasharray="6 5"/>
+<text x="1556.3449380166514" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">隧道 tunnel</text>
+<text x="1766.756395805518" y="341" fill="rgba(255,255,255,.45)" font-size="12" text-anchor="middle">高架 viaduct</text>
+<circle cx="473.7344087862993" cy="315" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(476.7344087862993,303) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">London Euston</text>
+<circle cx="651.733723186502" cy="315" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(654.733723186502,303) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Old Oak Common</text>
+<circle cx="1895.5268951923676" cy="315" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="1895.5268951923676" cy="315" r="3.5" fill="#fff"/>
+<text x="1895.5268951923676" y="293" fill="#fff" font-size="14" font-weight="600" text-anchor="end">P1 · Aylesbury Vale Parkway 西北 6.0 km</text>
+<line x1="60" y1="420" x2="1940" y2="420" stroke="rgba(255,255,255,.12)"/>
+<text x="60" y="472" fill="#fff" font-size="30" font-weight="700">P2</text>
+<text x="112" y="470" fill="#fff" font-size="21" font-weight="600">East Coast Main Line <tspan fill="rgba(255,255,255,.45)" font-weight="500">(ECML)</tspan></text>
+<text x="112" y="498" fill="rgba(255,255,255,.75)" font-size="15">东海岸干线</text>
+<text x="112" y="522" fill="rgba(255,255,255,.45)" font-size="14">Network Rail · East Coast route</text>
+<text x="112" y="544" fill="rgba(255,255,255,.45)" font-size="14">运营中 · operational</text>
+<line x1="470.0" y1="585" x2="1663.012459276991" y2="585" stroke="#fff" stroke-width="3"/>
+<circle cx="473.9645732453618" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(476.9645732453618,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">London King&#x27;s Cross</text>
+<circle cx="552.0035151073475" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(555.0035151073475,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Finsbury Park</text>
+<circle cx="580.3974835569157" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(583.3974835569157,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Harringay</text>
+<circle cx="602.2401306508186" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(605.2401306508186,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Hornsey</text>
+<circle cx="631.675177382691" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(634.675177382691,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Alexandra Palace</text>
+<circle cx="678.0950769457905" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(681.0950769457905,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">New Southgate</text>
+<circle cx="740.3190877187656" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(743.3190877187656,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Oakleigh Park</text>
+<circle cx="765.5800334752792" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(768.5800334752792,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">New Barnet</text>
+<circle cx="811.3768559484529" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(814.3768559484529,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Hadley Wood</text>
+<circle cx="881.4609233928325" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(884.4609233928325,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Potters Bar</text>
+<circle cx="937.4192411765875" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(940.4192411765875,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Brookmans Park</text>
+<circle cx="972.9537770196798" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(975.9537770196798,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Welham Green</text>
+<circle cx="1042.932435434401" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1045.932435434401,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Hatfield</text>
+<circle cx="1125.23961662293" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1128.23961662293,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Welwyn Garden City</text>
+<circle cx="1178.7491258957446" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1181.7491258957446,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Welwyn North</text>
+<circle cx="1277.475157134064" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1280.475157134064,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Knebworth</text>
+<circle cx="1360.1681210284569" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1363.1681210284569,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Stevenage</text>
+<circle cx="1500.0457198750103" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1503.0457198750103,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Hitchin</text>
+<circle cx="1663.012459276991" cy="585" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1666.012459276991,573) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Arlesey</text>
+<circle cx="1663.012459276991" cy="585" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="1663.012459276991" cy="585" r="3.5" fill="#fff"/>
+<text x="1677.012459276991" y="590" fill="#fff" font-size="14" font-weight="600">P2 · Arlesey 站旁 0.1 km</text>
+<line x1="60" y1="690" x2="1940" y2="690" stroke="rgba(255,255,255,.12)"/>
+<text x="60" y="742" fill="#E3B47B" font-size="30" font-weight="700">P3</text>
+<text x="112" y="740" fill="#E3B47B" font-size="21" font-weight="600">新线 · New line</text>
+<text x="112" y="768" fill="rgba(255,255,255,.75)" font-size="15">（本项目新建）</text>
+<text x="112" y="792" fill="rgba(255,255,255,.45)" font-size="14">起点 Stratford (London)</text>
+<text x="112" y="814" fill="rgba(255,255,255,.45)" font-size="14">规划 · proposed</text>
+<line x1="470.0" y1="855" x2="1425.6518603172162" y2="855" stroke="#E3B47B" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+<line x1="481.2121058774035" y1="864" x2="556.8544402520944" y2="864" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/>
+<text x="616.8544402520944" y="841" fill="rgba(255,255,255,.45)" font-size="12">0.6–4.3 km 沿 Great Eastern Main Line 走廊</text>
+<circle cx="481.2121058774035" cy="855" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(484.2121058774035,843) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">Stratford (London)</text>
+<circle cx="500.8350225145225" cy="855" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="500.8350225145225" y1="860" x2="500.8350225145225" y2="868" stroke="rgba(255,255,255,.2)"/>
+<text x="496.8350225145225" y="879" fill="rgba(255,255,255,.45)" font-size="12.5">Maryland</text>
+<circle cx="524.9256805743431" cy="855" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="524.9256805743431" y1="860" x2="524.9256805743431" y2="885" stroke="rgba(255,255,255,.2)"/>
+<text x="520.9256805743431" y="896" fill="rgba(255,255,255,.45)" font-size="12.5">Forest Gate</text>
+<circle cx="553.8419584419307" cy="855" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="553.8419584419307" y1="860" x2="553.8419584419307" y2="902" stroke="rgba(255,255,255,.2)"/>
+<text x="549.8419584419307" y="913" fill="rgba(255,255,255,.45)" font-size="12.5">Woodgrange Park</text>
+<circle cx="556.8544402520944" cy="855" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="556.8544402520944" y1="860" x2="556.8544402520944" y2="919" stroke="rgba(255,255,255,.2)"/>
+<text x="552.8544402520944" y="930" fill="rgba(255,255,255,.45)" font-size="12.5">Manor Park</text>
+<circle cx="639.1572393729468" cy="855" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="639.1572393729468" y1="860" x2="639.1572393729468" y2="868" stroke="rgba(255,255,255,.2)"/>
+<text x="635.1572393729468" y="879" fill="rgba(255,255,255,.45)" font-size="12.5">Newbury Park</text>
+<circle cx="1425.6518603172162" cy="855" r="9" fill="none" stroke="#E3B47B" stroke-width="2"/><circle cx="1425.6518603172162" cy="855" r="3.5" fill="#E3B47B"/>
+<text x="1439.6518603172162" y="860" fill="#E3B47B" font-size="14" font-weight="600">P3 · Braintree 西南 8.3 km</text>
+<line x1="60" y1="960" x2="1940" y2="960" stroke="rgba(255,255,255,.12)"/>
+<text x="60" y="1012" fill="#fff" font-size="30" font-weight="700">P4</text>
+<text x="112" y="1010" fill="#fff" font-size="21" font-weight="600">High Speed 1 <tspan fill="rgba(255,255,255,.45)" font-weight="500">(HS1)</tspan></text>
+<text x="112" y="1038" fill="rgba(255,255,255,.75)" font-size="15">高速一号线（法定名 Channel Tunnel Rail Link）</text>
+<text x="112" y="1062" fill="rgba(255,255,255,.45)" font-size="14">HS1 Ltd</text>
+<text x="112" y="1084" fill="rgba(255,255,255,.45)" font-size="14">运营中 · operational</text>
+<text x="112" y="1110" fill="rgba(255,255,255,.45)" font-size="13">HS1 伦敦终点：St Pancras International</text>
+<text x="112" y="1127" fill="rgba(255,255,255,.45)" font-size="13">　（本线起点以西 7.8 km）</text>
+<text x="112" y="1144" fill="rgba(255,255,255,.45)" font-size="13">下一站：Ebbsfleet International</text>
+<text x="112" y="1161" fill="rgba(255,255,255,.45)" font-size="13">　（P4 以南 1.3 km）</text>
+<line x1="470.0" y1="1125" x2="996.431154290329" y2="1125" stroke="#fff" stroke-width="3"/>
+<circle cx="479.73754864576784" cy="1125" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(482.73754864576784,1113) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">Stratford International</text>
+<circle cx="606.4147767342987" cy="1125" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="606.4147767342987" y1="1130" x2="606.4147767342987" y2="1138" stroke="rgba(255,255,255,.2)"/>
+<text x="602.4147767342987" y="1149" fill="rgba(255,255,255,.45)" font-size="12.5">Barking</text>
+<circle cx="705.4076177836441" cy="1125" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="705.4076177836441" y1="1130" x2="705.4076177836441" y2="1138" stroke="rgba(255,255,255,.2)"/>
+<text x="701.4076177836441" y="1149" fill="rgba(255,255,255,.45)" font-size="12.5">Dagenham Dock</text>
+<circle cx="772.5655635835315" cy="1125" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="772.5655635835315" y1="1130" x2="772.5655635835315" y2="1155" stroke="rgba(255,255,255,.2)"/>
+<text x="768.5655635835315" y="1166" fill="rgba(255,255,255,.45)" font-size="12.5">Rainham</text>
+<circle cx="996.431154290329" cy="1125" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="996.431154290329" cy="1125" r="3.5" fill="#fff"/>
+<text x="1010.431154290329" y="1130" fill="#fff" font-size="14" font-weight="600">P4 · Swanscombe 北 0.5 km</text>
+<line x1="60" y1="1230" x2="1940" y2="1230" stroke="rgba(255,255,255,.12)"/>
+<text x="60" y="1282" fill="#E3B47B" font-size="30" font-weight="700">P5</text>
+<text x="112" y="1280" fill="#E3B47B" font-size="21" font-weight="600">新线 · New line</text>
+<text x="112" y="1308" fill="rgba(255,255,255,.75)" font-size="15">（本项目新建）</text>
+<text x="112" y="1332" fill="rgba(255,255,255,.45)" font-size="14">起点 Poplar (DLR)</text>
+<text x="112" y="1354" fill="rgba(255,255,255,.45)" font-size="14">规划 · proposed</text>
+<line x1="470.0" y1="1395" x2="1157.283782934193" y2="1395" stroke="#E3B47B" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+<circle cx="476.0495409250403" cy="1395" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(479.0495409250403,1383) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">Poplar (DLR)</text>
+<circle cx="478.3619653281761" cy="1395" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="478.3619653281761" y1="1400" x2="478.3619653281761" y2="1408" stroke="rgba(255,255,255,.2)"/>
+<text x="474.3619653281761" y="1419" fill="rgba(255,255,255,.45)" font-size="12.5">Canary Wharf</text>
+<circle cx="525.0562001883263" cy="1395" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="525.0562001883263" y1="1400" x2="525.0562001883263" y2="1425" stroke="rgba(255,255,255,.2)"/>
+<text x="521.0562001883263" y="1436" fill="rgba(255,255,255,.45)" font-size="12.5">Island Gardens</text>
+<circle cx="539.1537723675373" cy="1395" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="539.1537723675373" y1="1400" x2="539.1537723675373" y2="1442" stroke="rgba(255,255,255,.2)"/>
+<text x="535.1537723675373" y="1453" fill="rgba(255,255,255,.45)" font-size="12.5">Cutty Sark for Maritime Greenwich</text>
+<circle cx="776.543993230482" cy="1395" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="776.543993230482" y1="1400" x2="776.543993230482" y2="1408" stroke="rgba(255,255,255,.2)"/>
+<text x="772.543993230482" y="1419" fill="rgba(255,255,255,.45)" font-size="12.5">Hayes (Kent)</text>
+<circle cx="1071.020656151632" cy="1395" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/>
+<line x1="1071.020656151632" y1="1400" x2="1071.020656151632" y2="1408" stroke="rgba(255,255,255,.2)"/>
+<text x="1067.020656151632" y="1419" fill="rgba(255,255,255,.45)" font-size="12.5">Hurst Green</text>
+<circle cx="1157.283782934193" cy="1395" r="9" fill="none" stroke="#E3B47B" stroke-width="2"/><circle cx="1157.283782934193" cy="1395" r="3.5" fill="#E3B47B"/>
+<text x="1171.283782934193" y="1400" fill="#E3B47B" font-size="14" font-weight="600">P5 · Edenbridge 西 3.3 km</text>
+<line x1="60" y1="1500" x2="1940" y2="1500" stroke="rgba(255,255,255,.12)"/>
+<text x="60" y="1552" fill="#fff" font-size="30" font-weight="700">P6</text>
+<text x="112" y="1550" fill="#fff" font-size="21" font-weight="600">South West Main Line <tspan fill="rgba(255,255,255,.45)" font-weight="500">(SWML)</tspan></text>
+<text x="112" y="1578" fill="rgba(255,255,255,.75)" font-size="15">西南干线</text>
+<text x="112" y="1602" fill="rgba(255,255,255,.45)" font-size="14">Network Rail · Wessex route (ELR BML1)</text>
+<text x="112" y="1624" fill="rgba(255,255,255,.45)" font-size="14">运营中 · operational</text>
+<text x="112" y="1650" fill="rgba(255,255,255,.45)" font-size="13">下一站：Hook（P6 西南方向 1.1 km）</text>
+<line x1="470.0" y1="1665" x2="1815.2312050111866" y2="1665" stroke="#fff" stroke-width="3"/>
+<circle cx="470.171118740187" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(473.171118740187,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="600">London Waterloo</text>
+<circle cx="511.5126226357787" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(514.5126226357787,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Vauxhall</text>
+<circle cx="552.7582692341385" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(555.7582692341385,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Queenstown Road (Battersea)</text>
+<circle cx="593.912576032817" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(596.912576032817,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Clapham Junction</text>
+<circle cx="648.7114819987476" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(651.7114819987476,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Earlsfield</text>
+<circle cx="700.5410999162759" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(703.5410999162759,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Wimbledon</text>
+<circle cx="746.8264186303102" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(749.8264186303102,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Raynes Park</text>
+<circle cx="783.6469482141499" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(786.6469482141499,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">New Malden</text>
+<circle cx="820.3353384049068" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(823.3353384049068,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Berrylands</text>
+<circle cx="855.9215822998257" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(858.9215822998257,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Surbiton</text>
+<circle cx="930.9678823916315" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(933.9678823916315,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Esher</text>
+<circle cx="982.3129504232891" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(985.3129504232891,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Hersham</text>
+<circle cx="1017.8925100949183" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1020.8925100949183,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Walton-on-Thames</text>
+<circle cx="1084.36574644369" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1087.36574644369,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Weybridge</text>
+<circle cx="1125.882238501245" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1128.882238501245,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Byfleet &amp; New Haw</text>
+<circle cx="1166.1300014352782" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1169.1300014352782,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">West Byfleet</text>
+<circle cx="1252.6631601223212" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1255.6631601223212,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Woking</text>
+<circle cx="1368.652507918337" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1371.652507918337,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Brookwood</text>
+<circle cx="1537.6032272455814" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1540.6032272455814,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Farnborough (Main)</text>
+<circle cx="1644.2983476341522" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1647.2983476341522,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Fleet</text>
+<circle cx="1750.6212464888472" cy="1665" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/>
+<text transform="translate(1753.6212464888472,1653) rotate(-50)" fill="#fff" font-size="13.5" font-weight="500">Winchfield</text>
+<circle cx="1815.2312050111866" cy="1665" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="1815.2312050111866" cy="1665" r="3.5" fill="#fff"/>
+<text x="1815.2312050111866" y="1699" fill="#fff" font-size="14" font-weight="600" text-anchor="end">P6 · Hook 东北 1.1 km</text>
+<circle cx="70" cy="1840" r="5.5" fill="#fff" stroke="#000" stroke-width="2"/><text x="84" y="1845" fill="#fff" font-size="14">本线车站（官方站名）</text>
+<circle cx="270" cy="1840" r="4.5" fill="#000" stroke="rgba(255,255,255,.45)" stroke-width="1.6"/><text x="284" y="1845" fill="rgba(255,255,255,.45)" font-size="14">线位经过的其他线路车站（300 m 内，不属本线）</text>
+<line x1="640" y1="1840" x2="690" y2="1840" stroke="#fff" stroke-width="1.6" stroke-dasharray="6 5"/><text x="700" y="1845" fill="rgba(255,255,255,.45)" font-size="14">HS2 隧道段（HS2 Ltd 线路数据）</text>
+<line x1="960" y1="1840" x2="1010" y2="1840" stroke="#E3B47B" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/><text x="1020" y="1845" fill="rgba(255,255,255,.45)" font-size="14">本项目新建线</text>
+</svg>

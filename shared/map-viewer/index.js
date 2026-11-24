@@ -78,6 +78,14 @@ function foldAttribution(el = document) {
   } catch { /* nothing to fold */ }
 }
 
+// What covers the map's edges (a phone's Display row above, its folded sheet below, in CSS px): opts.inset() → { top, bottom }.
+// fit() frames the ring in what is left. Without it, nothing.
+function insetOf(opts) {
+  let r = null;
+  try { r = opts.inset?.(); } catch { /* the page's own */ }
+  return { top: Math.max(0, +r?.top || 0), bottom: Math.max(0, +r?.bottom || 0) };
+}
+
 async function createMapLibreViewer(el, opts) {
   const maplibregl = await loadMapLibre(opts.timeoutMs ?? 8000);
   const provider = PROVIDERS[opts.provider || DEFAULT_PROVIDER];
@@ -233,8 +241,8 @@ async function createMapLibreViewer(el, opts) {
     setProgress(t) { progress = t; renderRoads(); },
     fit(ring, { animate = true } = {}) {
       if (!ring || ring.length < 3) return;
-      const [x0, y0, x1, y1] = bbox(ring.map(toWGS84));
-      map.fitBounds([[x0, y0], [x1, y1]], { padding: 48, duration: animate ? 900 : 0, pitch: map.getPitch() });
+      const [x0, y0, x1, y1] = bbox(ring.map(toWGS84)), ins = insetOf(opts);
+      map.fitBounds([[x0, y0], [x1, y1]], { padding: { top: 48 + ins.top, bottom: 48 + ins.bottom, left: 48, right: 48 }, duration: animate ? 900 : 0, pitch: map.getPitch() });
     },
     setView3D(on) {
       if (lm) { lm.setCityView(on); return; }
@@ -364,9 +372,9 @@ function createCanvasViewer(el, opts) {
     setProgress(t) { progress = t; draw(); },
     fit(ring) {
       if (!ring || ring.length < 3) return;
-      const [x0, y0, x1, y1] = bbox(ring);
-      view = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2,
-        mpp: Math.max((x1 - x0) / Math.max(1, canvas.clientWidth - 96), (y1 - y0) / Math.max(1, canvas.clientHeight - 96)) };
+      const [x0, y0, x1, y1] = bbox(ring), ins = insetOf(opts);
+      const mpp = Math.max((x1 - x0) / Math.max(1, canvas.clientWidth - 96), (y1 - y0) / Math.max(1, canvas.clientHeight - 96 - ins.top - ins.bottom));
+      view = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 + (ins.top - ins.bottom) / 2 * mpp, mpp };   // centred in the space left free
       draw();
     },
     setView3D() { /* 3D needs MapLibre */ },

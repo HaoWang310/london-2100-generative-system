@@ -1,12 +1,16 @@
-/* Loop City step 1 · the opening story (24 Nov 2026). See intro.js.
+/* Loop City step 1 · the opening story (24 Nov 2026; second version, on the real base map). See intro.js.
 
-   Every moving thing is its own small HTML box (an <svg> cut to its piece of line, or a <div> for a station) and
-   only its opacity and its transform are animated, each with a delay set once when the story is built. The page
-   prepares its model on the same thread, in pieces that can each take seconds; an animation of opacity or transform
-   that has been handed over is kept moving by the browser's compositor meanwhile, where one drawn by script (or an
-   SVG line "drawn" with a dash offset) would stand still. So: no script steps the story, and nothing else is animated.
+   Every moving thing is its own small HTML box (an <svg> cut to its piece of line, a <div> for a station or a label,
+   an <img> for the map) and only its opacity and its transform are animated, each with a delay set once when the
+   story is built. The page prepares its model on the same thread, in pieces that can each take seconds; an
+   animation of opacity or transform that has been handed over is kept moving by the browser's compositor meanwhile,
+   where one drawn by script (or an SVG line "drawn" with a dash offset) would stand still. So: no script steps the
+   story, and nothing else is animated. The camera of scene 2 is one more transform, on the box that holds the map
+   and its lines; the labels sit outside it, placed where their point will be in the close view, so the words stay
+   their size.
 
-   Black, white, and white at lower opacity, as the rest of the interface; the Green Belt keeps the map's own green. */
+   Black, white, and white at lower opacity, as the rest of the interface; the Green Belt keeps the map's own green,
+   the two new radials the warm tone the page uses for growth. */
 #lcIntro { position:fixed; inset:0; z-index:2147483000; background:#000; color:#fff; display:flex; flex-direction:column;
   font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased; opacity:1; transition:opacity .6s ease; overflow:hidden;
@@ -23,11 +27,15 @@
 .lci-skip.lci-go { background:#fff; color:#000; border-color:#fff; }
 
 .lci-map { flex:1 1 auto; min-height:0; position:relative; margin:8px 20px 0; }
-.lci-stage { position:absolute; transform-origin:0 0; }
-.lci-stage > *, .lci-g > * { position:absolute; }
-.lci-g { inset:0; }
+.lci-stage { position:absolute; transform-origin:0 0; overflow:hidden; border-radius:2px; transition:opacity .35s ease; }
+#lcIntro.lci-wait .lci-stage, #lcIntro.lci-wait .lci-pips, #lcIntro.lci-wait .lci-caps { opacity:0; }   /* until the map has come */
+.lci-cam { position:absolute; inset:0; transform-origin:0 0; }
+.lci-g { position:absolute; inset:0; }
+.lci-g > *, .lci-cam > img { position:absolute; }
 .lci-stage svg { display:block; overflow:visible; }
-.lci-base { inset:0; width:100%; height:100%; }
+.lci-img { display:block; left:0; top:0; width:100%; height:100%; max-width:none; user-select:none; -webkit-user-drag:none; }
+.lci-gb { left:0; top:0; width:100%; height:100%; background:#9EBE7A; -webkit-mask-size:100% 100%; mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; }
+.lci-dark { opacity:0; }
 
 .lci-dot { border-radius:50%; transform:translate(-50%,-50%); }
 .lci-dot i { position:absolute; inset:0; border-radius:50%; display:block; }
@@ -36,10 +44,39 @@
 .lci-dot b { position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; border:1px solid #fff; opacity:0; display:block; }
 .lci-s b { width:20px; height:20px; margin:-10px 0 0 -10px; }
 
+/* the labels: a word in white, the rest a little quieter; a dark edge keeps them readable over the map */
+.lci-labs { pointer-events:none; }
+.lci-end { width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #000; }
+.lci-lab { --sx:0px; white-space:nowrap; font-size:12px; line-height:1.25; font-weight:500; color:rgba(255,255,255,.72);
+  text-shadow:0 0 2px #000, 0 0 4px #000, 0 0 8px rgba(0,0,0,.8); letter-spacing:.005em; }
+.lci-lab b { color:#fff; font-weight:600; }
+.lci-ls b { margin-right:.4em; }
+.lci-lr b, .lci-lr span { display:block; }
+.lci-lr b { font-size:12.5px; }
+.lci-lr.lci-new b { color:#E3B47B; }
+.lci-lr i, .lci-lr em { display:block; font-style:normal; font-size:11px; font-weight:500; color:rgba(255,255,255,.58); }
+.lci-lr i:empty { display:none; }
+.lci-lr span { color:rgba(255,255,255,.8); }
+.lci-stop { width:5px; height:5px; margin:-2.5px 0 0 -2.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 1.5px #000; }
+.lci-stop.lci-new { background:#E3B47B; }
+.lci-lk { font-size:11px; font-weight:500; color:rgba(255,255,255,.8); }
+#lcIntro.lci-story .lci-stop { opacity:0; animation:lciIn .45s ease-out var(--d) both, lciOut .35s ease-in var(--o) forwards; }
+.lci-sr { transform:translate(calc(10px + var(--sx)), -50%); }
+.lci-sl { transform:translate(calc(-100% - 10px + var(--sx)), -50%); text-align:right; }
+.lci-su { transform:translate(calc(-50% + var(--sx)), calc(-100% - 9px)); text-align:center; }
+.lci-sd { transform:translate(calc(-50% + var(--sx)), 9px); text-align:center; }
+#lcIntro.lci-small .lci-lab { font-size:11px; }
+#lcIntro.lci-small .lci-lr b { font-size:11.5px; }
+#lcIntro.lci-small .lci-lr i, #lcIntro.lci-small .lci-lr em { font-size:10.5px; }
+#lcIntro.lci-small .lci-tP b, #lcIntro.lci-small .lci-tA b, #lcIntro.lci-small .lci-tP span, #lcIntro.lci-small .lci-tA span { display:block; margin:0; }
+#lcIntro.lci-small .lci-tS span { display:none; }
+#lcIntro.lci-small .lci-lk { display:none; }            /* on a phone the interchanges on the way out keep their dot only */          /* on a phone the secondary stations keep their number only */
+#lcIntro.lci-small .lci-tS b { margin:0; font-weight:600; color:rgba(255,255,255,.8); }
+
 .lci-caps { flex:none; position:relative; height:104px; margin:6px 20px 0; }
 .lci-cap { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; opacity:0; }
 .lci-cap h2 { margin:0; font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.01em; color:#fff; }
-.lci-cap p { margin:8px 0 0; max-width:560px; font-size:14.5px; line-height:1.5; color:rgba(255,255,255,.72); text-wrap:balance; }
+.lci-cap p { margin:8px 0 0; max-width:620px; font-size:14.5px; line-height:1.5; color:rgba(255,255,255,.72); text-wrap:balance; }
 
 .lci-foot { flex:none; display:flex; align-items:center; justify-content:center; gap:10px; height:44px; padding:0 20px 14px;
   font-size:12.5px; font-weight:600; color:rgba(255,255,255,.5); font-variant-numeric:tabular-nums; }
@@ -48,45 +85,62 @@
 .lci-pips i::after { content:""; position:absolute; inset:0; background:#fff; opacity:0; }
 
 @media (max-width:600px), (max-height:560px) {
-  .lci-top { padding:12px 14px 0; } .lci-map { margin:6px 12px 0; } .lci-caps { height:112px; margin:4px 14px 0; }
-  .lci-cap h2 { font-size:19px; } .lci-cap p { font-size:13.5px; margin-top:6px; }
+  .lci-top { padding:12px 14px 0; } .lci-map { margin:6px 12px 0; } .lci-caps { height:132px; margin:4px 14px 0; }
+  .lci-cap h2 { font-size:18px; } .lci-cap p { font-size:13.5px; margin-top:6px; }
   .lci-foot { padding:0 14px 10px; height:38px; }
 }
-@media (max-height:420px) { .lci-caps { height:74px; } .lci-cap p { margin-top:3px; } }
+@media (max-height:420px) { .lci-caps { height:78px; } .lci-cap h2 { font-size:16px; } .lci-cap p { margin-top:3px; font-size:12.5px; } }
 
 /* ---- the story: delays come from intro.js as --d (when it comes in) and --o (when it goes) */
 @keyframes lciIn    { from { opacity:0; } to { opacity:1; } }
 @keyframes lciOut   { from { opacity:1; } to { opacity:0; } }
+@keyframes lciGbIn  { from { opacity:0; } to { opacity:.2; } }
+@keyframes lciGbOut { from { opacity:.2; } to { opacity:.08; } }
 @keyframes lciGrow  { from { opacity:0; transform:scale(.02); } 12% { opacity:1; } to { opacity:1; transform:scale(1); } }
 @keyframes lciPop   { from { opacity:0; transform:scale(.2); } 60% { opacity:1; transform:scale(1.25); } to { opacity:1; transform:scale(1); } }
-@keyframes lciDimA  { from { opacity:1; } to { opacity:.62; } }
+@keyframes lciDimA  { from { opacity:1; } to { opacity:.72; } }
 @keyframes lciDimB  { from { opacity:1; } to { opacity:.45; } }
 @keyframes lciPulse { 0% { opacity:.7; transform:scale(.35); } 70% { opacity:0; transform:scale(1); } 100% { opacity:0; transform:scale(1); } }
+@keyframes lciZoomIn  { from { transform:translate(0,0) scale(1); } to { transform:translate(var(--zx),var(--zy)) scale(var(--zk)); } }
+@keyframes lciZoomOut { from { transform:translate(var(--zx),var(--zy)) scale(var(--zk)); } to { transform:translate(0,0) scale(1); } }
 
-#lcIntro.lci-story .lci-base    { opacity:0; animation:lciIn 1s ease-out var(--d) both; }
+#lcIntro.lci-story .lci-cam     { animation:lciZoomIn 1.4s cubic-bezier(.45,0,.2,1) var(--d) both, lciZoomOut 1.4s cubic-bezier(.45,0,.2,1) var(--o) forwards; }
+#lcIntro.lci-story .lci-img:not(.lci-dark) { opacity:0; animation:lciIn 1.1s ease-out var(--d) both; }
+#lcIntro.lci-story .lci-gb      { opacity:0; animation:lciGbIn 1s ease-out var(--d) both, lciGbOut 1s ease var(--o) forwards; }
 #lcIntro.lci-story .lci-dimA    { animation:lciDimA .9s ease var(--d) both; }
 #lcIntro.lci-story .lci-dimB    { animation:lciDimB .9s ease var(--d) both; }
-#lcIntro.lci-story .lci-grow    { opacity:0; animation:lciGrow 1.5s cubic-bezier(.22,.61,.36,1) var(--d) both; }
+#lcIntro.lci-story .lci-grow    { opacity:0; animation:lciGrow 1.5s cubic-bezier(.22,.61,.36,1) var(--d) both, lciOut .4s ease var(--o) forwards; }
 #lcIntro.lci-story .lci-seg     { opacity:0; animation:lciIn .5s ease-out var(--d) both; }
 #lcIntro.lci-story .lci-dot i   { opacity:0; animation:lciPop .5s ease-out var(--d) both; }
 #lcIntro.lci-story .lci-dot b   { animation:lciPulse 2.6s ease-out var(--o) infinite; }
+#lcIntro.lci-story .lci-lab, #lcIntro.lci-story .lci-end { opacity:0; animation:lciIn .45s ease-out var(--d) both, lciOut .35s ease-in var(--o) forwards; }
 #lcIntro.lci-story .lci-cap     { animation:lciIn .5s ease-out var(--d) both, lciOut .4s ease-in var(--o) forwards; }
 #lcIntro.lci-story .lci-cap.lci-last { animation:lciIn .5s ease-out var(--d) both; }
 #lcIntro.lci-story .lci-pips i::after { animation:lciIn .4s ease-out var(--d) both; }
 
+/* ---- the last scene: once the page's own dark map has come, it takes over, with the loop drawn into it */
+#lcIntro.lci-swap .lci-dark  { opacity:1; transition:opacity 1.2s ease; }
+#lcIntro.lci-swap .lci-lines { opacity:0; transition:opacity .6s ease .9s; }
+
 /* ---- the still picture: a later visit, or a viewer who asked for less motion */
-#lcIntro.lci-still .lci-dimA { opacity:.62; } #lcIntro.lci-still .lci-dimB { opacity:.45; }
+#lcIntro.lci-still .lci-gb { opacity:.08; }
+#lcIntro.lci-still .lci-dimA { opacity:.72; } #lcIntro.lci-still .lci-dimB { opacity:.45; }
+#lcIntro.lci-still .lci-labs, #lcIntro.lci-still .lci-zr { display:none; }
 #lcIntro.lci-still .lci-cap { opacity:0; } #lcIntro.lci-still .lci-cap.lci-last { opacity:1; }
 #lcIntro.lci-still .lci-pips { display:none; }
 #lcIntro.lci-still .lci-dot b { animation:lciPulse 2.6s ease-out 0s infinite; }
+#lcIntro.lci-still.lci-swap .lci-dark, #lcIntro.lci-still.lci-swap .lci-lines { transition:none; }
 @media (prefers-reduced-motion:reduce) { #lcIntro.lci-still .lci-dot b { animation:none; } #lcIntro, .lci-stage { transition:none !important; } }
 
 /* ---- handing over to the map: the frame moves onto the sheet, then the cover clears */
 #lcIntro.lci-hand .lci-stage { transition:transform .9s cubic-bezier(.4,0,.2,1); }
-#lcIntro.lci-hand .lci-caps, #lcIntro.lci-hand .lci-foot, #lcIntro.lci-hand .lci-top { transition:opacity .35s ease; opacity:0; }
+#lcIntro.lci-hand .lci-caps, #lcIntro.lci-hand .lci-foot, #lcIntro.lci-hand .lci-top, #lcIntro.lci-hand .lci-labs { transition:opacity .35s ease; opacity:0; }
 
 /* the link back to the story, in the left panel */
 html.lcskin .lc-introlink { display:block; margin:-6px 0 16px; padding:0; border:0; background:none; color:rgba(255,255,255,.6);
   font:600 12.5px/1.4 inherit; font-family:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:rgba(255,255,255,.3); }
 html.lcskin .lc-introlink:hover { color:#fff; }
 html.lcskin .lc-introlink:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:4px; }
+/* 24 Nov 2026 · opened from the catalogue on a phone, the shell's language switch floats at the top right (12 px in,
+   44 px high): the top row, with Skip, stands below it */
+@media (max-width:760px) { html.l2-shell-lang .lci-top { padding-top:68px; } }

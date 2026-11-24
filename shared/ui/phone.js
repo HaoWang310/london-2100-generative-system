@@ -8,6 +8,7 @@
        quick:   [elements],           // its main action(s): moved to the folded sheet, their handlers untouched
        narrow:  [elements],           // those of quick that stay narrow (a Reset beside a Run)
        display: element,              // the app's display panel: opens across the top
+       lang:    element,              // the app's own language switch: floats at the top right, level with Display
        hide:    [elements]            // what the phone layout replaces (the app's own title, its collapse buttons)
      })
 
@@ -35,6 +36,11 @@
     (o.narrow || []).forEach(function (e) { if (e) e.classList.add('l2ph-narrow'); });
     sheet.appendChild(handle); sheet.appendChild(head); sheet.appendChild(quick); sheet.appendChild(body);
     sheet.classList.add('l2ph-sheet');
+
+    /* the language switch (24 Nov 2026): at the top right, level with Display, as the shell's own switch stands when the
+       app is opened from the catalogue (the shell then hides this one). Moved, not cloned: its handlers stay. The class
+       on <html> tells the app to keep that corner free (its north symbol, its zoom buttons go below). */
+    if (o.lang) { o.lang.classList.add('l2ph-lang'); document.body.appendChild(o.lang); root.classList.add('l2ph-lang-top'); }
 
     /* Display */
     var db = null, dbt = null;

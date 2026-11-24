@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Loop City · real map</title>
+<script>/* 24 Nov 2026: a phone is known before anything is laid out, as in the other apps (../../shared/ui/phone.css) */
+try{var d0=document.documentElement,h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}</script>
+<link rel="stylesheet" href="../../shared/ui/phone.css?v=2">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 <style>
 :root{--map-bg:#161616;--panel:#141414f0;--line:#2c2c2c;--ink:#d8d8d8;--mute:#8a8a8a;--on:#e6e6e6;--accent:#bfbfbf;
@@ -76,6 +79,32 @@ input[type=color]{width:34px;height:20px;border:1px solid var(--line);border-rad
 #fileNote{display:none;position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);max-width:440px;background:#1b1b1b;
   border:1px solid #444;border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.5;z-index:5}
 @media (max-width:600px){#panel{width:calc(100% - 24px);max-height:55%;top:auto;bottom:12px}#north{bottom:auto;top:14px}}
+/* ==== the phone (24 Nov 2026): the one layout of ../../shared/ui/phone, as in Loop City 2 and 3. The sheet along the
+   bottom holds the name, the status and the three views (Plan, Tilt, Whole loop); Display, at the top left, opens the
+   look (labels, buildings, terrain, layers, colours) across the top; the language switch stands at the top right and
+   the north symbol below it. The panels stay dark whatever the map's mode; nothing to touch is under 44 px. */
+html.l2phone .l2ph-sheet, html.l2phone .l2ph-panel { --panel:#000; --line:#2c2c2e; --ink:#e5e5ea; --mute:#8e8e93; --on:#fff; --accent:#fff; --hover:#1c1c1e;
+  --sw-off:#39393d; --sw-knob:#fff; --sw-on:#fff; --sw-on-knob:#000; --sel-bg:#fff; --sel-ink:#000; --field:#1c1c1e; --hint:#8e8e93;
+  font-size:14px; line-height:1.4; color:var(--ink); backdrop-filter:none; }
+html.l2phone #lookPanel { padding:4px 16px 12px; }
+html.l2phone .l2ph-panel h2, html.l2phone .l2ph-sheet h2 { font-size:12px; margin:4px 0 6px; }
+html.l2phone .l2ph-panel .row, html.l2phone .l2ph-sheet .row { min-height:44px; }
+html.l2phone .l2ph-panel .hint, html.l2phone .l2ph-sheet .hint, html.l2phone #version { font-size:12.5px; }
+html.l2phone .sw, html.l2phone .row .sw { width:51px; height:31px; }
+html.l2phone .sw span { border-radius:31px; }
+html.l2phone .sw span:before { width:27px; height:27px; }
+html.l2phone .sw input:checked+span:before { transform:translateX(20px); }
+html.l2phone .seg { border-radius:12px; }
+html.l2phone .seg button { min-height:40px; padding:0 14px; }
+html.l2phone select { min-height:40px; width:170px; border-radius:10px; font-size:14px; }
+html.l2phone input[type=range] { width:140px; height:32px; }
+html.l2phone .out { width:48px; }
+html.l2phone input[type=color] { width:44px; height:32px; }
+html.l2phone .colours label { min-height:44px; }
+html.l2phone .l2ph-quick .btn { min-height:44px; border-radius:12px; border:1px solid rgba(255,255,255,.22); background:#000; color:#fff; font-size:15px; font-weight:600; }
+html.l2phone .l2ph-quick .btn:active { background:#fff; color:#000; }
+html.l2phone #status { font-size:12.5px; }
+html.l2phone #north { left:auto; right:16px; top:68px; bottom:auto; }
 </style>
 </head>
 <body>
@@ -242,6 +271,29 @@ input[type=color]{width:34px;height:20px;border:1px solid var(--line);border-rad
   try { if (localStorage.getItem('loopCityMap.mode') === 'light') document.documentElement.dataset.theme = 'light'; } catch (_) {}
   if (location.protocol === 'file:') document.getElementById('fileNote').style.display = 'block';
 </script>
-<script type="module" src="scripts/app.js?v=lc13"></script>
+<script src="../../shared/ui/phone.js?v=2"></script>
+<script>
+/* the phone (24 Nov 2026): the panel becomes the sheet; its sections after "View" become the look under Display.
+   Moved, not cloned: app.js finds every control by its id and wires it as before. Interface only. */
+(function () {
+  if (!window.L2Phone || !L2Phone.is()) return;
+  var $ = function (id) { return document.getElementById(id); };
+  var panel = $('panel'), body = panel.querySelector('.body'), secs = body ? body.querySelectorAll(':scope > section') : [];
+  if (!body || !secs.length) return;
+  var look = document.createElement('div'); look.id = 'lookPanel';
+  for (var i = 1; i < secs.length; i++) look.appendChild(secs[i]);
+  document.body.appendChild(look);
+  var view = secs[0], h1 = panel.querySelector('h1');
+  L2Phone.init({
+    sheet: panel, display: look, lang: $('langbar'),
+    quick: [$('btnPlan'), $('btnTilt'), $('btnFit')],
+    hide: [panel.querySelector('header'), view.querySelector('h2'), view.querySelector('.btns')],
+    zh: function () { return /^zh/i.test(document.documentElement.lang || ''); },
+    title: function () { return h1 ? h1.textContent.trim() : 'Loop City · real map'; },
+    status: function () { var s = $('status'); return s ? s.textContent.trim() : ''; }
+  });
+})();
+</script>
+<script type="module" src="scripts/app.js?v=lc14"></script>
 </body>
 </html>
