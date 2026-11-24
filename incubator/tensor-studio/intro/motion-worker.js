@@ -173,12 +173,12 @@ function chII(t, dt, al) {
     if (on <= 0) return;
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
     const w = r.w, h = r.h, pl = (y, col, fill) => { c.beginPath(); c.moveTo(w * .12, y + h * .13); c.lineTo(w * .5, y); c.lineTo(w * .88, y + h * .13); c.lineTo(w * .5, y + h * .26); c.closePath(); c.fillStyle = fill || 'rgba(255,255,255,.03)'; c.fill(); c.strokeStyle = col; c.lineWidth = 1; c.stroke(); };
-    if (k === 0) {            // McHarg: three grey maps fall and add up to one shade
+    if (k === 0) {            // overlay analysis: three grey maps fall and add up to one shade
       c.clearRect(0, 0, w, h);
       for (let j = 0; j < 3; j++) { const d = ease((u - j * .45) / .7), y = h * .02 + j * h * .2 * (1 - d) + h * .55 * d;
         pl(y, 'rgba(255,255,255,' + (.65 - .3 * d) + ')'); c.fillStyle = 'rgba(255,255,255,' + (.18 + j * .08) + ')'; c.beginPath(); c.ellipse(w * (.38 + j * .1), y + h * .13, w * (.12 - j * .02), h * .045, 0, 0, 7); c.fill(); }
       const m = ease((u - 1.6) / .6); if (m > 0) { c.fillStyle = 'rgba(255,255,255,' + .55 * m + ')'; c.beginPath(); c.ellipse(w * .46, h * .68, w * .16, h * .06, 0, 0, 7); c.fill(); }
-    } else {                  // Chen et al.: particles follow a grid, then a radial field bends them into streets; this study: five coloured flows join into one
+    } else {                  // streets from geometric fields: particles follow a grid, then a radial field bends them into streets; this study: five coloured flows join into one
       fade(c, phone ? .1 : .07);
       if (!s.parts) s.parts = Array.from({ length: phone ? 34 : 60 }, () => ({ x: rnd() * w, y: rnd() * h, c: k === 2 ? Math.floor(rnd() * 5) : 0 }));
       const cx = w * .72, cy = h * .5;

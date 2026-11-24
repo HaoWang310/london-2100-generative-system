@@ -1,6 +1,6 @@
 /* Tensor Studio · the method film (24 Nov 2026; moving, the same evening).
    While the site loads, six short chapters show how the data become the tensor field: the question, where the method
-   stands (McHarg, Chen et al.), the five layers and their reasons, how directions are added (as tensors), what the
+   stands (overlay analysis, streets grown from geometric fields), the five layers and their reasons, how directions are added (as tensors), what the
    field says about itself (clarity, conflict) and the evidence (the same site grown with four sets of layers).
    Every picture and number is the app's own, made by tools/build-intro.py into intro/img and intro-data.js.
 
@@ -69,11 +69,11 @@
   function precSVG(kind) {
     var o = '<svg viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg">', pl = function (y, col, op) {
       return '<polygon points="30,' + (y + 18) + ' 110,' + y + ' 190,' + (y + 18) + ' 110,' + (y + 36) + '" fill="rgba(255,255,255,' + (op || 0.03) + ')" stroke="' + col + '" stroke-opacity=".7" stroke-width="1"/>'; };
-    if (kind === 0) {               // McHarg: maps of how good the land is, laid over each other into one shade
+    if (kind === 0) {               // overlay analysis: maps of how good the land is, laid over each other into one shade
       [6, 30, 54].forEach(function (y, k) { o += pl(y, 'rgba(255,255,255,.6)');
         o += '<ellipse cx="' + (80 + k * 22) + '" cy="' + (y + 18) + '" rx="' + (26 - k * 4) + '" ry="7" fill="rgba(255,255,255,' + (0.16 + k * 0.08) + ')"/>'; });
       o += pl(88, 'rgba(255,255,255,.9)', 0.05) + '<ellipse cx="102" cy="106" rx="36" ry="9" fill="rgba(255,255,255,.42)"/><ellipse cx="102" cy="106" rx="16" ry="4.5" fill="rgba(255,255,255,.75)"/>';
-    } else if (kind === 1) {        // Chen et al.: geometric basis fields (a grid, a radial) blended into streets
+    } else if (kind === 1) {        // streets from geometric fields: (a grid, a radial) blended into streets
       for (var i = 0; i < 5; i++) for (var j = 0; j < 4; j++) { var x = 22 + i * 16, y = 22 + j * 22; o += '<path d="M' + (x - 5) + ' ' + y + 'h10M' + x + ' ' + (y - 5) + 'v10" stroke="rgba(255,255,255,.55)" stroke-width="1"/>'; }
       for (var k = 0; k < 12; k++) { var a = k * Math.PI / 6; o += '<line x1="' + (176 + Math.cos(a) * 9).toFixed(1) + '" y1="' + (60 + Math.sin(a) * 9).toFixed(1) + '" x2="' + (176 + Math.cos(a) * 30).toFixed(1) + '" y2="' + (60 + Math.sin(a) * 30).toFixed(1) + '" stroke="rgba(255,255,255,.55)" stroke-width="1"/>'; }
       o += '<path d="M16 116 C 70 116, 110 112, 150 92 S 192 64, 206 30" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M60 126 C 70 100, 74 70, 66 20" fill="none" stroke="#fff" stroke-width="1.4"/>';
@@ -117,16 +117,16 @@
         L('车站 P2 场地，' + G.ha + ' 公顷，切成 ' + G.cell_m + ' m 的网格，共 ' + fmt(G.land) + ' 个点。每个点都要回答同一个问题：<b>这里的路该朝哪个方向？</b>',
           'The site by station P2: ' + G.ha + ' ha on a ' + G.cell_m + ' m grid, ' + fmt(G.land) + ' points. Each answers one question: <b>which way should a street run here?</b>')));
     // II · where the method stands
-    var prec = [['1969', 'McHarg · <i>Design with Nature</i>', L('叠加数值：土地好或坏', 'Values: good land or bad')],
-                ['2008', L('Chen 等 · 张量场街道建模', 'Chen et al. · tensor-field streets'), L('叠加几何：网格、放射', 'Geometry: grids and radials')],
+    var prec = [[L('常见做法 · 一', 'COMMON · 1'), L('叠图分析', 'Overlay analysis'), L('叠加数值：土地好或坏', 'Values: good land or bad')],
+                [L('常见做法 · 二', 'COMMON · 2'), L('几何场生成街道', 'Streets from geometric fields'), L('叠加几何：网格、放射', 'Geometry: grids and radials')],
                 [L('本研究', 'THIS STUDY'), L('张量场工作室', 'Tensor Studio'), L('叠加方向：地形、风、水', 'Directions: terrain, wind, water')]];
     html += ch(1, '<div class="tsi-art"><div class="tsi-prec">' + prec.map(function (p, k) {
         return '<div class="tsi-r' + (k === 2 ? ' me' : '') + '" ' + v(T[1] + 0.5 + k * 0.9) + '>' + (moving ? '<div class="tsi-ps"></div>' : precSVG(k)) +
                '<div class="y tsi-mono">' + p[0] + '</div><div class="n">' + p[1] + '</div><div class="c">' + p[2] + '</div></div>';
       }).join('') + '</div></div>' +
       txt(1, 'II · POSITION', L('叠加的不是数值，而是方向', 'Not values laid over each other, but directions'),
-        L('McHarg 把地形、水文等图层叠在一起，读出土地的好坏；Chen 等人用网格、放射这样的几何场生成街道。这里叠在一起的，是由环境数据得出的<b>方向</b>。',
-          'McHarg laid maps over each other to read how good the land is; Chen et al. grew streets from geometric fields, grids and radials. Here the layers are <b>directions</b> taken from the environment.')));
+        L('叠图分析把地形、水文等图层叠在一起，读出土地的好坏；常见的街道生成用网格、放射这样的几何场。这里叠在一起的，是由环境数据得出的<b>方向</b>。',
+          'Overlay analysis lays maps over each other to read how good the land is; streets are usually grown from geometric fields, grids and radials. Here the layers are <b>directions</b> taken from the environment.')));
     // III · the layers: what each kind of data does, then the direction it gives a street
     html += ch(2, txt(2, 'III · LAYERS', L('五层数据，各自给出道路方向', 'Five layers, each with a direction for the street'),
       moving ? L('每层先看数据本身——等高线、风、水——再看它推出的道路方向。', 'Each layer shows its data first — contours, wind, water — then the street direction it gives.') : '',

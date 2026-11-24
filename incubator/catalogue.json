@@ -568,8 +568,8 @@
             "body": [
               {
                 "p": {
-                  "zh": "平面分五步：核心与疏密、离路主线、拉扯、走廊与节点、方案（换随机种子比较多个方案，按五组指标打分）。第 6 步按真实标高立成三维：全网两层走道在 7.2 m 和 10.8 m，大塔 200 m 内升到第三层 14.4 m，坡道把各层缝在一起；每个核心立一座种植塔，站在三叶形的三层塔座上，塔尖约 186 m。张量场的道路一条不动，从结构下面穿过。",
-                  "en": "The plan comes in five steps: cores and density, off-road primaries, pull, corridors and nodes, and scheme (many random seeds compared and ranked on five measures). Step 6 raises it at real levels: two decks across the net at 7.2 m and 10.8 m, a third at 14.4 m within 200 m of the large towers, ramps stitching the levels together; on each core a planting tower stands on a three-lobed, three-tier base, about 186 m to the tip. Every tensor-field street passes underneath, untouched."
+                  "zh": "平面分五步：核心与疏密、离路主线、拉扯、走廊与节点、方案（换随机种子比较多个方案，按五组指标打分）。第 6 步按真实标高立成三维：全网两层走道在 7.2 m 和 11.8 m，大塔 200 m 内升到第三层 16.4 m（板厚 1 m，层间净高 3.6 m），坡道把各层缝在一起；每个核心立一座种植塔，站在三叶形的三层塔座上，塔尖约 186 m。张量场的道路一条不动，从结构下面穿过。",
+                  "en": "The plan comes in five steps: cores and density, off-road primaries, pull, corridors and nodes, and scheme (many random seeds compared and ranked on five measures). Step 6 raises it at real levels: two decks across the net at 7.2 m and 11.8 m, a third at 16.4 m within 200 m of the large towers (1 m slabs, 3.6 m clear between them), ramps stitching the levels together; on each core a planting tower stands on a three-lobed, three-tier base, about 186 m to the tip. Every tensor-field street passes underneath, untouched."
                 }
               }
             ]
