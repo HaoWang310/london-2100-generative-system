@@ -357,7 +357,7 @@
     {
       "id": "tensor-studio",
       "href": "incubator/tensor-studio/",
-      "cover": "assets/catalogue/tensor-studio.webp",
+      "cover": "assets/catalogue/tensor-studio.webp?v=2",
       "status": "incubating",
       "title": {
         "zh": "张量场工作室",
@@ -366,6 +366,101 @@
       "desc": {
         "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路；按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图，可在伦敦地图上任选场地，并导出正式路网。",
         "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
+      },
+      "detail": {
+        "subtitle": "Tensor Studio · Streets from an Environmental Field",
+        "sections": [
+          {
+            "h": {
+              "zh": "研究定位",
+              "en": "Research position"
+            },
+            "lead": {
+              "zh": "让街道的走向，从地形、气候和水里推出来",
+              "en": "Streets whose direction comes from the terrain, the climate and the water"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "地块有了，街道往哪走？这里不画路网：把地形、全年风、夏季风、冬季冷风和水各自写成一张方向场，叠成张量场，街道沿着它生长。和常见的叠图分析不同，这里叠在一起的不是土地好坏的数值，而是方向；街道生长所沿的场，也不是网格、放射这类几何图形，而是由环境数据得出的。",
+                  "en": "With the plots in hand, which way should the streets run? They are not drawn: the terrain, the year’s wind, the summer air, the winter cold and the water each become a field of directions, added into one tensor field, and the streets grow along it. Unlike the usual overlay analysis, what is laid over each other is direction, not how good the land is; and the field the streets grow along is not a geometric figure such as a grid or a radial, but one taken from the environment."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "数据层",
+              "en": "Data layers"
+            },
+            "lead": {
+              "zh": "五层环境数据，各给出一个方向",
+              "en": "Five layers of the environment, each giving a direction"
+            },
+            "body": [
+              {
+                "list": [
+                  {
+                    "zh": "**地形**：车站 P2 由 1 m 等高线重建，伦敦其他选区用 OS Terrain 50；道路顺等高线，坡越陡越要顺",
+                    "en": "**Terrain**: rebuilt from 1 m contours at station P2, OS Terrain 50 elsewhere in London; streets follow the contours, the more so the steeper"
+                  },
+                  {
+                    "zh": "**全年风**：London Luton 典型气象年，逐月风玫瑰；温和的方向顺着，寒冷的方向横切",
+                    "en": "**The year’s wind**: the London Luton typical meteorological year, month by month; along the mild directions, across the cold ones"
+                  },
+                  {
+                    "zh": "**夏季风与冬季冷风**：同一份风数据里的夏季风能和冬季冷风；顺夏风为通风，横切冷风为挡风",
+                    "en": "**Summer air and winter cold**: the summer wind energy and the cold winter wind from the same record; along the summer air for ventilation, across the cold for shelter"
+                  },
+                  {
+                    "zh": "**水**：英国环境署洪水风险，地表水与河流海洋逐格取较高等级；高风险区留作蓝绿走廊，道路顺水流",
+                    "en": "**Water**: the Environment Agency’s flood risk, the higher of surface water and rivers and sea; high-risk land stays a blue-green corridor, and streets follow the flow"
+                  },
+                  {
+                    "zh": "**吸引点**：放在全年风互相抵消、最平静的地方，道路向它们汇聚",
+                    "en": "**Attractors**: placed where the year’s winds cancel and the air is calmest; the streets gather towards them"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "叠加与生长",
+              "en": "Adding and growing"
+            },
+            "lead": {
+              "zh": "张量相加，街道沿场长出",
+              "en": "Tensors added; streets grow along the field"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "场地切成 10 m 网格。每个点上，各层的方向写成二阶对称张量相加——路没有正反，角度不能直接平均——再平滑 40 m。主方向长主路，与它垂直的方向长次路，从现有道路与红线的交点出发。清晰度和冲突是可以度量的读数：各层一致处道路平直，相左处转折。同一块地四组输入的对照里，每加一层，平均清晰度从 0.63 降到 0.53、0.30。",
+                  "en": "The site becomes a 10 m grid. At every point each layer’s direction is written as a symmetric second-order tensor and the tensors are added — a street has no arrow, so angles cannot simply be averaged — then smoothed over 40 m. The major direction grows the main streets, the one square to it the second streets, from where existing roads meet the red line. Clarity and conflict are measured readings: where the layers agree the streets run straight; where they disagree, they turn. Grown four times on the same site, each layer added lowers the mean clarity, from 0.63 to 0.53 to 0.30."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "交给下一步",
+              "en": "On to the next step"
+            },
+            "lead": {
+              "zh": "成为真实的城市道路，交给结构工作室",
+              "en": "Built as real streets, handed to Structure Studio"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图；跨过蓝绿走廊的道路近乎垂直，作为堤道。可在伦敦地图上任选场地运行，导出 GeoJSON（英国国家网格）。结果交给结构工作室，在街道之上生成 Linear Farm 走廊。打开时的原理短片，就是把这一页动起来讲。",
+                  "en": "Drawn as a city’s streets: three grades at real carriageway widths, kerbs fitted junction by junction; streets cross the blue-green corridors nearly square, as causeways. Runs on any site chosen on the London map and exports GeoJSON (British National Grid). The result goes to Structure Studio, which raises the Linear Farm corridors over the streets. The film at the opening tells this page in motion."
+                }
+              }
+            ]
+          }
+        ]
       },
       "tags": [
         {
@@ -394,7 +489,7 @@
     {
       "id": "structure-studio",
       "href": "incubator/structure-studio/",
-      "cover": "assets/catalogue/structure-studio.webp",
+      "cover": "assets/catalogue/structure-studio.webp?v=2",
       "status": "incubating",
       "title": {
         "zh": "结构工作室 · Linear Farm 走廊",
@@ -407,6 +502,97 @@
       "desc": {
         "zh": "在张量场工作室生成的真实场地上，生成架在街道之上的种植工厂走廊网：离路主线顺张量场、核心密外围疏、按夹角光滑过渡的节点，两侧建筑、室内农田；导出 GeoJSON（英国国家网格）与 OBJ。",
         "en": "Planting-factory corridors over a site grown in Tensor Studio: off-road primaries along the tensor field, dense at the cores and open at the edge, nodes blended by their angle, buildings on both sides and farmland in the cells; exported as GeoJSON (British National Grid) and OBJ."
+      },
+      "detail": {
+        "subtitle": "Structure Studio · Linear Farm Corridors over the Streets",
+        "sections": [
+          {
+            "h": {
+              "zh": "研究定位",
+              "en": "Research position"
+            },
+            "lead": {
+              "zh": "一张架在街道之上的种植工厂走廊网",
+              "en": "A network of planting-factory corridors, raised over the streets"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "张量场工作室长出了地面上的街道，结构工作室在它上面再长一张网：15–25 m 宽的 Linear Farm 走廊，里面是种植工厂，走廊围出的地块是农田。如果直接把主干路加宽成走廊，得到的只是一块块街区——加宽的街道；所以这里从同一个张量场推出第二张网，离开道路，跨过街道、水面和铁路。形态取自湿线找形：浸湿的线会自己并拢成束，节点成三岔。",
+                  "en": "Tensor Studio grows the streets on the ground; Structure Studio grows a second net above them: Linear Farm corridors 15–25 m wide with planting factories inside, and farmland in the cells between. Widening the main streets into corridors would give only blocks — wider streets; so a second net is drawn from the same tensor field, off the roads, bridging streets, water and rail. Its form comes from wet-thread form-finding: wet threads draw together into bundles and meet in three-way nodes."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "输入",
+              "en": "Inputs"
+            },
+            "lead": {
+              "zh": "张量场工作室的结果，就是它的场地",
+              "en": "Tensor Studio’s result is its site"
+            },
+            "body": [
+              {
+                "list": [
+                  {
+                    "zh": "**张量场与街道**：张量场工作室第 8 步的结果——三级道路、路口、吸引点和场本身",
+                    "en": "**Field and streets**: Tensor Studio’s finished result — the three grades of street, the junctions, the attractors and the field itself"
+                  },
+                  {
+                    "zh": "**水与地面**：水面、场地红线，以及红线外的现状建筑、道路和建成区",
+                    "en": "**Water and ground**: the water, the red line, and the existing buildings, roads and built-up land beyond it"
+                  },
+                  {
+                    "zh": "**核心**：张量场的主吸引点；走廊在这里密，往外疏",
+                    "en": "**Cores**: the field’s main attractors; the corridors are dense there and open out towards the edge"
+                  },
+                  {
+                    "zh": "**模块**：Linear Farm 的 Rhino 模型——双 U 形走道、两层坡道、漏斗柱与种植托盘，层高 3.6 m",
+                    "en": "**The module**: the Linear Farm Rhino model — twin U-channel walkways, two-level ramps, funnel columns and planting trays, 3.6 m a storey"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "生成",
+              "en": "Generation"
+            },
+            "lead": {
+              "zh": "五步定平面，第六步立起来",
+              "en": "Five steps for the plan, a sixth to raise it"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "平面分五步：核心与疏密、离路主线、拉扯、走廊与节点、方案（换随机种子比较多个方案，按五组指标打分）。第 6 步按真实标高立成三维：全网两层走道在 7.2 m 和 10.8 m，大塔 200 m 内升到第三层 14.4 m，坡道把各层缝在一起；每个核心立一座种植塔，站在三叶形的三层塔座上，塔尖约 186 m。张量场的道路一条不动，从结构下面穿过。",
+                  "en": "The plan comes in five steps: cores and density, off-road primaries, pull, corridors and nodes, and scheme (many random seeds compared and ranked on five measures). Step 6 raises it at real levels: two decks across the net at 7.2 m and 10.8 m, a third at 14.4 m within 200 m of the large towers, ramps stitching the levels together; on each core a planting tower stands on a three-lobed, three-tier base, about 186 m to the tip. Every tensor-field street passes underneath, untouched."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "输出",
+              "en": "Output"
+            },
+            "lead": {
+              "zh": "叠回伦敦地图，进入 Rhino",
+              "en": "Back onto the London map, into Rhino"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "导出 GeoJSON（英国国家网格，可直接叠回伦敦地图）、OBJ（Rhino）、JSON 和平面 PNG。规则对任何场地成立：从张量场工作室取另一块场地的结果，就能在伦敦的其他地方生成。沿走廊的建筑之后单独做成一个功能。",
+                  "en": "Exports GeoJSON (British National Grid, straight back onto the London map), OBJ for Rhino, JSON and a plan PNG. The rules hold on any site: take another site’s result from Tensor Studio and the corridors grow elsewhere in London. Buildings along the corridors come later, as a feature of their own."
+                }
+              }
+            ]
+          }
+        ]
       },
       "tags": [
         {
