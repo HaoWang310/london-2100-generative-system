@@ -165,12 +165,18 @@
     var gLab = mk('div', 'lci-g lci-labs'), labs = [];
     D.radials.forEach(function (r, i) {
       var t = T[1] + 1.2 + i * 0.35;
-      gLab.appendChild(delay(place(mk('div', 'lci-end'), at(r.a[0], r.a[1], true)), t, T[2] - 0.4));
-      /* the line's other stations, where the close view shows them */
-      r.stops.forEach(function (st) {
-        var q = at(st.x, st.y, true);
-        if (q[0] < 4 || q[1] < 4 || q[0] > D.W - 4 || q[1] > D.H - 4) return;
-        gLab.appendChild(delay(place(mk('div', 'lci-stop' + (r.proposed ? ' lci-new' : '')), q), t + 0.6, T[2] - 0.4));
+      var end = place(mk('div', 'lci-end'), at(r.a[0], r.a[1], true)); end.appendChild(mk('b'));
+      gLab.appendChild(delay(end, t, T[2] - 0.4));
+      /* the line's other stations, where the close view shows them: they light up one after another outwards from
+         London once the line has grown (a wave down the line), and go out the other way, outermost first, before the
+         camera pulls back */
+      var vis = r.stops.filter(function (st) { var q = at(st.x, st.y, true); return q[0] >= 4 && q[1] >= 4 && q[0] <= D.W - 4 && q[1] <= D.H - 4; });
+      var grown = T[1] + 1.0 + i * 0.35 + 1.1;
+      vis.forEach(function (st, k) {
+        st._t = grown + k * 0.06; st._o = T[2] - 0.45 - (vis.length - 1 - k) * 0.03;
+        var d = place(mk('div', 'lci-stop' + (st.key ? ' lci-x' : '') + (r.proposed ? ' lci-new' : '')), at(st.x, st.y, true));
+        if (st.key) d.appendChild(mk('b'));
+        gLab.appendChild(delay(d, st._t, st._o));
       });
       var dx = r.dir[0], dy = r.dir[1];
       var side = Math.abs(dx) > 0.8 ? 'd' : Math.abs(dy) > 0.8 ? 'r' : (dx < 0 ? 'l' : 'r');
@@ -181,18 +187,27 @@
         var L = r.line, isNew = L.status === 'proposed', building = L.status === 'building';
         nm.textContent = isNew ? (z ? '新线' : 'New line') : L.en;
         gl.textContent = isNew ? '' : z ? L.zh + (building ? '（在建）' : '') : (building ? 'under construction' : '');
-        lo.textContent = r.london;
+        lo.textContent = '';
         if (tm) tm.textContent = z ? L.abbr + ' 伦敦终点 ' + r.terminus : L.abbr + ' London terminus: ' + r.terminus;
       }]);
     });
-    /* the main interchanges on the way out, named */
+    /* every station in the close view, named: the London end at its own dot, then the main interchanges, then the
+       rest where there is room (a name that would cover another is left out) */
     D.radials.forEach(function (r, i) {
-      r.stops.forEach(function (st) {
-        if (!st.key) return;
-        var q = at(st.x, st.y, true);
-        if (q[0] < 4 || q[1] < 4 || q[0] > D.W - 4 || q[1] > D.H - 4) return;
-        var e = label(q, 'r', 'lci-lk'); e.dataset.group = 'r'; e.textContent = st.n;
-        gLab.appendChild(delay(e, T[1] + 1.9 + i * 0.35, T[2] - 0.4)); labs.push([e, function () {}]);
+      var t = T[1] + 1.4 + i * 0.35;
+      var e0 = label(at(r.a[0], r.a[1], true), 'r', 'lci-lt'); e0.dataset.group = 'r'; e0.textContent = r.london;
+      gLab.appendChild(delay(e0, t + 0.15, T[2] - 0.4)); labs.push([e0, function () {}]);
+    });
+    [true, false].forEach(function (keyPass) {
+      D.radials.forEach(function (r, i) {
+        r.stops.forEach(function (st) {
+          if (!!st.key !== keyPass) return;
+          var q = at(st.x, st.y, true);
+          if (q[0] < 4 || q[1] < 4 || q[0] > D.W - 4 || q[1] > D.H - 4) return;
+          var e = label(q, 'r', keyPass ? 'lci-lk' : 'lci-lo'); e.dataset.group = 'r'; e.textContent = st.n;
+          if (!keyPass) e.dataset.opt = '1';
+          gLab.appendChild(delay(e, (st._t || T[1] + 1.9 + i * 0.35) + 0.08, st._o || T[2] - 0.4)); labs.push([e, function () {}]);
+        });
       });
     });
     var cx = 0, cy = 0; D.stations.forEach(function (n) { cx += n.x / D.stations.length; cy += n.y / D.stations.length; });
@@ -288,6 +303,8 @@
           if (c === 0) break;
         }
         b = put(best);
+        if ((e.dataset.opt || (small && e.classList.contains('lci-lk'))) && bestCost > 0) { e.style.visibility = 'hidden'; return; }
+        e.style.visibility = '';
         list.push(b);
       });
     }
