@@ -49,6 +49,10 @@ The slime mould and the city grown together round the whole 412 km loop, 2025–
 - **车站位置以孵化区第 1 步页面为准**，与旧版城市生长模拟的车站相差最多约 360 m（两个 app 的数据不同）。
 - **参数**：面板上是引擎页面自己列为接口的九个滑块和开关（`LoopCityEngine.sliders`）；其余参数在孵化区页面里调。
 
+## 手机上 · On a phone
+
+手机上主程序工作区用和各应用相同的手机布局（`app/phone.js`，2026-11-24）：地图铺满，面板是底部卡。本模块面板里带 `data-phone-quick` 的元素（「运行百年」「回到发布的结果」）会显示在收起的底部卡里，点击处理不变；面板重建时外壳会重新接上。
+
 ## 文件 · Files
 
 | 文件 | 作用 |
