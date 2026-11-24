@@ -44,3 +44,18 @@ html.l2phone .l2ph-panel { position:fixed !important; left:12px !important; righ
   display:none !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch; background:var(--l2-bg,#000) !important; border:1px solid var(--l2-bd,rgba(255,255,255,.22)) !important; border-radius:20px !important;
   box-shadow:0 18px 50px rgba(0,0,0,.7) !important; transform:none !important; }
 html.l2phone.l2ph-disp-open .l2ph-panel { display:block !important; }
+
+/* the language switch (24 Nov 2026): the app's own, at the top right, level with Display; the same size and look as the
+   shell's switch when the app is opened from the catalogue (../../app/appview.css), so the two cannot be told apart.
+   phone.js puts the class on the switch it is handed and "l2ph-lang-top" on <html>. Not tied to html.l2phone, so an app
+   with a phone layout of its own (Loop City step 1) can use it too. A framed app's switch is hidden by its id. */
+.l2ph-lang { position:fixed !important; right:12px !important; top:12px !important; left:auto !important; bottom:auto !important; z-index:72 !important;
+  box-sizing:border-box !important; height:44px !important; margin:0 !important; padding:3px !important; display:flex !important; gap:2px !important; align-items:stretch !important;
+  border:1px solid var(--l2-bd,rgba(255,255,255,.22)) !important; border-radius:14px !important; background:#000 !important; box-shadow:0 8px 24px rgba(0,0,0,.5) !important; transform:none !important; }
+.l2ph-lang button { all:unset; box-sizing:border-box !important; min-width:48px !important; height:auto !important; margin:0 !important; padding:0 12px !important; display:flex !important; align-items:center !important; justify-content:center !important;
+  border:0 !important; border-radius:11px !important; background:transparent !important; box-shadow:none !important; font:600 15px/1 var(--l2-font,system-ui,sans-serif) !important; letter-spacing:0 !important;
+  color:rgba(255,255,255,.6) !important; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+/* 中文 first, as in the shell, whatever order the app wrote them in */
+.l2ph-lang button[data-lang="zh"], .l2ph-lang button[data-language="zh"] { order:-1; }
+.l2ph-lang button:focus-visible { outline:2px solid #fff; outline-offset:-2px; }
+.l2ph-lang button.on, .l2ph-lang button.active, .l2ph-lang button[aria-pressed="true"] { background:#fff !important; color:#000 !important; }
