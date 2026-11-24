@@ -192,6 +192,12 @@ body.ws-resizing iframe { pointer-events: none; }
    under the top bar; the inspector is the sheet along the bottom (folded: the name, the status, the time bar, the main
    actions); Display at the top left opens 2D / 3D, the map's display panel and the legend; the language switch stands
    at the top right. A narrow window on a computer keeps the stacked layout above. */
+/* Only on the workspace (24 Nov 2026): the sheet, Display, the display panel, the language switch and the menus are
+   fixed to the screen above everything (z-index 70–80), higher than the opening video (60), an app opened from the
+   catalogue (58) and the catalogue (55). main.js puts html.l2-ws on while the workspace is the screen shown; until then
+   they are hidden, so the opening video and the catalogue show only their own. */
+html.l2phone:not(.l2-ws) #inspector, html.l2phone:not(.l2-ws) #wsDisplay, html.l2phone:not(.l2-ws) .l2ph-disp,
+html.l2phone:not(.l2-ws) #langToggle, html.l2phone:not(.l2-ws) #wsScaleMenu, html.l2phone:not(.l2-ws) #phoneMenu { display: none !important; }
 html.l2phone .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); grid-template-areas: "top" "stage"; }
 html.l2phone .sidenav, html.l2phone .crumbs, html.l2phone .ws-rz, html.l2phone .phone-scales, html.l2phone .version { display: none !important; }
 html.l2phone .topbar { gap: 10px; padding: 0 8px 0 14px; min-width: 0; }
