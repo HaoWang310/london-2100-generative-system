@@ -53,14 +53,23 @@
 .lci-lr b, .lci-lr span { display:block; }
 .lci-lr b { font-size:12.5px; }
 .lci-lr.lci-new b { color:#E3B47B; }
+.lci-lr i, .lci-lr em { display:block; font-style:normal; font-size:11px; font-weight:500; color:rgba(255,255,255,.58); }
+.lci-lr i:empty { display:none; }
+.lci-lr span { color:rgba(255,255,255,.8); }
+.lci-stop { width:5px; height:5px; margin:-2.5px 0 0 -2.5px; border-radius:50%; background:#fff; box-shadow:0 0 0 1.5px #000; }
+.lci-stop.lci-new { background:#E3B47B; }
+.lci-lk { font-size:11px; font-weight:500; color:rgba(255,255,255,.8); }
+#lcIntro.lci-story .lci-stop { opacity:0; animation:lciIn .45s ease-out var(--d) both, lciOut .35s ease-in var(--o) forwards; }
 .lci-sr { transform:translate(calc(10px + var(--sx)), -50%); }
 .lci-sl { transform:translate(calc(-100% - 10px + var(--sx)), -50%); text-align:right; }
 .lci-su { transform:translate(calc(-50% + var(--sx)), calc(-100% - 9px)); text-align:center; }
 .lci-sd { transform:translate(calc(-50% + var(--sx)), 9px); text-align:center; }
 #lcIntro.lci-small .lci-lab { font-size:11px; }
 #lcIntro.lci-small .lci-lr b { font-size:11.5px; }
+#lcIntro.lci-small .lci-lr i, #lcIntro.lci-small .lci-lr em { font-size:10.5px; }
 #lcIntro.lci-small .lci-tP b, #lcIntro.lci-small .lci-tA b, #lcIntro.lci-small .lci-tP span, #lcIntro.lci-small .lci-tA span { display:block; margin:0; }
-#lcIntro.lci-small .lci-tS span { display:none; }          /* on a phone the secondary stations keep their number only */
+#lcIntro.lci-small .lci-tS span { display:none; }
+#lcIntro.lci-small .lci-lk { display:none; }            /* on a phone the interchanges on the way out keep their dot only */          /* on a phone the secondary stations keep their number only */
 #lcIntro.lci-small .lci-tS b { margin:0; font-weight:600; color:rgba(255,255,255,.8); }
 
 .lci-caps { flex:none; position:relative; height:104px; margin:6px 20px 0; }

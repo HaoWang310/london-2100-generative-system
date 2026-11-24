@@ -20,7 +20,10 @@ Writes, from what the page itself holds, so that the story shows the same map an
                           contributors, ODbL, fetched 21 Nov 2026), less a few heritage and works stations that the
                           data files as national (below).
 
-Run again when the rail, the stations, the dark base map or the layers change:
+The names of the lines and of their stations are the official ones, from reference/radials.json (see
+tools/build-radials-reference.py), and the nearest-station labels use the official name where the OSM one differs.
+
+Run again when the rail, the stations, the reference, the dark base map or the layers change:
 
     python3 tools/build-intro.py            (numpy, scipy, Pillow, opencv-python; about a minute)
 """
@@ -40,6 +43,9 @@ LAYERS = ['aonb', 'greenbelt', 'greenbelt_edge', 'greenspace', 'nationalparks', 
 NOT_NATIONAL = {'Quainton Road', 'Golding Spring Central', 'Stonehenge Works', 'Central Terminal', 'Wallingford', 'Chinnor',
                 'Holycombe Junction'}
 ZOOM_KM = 36.0          # the width of the close view of the middle of London, in km
+# the official names of the lines and of their stations (reference/radials.json, checked 24 Nov 2026)
+REF = json.load(open(os.path.join(ROOT, 'reference', 'radials.json'), encoding='utf-8'))
+OFFICIAL = REF['officialNames']
 
 s = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
 i = s.find('const HW_RAIL = '); j = s.find('};', i)
@@ -188,7 +194,23 @@ def near_station(E, N):
     n, e, nn = min(STN, key=lambda q: (q[1] - E) ** 2 + (q[2] - N) ** 2)
     d = math.hypot(E - e, N - nn)
     bearing = (math.degrees(math.atan2(E - e, N - nn)) + 360) % 360       # from the station to the point, clockwise from north
-    return {'n': n, 'km': round(d / 1000, 1), 'c': int(((bearing + 22.5) % 360) // 45)}   # c: 0 N, 1 NE, ... 7 NW
+    return {'n': OFFICIAL.get(n, n), 'km': round(d / 1000, 1), 'c': int(((bearing + 22.5) % 360) // 45)}   # c: 0 N, 1 NE, ... 7 NW
+
+# every station of the extract by name (a name can be on several entries: DLR, Underground, Elizabeth line)
+BYNAME = {}
+for f in json.load(open(os.path.join(OSM, 'stations.geojson')))['features']:
+    BYNAME.setdefault(f['properties']['n'], []).append(wgs84_to_bng(f['geometry']['coordinates'][1], f['geometry']['coordinates'][0]))
+
+def on_line(s, line_bng):
+    """Where a station of reference/radials.json is: its 'at', or the entry of its OSM name nearest the radial."""
+    if 'at' in s: return wgs84_to_bng(*s['at'])
+    a = np.array(line_bng, float)
+    def off(q):
+        q = np.array(q); A, B = a[:-1], a[1:]; AB = B - A; L2 = (AB ** 2).sum(1) + 1e-9
+        t = np.clip(((q - A) * AB).sum(1) / L2, 0, 1); return float(np.hypot(*(A + t[:, None] * AB - q).T).min())
+    q = min(BYNAME[s.get('osm', s['name'])], key=off)
+    if off(q) > 300: raise SystemExit(f"{s['name']}: {off(q):.0f} m from its radial")
+    return q
 
 P = [n for n in NODES if n['t'] == 'P']
 radials = []
@@ -199,11 +221,14 @@ for L in RAIL['radials']:
     if math.dist((best['E'], best['N']), L[0]) < math.dist((best['E'], best['N']), L[-1]): L = L[::-1]
     pts = [xy(*q) for q in L]
     p = piece(pts); p['node'] = best['id']; p['proposed'] = best['id'] in PROPOSED
-    # the National Rail station at its London end: a London terminus if there is one within 700 m (the extract also
-    # files "Euston Square" and "King's Cross St Pancras", on the Underground, as national, a few steps from the termini)
-    E0, N0 = L[0]; by = sorted(STN, key=lambda q: (q[1] - E0) ** 2 + (q[2] - N0) ** 2)
-    term = [q for q in by if math.hypot(q[1] - E0, q[2] - N0) < 700 and q[0].startswith('London ')]
-    p['london'] = (term or by)[0][0]
+    # the line it follows and its stations, by their official names (reference/radials.json)
+    ref = REF['radials'][best['id']]
+    p['london'] = ref['londonEnd']
+    p['line'] = {'en': ref['line'], 'zh': ref['zh'], 'abbr': ref['abbr'], 'status': ref['status']}
+    if ref.get('terminus'): p['terminus'] = ref['terminus']
+    p['stops'] = [dict(n=st['name'], **({'key': True} if st.get('key') else {}),
+                       x=round(xy(*on_line(st, L))[0], 2), y=round(xy(*on_line(st, L))[1], 2))
+                  for st in ref['stations'] if st['name'] != ref['londonEnd']]
     at, dirn = along(pts, 9 * KM)                              # where the line's name is written, 9 km out
     p['lab'] = [round(at[0], 2), round(at[1], 2)]; p['dir'] = [round(dirn[0], 3), round(dirn[1], 3)]
     radials.append(p)

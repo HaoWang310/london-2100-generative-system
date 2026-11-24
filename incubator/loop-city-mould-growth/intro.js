@@ -4,7 +4,8 @@
    a cover tells where the picture the page opens on comes from, on the page's own dark map with the loop taken out
    of it (img/intro/, made by tools/build-intro.py), in five scenes:
      1 London today, inside its Green Belt
-     2 close in on the middle of London: six radial railways out of it, each named, with its London station
+     2 close in on the middle of London: six radial railways out of it, each with its line's official name, its London
+       station and the line's stations on the way out (the main interchanges named)
      3 back out: the six primary stations where the radials meet the loop, and the high-speed loop that joins them
      4 the 412 km orbital through all 17 stations, each placed by its nearest National Rail station
      5 the stations, where the mould is released: the map turns into the page's own, lines and all
@@ -46,15 +47,8 @@
     ['Growth starts at the stations', 'The slime mould is released at these 17 stations and grows with the city, 2025 to 2100.',
      '从车站开始生长', '黏菌从这 17 个车站出发，和城市一起生长，2025 至 2100 年。']
   ];
-  /* the line each radial follows (Network Rail and HS2 Ltd names); the new ones have none */
-  var LINE = {
-    P1: ['HS2 (being built)', 'HS2（在建）'],
-    P2: ['East Coast Main Line', '东海岸干线'],
-    P3: ['New line', '新线'],
-    P4: ['High Speed 1', '高速一号线 HS1'],
-    P5: ['New line', '新线'],
-    P6: ['South West Main Line', '西南干线']
-  };
+  /* the lines the radials follow and their stations carry their official names (reference/radials.json): the
+     line's own name in both languages, with a Chinese gloss under it in Chinese */
   var DIR = [['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], ['北', '东北', '东', '东南', '南', '西南', '西', '西北']];
   /* "8.3 km SW of Braintree" / "Braintree 西南 8.3 km": where the Loop City station is, from the nearest National Rail station */
   function where(n, zh) {
@@ -163,11 +157,34 @@
     D.radials.forEach(function (r, i) {
       var t = T[1] + 1.2 + i * 0.35;
       gLab.appendChild(delay(place(mk('div', 'lci-end'), at(r.a[0], r.a[1], true)), t, T[2] - 0.4));
+      /* the line's other stations, where the close view shows them */
+      r.stops.forEach(function (st) {
+        var q = at(st.x, st.y, true);
+        if (q[0] < 4 || q[1] < 4 || q[0] > D.W - 4 || q[1] > D.H - 4) return;
+        gLab.appendChild(delay(place(mk('div', 'lci-stop' + (r.proposed ? ' lci-new' : '')), q), t + 0.6, T[2] - 0.4));
+      });
       var dx = r.dir[0], dy = r.dir[1];
       var side = Math.abs(dx) > 0.8 ? 'd' : Math.abs(dy) > 0.8 ? 'r' : (dx < 0 ? 'l' : 'r');
       var e = label(at(r.lab[0], r.lab[1], true), side, 'lci-lr' + (r.proposed ? ' lci-new' : '')); e.dataset.group = 'r';
-      e.appendChild(mk('b')); e.appendChild(mk('span'));
-      gLab.appendChild(delay(e, t + 0.5, T[2] - 0.4)); labs.push([e, function (z) { e.firstChild.textContent = LINE[r.node][z ? 1 : 0]; e.lastChild.textContent = r.london; }]);
+      var nm = e.appendChild(mk('b')), gl = e.appendChild(mk('i')), lo = e.appendChild(mk('span')), tm = r.terminus ? e.appendChild(mk('em')) : null;
+      gLab.appendChild(delay(e, t + 0.5, T[2] - 0.4));
+      labs.push([e, function (z) {
+        var L = r.line, isNew = L.status === 'proposed', building = L.status === 'building';
+        nm.textContent = isNew ? (z ? '新线' : 'New line') : L.en;
+        gl.textContent = isNew ? '' : z ? L.zh + (building ? '（在建）' : '') : (building ? 'under construction' : '');
+        lo.textContent = r.london;
+        if (tm) tm.textContent = z ? L.abbr + ' 伦敦终点 ' + r.terminus : L.abbr + ' London terminus: ' + r.terminus;
+      }]);
+    });
+    /* the main interchanges on the way out, named */
+    D.radials.forEach(function (r, i) {
+      r.stops.forEach(function (st) {
+        if (!st.key) return;
+        var q = at(st.x, st.y, true);
+        if (q[0] < 4 || q[1] < 4 || q[0] > D.W - 4 || q[1] > D.H - 4) return;
+        var e = label(q, 'r', 'lci-lk'); e.dataset.group = 'r'; e.textContent = st.n;
+        gLab.appendChild(delay(e, T[1] + 1.9 + i * 0.35, T[2] - 0.4)); labs.push([e, function () {}]);
+      });
     });
     var cx = 0, cy = 0; D.stations.forEach(function (n) { cx += n.x / D.stations.length; cy += n.y / D.stations.length; });
     /* the named stations first, so the secondary stations' numbers make room for them rather than the other way round */
