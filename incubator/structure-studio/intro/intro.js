@@ -12,14 +12,13 @@
    here with the page's three.js once the page is idle. If the structure is not ready by the end of scene 3, the film
    holds there. "Skip" (or Esc) closes it at any time; "Enter" (or Enter) once the structure is ready. At the end the
    page goes straight on to its own opening picture, the tensor field, without replaying it.
-   Every visit, when the page is opened on its own. Not with #nointro, #noskin, ?embed=1, nor with the system's
-   "reduce motion". "▶ 开场" in the process panel plays it again (SSIntro.replay()). */
+   Every visit, on its own or from the catalogue (which opens the app in a frame). Not with #nointro, #noskin,
+   ?embed=1, nor with the system's "reduce motion". "▶ 开场" in the process panel plays it again (SSIntro.replay()). */
 (function () {
   'use strict';
   var de = document.documentElement, H = location.hash || '', Q = location.search || '';
   var calm = false; try { calm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
-  var framed = false; try { framed = window.parent !== window; } catch (e) { framed = true; }
-  var off = !de.classList.contains('l2ui') || /[#&]nointro\b/.test(H) || /[?&]embed=1\b/.test(Q) || framed || calm;
+  var off = !de.classList.contains('l2ui') || /[#&]nointro\b/.test(H) || /[?&]embed=1\b/.test(Q) || calm;   // the catalogue opens the app in a frame: it plays there too
   var canMove = typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined' && !!(window.HTMLCanvasElement && HTMLCanvasElement.prototype.transferControlToOffscreen);
   var V = (document.currentScript && /\?v=([^&]+)/.exec(document.currentScript.src) || [])[1] || '';
   var lang = function () { try { if (typeof LANG !== 'undefined') return LANG; } catch (e) {} try { var s = localStorage.getItem('structureStudio.uiLanguage') || localStorage.getItem('l2100.lang') || ''; if (s) return /^en/.test(s) ? 'en' : 'zh'; } catch (e) {} return /^zh/i.test(navigator.language || 'zh') ? 'zh' : 'en'; };
