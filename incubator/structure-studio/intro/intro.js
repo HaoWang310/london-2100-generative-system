@@ -3,7 +3,7 @@
    intro/data.js from the snapshot, step 5 and step 6):
      1 the ground: the streets the tensor field grew, and their junctions (mostly T)
      2 the problem: made into 20 m corridors, the main and through streets give street blocks — a wider street
-     3 the precedent: Frei Otto's wet wool threads merge into three-way nodes (a small simulation, intro/wool.json)
+     3 the precedent: wet wool threads (form-finding) merge into three-way nodes (a small simulation, intro/wool.json)
      4 the rule: one field, two nets (an exploded axonometric: field, ground net, raised net, farmland)
      5 standing up: the step-6 structure in WebGL — the net rises, its levels are pulled apart and woven by the ramps,
        the camera closes in on a tower, the levels close up again, and the plan fades in: the app's first picture
