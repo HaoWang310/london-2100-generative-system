@@ -12,7 +12,8 @@ film shows, so every picture and number in the film is the app's own:
   * the evidence: the same site grown four times, terrain only / climate only / terrain and water / everything,
     with each network's numbers.
 
-Writes intro/img/*.webp (computer) and intro/img/s/*.webp (phone) and intro/intro-data.js.
+Writes intro/img/*.webp (computer) and intro/img/s/*.webp (phone), intro/intro-data.js, and intro/motion.json:
+the fields on a 30 m grid, the contours, anchors and the four networks in the order they grew, for the moving film.
 Takes about six minutes (four full growths). Run from anywhere:  python3 tools/build-intro.py
 Needs: playwright with Chrome at /usr/bin/google-chrome (or CHROME=...), Pillow.
 """
@@ -59,6 +60,30 @@ GRID_JS = r'''(() => { const out = [], STP = 6;
   for (let r = 0; r < ny; r += STP) for (let c = 0; c < nx; c += STP){ const i = r * nx + c, x = c * cell, y = r * cell; if (!inLand(x, y)) continue;
     const f = fieldAtT(x, y); out.push([x, y, __parts(i).map(p => [p[0], +p[1].toFixed(4), +p[2].toFixed(4)]), f === null ? null : +f.toFixed(4), +CLAR[i].toFixed(3)]); }
   return { pts: out, rings: D.pieces.map(p => p.outer.map(q => [Math.round(q[0]), Math.round(q[1])])) }; })()'''
+
+# (v2, the moving film) the fields on a 30 m grid for the particles: each layer's tensor, the field, clarity, the
+# ground's height (for water running downhill) and how exposed each cell is to the three winds shown
+MOTION_JS = r"""(() => { const STP = 3, cells = [], E = window.__TS.D.env, Z = E.Z, M = YEAR[MONTH], eS = E.stats.summerEnergy, eW = E.stats.winterColdEnergy;
+  const best = f => { let b = 0; for (let d = 1; d < 8; d++) if (f(d) > f(b)) b = d; return b; };
+  const dY = best(d => M.share[d] * M.v[d] * M.v[d]), dS = best(d => eS[d]), dW = best(d => eW[d]);
+  const r3 = v => Math.round(v * 1000) / 1000;
+  for (let r = 0; r < ny; r += STP) for (let c = 0; c < nx; c += STP){ const i = r * nx + c, x = c * cell, y = r * cell; if (!inLand(x, y)) continue;
+    const P = __parts(i), row = [c / STP, r / STP];
+    for (const p of P) row.push(r3(p[2] * Math.cos(2 * p[1])), r3(p[2] * Math.sin(2 * p[1])));
+    const f = fieldAtT(x, y); row.push(f === null ? 0 : r3(f), r3(CLAR[i]), Math.round(Z[i] * 10) / 10, r3(DIRS[dY].S[i]), r3(DIRS[dS].S[i]), r3(DIRS[dW].S[i]));
+    cells.push(row); }
+  const smp = (P, k) => P.filter((q, j) => j % k === 0 || j === P.length - 1).map(q => [Math.round(q[0]), Math.round(q[1])]);
+  return { step_m: STP * cell, cols: ['ix', 'iy', 'terrain_c', 'terrain_s', 'wind_c', 'wind_s', 'summer_c', 'summer_s', 'winter_c', 'winter_s', 'water_c', 'water_s', 'field', 'clarity', 'z', 'expYear', 'expSummer', 'expWinter'],
+    cells, winds: { year: DIRS[dY].frm, summer: DIRS[dS].frm, winter: DIRS[dW].frm },
+    rings: D.pieces.map(p => smp(p.outer, 1)), contours: D.contours.map(k => ({ z: k.z, p: smp(k.p, 2) })),
+    anchors: D.anchors.map(a => [Math.round(a.x), Math.round(a.y)]), size: [Math.round(D.w), Math.round(D.h)] }; })()"""
+
+# the streets in the order they grew (main streets first), each thinned to about 3 m
+GROWTH_JS = r"""(() => { const rdp = (P, e) => { if (P.length < 3) return P; let dm = 0, k = 0; const a = P[0], b = P[P.length - 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    for (let i = 1; i < P.length - 1; i++){ const d = Math.abs((b[0] - a[0]) * (a[1] - P[i][1]) - (a[0] - P[i][0]) * (b[1] - a[1])) / L; if (d > dm){ dm = d; k = i; } }
+    return dm > e ? rdp(P.slice(0, k + 1), e).slice(0, -1).concat(rdp(P.slice(k), e)) : [a, b]; };
+  return { streets: LINES.filter(l => !l.dead && (l.level === 1 || l.level === 2) && l.pts.length > 1).map(l => [l.level].concat(rdp(l.pts, 3).map(q => [Math.round(q[0]), Math.round(q[1])]))),
+           attractors: attractorsOn().map(a => [Math.round(a.x), Math.round(a.y), a.kind]) }; })()"""
 
 def probe_js(x, y):
     return r'''(() => { const c = Math.round(PX / cell), r = Math.round(PY / cell), i = r * nx + c;
@@ -169,6 +194,7 @@ async def main():
         ctx, pg = await open_app(b)
         grid = await pg.evaluate(GRID_JS)
         data['probe'] = await pg.evaluate(probe_js(*PROBE))
+        motion = await pg.evaluate(MOTION_JS); motion['probe'] = list(PROBE); motion['growth'] = {}
         data['grid'] = {'points': len(grid['pts']), 'cells': await pg.evaluate('N'), 'cell_m': await pg.evaluate('cell'),
                         'ha': round(await pg.evaluate('D.pieces.reduce((s, p) => s + Math.abs(polyArea(p.outer)), 0)') / 1e4, 1),
                         'smooth_m': await pg.evaluate("v('smooth')"),
@@ -197,12 +223,16 @@ async def main():
             await asyncio.sleep(2.5)
             await plate(pg, 'net-' + k, 760, 480)
             data['evidence'][k] = await pg.evaluate(STATS_JS)
+            motion['growth'][k] = await pg.evaluate(GROWTH_JS)
             print(f'{time.time() - t0:5.0f} s  {k} {data["evidence"][k]}')
             await ctx.close()
         await b.close()
     with open(os.path.join(OUT, 'intro-data.js'), 'w') as f:
         f.write('/* Tensor Studio · the method film: numbers read from the app on its default site (tools/build-intro.py). */\n')
         f.write('window.TS_INTRO_DATA = ' + json.dumps(data, separators=(',', ':')) + ';\n')
+    with open(os.path.join(OUT, 'motion.json'), 'w') as f:
+        json.dump(motion, f, separators=(',', ':'))
+    print('motion.json', os.path.getsize(os.path.join(OUT, 'motion.json')) // 1024, 'KB')
     sz = lambda d: sum(os.path.getsize(os.path.join(d, n)) for n in os.listdir(d) if n.endswith('.webp'))
     print(f'done in {time.time() - t0:.0f} s; pictures {sz(os.path.join(OUT, "img")) // 1024} KB (computer), {sz(os.path.join(OUT, "img", "s")) // 1024} KB (phone)')
 

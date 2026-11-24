@@ -1,4 +1,4 @@
-/* Tensor Studio · the method film (24 Nov 2026).
+/* Tensor Studio · the method film (24 Nov 2026; moving, the same evening).
    While the site loads, six short chapters show how the data become the tensor field: the question, where the method
    stands (McHarg, Chen et al.), the five layers and their reasons, how directions are added (as tensors), what the
    field says about itself (clarity, conflict) and the evidence (the same site grown with four sets of layers).
@@ -8,16 +8,24 @@
    It waits until its pictures are decoded (12 s at most, else it does not play), then runs by itself: the app's
    loading goes on underneath. Once the app has drawn, "Enter" appears; at the end the film hands over by itself,
    or, if the site is still loading, waits on the last chapter. Skip (or Esc) closes it at any time.
-   Only opacity and transform move, so it plays on while the page is busy. window.TSIntro.replay() plays it again. */
+   Two ways to play. Moving (where the browser has OffscreenCanvas and workers: Safari / iOS 16.4 on, Chrome 69 on):
+   the pictures are drawn live by intro/motion-worker.js from the app's fields (intro/motion.json) — particles in each
+   layer, the angles doubled and added at one point, the networks growing — in a worker, so they keep moving while
+   the page is busy. Still (older browsers, "reduce motion", or #static): the pictures made beforehand in intro/img.
+   The text is the page's own either way, moved by opacity and transform only.
+   A "Method" button in the app's panel plays it again (window.TSIntro.replay()). */
 (function () {
   'use strict';
   var B = window.__TS_BOOT || {}, H = location.hash || '', D = window.TS_INTRO_DATA;
   var host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) {}
-  if (!D || B.fromMap || host || /[#&]nointro\b/.test(H)) return;      // a site handed in (the London map): straight to it
+  if (!D || B.fromMap || host) return;                                    // a site handed in (the London map): straight to it, no button either
   var zh = (B.lang || 'zh') === 'zh';
   var small = Math.min(innerWidth, innerHeight) < 600 || innerWidth <= 760;
   var IMG = 'intro/img/' + (small ? 's/' : '');
-  var T = [0, 4, 9, 17, 22, 26], END = 34;
+  var T = [0, 4, 9, 19, 24, 28], END = 36;
+  var lay = function (k) { return T[2] + 0.4 + k * 1.6; };              // when layer k of the stack rises (the worker uses the same)
+  var canMove = typeof OffscreenCanvas !== 'undefined' && typeof Worker !== 'undefined' && !!(window.HTMLCanvasElement && HTMLCanvasElement.prototype.transferControlToOffscreen);
+  var still = /[#&]static\b/.test(H) || !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var L = function (a, b) { return zh ? a : b; };
   var f2 = function (v) { return (+v).toFixed(2); };
   var fmt = function (n) { return Number(n).toLocaleString(zh ? 'zh-CN' : 'en-GB'); };
@@ -26,7 +34,9 @@
 
   // ---------------------------------------------------------------- the probe: the parts at one point, and their sum
   var COL = { terrain: '#F2F2F2', wind: '#68C8FF', summer: '#E8A33D', winter: '#9D7CFF', water: '#5FBF7A' };
-  var NAME = { terrain: L('地形', 'Terrain'), wind: L('全年风', "The year's wind"), summer: L('夏季风', 'Summer air'), winter: L('冬季冷风', 'Winter cold'), water: L('水', 'Water') };
+  var NAME = {};
+  function names() { NAME = { terrain: L('地形', 'Terrain'), wind: L('全年风', "The year's wind"), summer: L('夏季风', 'Summer air'), winter: L('冬季冷风', 'Winter cold'), water: L('水', 'Water') }; }
+  names();
   var P = (D.probe && D.probe.parts) || [];
   var sc = 0, ss = 0, sw = 0, wmax = 0;
   P.forEach(function (p) { var t = p[1] * Math.PI / 90; sc += p[2] * Math.cos(t); ss += p[2] * Math.sin(t); sw += p[2]; wmax = Math.max(wmax, p[2]); });
@@ -76,113 +86,183 @@
     return o + '</svg>';
   }
 
-  // ---------------------------------------------------------------- the chapters
+  // ---------------------------------------------------------------- the chapters (moving: the pictures are left to the worker)
   var E = D.evidence || {}, G = D.grid || {};
-  var txt = function (k, kicker, title, body, more) {
-    var o = T[k];
-    return '<div class="tsi-txt"><div class="tsi-k tsi-mono tsi-r" ' + v(o + 0.15) + '>' + kicker + '</div><div class="tsi-t tsi-r" ' + v(o + 0.35) + '>' + title + '</div>' +
-           (body ? '<div class="tsi-b tsi-r" ' + v(o + 0.6) + '>' + body + '</div>' : '') + (more || '') + '</div>';
-  };
-  var ch = function (k, inner) {
-    var last = k === T.length - 1, e = last ? END : T[k + 1] - 0.5;
-    return '<section class="tsi-ch' + (last ? ' tsi-last' : '') + '" style="--d:' + T[k] + 's;--e:' + e + 's">' + inner + '</section>';
-  };
-  var html = '';
-  // I · the question
-  html += ch(0, '<div class="tsi-art"><img class="tsi-plate tsi-drift" style="--d:0s" src="' + IMG + 'site.webp" alt=""></div>' +
-    txt(0, 'I · QUESTION', L('能否把地形、气候和水，写进街道的方向？', 'Can terrain, climate and water be written into the direction of the streets?'),
-      L('车站 P2 场地，' + G.ha + ' 公顷，切成 ' + G.cell_m + ' m 的网格，共 ' + fmt(G.land) + ' 个点。每个点都要回答同一个问题：<b>这里的路该朝哪个方向？</b>',
-        'The site by station P2: ' + G.ha + ' ha on a ' + G.cell_m + ' m grid, ' + fmt(G.land) + ' points. Each answers one question: <b>which way should a street run here?</b>')));
-  // II · where the method stands
-  var prec = [['1969', 'McHarg · <i>Design with Nature</i>', L('叠加数值：土地好或坏', 'Values: good land or bad')],
-              ['2008', L('Chen 等 · 张量场街道建模', 'Chen et al. · tensor-field streets'), L('叠加几何：网格、放射', 'Geometry: grids and radials')],
-              [L('本研究', 'THIS STUDY'), L('张量场工作室', 'Tensor Studio'), L('叠加方向：地形、风、水', 'Directions: terrain, wind, water')]];
-  html += ch(1, '<div class="tsi-art"><div class="tsi-prec">' + prec.map(function (p, k) {
-      return '<div class="tsi-r' + (k === 2 ? ' me' : '') + '" ' + v(T[1] + 0.5 + k * 1.0) + '>' + precSVG(k) + '<div class="y tsi-mono">' + p[0] + '</div><div class="n">' + p[1] + '</div><div class="c">' + p[2] + '</div></div>';
-    }).join('') + '</div></div>' +
-    txt(1, 'II · POSITION', L('叠加的不是数值，而是方向', 'Not values laid over each other, but directions'),
-      L('McHarg 把地形、水文等图层叠在一起，读出土地的好坏；Chen 等人用网格、放射这样的几何场生成街道。这里叠在一起的，是由环境数据得出的<b>方向</b>。',
-        'McHarg laid maps over each other to read how good the land is; Chen et al. grew streets from geometric fields, grids and radials. Here the layers are <b>directions</b> taken from the environment.')));
-  // III · the layers (their pictures are on the shared stage below)
-  var RULES = [['terrain', L('地形', 'Terrain'), L('顺等高线：坡度平缓，利于步行和排水', 'along the contour: gentle gradients, for walking and drainage')],
+  var RULES, VAR;
+  function defs() {
+    RULES = [['terrain', L('地形', 'Terrain'), L('顺等高线：坡度平缓，利于步行和排水', 'along the contour: gentle gradients, for walking and drainage')],
                ['wind', L('全年风', "The year's wind"), L('温和的方向顺着，寒冷的方向横切', 'along the mild directions, across the cold ones')],
                ['summer', L('夏季风', 'Summer air'), L('顺风：通风廊道', 'along it: a ventilation corridor')],
                ['winter', L('冬季冷风', 'Winter cold'), L('横切：挡风', 'across it: shelter')],
                ['water', L('水', 'Water'), L('顺走廊和水流：滨水路，路面兼作排水', 'along corridors and the flow: waterside streets that drain')]];
-  var lay = function (k) { return T[2] + 0.5 + k * 1.15; };
-  html += ch(2, txt(2, 'III · LAYERS', L('五层数据，各自给出道路方向', 'Five layers, each with a direction for the street'), '',
-    '<div class="tsi-rules">' + RULES.map(function (r, k) {
-      return '<div class="tsi-r' + '" style="--c:' + COL[r[0]] + ';--o:' + lay(k).toFixed(2) + 's;--x:' + (lay(k + 1) - 0.45).toFixed(2) + 's"><b>' + r[1] + '</b>　' + r[2] + '</div>';
-    }).join('') + '<div class="tsi-r end" style="--c:#E8463A;--o:' + (lay(5) + 0.3).toFixed(2) + 's"><b>' + L('红色', 'Red') + '</b>　' + L('五层之和：张量场', 'the five added up: the tensor field') + '</div></div>'));
-  // IV · adding them up
-  html += ch(3, '<div class="tsi-art"><div class="tsi-probe">' + probeSVG(T[3] + 1.5) + '</div></div>' +
-    txt(3, 'IV · SUPERPOSITION', L('张量相加：方向没有正反', 'Adding tensors: a street has no arrow'),
-      L('10° 和 170° 的两条路几乎同向，直接平均却得到 90°。所以每层在每个点写成一个张量再相加：主方向给主路，与它垂直的方向给次路。',
-        'Streets at 10° and 170° run almost the same way, yet their average is 90°. So each layer becomes a tensor at every point and the tensors are added: the major direction gives the main streets, the one square to it the second streets.'),
-      '<div class="tsi-eq tsi-mono tsi-r" ' + v(T[3] + 0.9) + '>T = Σ w<sub>i</sub>·[cos2θ<sub>i</sub>  sin2θ<sub>i</sub> ; sin2θ<sub>i</sub>  −cos2θ<sub>i</sub>]</div>'));
-  // V · what the field says
-  html += ch(4, '<div class="tsi-art"><div class="tsi-two"><img src="' + IMG + 'field.webp" alt=""><img class="tsi-f" ' + v(T[4] + 1.4) + ' src="' + IMG + 'conflict.webp" alt="">' +
-      '<div class="tsi-chip tsi-f" ' + v(T[4] + 1.8) + '><span><i style="background:#9D7CFF"></i>' + L('流线：道路的方向', 'streamlines: where streets run') + '</span><span><i style="background:#C98A3A"></i>' + L('橙色：冲突', 'orange: conflict') + '</span></div></div></div>' +
-    txt(4, 'V · READING', L('意见一致处平直，相左处转折', 'Where the layers agree, streets run straight; where they disagree, they turn'),
-      L('清晰度 c = |ΣT| / Σw：1 表示各层同向，0 表示互相抵消。橙色是地形与气候相左的地方，道路在那里转弯。',
-        'Clarity c = |ΣT| / Σw: 1 when the layers agree, 0 when they cancel out. Orange is where terrain and climate disagree; the streets turn there.')));
-  // VI · the evidence
-  var VAR = [['A', L('只用地形', 'Terrain only')], ['B', L('只用气候', 'Climate only')], ['C', L('地形 + 水', 'Terrain and water')], ['D', L('全部（默认）', 'Everything (default)')]];
+    VAR = [['A', L('只用地形', 'Terrain only')], ['B', L('只用气候', 'Climate only')], ['C', L('地形 + 水', 'Terrain and water')], ['D', L('全部（默认）', 'Everything (default)')]];
+  }
+  defs();
   var ev = function (k) { return E[k] || {}; };
-  html += ch(5, '<div class="tsi-art"><div class="tsi-four">' + VAR.map(function (x, k) {
-      var e = ev(x[0]);
-      return '<div class="tsi-r" ' + v(T[5] + 0.4 + k * 0.6) + '><img src="' + IMG + 'net-' + x[0] + '.webp" alt=""><div class="l"><em class="tsi-mono">' + x[0] + '</em>' + x[1] + '</div>' +
-             '<div class="m">c <span>' + f2(e.clarity) + '</span> · ' + e.streets + L(' 条道路', ' streets') + '</div></div>';
-    }).join('') + '</div></div>' +
-    txt(5, 'VI · EVIDENCE', L('输入不同，路网不同', 'Different inputs, different networks'),
-      L('同一块地，其余参数不变，跑四次。每加一层，平均清晰度下降（' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + '），冲突上升（' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '）：<b>街道的走向可以追溯到环境数据。</b>',
-        'The same site, everything else unchanged, grown four times. Each layer added lowers the mean clarity (' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + ') and raises the conflict (' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '): <b>each street’s direction can be traced to the environment.</b>'),
-      '<div class="tsi-n tsi-r" ' + v(T[5] + 3.2) + '>' + L('一块场地，每组运行一次；各层权重是设计判断，可以在 app 里调整。', 'One site, one run each; the weights are design judgements, set in the app.') + '</div>'));
-  // the shared stage: the layer stack rises through III and falls into one in IV
-  var LW = (small ? D.layers_s : D.layers) || { w: 1100, h: 450 }, gap = 0.4, extra = 0.22, SH = 1 + 5 * gap + extra, ar = LW.w / (LW.h * SH);
-  var fieldTop = (5 * gap + extra) / SH, drop = T[3] + 0.15;
-  var stack = ['terrain', 'wind', 'summer', 'winter', 'water'].map(function (key, k) {
-    var top = k * gap / SH, dy = ((fieldTop - top) * SH * 100).toFixed(1);
-    return '<div class="tsi-L" style="--top:' + (top * 100).toFixed(2) + '%;--h:' + (100 / SH).toFixed(2) + '%;--o:' + lay(k).toFixed(2) + 's;--x:' + (drop + k * 0.08).toFixed(2) + 's;--dy:' + dy + '%;--c:' + COL[key] + '">' +
-           '<img src="' + IMG + 'layer-' + key + '.webp" alt=""><span>' + NAME[key] + '</span></div>';
-  }).join('') + '<div class="tsi-L sum" style="--top:' + (fieldTop * 100).toFixed(2) + '%;--h:' + (100 / SH).toFixed(2) + '%;--o:' + lay(5).toFixed(2) + 's;--c:#E8463A">' +
-     '<img src="' + IMG + 'layer-field.webp" alt=""><span>' + L('张量场', 'The field') + '</span></div>';
-  html += '<section class="tsi-stage" style="--d:' + T[2] + 's;--e:' + (T[3] + 1.4) + 's"><div class="tsi-art"><div class="tsi-stack" style="--ar:' + ar.toFixed(4) + '">' + stack + '</div></div></section>';
+  var siteAR = (D.layers && D.plates && D.plates.site) ? (D.plates.site[0] / D.plates.site[1]) : 1.02;
+  function build(moving) {
+    var txt = function (k, kicker, title, body, more) {
+      var o = T[k];
+      return '<div class="tsi-txt"><div class="tsi-k tsi-mono tsi-r" ' + v(o + 0.15) + '>' + kicker + '</div><div class="tsi-t tsi-r" ' + v(o + 0.35) + '>' + title + '</div>' +
+             (body ? '<div class="tsi-b tsi-r" ' + v(o + 0.6) + '>' + body + '</div>' : '') + (more || '') + '</div>';
+    };
+    var ch = function (k, inner) {
+      var last = k === T.length - 1, e = last ? END : T[k + 1] - 0.5;
+      return '<section class="tsi-ch' + (last ? ' tsi-last' : '') + '" style="--d:' + T[k] + 's;--e:' + e + 's">' + inner + '</section>';
+    };
+    var html = '';
+    // I · the question
+    html += ch(0, (moving ? '' : '<div class="tsi-art"><img class="tsi-plate tsi-drift" style="--d:0s" src="' + IMG + 'site.webp" alt=""></div>') +
+      txt(0, 'I · QUESTION', L('能否把地形、气候和水，写进街道的方向？', 'Can terrain, climate and water be written into the direction of the streets?'),
+        L('车站 P2 场地，' + G.ha + ' 公顷，切成 ' + G.cell_m + ' m 的网格，共 ' + fmt(G.land) + ' 个点。每个点都要回答同一个问题：<b>这里的路该朝哪个方向？</b>',
+          'The site by station P2: ' + G.ha + ' ha on a ' + G.cell_m + ' m grid, ' + fmt(G.land) + ' points. Each answers one question: <b>which way should a street run here?</b>')));
+    // II · where the method stands
+    var prec = [['1969', 'McHarg · <i>Design with Nature</i>', L('叠加数值：土地好或坏', 'Values: good land or bad')],
+                ['2008', L('Chen 等 · 张量场街道建模', 'Chen et al. · tensor-field streets'), L('叠加几何：网格、放射', 'Geometry: grids and radials')],
+                [L('本研究', 'THIS STUDY'), L('张量场工作室', 'Tensor Studio'), L('叠加方向：地形、风、水', 'Directions: terrain, wind, water')]];
+    html += ch(1, '<div class="tsi-art"><div class="tsi-prec">' + prec.map(function (p, k) {
+        return '<div class="tsi-r' + (k === 2 ? ' me' : '') + '" ' + v(T[1] + 0.5 + k * 0.9) + '>' + (moving ? '<div class="tsi-ps"></div>' : precSVG(k)) +
+               '<div class="y tsi-mono">' + p[0] + '</div><div class="n">' + p[1] + '</div><div class="c">' + p[2] + '</div></div>';
+      }).join('') + '</div></div>' +
+      txt(1, 'II · POSITION', L('叠加的不是数值，而是方向', 'Not values laid over each other, but directions'),
+        L('McHarg 把地形、水文等图层叠在一起，读出土地的好坏；Chen 等人用网格、放射这样的几何场生成街道。这里叠在一起的，是由环境数据得出的<b>方向</b>。',
+          'McHarg laid maps over each other to read how good the land is; Chen et al. grew streets from geometric fields, grids and radials. Here the layers are <b>directions</b> taken from the environment.')));
+    // III · the layers: what each kind of data does, then the direction it gives a street
+    html += ch(2, txt(2, 'III · LAYERS', L('五层数据，各自给出道路方向', 'Five layers, each with a direction for the street'),
+      moving ? L('每层先看数据本身——等高线、风、水——再看它推出的道路方向。', 'Each layer shows its data first — contours, wind, water — then the street direction it gives.') : '',
+      '<div class="tsi-rules">' + RULES.map(function (r, k) {
+        return '<div class="tsi-r" style="--c:' + COL[r[0]] + ';--o:' + lay(k).toFixed(2) + 's;--x:' + (lay(k + 1) - 0.45).toFixed(2) + 's"><b>' + r[1] + '</b>　' + r[2] + '</div>';
+      }).join('') + '<div class="tsi-r end" style="--c:#E8463A;--o:' + (lay(5) - 0.2).toFixed(2) + 's"><b>' + L('红色', 'Red') + '</b>　' + L('五层之和：张量场', 'the five added up: the tensor field') + '</div></div>'));
+    // IV · adding them up
+    html += ch(3, (moving ? '' : '<div class="tsi-art"><div class="tsi-probe">' + probeSVG(T[3] + 1.5) + '</div></div>') +
+      txt(3, 'IV · SUPERPOSITION', L('张量相加：方向没有正反', 'Adding tensors: a street has no arrow'),
+        L('10° 和 170° 的两条路几乎同向，直接平均却得到 90°。所以每层在每个点写成一个张量：角度乘 2、首尾相加、再除以 2。主方向给主路，与它垂直的方向给次路。',
+          'Streets at 10° and 170° run almost the same way, yet their average is 90°. So each layer becomes a tensor at every point: double the angle, add tip to tail, halve it again. The major direction gives the main streets, the one square to it the second streets.'),
+        '<div class="tsi-eq tsi-mono tsi-r" ' + v(T[3] + 0.9) + '>T = Σ w<sub>i</sub>·[cos2θ<sub>i</sub>  sin2θ<sub>i</sub> ; sin2θ<sub>i</sub>  −cos2θ<sub>i</sub>]</div>'));
+    // V · what the field says
+    var chip = '<div class="tsi-chip tsi-f" ' + v(T[4] + (moving ? 0.8 : 1.8)) + '>' + (moving
+      ? '<span><i style="background:#F5F5F7"></i>' + L('清晰：快、直', 'clear: fast, straight') + '</span><span><i style="background:#B9A4FF"></i>' + L('中', 'middling') + '</span><span><i style="background:#E8A33D"></i>' + L('冲突：慢、打转', 'conflict: slow, turning') + '</span>'
+      : '<span><i style="background:#9D7CFF"></i>' + L('流线：道路的方向', 'streamlines: where streets run') + '</span><span><i style="background:#C98A3A"></i>' + L('橙色：冲突', 'orange: conflict') + '</span>') + '</div>';
+    html += ch(4, '<div class="tsi-art"><div class="tsi-two">' + (moving ? '' : '<img src="' + IMG + 'field.webp" alt=""><img class="tsi-f" ' + v(T[4] + 1.4) + ' src="' + IMG + 'conflict.webp" alt="">') + chip + '</div></div>' +
+      txt(4, 'V · READING', L('意见一致处平直，相左处转折', 'Where the layers agree, streets run straight; where they disagree, they turn'),
+        L('清晰度 c = |ΣT| / Σw：1 表示各层同向，0 表示互相抵消。各层一致处道路平直，相左处道路转弯。',
+          'Clarity c = |ΣT| / Σw: 1 when the layers agree, 0 when they cancel out. Where they agree the streets run straight; where they disagree, they turn.')));
+    // VI · the evidence
+    html += ch(5, '<div class="tsi-art"><div class="tsi-four">' + VAR.map(function (x, k) {
+        var e = ev(x[0]);
+        return '<div class="tsi-r" ' + v(T[5] + 0.2 + k * 0.15) + '>' + (moving ? '<div class="tsi-fs" style="aspect-ratio:' + siteAR.toFixed(3) + '"></div>' : '<img src="' + IMG + 'net-' + x[0] + '.webp" alt="">') +
+               '<div class="l"><em class="tsi-mono">' + x[0] + '</em>' + x[1] + '</div>' +
+               '<div class="m tsi-f" ' + v(T[5] + (moving ? 5.6 : 0.4)) + '>c <span>' + f2(e.clarity) + '</span> · ' + e.streets + L(' 条道路', ' streets') + '</div></div>';
+      }).join('') + '</div></div>' +
+      txt(5, 'VI · EVIDENCE', L('输入不同，路网不同', 'Different inputs, different networks'),
+        L('同一块地，其余参数不变，跑四次' + (moving ? '，按 app 的生成顺序回放' : '') + '。每加一层，平均清晰度下降（' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + '），冲突上升（' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '）：<b>街道的走向可以追溯到环境数据。</b>',
+          'The same site, everything else unchanged, grown four times' + (moving ? ', replayed in the order the app grew it' : '') + '. Each layer added lowers the mean clarity (' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + ') and raises the conflict (' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '): <b>each street’s direction can be traced to the environment.</b>'),
+        '<div class="tsi-n tsi-r" ' + v(T[5] + 3.2) + '>' + L('一块场地，每组运行一次；各层权重是设计判断，可以在 app 里调整。', 'One site, one run each; the weights are design judgements, set in the app.') + '</div>'));
+    if (!moving) {    // the still film: the layer stack as pictures, rising through III and falling into one in IV
+      var LW = (small ? D.layers_s : D.layers) || { w: 1100, h: 450 }, gap = 0.4, extra = 0.22, SH = 1 + 5 * gap + extra, ar = LW.w / (LW.h * SH);
+      var fieldTop = (5 * gap + extra) / SH, drop = T[3] + 0.15;
+      var stack = ['terrain', 'wind', 'summer', 'winter', 'water'].map(function (key, k) {
+        var top = k * gap / SH, dy = ((fieldTop - top) * SH * 100).toFixed(1);
+        return '<div class="tsi-L" style="--top:' + (top * 100).toFixed(2) + '%;--h:' + (100 / SH).toFixed(2) + '%;--o:' + lay(k).toFixed(2) + 's;--x:' + (drop + k * 0.08).toFixed(2) + 's;--dy:' + dy + '%;--c:' + COL[key] + '">' +
+               '<img src="' + IMG + 'layer-' + key + '.webp" alt=""><span>' + NAME[key] + '</span></div>';
+      }).join('') + '<div class="tsi-L sum" style="--top:' + (fieldTop * 100).toFixed(2) + '%;--h:' + (100 / SH).toFixed(2) + '%;--o:' + (lay(5) - 0.2).toFixed(2) + 's;--c:#E8463A">' +
+         '<img src="' + IMG + 'layer-field.webp" alt=""><span>' + L('张量场', 'The field') + '</span></div>';
+      html += '<section class="tsi-stage" style="--d:' + T[2] + 's;--e:' + (T[3] + 1.4) + 's"><div class="tsi-art"><div class="tsi-stack" style="--ar:' + ar.toFixed(4) + '">' + stack + '</div></div></section>';
+      html = html.replace(/<img /g, '<img fetchpriority="high" decoding="async" ');
+    }
+    var pips = T.map(function (t, k) { var e = k < T.length - 1 ? T[k + 1] : END; return '<i><b style="--d:' + t + 's;--len:' + (e - t) + 's"></b></i>'; }).join('');
+    return (moving ? '<canvas class="tsi-cv"></canvas>' : '') + '<div class="tsi-art tsi-measure" aria-hidden="true"></div>' +
+      '<div class="tsi-head tsi-mono">TENSOR STUDIO · METHOD</div><div class="tsi-pips">' + pips + '</div>' +
+      '<button type="button" class="tsi-skip">' + L('跳过', 'Skip') + '</button><div class="tsi-film">' + html + '</div>' +
+      '<button type="button" class="tsi-enter">' + L('进入 ›', 'Enter ›') + '</button><div class="tsi-load"><i></i>' + L('正在载入场地…', 'Loading the site…') + '</div>';
+  }
 
-  var pips = T.map(function (t, k) { var e = k < T.length - 1 ? T[k + 1] : END; return '<i><b style="--d:' + t + 's;--len:' + (e - t) + 's"></b></i>'; }).join('');
-  var root = document.createElement('div');
-  root.id = 'tsIntro'; root.className = 'tsi-wait'; root.setAttribute('lang', zh ? 'zh-CN' : 'en'); root.setAttribute('aria-label', L('原理短片', 'How it works: a short film'));
-  html = html.replace(/<img /g, '<img fetchpriority="high" decoding="async" ');
-  root.innerHTML = '<div class="tsi-head tsi-mono">TENSOR STUDIO · METHOD</div><div class="tsi-pips">' + pips + '</div>' +
-    '<button type="button" class="tsi-skip">' + L('跳过', 'Skip') + '</button><div class="tsi-film">' + html + '</div>' +
-    '<button type="button" class="tsi-enter">' + L('进入 ›', 'Enter ›') + '</button><div class="tsi-load"><i></i>' + L('正在载入场地…', 'Loading the site…') + '</div>';
-
-  // ---------------------------------------------------------------- playing it
-  var de = document.documentElement, started = false, ended = false, closed = false, t0 = 0, timers = [];
+  // ---------------------------------------------------------------- playing it (once on opening, and again from the app's button)
+  var de = document.documentElement, cur = null;
   var ready = function () { return !de.classList.contains('ts-boot'); };
-  function close() {
-    if (closed) return; closed = true; timers.forEach(clearTimeout);
-    root.classList.add('tsi-out'); document.removeEventListener('keydown', onKey, true);
-    setTimeout(function () { if (root.parentNode) root.parentNode.removeChild(root); }, 750);
-  }
-  function onReady() { if (!ready() || closed) return; root.classList.add('tsi-ready'); if (ended) close(); }
-  function onKey(e) { if (e.key === 'Escape') close(); else if (e.key === 'Enter' && ready()) close(); }
-  root.querySelector('.tsi-skip').onclick = close;
-  root.querySelector('.tsi-enter').onclick = close;
-  function begin() {
-    if (started || closed) return; started = true; t0 = performance.now();
-    root.classList.remove('tsi-wait'); root.classList.add('tsi-play');
-    timers.push(setTimeout(function () { ended = true; root.classList.add('tsi-hold'); if (ready()) close(); }, END * 1000 + 300));
-  }
-  function mount() {
-    (document.body || de).appendChild(root);
+  function film() {
+    if (cur && !cur.closed) return;
+    names(); defs();
+    var me = { closed: false }, root = document.createElement('div'), started = false, ended = false, timers = [], worker = null, moving = canMove && !still;
+    cur = me;
+    root.id = 'tsIntro'; root.className = 'tsi-wait'; root.setAttribute('lang', zh ? 'zh-CN' : 'en'); root.setAttribute('aria-label', L('原理短片', 'How it works: a short film'));
+    function close() {
+      if (me.closed) return; me.closed = true; timers.forEach(clearTimeout);
+      if (worker) { try { worker.postMessage({ type: 'stop' }); } catch (e) {} setTimeout(function () { try { worker.terminate(); } catch (e) {} }, 800); }
+      root.classList.add('tsi-out'); document.removeEventListener('keydown', onKey, true); removeEventListener('resize', onResize);
+      setTimeout(function () { if (root.parentNode) root.parentNode.removeChild(root); }, 750);
+    }
+    function onReady() { if (!ready() || me.closed) return; root.classList.add('tsi-ready'); if (ended) close(); }
+    function onKey(e) { if (e.key === 'Escape') close(); else if (e.key === 'Enter' && ready()) close(); }
+    function begin() {
+      if (started || me.closed) return; started = true;
+      root.classList.remove('tsi-wait'); root.classList.add('tsi-play');
+      if (worker) worker.postMessage({ type: 'start', t0: performance.timeOrigin + performance.now() });
+      timers.push(setTimeout(function () { ended = true; root.classList.add('tsi-hold'); if (ready()) close(); }, END * 1000 + 300));
+    }
+    function rects() {
+      var r = function (el) { var b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; };
+      return { art: r(root.querySelector('.tsi-measure')), prec: [].map.call(root.querySelectorAll('.tsi-ps'), r), four: [].map.call(root.querySelectorAll('.tsi-fs'), r) };
+    }
+    var rsT = 0;
+    function onResize() { clearTimeout(rsT); rsT = setTimeout(function () { if (worker) worker.postMessage({ type: 'size', w: innerWidth, h: innerHeight, dpr: Math.min(2, devicePixelRatio || 1), rects: rects() }); }, 150); }
+    function still_() {          // the pictures made beforehand: wait for them to decode
+      var imgs = [].slice.call(root.querySelectorAll('img')), left = imgs.length;
+      var one = function () { if (--left <= 0) begin(); };
+      if (!left) begin();
+      imgs.forEach(function (im) { var p = im.decode ? im.decode() : null; if (p) p.then(one, one); else if (im.complete) one(); else { im.onload = im.onerror = one; } });
+    }
+    function moving_() {         // the worker draws; it says when its data are in
+      try {
+        var cv = root.querySelector('.tsi-cv'), ofs = cv.transferControlToOffscreen();
+        worker = new Worker('intro/motion-worker.js?v=1');
+        worker.onmessage = function (e) {
+          if (e.data.type === 'ready') begin();
+          else if (e.data.type === 'stats') de.dataset.tsiFps = Math.round(e.data.frames / e.data.t);
+          else if (e.data.type === 'error') { if (!started) fallback(); else if (window.console) console.warn('method film:', e.data.message); }
+        };
+        worker.onerror = function () { if (!started) fallback(); };
+        worker.postMessage({ type: 'init', canvas: ofs, data: new URL('intro/motion.json?v=1', location.href).href, w: innerWidth, h: innerHeight, dpr: Math.min(2, devicePixelRatio || 1),
+          phone: small, rects: rects(), strings: strings() }, [ofs]);
+        addEventListener('resize', onResize);
+      } catch (e) { fallback(); }
+    }
+    function fallback() {        // no worker after all: the still film
+      if (started || me.closed) return;
+      if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+      moving = false; root.innerHTML = build(false); wire(); still_();
+    }
+    function wire() {
+      root.querySelector('.tsi-skip').onclick = close;
+      root.querySelector('.tsi-enter').onclick = close;
+    }
+    root.innerHTML = build(moving);
+    (document.body || de).appendChild(root); wire();
     document.addEventListener('keydown', onKey, true);
     new MutationObserver(onReady).observe(de, { attributes: true, attributeFilter: ['class'] }); onReady();
-    var imgs = [].slice.call(root.querySelectorAll('img')), left = imgs.length;
-    var one = function () { if (--left <= 0) begin(); };
-    imgs.forEach(function (im) { var p = im.decode ? im.decode() : null; if (p) p.then(one, one); else if (im.complete) one(); else { im.onload = im.onerror = one; } });
-    timers.push(setTimeout(function () { if (!started) close(); }, 12000));   // the pictures did not come in time (a very slow line): the app's own loading mark stays
+    if (moving) moving_(); else still_();
+    timers.push(setTimeout(function () { if (!started) close(); }, 12000));   // nothing came in time (a very slow line): the app's own loading mark stays
+    me.close = close;
   }
-  if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
-  window.TSIntro = { replay: function () { location.reload(); }, get open() { return !closed; }, get started() { return started; }, get ready() { return ready(); } };
+  function strings() {
+    return { zh: zh, probe: P, land: G.land,
+      layers: { terrain: NAME.terrain, wind: NAME.wind, summer: NAME.summer, winter: NAME.winter, water: NAME.water, field: L('张量场', 'The field') },
+      data: { terrain: L('数据：等高线', 'data: the contours'), wind: L('数据：全年主导风', 'data: the prevailing wind'), summer: L('数据：夏季风', 'data: the summer wind'),
+              winter: L('数据：冬季冷风', 'data: the cold winter wind'), water: L('数据：水往低处流', 'data: water running downhill') },
+      street: L('→ 道路方向', '→ the street direction'),
+      steps: zh ? ['各层方向', '角度 × 2', '首尾相接', '÷ 2'] : ['each layer', 'angle × 2', 'tip to tail', '÷ 2'] };
+  }
+  // the app's "Method" button, beside the site's name, once the app has drawn
+  function button() {
+    var sub = document.querySelector('#panel .ts-sub'); if (!sub || document.getElementById('tsMethod')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'tsMethod'; b.className = 'ts-method';
+    b.innerHTML = '<span data-i18n data-zh="▶ 原理" data-en="▶ Method">' + L('▶ 原理', '▶ Method') + '</span>';
+    b.title = L('播放原理短片', 'Play the film on how it works');
+    b.onclick = function () { zh = (typeof window.TS_LANG === 'string' ? window.TS_LANG : (zh ? 'zh' : 'en')) === 'zh'; film(); };
+    sub.appendChild(b);
+  }
+  (function whenReady() { if (ready() && document.querySelector('#panel .ts-sub')) button(); else setTimeout(whenReady, 400); })();
+  window.TSIntro = { replay: function () { film(); }, get open() { return !!(cur && !cur.closed); } };
+  if (/[#&]nointro\b/.test(H)) return;
+  if (document.body) film(); else document.addEventListener('DOMContentLoaded', film);
 })();
