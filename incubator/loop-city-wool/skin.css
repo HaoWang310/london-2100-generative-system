@@ -46,14 +46,12 @@ html.l2ui .l2-nav button { padding:11px 12px; border-radius:var(--l2-r); border:
 html.l2ui .l2-nav button.nx { background:#fff; border-color:#fff; color:#000; }
 html.l2ui .l2-nav button:disabled { opacity:.35; cursor:default; }
 html.l2ui p.hint { font-size:12.5px; line-height:1.5; color:var(--l2-ink3); }
-html.l2ui #reading { border-color:var(--l2-bd); border-radius:var(--l2-r); }
-html.l2ui #reading .t { text-transform:none; letter-spacing:.04em; font-size:12.5px; color:var(--l2-ink3); }
 
 /* controls */
 html.l2ui .btns { gap:8px; }
 html.l2ui .btn { padding:10px 14px; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font-size:13px; font-weight:600; text-align:center; }
 html.l2ui .btn:hover { border-color:var(--l2-bd2); color:#fff; }
-html.l2ui .btn.primary, html.l2ui #pickSend { background:#fff !important; border-color:#fff !important; color:#000 !important; }
+html.l2ui .btn.primary { background:#fff !important; border-color:#fff !important; color:#000 !important; }
 html.l2ui .btn.on { background:#fff; border-color:#fff; color:#000; }
 html.l2ui #status { color:#fff; font-size:12.5px; }
 html.l2ui #editHint { color:var(--l2-ink2); font-size:12.5px; }
