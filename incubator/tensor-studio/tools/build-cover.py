@@ -9,14 +9,14 @@
 
 intro/motion.json comes from tools/build-intro.py; run that first if the app's defaults change.
 
-    python3 incubator/tensor-studio/tools/build-cover.py      # writes assets/catalogue/tensor-studio.webp
+    python3 incubator/tensor-studio/tools/build-cover.py      # writes assets/catalogue/tensor-studio-v2.webp
 
 Needs numpy, Pillow, OpenCV and the DM Sans font (path below)."""
 import json, math, os, random
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.normpath(os.path.join(HERE, '..', '..', '..'))
-OUT = os.path.join(ROOT, 'assets', 'catalogue', 'tensor-studio.webp')
+OUT = os.path.join(ROOT, 'assets', 'catalogue', 'tensor-studio-v2.webp')
 FONT = '/usr/share/fonts/truetype/google-fonts/ofl/dmsans/DMSans[opsz,wght].ttf'
 K = 2
 CW, CH = 1200 * K, 800 * K

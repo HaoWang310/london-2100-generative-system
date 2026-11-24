@@ -9,7 +9,7 @@
 The structure is the app's own: engine/structure.js and engine/deck.js run in Node on the snapshot with the page's
 default parameters, exactly as the tests do.
 
-    python3 incubator/structure-studio/tools/build-cover.py      # writes assets/catalogue/structure-studio.webp
+    python3 incubator/structure-studio/tools/build-cover.py      # writes assets/catalogue/structure-studio-v2.webp
 
 Needs Node, numpy, Pillow, OpenCV and the DM Sans font (path below)."""
 import json, math, os, base64, subprocess, tempfile
@@ -17,7 +17,7 @@ import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 HERE = os.path.dirname(os.path.abspath(__file__)); APP = os.path.normpath(os.path.join(HERE, '..'))
 ROOT = os.path.normpath(os.path.join(APP, '..', '..'))
-OUT = os.path.join(ROOT, 'assets', 'catalogue', 'structure-studio.webp')
+OUT = os.path.join(ROOT, 'assets', 'catalogue', 'structure-studio-v2.webp')
 NODE = r"""
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
