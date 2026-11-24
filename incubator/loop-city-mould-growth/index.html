@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("lcskin");/* 23 Nov 2026: a phone is known before anything is laid out, so the map is sized and fitted to the whole screen from the start */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("lcphone");}catch(e){}}</script><link rel="stylesheet" href="skin.css?v=8"><link rel="stylesheet" href="intro.css?v=3"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/base_dark.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
+<head><script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("lcskin");/* 23 Nov 2026: a phone is known before anything is laid out, so the map is sized and fitted to the whole screen from the start */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("lcphone");}catch(e){}/* 24 Nov 2026: the opening story's map first, ahead of the page's own large images, so the story never starts on an empty frame (intro.js): its base map (a smaller copy on a phone) and the Green Belt layer it lights up (the file the page loads itself: half size on a touch device, as LITE decides) */try{if(!/[?&]embed=1\b/.test(location.search)&&!/[#&]nointro\b/.test(h0)){var c0=/[#&]lite\b/.test(h0)?true:/[#&]nolite\b/.test(h0)?false:((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches);[d0.classList.contains("lcphone")?"img/intro/base-s.webp":"img/intro/base.webp",c0?"img/half/greenbelt.webp":"img/greenbelt.webp"].forEach(function(u){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=u;l.setAttribute("fetchpriority","high");document.head.appendChild(l);});}}catch(e){}}</script><link rel="stylesheet" href="skin.css?v=8"><link rel="stylesheet" href="intro.css?v=5"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/base_dark.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -333,7 +333,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
 </head>
 <body>
 <!-- 24 Nov 2026: the opening story, on the screen before the rest of the page is read (intro.js) -->
-<script src="intro-data.js?v=3"></script><script src="intro.js?v=3"></script>
+<script src="intro-data.js?v=4"></script><script src="intro.js?v=5"></script>
 
 <div id="panelL"><div id="panelScrollL">
   <div class="panelHead">The two models</div>

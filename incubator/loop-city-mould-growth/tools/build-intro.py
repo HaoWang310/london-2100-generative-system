@@ -8,9 +8,9 @@ Writes, from what the page itself holds, so that the story shows the same map an
                           itself one at a time. Each pixel under them is rebuilt from the map's own layers (img/*.webp:
                           water, roads, built-up area, the Green Belt's edge, ...): it is given the colour of nearby
                           pixels that have the same layers under them. 1600 px across, the whole frame.
+  img/intro/base-s.webp   the same, 1100 px across, for a phone.
   img/intro/centre.webp   the same, at full size, for the middle of London only, where the story moves in close.
-  intro-data.js           the lines (HW_RAIL), the 17 stations (CFG.map.nodes) and the Green Belt (traced from
-                          img/half/greenbelt.webp), in one 1000 x 820 frame that covers CFG.map.extentBNG, so the
+  intro-data.js           the lines (HW_RAIL) and the 17 stations (CFG.map.nodes), in one 1000 x 820 frame that covers CFG.map.extentBNG, so the
                           story's frame and the map's sheet are the same rectangle; and, for the labels:
                             - each radial's London end, named by the OpenStreetMap station there;
                             - for each of the 17 stations, the nearest National Rail station in OpenStreetMap, which
@@ -120,6 +120,9 @@ def save_images(clean, zoom):
     Hh, Ww = clean.shape[:2]
     small = cv2.resize(clean, (1600, int(round(1600 * Hh / Ww))), interpolation=cv2.INTER_AREA)
     Image.fromarray(small).save(os.path.join(ROOT, 'img', 'intro', 'base.webp'), 'WEBP', quality=78, method=6)
+    # a phone's frame is some 370 px across, 1100 device pixels at most: half the bytes, twice as soon on a slow line
+    phone = cv2.resize(clean, (1100, int(round(1100 * Hh / Ww))), interpolation=cv2.INTER_AREA)
+    Image.fromarray(phone).save(os.path.join(ROOT, 'img', 'intro', 'base-s.webp'), 'WEBP', quality=76, method=6)
     # the middle of London at full size: the close view and a margin round it
     bw = ZOOM_KM * 1.25 * KM; bh = bw * H / W
     box = [zoom['x'] - bw / 2, zoom['y'] - bh / 2, bw, bh]
@@ -143,17 +146,6 @@ def piece(pts, eps=0.25, pad=6):
     x0, y0 = a.min(axis=0) - pad; x1, y1 = a.max(axis=0) + pad
     return {'box': [round(float(x0), 1), round(float(y0), 1), round(float(x1 - x0), 1), round(float(y1 - y0), 1)],
             'd': d_of(a, nd=2), 'a': [round(float(a[0][0]), 2), round(float(a[0][1]), 2)]}
-
-def mask(name, blur, thr, minarea, eps, maxn):
-    a = np.array(Image.open(os.path.join(ROOT, 'img', 'half', name + '.webp')).convert('RGBA'))[..., 3]
-    m = cv2.resize((a > 40).astype(np.float32), (int(W), int(H)), interpolation=cv2.INTER_AREA)
-    m = cv2.GaussianBlur(m, (0, 0), blur)
-    cs, _ = cv2.findContours((m > thr).astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-    out = []
-    for c in sorted(cs, key=cv2.contourArea, reverse=True)[:maxn]:
-        if cv2.contourArea(c) < minarea: continue
-        out.append(d_of(cv2.approxPolyDP(c, eps, True).reshape(-1, 2), True, 0))
-    return ' '.join(out)
 
 def nearest(line, p):
     return min(range(len(line)), key=lambda k: (line[k][0] - p[0]) ** 2 + (line[k][1] - p[1]) ** 2)
@@ -254,7 +246,6 @@ if __name__ == '__main__':
     lon = {n['id']: (n['E'], n['N']) for n in NODES}
     data = {
         'W': W, 'H': H, 'zoom': zoom, 'centre': centre,
-        'greenbelt': mask('greenbelt', 11, 0.42, 4000, 3.0, 3),
         'radials': radials, 'highSpeed': high, 'orbital': orbital,
         'stations': [{'id': n['id'], 't': n['t'], 'x': round(xy(n['E'], n['N'])[0], 2), 'y': round(xy(n['E'], n['N'])[1], 2),
                       'k': reach.get(n['id'], 0), 'near': near_station(*lon[n['id']])} for n in NODES],
@@ -270,5 +261,5 @@ if __name__ == '__main__':
     print(out, os.path.getsize(out), 'bytes; zoom', zoom, '; centre', centre)
     for r in radials: print(' ', r['node'], 'London end:', r['london'], '; proposed' if r['proposed'] else '')
     for n in data['stations']: print(' ', n['id'], n['near'])
-    for f in ('base', 'centre'):
+    for f in ('base', 'base-s', 'centre'):
         p = os.path.join(ROOT, 'img', 'intro', f + '.webp'); print(' ', p, os.path.getsize(p) // 1024, 'KB', Image.open(p).size)

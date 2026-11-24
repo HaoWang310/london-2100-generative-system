@@ -27,13 +27,14 @@
 .lci-skip.lci-go { background:#fff; color:#000; border-color:#fff; }
 
 .lci-map { flex:1 1 auto; min-height:0; position:relative; margin:8px 20px 0; }
-.lci-stage { position:absolute; transform-origin:0 0; overflow:hidden; border-radius:2px; }
+.lci-stage { position:absolute; transform-origin:0 0; overflow:hidden; border-radius:2px; transition:opacity .35s ease; }
+#lcIntro.lci-wait .lci-stage, #lcIntro.lci-wait .lci-pips, #lcIntro.lci-wait .lci-caps { opacity:0; }   /* until the map has come */
 .lci-cam { position:absolute; inset:0; transform-origin:0 0; }
 .lci-g { position:absolute; inset:0; }
 .lci-g > *, .lci-cam > img { position:absolute; }
 .lci-stage svg { display:block; overflow:visible; }
 .lci-img { display:block; left:0; top:0; width:100%; height:100%; max-width:none; user-select:none; -webkit-user-drag:none; }
-.lci-gb { left:0; top:0; width:100%; height:100%; }
+.lci-gb { left:0; top:0; width:100%; height:100%; background:#9EBE7A; -webkit-mask-size:100% 100%; mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; }
 .lci-dark { opacity:0; }
 
 .lci-dot { border-radius:50%; transform:translate(-50%,-50%); }
