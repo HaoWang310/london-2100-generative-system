@@ -43,10 +43,18 @@
   PL.insertBefore(hl, L);
   if (oldHeadL) oldHeadL.style.display = 'none';
 
+  /* 24 Nov 2026: the opening story (intro.js) can be played again from here */
+  function introLink() {
+    if (!window.LCIntro) return null;
+    var b = el('button', 'lc-introlink', 'Where the loop comes from: watch the introduction', '环线从哪里来：重看介绍'); b.type = 'button';
+    b.onclick = function () { window.LCIntro.replay(); };
+    return b;
+  }
   var top = el('div');
   add(top,
     el('div', 'lc-lead', 'The city and its roads grown together round the whole loop, 2025 to 2100. When the century ends the cells are read from the mould’s highways, and one of them goes on to step 2.', '城市与道路在整条环线上共同生长，2025 至 2100 年。百年结束后，从黏菌的干道读出单元，选一个送往第 2 步。'),
     el('div', 'lc-badge', 'Loop City · step 1 · the 412 km loop', 'Loop City · 第 1 步 · 412 km 环线'),
+    introLink(),
     el('div', 'lc-h2', 'How the cells are made', '生成流程'));
 
   var steps = [];
