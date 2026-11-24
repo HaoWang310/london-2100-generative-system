@@ -20,14 +20,19 @@ const fnv = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^=
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 200)));
   await page.route(/\/incubator\/loop-city-wool\/(index\.html)?(\?.*)?$/, async r => { const res = await r.fetch(); let t = await res.text();
     if (!t.includes(MARK)) throw new Error('the test hook mark is gone'); r.fulfill({ response: res, body: t.replace(MARK, HOOK + MARK) }); });
-  await page.goto(`http://127.0.0.1:${port}/incubator/loop-city-wool/index.html#noauto&rebake`, { waitUntil: 'load' });
+  await page.goto(`http://127.0.0.1:${port}/incubator/loop-city-wool/index.html#noauto&rebake${process.argv[4] ? '&' + process.argv[4] : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__W && __W.DATA(), null, { timeout: 600000, polling: 300 });
   // a page that bakes step by step bakes every step here first
   await page.evaluate(async () => { if (window.__woolUpTo) await window.__woolUpTo(9); });
   const R = { errors: errs };
-  R.data = await page.evaluate(() => { const D = __W.DATA(), f = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return (x >>> 0).toString(36); };
+  // the pictures by their pixels (a picture may come as PNG or as lossless WebP), the rest by its JSON
+  R.data = await page.evaluate(async () => { const D = __W.DATA(), f = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return (x >>> 0).toString(36); };
+    const px = url => new Promise((ok, no) => { const im = new Image(); im.onerror = no; im.onload = () => { const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const g = c.getContext('2d'); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data; let x = 2166136261;
+      for (let i = 0; i < d.length; i++) { x ^= d[i]; x = Math.imul(x, 16777619); } ok(c.width + 'x' + c.height + ':' + (x >>> 0).toString(36)); }; im.src = url; });
     const skip = new Set(['bakeMs', 'fromStore', 'ms', 'stage', 'stages']), o = {};
-    for (const k of Object.keys(D).sort()) if (!skip.has(k)) o[k] = k === 'img' ? Object.fromEntries(Object.keys(D.img).sort().map(i => [i, f(D.img[i])])) : f(JSON.stringify(D[k]));
+    for (const k of Object.keys(D).sort()) if (!skip.has(k)) o[k] = k === 'img' ? null : f(JSON.stringify(D[k]));
+    o.img = {}; for (const i of Object.keys(D.img).sort()) o.img[i] = await px(D.img[i]);
     return o; });
   const pics = async (tag, steps) => { for (const s of steps) {
     await page.evaluate(n => { __W.setStep(n, true); }, s);

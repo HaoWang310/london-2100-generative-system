@@ -1985,13 +1985,6 @@ const G = (function () {
            grid, canvasFor, pathOf, readMask, label, fillHoles, blur, contours };
 })();
 </script>
-<script>/* (22 Nov 2026) opened on its own (not by step 1, no file just chosen): the example cells. ?sample forces it, #nosample skips it */
-(function(){ var stored = null; try { stored = sessionStorage.getItem('loopCity.wool.pkg'); } catch (e) {}
-  var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
-  window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=2"><\/script>');
-  if (want) document.addEventListener('DOMContentLoaded', function(){ var g = document.getElementById('liveStart'); if (!g) return; var zh = false; try { zh = localStorage.getItem('woolAppsLang') === 'zh'; } catch (e) {} var lh = /lang=(en|zh)/.exec(location.hash); if (lh) zh = lh[1] === 'zh';
-    var p = g.querySelector('p'), b = document.getElementById('livePick'), h = p && p.previousElementSibling; if (h) h.textContent = zh ? '毛线带 · 范例' : 'The wool bands · the example';
-    if (p) p.textContent = zh ? '正在载入范例：车站 P2 与相邻两个单元。载入后会自动把各步运行一遍。' : 'Loading the example: station P2 and its two neighbours. Once it is in, the page runs the steps on it by itself.'; if (b) b.style.display = 'none'; var k = g.querySelector('a'); if (k && k.parentNode) k.parentNode.style.display = 'none'; }); })();</script>
 <div id="liveStart" style="position:fixed;inset:0;z-index:60;background:#000;color:#ECECEC;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',system-ui,sans-serif">
  <div style="max-width:470px;padding:24px">
   <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8A8A8A">Loop City · live</div>
@@ -2003,6 +1996,21 @@ const G = (function () {
   <div style="margin-top:22px;font-size:13px"><a href="index.html?sample" style="color:#ECECEC">Open the example (station P2) · 打开范例（车站 P2）</a> &nbsp;·&nbsp; <a href="../loop-city-mould-growth/index.html" style="color:#ECECEC">Step 1, the whole loop · 第 1 步：整环</a></div>
  </div>
 </div>
+<script>/* (22 Nov 2026) opened on its own (not by step 1, no file just chosen): the example cells. ?sample forces it, #nosample skips it */
+(function(){ var stored = null; try { stored = sessionStorage.getItem('loopCity.wool.pkg'); } catch (e) {}
+  var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
+  // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
+  // by source/make-example.cjs: the bake it was made from, and its files
+  var EXV = /*EXV*/'d2daa1:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
+  if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
+    EXV.split(':')[1].split(',').forEach(function(f){ pre('example/' + f + '?b=' + EXV.split(':')[0], 'fetch', true); }); }
+  window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=2"><\/script>');
+  if (want) (function(){ var g = document.getElementById('liveStart');          // the overlay is above: dressed at once, not when the page is in
+    if (!g) return; var zh = false; try { zh = localStorage.getItem('woolAppsLang') === 'zh'; } catch (e) {} var lh = /lang=(en|zh)/.exec(location.hash); if (lh) zh = lh[1] === 'zh';
+    var p = g.querySelector('p'), b = document.getElementById('livePick'), h = p && p.previousElementSibling; if (h) h.textContent = zh ? '毛线带 · 范例' : 'The wool bands · the example';
+    g.style.background = '#000 url(example/preview.jpg) center / contain no-repeat'; g.style.alignItems = 'flex-end'; var box = g.firstElementChild; if (box) box.style.cssText += ';margin:0 0 28px;padding:10px 16px;border-radius:14px;background:rgba(10,10,12,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)'; var hh = box && box.firstElementChild; if (hh && hh !== h) hh.style.display = 'none'; if (h) h.style.cssText += ';font-size:15px;margin:0 0 4px'; if (p) p.style.margin = '0';
+    if (p) p.textContent = zh ? '正在打开范例：车站 P2 与相邻两个单元，停在第 1 步；点「演示」逐步生成。' : 'Opening the example: station P2 and its two neighbours, on step 1; press Demo to work out the steps.'; if (b) b.style.display = 'none'; var k = g.querySelector('a'); if (k && k.parentNode) k.parentNode.style.display = 'none'; })(); })();</script>
 <script type="text/plain" id="appSrc">/* Wool on the mould cells (Loop City step 2): the cells handed on from step 1, taken to a road network.
 
      1 the slime mould          5 primary cells        9 base net                  13 fine tuning
@@ -2072,13 +2080,13 @@ const off = document.createElement('canvas'), ox = off.getContext('2d');
 let W = 0, Hh = 0, DPR = 1;
 const IMG = {};
 let toLoad = 0;
-for (const k of Object.keys(DATA.img)) {
-  toLoad++;
+// (24 Nov) the pictures there are: a stage baked later (the soil) adds its own, and the map redraws when it is in
+const loadImg = (k, first) => {
   const im = new Image();
-  im.onload = () => { if (--toLoad === 0) ready(); };
-  im.src = DATA.img[k];
-  IMG[k] = im;
-}
+  if (first) { toLoad++; im.onload = () => { if (--toLoad === 0) ready(); }; } else im.onload = () => schedule();
+  im.src = DATA.img[k]; IMG[k] = im;
+};
+for (const k of Object.keys(DATA.img)) if (DATA.img[k]) loadImg(k, true);
 // a flat polyline's box: [x0, y0, x1, y1]
 const bbox = p => { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (let i = 0; i < p.length; i += 2) { a = Math.min(a, p[i]); c = Math.max(c, p[i]); b = Math.min(b, p[i + 1]); d = Math.max(d, p[i + 1]); }
@@ -2116,11 +2124,12 @@ function inRing(r, x, y) {
   }
   return c;
 }
-const townBox = DATA.towns.map(bbox);
+let townBox = DATA.towns.map(bbox);
 const inTown = (x, y) => DATA.towns.some((r, i) => { const b = townBox[i]; return x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3] && inRing(r, x, y); });
-const SOIL = (() => { const s = DATA.soilGrid, raw = atob(s.data), a = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i); return Object.assign({ a }, s); })();
-const soilAt = (x, y) => { const c = Math.floor((x - SOIL.x0) / SOIL.step), r = Math.floor((SOIL.y1 - y) / SOIL.step);
+const soilOf = () => { const s = DATA.soilGrid; if (!s) return null; const raw = atob(s.data), a = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i); return Object.assign({ a }, s); };
+let SOIL = soilOf();
+const soilAt = (x, y) => { if (!SOIL) return 255; const c = Math.floor((x - SOIL.x0) / SOIL.step), r = Math.floor((SOIL.y1 - y) / SOIL.step);
   return c >= 0 && r >= 0 && c < SOIL.w && r < SOIL.h ? SOIL.a[r * SOIL.w + c] : 255; };
 // the spacing at a point: finer near a station, looser on good soil (Grade 1-2); 1 and 1 = the slides' uniform spacing
 function spacingAt(a, x, y) {
@@ -2312,7 +2321,7 @@ function setStatus(t) { $('status').textContent = t; }
 // ---------------------------------------------------------------- the existing roads, and helpers the network of steps 11 to 17 uses
 const EX_CLS = { M: 'M', A: 'A', B: 'B' };
 // the existing roads that count: motorways, A and B roads
-const EXIST = DATA.roads.filter(r => EX_CLS[r.c]);
+let EXIST = DATA.roads.filter(r => EX_CLS[r.c]);
 // exact Euclidean distance to the nearest cell where f is 1 (Felzenszwalb and Huttenlocher), in cells
 function edt(f, w, h) {
   const INF = 1e20, d = new Float64Array(w * h);
@@ -3892,7 +3901,36 @@ function moveAnchor(id, x, y) {
 function deleteAnchor(id) { S.E.del.add(id); rebuildNet(); }
 
 // ---------------------------------------------------------------- the panels
+// (24 Nov) the steps are baked when first shown: a step whose stage is not worked out yet is worked out, then shown
+const STEP_STAGE = n => (n <= 3 ? 1 : n <= 8 ? n : 8);
+const stepReady = n => { const B = window.__WOOL_BAKER__; return !B || B.done.has(STEP_STAGE(n)); };
+let stepWant = 0;
 function setStep(n, keepRun) {
+  if (stepReady(n)) { stepWant = 0; return setStepNow(n, keepRun); }
+  const my = stepWant = n; woolBusy(STEP_STAGE(n));
+  window.__woolUpTo(STEP_STAGE(n)).then(() => { woolBusy(0); if (stepWant === my) { stepWant = 0; setStepNow(n, keepRun); } },
+    err => { woolBusy(0); console.error(err); setStatus('This step could not be worked out: ' + err.message); });
+}
+// what a stage brings, taken in by the app: the roads, the towns and the soil it reads, the pictures, the anchors
+window.__woolStage = s => {
+  if (s >= 4) { EXIST = DATA.roads.filter(r => EX_CLS[r.c]); townBox = DATA.towns.map(bbox); }
+  if (s === 6) { SOIL = soilOf(); if (DATA.img.soil && !IMG.soil) loadImg('soil', false); }
+  for (const k of [...PX.tex.keys()]) if (/^(primary|small|zone|soil)/.test(k)) PX.tex.delete(k);
+  if (s === 8 && toLoad === 0) { DATA.areas.forEach(prepArea); rebuildNet(); }
+  if (toLoad === 0) { legend(); nums(); schedule(); }
+};
+// a quiet note while a stage is worked out (the example's bar says it itself)
+function woolBusy(stage) {
+  let el = $('woolBusy');
+  if (!stage) { if (el) el.hidden = true; return; }
+  if (window.__LC_AUTO__ && window.__LC_AUTO__.on) return;
+  if (!el) { el = document.createElement('div'); el.id = 'woolBusy'; el.setAttribute('role', 'status'); el.setAttribute('translate', 'no');
+    el.style.cssText = "position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:56;display:flex;align-items:center;gap:9px;padding:7px 14px;border-radius:999px;background:rgba(22,22,24,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);color:#ECECEC;font:13px/1.3 'DM Sans',system-ui,sans-serif;pointer-events:none";
+    document.body.appendChild(el); }
+  const zh = /^zh/i.test(document.documentElement.lang || '');
+  el.hidden = false; el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#5FF2FF;box-shadow:0 0 10px #5FF2FF"></span><span>' + (zh ? '正在计算第 ' + stage + ' 步…' : 'Working out step ' + stage + '…') + '</span>';
+}
+function setStepNow(n, keepRun) {
   if (!keepRun && n < 10) stopRun();
   S.step = n;
   S.layers = Object.assign({}, STEP_LAYERS[n]);
@@ -3980,7 +4018,7 @@ function nums() {
   } else if (step === 5) {
     each.forEach(c => rows.push([`Primary cells in ${c}`, `${n.primary[c].n}, ${fmt(n.primary[c].km2, 1)} km²`]));
   } else if (step <= 7) {
-    each.forEach(c => rows.push([`Soil cells in ${c}`, `${n.zones[c].n}`], [`Farming in ${c}`, `${fmt(n.zones[c].farm, 1)} km²`],
+    each.forEach(c => n.zones[c] && rows.push([`Soil cells in ${c}`, `${n.zones[c].n}`], [`Farming in ${c}`, `${fmt(n.zones[c].farm, 1)} km²`],
                                 [`To build on in ${c}`, `${fmt(n.zones[c].build, 1)} km²`]));
   } else if (S.per) {
     const ids = new Map(); S.per.forEach(l => l.forEach(q => ids.set(q.id, q.kind)));
@@ -4571,7 +4609,14 @@ async function vectors() {
 }
 
 // ------------------------------------------------------------------ the bake
-async function bake(pkg) {
+// (24 Nov 2026) in stages, each worked out when a step first needs it, so the page opens on step 1 and the example
+// computes each step as it is shown: 1 what steps 1 to 3 show (the cells, their labels, the shared edge, the pictures),
+// 4 the existing roads and towns, 5 the primary cells, 6 the soil, 7 the soil cells, 8 the anchors. The same work as
+// the bake in one go, in the same order within each piece, so the result is the same (incubator/loop-city-wool/source/
+// fingerprint.cjs). baker(pkg, pre) gives { data, upTo(n), done }: data fills in as the stages finish; pre is step 1
+// made before (example/), whose pictures and data are used as they are.
+const STAGES = [1, 4, 5, 6, 7, 8];
+function baker(pkg, pre) {
   const t0 = performance.now();
   if (!pkg || pkg.format !== 'loop-city-cell-package') throw new Error('This is not a Loop City cell package.');
   // v7: package version 2 (Loop City live v6 on) carries several neighbouring cells; each is woven inside its own
@@ -4579,354 +4624,403 @@ async function bake(pkg) {
   const cellsP = (pkg.version >= 2 && pkg.cells && pkg.cells.length) ? pkg.cells : [pkg.cell];
   const allId = cellsP.map(c => String(c.id)).join(' + ');
   const [E0, E1, N0, N1] = pkg.tile, Wm = E1 - E0, Hm = N1 - N0;
-  say('Reading the site under ' + allId + '…'); await pause();
-  const V = await vectors();
   const view = [0, 0, Wm, Hm], viewW = [E0, N0, E1, N1];
   const rel = f => shift(f, E0, N0);
-  const roadsV = V.roads.filter(r => hit(r.bb, [E0 - 300, N0 - 300, E1 + 300, N1 + 300])).map(r => ({ c: r.c, n: r.n, p: rel(r.p) }));
-  roadsV.forEach(r => { r.bb = bbox(r.p); });
-  const townsV = V.towns.filter(t => hit(t.bb, viewW)).map(t => ({ a: t.a, p: closeRing(rel(t.p)) }));
-  townsV.forEach(t => { t.bb = bbox(t.p); });
-  const waterV = V.water.filter(w => hit(w.bb, viewW)).map(w => ({ a: w.a, p: closeRing(rel(w.p)) }));
-  waterV.forEach(w => { w.bb = bbox(w.p); });
   const stIn = (pkg.stations_in_tile || []).map(s => ({ id: s.id, kind: s.kind, x: s.E - E0, y: s.N - N0 }));
   const railL = [];
   for (const kind of ['orbital', 'radials', 'high_speed']) for (const ln of ((pkg.rail || {})[kind] || [])) railL.push({ kind, p: rel(flatOf(ln.coords || ln)) });
-  // the soil classes (ALC, 50 m) under the window
-  const A = SITE.alc, alcIm = await img(siteUrl('alc.png'));
-  const ax0 = Math.floor((E0 - A.e0) / A.c) - 2, ay0 = Math.floor((A.n1 - N1) / A.c) - 2;
-  const aw = Math.ceil(Wm / A.c) + 5, ah = Math.ceil(Hm / A.c) + 5;
-  const ac = cnv(aw, ah), ax = ac.getContext('2d');
-  ax.fillStyle = '#FFF'; ax.fillRect(0, 0, aw, ah); ax.imageSmoothingEnabled = false;
-  const sx0 = Math.max(0, ax0), sy0 = Math.max(0, ay0), sx1 = Math.min(A.w, ax0 + aw), sy1 = Math.min(A.h, ay0 + ah);
-  if (sx1 > sx0 && sy1 > sy0) ax.drawImage(alcIm, sx0, sy0, sx1 - sx0, sy1 - sy0, sx0 - ax0, sy0 - ay0, sx1 - sx0, sy1 - sy0);
-  const ad = ax.getImageData(0, 0, aw, ah).data, alc = new Uint8Array(aw * ah);
-  for (let i = 0; i < alc.length; i++) alc[i] = ad[i * 4];
-  const cls = (x, y) => { const c = Math.floor((x + E0 - A.e0) / A.c) - ax0, r = Math.floor((A.n1 - (y + N0)) / A.c) - ay0;
-    return c < 0 || r < 0 || c >= aw || r >= ah ? 255 : alc[r * aw + c]; };
-
-  // ---------------------------------------------------------------- one cell, on its own 10 m grid
-  const work = async (cellP) => {
-    const cid = String(cellP.id);
-    const cellF = closeRing(rel(flatOf(cellP.boundary)));
-    const holes = (cellP.holes || []).map(h => closeRing(rel(flatOf(h))));
-    const cbb = bbox(cellF);
-    const M = 1000, gx0 = Math.floor((cbb[0] - M) / G) * G, gy1 = Math.ceil((cbb[3] + M) / G) * G;
-    const K = { x0: gx0, y1: gy1, w: Math.ceil((cbb[2] + M - gx0) / G), h: Math.ceil((gy1 - cbb[1] + M) / G) };
-    K.P = (x, y) => [(x - K.x0) / G, (K.y1 - y) / G];
-    const idx = (x, y) => { const i = Math.floor((x - K.x0) / G), j = Math.floor((K.y1 - y) / G); return i < 0 || j < 0 || i >= K.w || j >= K.h ? -1 : j * K.w + i; };
-    const look = (m, x, y) => { const i = idx(x, y); return i >= 0 && m[i] === 1; };
-    const cellM = raster(K, (x, P) => { x.beginPath(); pathOn(x, P, cellF, true); for (const h of holes) pathOn(x, P, h, true); x.fill('evenodd'); });
-    const inCell = (x, y) => look(cellM, x, y);
-
-    // step 5: the existing roads and towns that cut the cell
-    const touches = f => { for (let i = 0; i < f.length; i += 2) if (inCell(f[i], f[i + 1])) return true;
-      for (let i = 2; i < f.length; i += 2) { const L = Math.hypot(f[i] - f[i - 2], f[i + 1] - f[i - 1]), n = Math.floor(L / 20);
-        for (let k = 1; k < n; k++) if (inCell(f[i - 2] + (f[i] - f[i - 2]) * k / n, f[i - 1] + (f[i + 1] - f[i - 1]) * k / n)) return true; }
-      return false; };
-    const kRoads = roadsV.filter(r => hit(r.bb, cbb) && touches(r.p));
-    const kTowns = townsV.filter(t => t.a >= TOWN_MIN && hit(t.bb, cbb) && (touches(t.p) || (() => { for (let i = 0; i < cellF.length; i += 2) if (inPoly(t.p, cellF[i], cellF[i + 1])) return true; return false; })()));
-    const townM = raster(K, (x, P) => { for (const t of kTowns) { x.beginPath(); pathOn(x, P, t.p, true); x.fill(); } });
-    const knife = raster(K, (x, P) => {
-      x.lineWidth = 2 * HALF_ROAD / G;
-      for (const r of (window.WHOLE_ ? [] : kRoads)) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
-      for (const t of (window.TCROSS_ ? [] : kTowns)) { x.beginPath(); pathOn(x, P, t.p, true); x.fill(); }
-    });
-    const pieceM = cellM.map((v, i) => v & (1 - knife[i]));
-    const pc = comps(pieceM, K.w, K.h);
-    const prim = pc.list.filter(c => c.n * G * G >= MIN_PRIM).sort((a, b) => b.n - a.n);
-    const smallC = pc.list.filter(c => c.n * G * G < MIN_PRIM);
-    say('Cutting ' + cid + ' into primary cells…'); await pause();
-    const eased = prim.map(c => ease(cut(pc.lab, K.w, c, 22)));
-    // the distances the anchors need: to the cell's edge, to the roads
-    const ringM = raster(K, (x, P) => { x.lineWidth = 1; x.beginPath(); pathOn(x, P, cellF, true); x.stroke(); });
-    const ringD = edt(ringM, K.w, K.h);
-    const roadM = raster(K, (x, P) => { x.lineWidth = 1; for (const r of kRoads) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); } });
-    const roadD = edt(roadM, K.w, K.h);
-    const dist = (D, x, y) => { const i = idx(x, y); return i < 0 ? Infinity : Math.sqrt(D[i]) * G; };
-
-    const prims = [], areas = [], plines = [];
-    eased.forEach((q, i) => {
-      const o = outer(q, K, 3), lp = pole(q, K), km2 = prim[i].n * G * G / 1e6;
-      const id = cid + '.' + (i + 1);
-      prims.push({ id, cell: cid, km2: Math.round(km2 * 100) / 100, ring: o ? o.f : [], lx: lp[0], ly: lp[1] });
-      const ol = o ? dp(o.f, SIMPLIFY) : [];
-      areas.push({ id, cell: cid, outline: ol, L: plen(ol) });
-      if (o) {                                            // the outline kept 140 m off the cell's edge, pieces of 80 m or more
-        let run = [];
-        const flush = () => { if (run.length >= 4 && plen(run) >= 80) plines.push(run); run = []; };
-        for (let k = 0; k < o.f.length; k += 2) { if (dist(ringD, o.f[k], o.f[k + 1]) >= 140) run.push(o.f[k], o.f[k + 1]); else flush(); }
-        flush();
-      }
-    });
-    const small = smallC.map(c => outer(cut(pc.lab, K.w, c, 2), K, 5)).filter(Boolean).map(o => o.f);
-
-    // steps 6-7: the soil, and the zones it splits each primary cell into
-    say('Splitting ' + cid + ' by the soil…'); await pause();
-    let keep = new Uint8Array(K.w * K.h);
-    for (let j = 0; j < K.h; j++) for (let i = 0; i < K.w; i++) {
-      const p = j * K.w + i;
-      if (cellM[p]) { const c = cls(K.x0 + (i + 0.5) * G, K.y1 - (j + 0.5) * G); keep[p] = c === 0 || c === 1 ? 1 : 0; }
-    }
-    const sr = SMOOTH / G;
-    keep = grow(keep, K.w, K.h, sr); keep = shrink(keep, K.w, K.h, 2 * sr); keep = grow(keep, K.w, K.h, sr);
-    { const kc = comps(keep, K.w, K.h), big = new Set(kc.list.filter(c => c.n * G * G >= MIN_ZONE).map(c => c.id));
-      for (let i = 0; i < keep.length; i++) keep[i] = big.has(kc.lab[i]) ? 1 : 0; }
-    const zones = [], zoneLabels = [];
-    let farmKm = 0, buildKm = 0;
-    eased.forEach(q => {
-      const n = q.m.length, at_ = (i) => { const x = i % q.w, y = (i - x) / q.w, X = x + q.ox, Y = y + q.oy; return X < 0 || Y < 0 || X >= K.w || Y >= K.h ? -1 : Y * K.w + X; };
-      const fm = new Uint8Array(n);
-      for (let i = 0; i < n; i++) if (q.m[i]) { const g = at_(i); fm[i] = g >= 0 && keep[g] ? 1 : 0; }
-      // (24 Nov) each piece's pixels gathered in one pass over the grid, not one pass per piece: the same pieces, in the same order
-      const lists = (c, keep) => { const at = new Int32Array(c.list.length + 1), L = []; c.list.forEach((k, j) => { if (keep(k)) { at[k.id] = L.length + 1; L.push({ k, idx: new Int32Array(k.n), f: 0 }); } });
-        for (let i = 0; i < n; i++) { const j = at[c.lab[i]]; if (j) { const e = L[j - 1]; e.idx[e.f++] = i; } } return L; };
-      const maskOf = idx => { const z = new Uint8Array(n); for (let t = 0; t < idx.length; t++) z[idx[t]] = 1; return z; };
-      const pieces = (m, min) => lists(comps(m, q.w, q.h), k => k.n * G * G >= min).map(e => ({ m: maskOf(e.idx), n: e.k.n }));
-      const farm = pieces(fm, MIN_PIECE);
-      const used = new Uint8Array(n); farm.forEach(z => z.m.forEach((v, i) => { if (v) used[i] = 1; }));
-      const rest = q.m.map((v, i) => v & (1 - used[i])), rc = comps(rest, q.w, q.h);
-      const build = [], slivers = [];
-      for (const e of lists(rc, () => true)) { if (e.k.n * G * G >= MIN_PIECE) build.push({ m: maskOf(e.idx), n: e.k.n }); else slivers.push({ idx: e.idx, n: e.k.n }); }
-      // a sliver joins the zone it touches most. (24 Nov) Read off one map of which zone each pixel is in, over the
-      // sliver's own pixels: before, every sliver walked the whole grid once per zone (ten seconds on a big cell)
-      const all = farm.concat(build), zl = new Int32Array(n);
-      all.forEach((z, j) => { for (let i = 0; i < n; i++) if (z.m[i]) zl[i] = j + 1; });
-      for (const s of slivers) {
-        if (!all.length) { const z = { m: maskOf(s.idx), n: s.n }; build.push(z); all.push(z); for (const i of s.idx) zl[i] = 1; continue; }
-        const cnt = new Int32Array(all.length + 1);
-        for (let t = 0; t < s.idx.length; t++) { const i = s.idx[t], x = i % q.w;
-          const a = x > 0 ? zl[i - 1] : 0, b = x < q.w - 1 ? zl[i + 1] : 0, c = i >= q.w ? zl[i - q.w] : 0, e = i + q.w < n ? zl[i + q.w] : 0;
-          if (a) cnt[a]++; if (b && b !== a) cnt[b]++; if (c && c !== a && c !== b) cnt[c]++; if (e && e !== a && e !== b && e !== c) cnt[e]++; }
-        let bj = 0, bc = -1;
-        for (let j = 0; j < all.length; j++) if (cnt[j + 1] > bc) { bc = cnt[j + 1]; bj = j; }
-        const z = all[bj]; for (let t = 0; t < s.idx.length; t++) { z.m[s.idx[t]] = 1; zl[s.idx[t]] = bj + 1; } z.n += s.n;
-      }
-      const clean = L => { const out = [];                 // the towns taken out; pieces of 2 ha or more
-        for (const z of L) { const m = z.m.map((v, i) => { if (!v) return 0; const g = at_(i); return g >= 0 && townM[g] ? 0 : 1; });
-          const c = comps(m, q.w, q.h);
-          for (const k of c.list) if (k.n * G * G >= 2e4) { const zz = new Uint8Array(n); for (let i = 0; i < n; i++) if (c.lab[i] === k.id) zz[i] = 1; out.push({ m: zz, n: k.n }); } }
-        return out.sort((a, b) => b.n - a.n); };
-      for (const [kind, L] of [['farm', clean(farm)], ['build', clean(build)]]) for (const z of L) {
-        const p = Object.assign({}, q, { m: z.m }), rs = rings(p, K, 8);
-        zones.push({ kind, rings: rs.map(r => r.f) });
-        if (kind === 'farm') farmKm += z.n * G * G / 1e6; else buildKm += z.n * G * G / 1e6;
-        if (z.n * G * G >= 1.5e6) { const lp = pole(p, K); zoneLabels.push({ t: (z.n * G * G / 1e6).toFixed(1), x: lp[0], y: lp[1] }); }
-      }
-    });
-
-    // step 8's marks in this cell: where a road crosses its edge, and where two differently named roads meet inside it
-    const ringMarks = [], pairMarks = [];
-    for (const r of kRoads) for (let i = 2; i < r.p.length; i += 2) for (let k = 2; k < cellF.length; k += 2) {
-      const q = cross(r.p[i - 2], r.p[i - 1], r.p[i], r.p[i + 1], cellF[k - 2], cellF[k - 1], cellF[k], cellF[k + 1]);
-      if (q) ringMarks.push(q);
-    }
-    { const B = 400, cellsOf = new Map(), key = (a, b) => a * 100003 + b;
-      kRoads.forEach((r, ri) => { for (let i = 2; i < r.p.length; i += 2) {
-        const a0 = Math.floor(Math.min(r.p[i - 2], r.p[i]) / B), a1 = Math.floor(Math.max(r.p[i - 2], r.p[i]) / B);
-        const b0 = Math.floor(Math.min(r.p[i - 1], r.p[i + 1]) / B), b1 = Math.floor(Math.max(r.p[i - 1], r.p[i + 1]) / B);
-        for (let a = a0; a <= a1; a++) for (let b = b0; b <= b1; b++) { const kk = key(a, b); if (!cellsOf.has(kk)) cellsOf.set(kk, []); cellsOf.get(kk).push([ri, i]); } } });
-      const seen = new Set(), pairs = [];
-      for (const list of cellsOf.values()) for (let u = 0; u < list.length; u++) for (let w = u + 1; w < list.length; w++) {
-        let [ra, ia] = list[u], [rb, ib] = list[w];
-        if (ra === rb) continue;
-        if (ra > rb) { [ra, ia, rb, ib] = [rb, ib, ra, ia]; }
-        const A_ = kRoads[ra], B_ = kRoads[rb];
-        if (A_.n && A_.n === B_.n) continue;
-        const tag = ra + ':' + ia + ':' + rb + ':' + ib;
-        if (seen.has(tag)) continue;
-        seen.add(tag);
-        const q = cross(A_.p[ia - 2], A_.p[ia - 1], A_.p[ia], A_.p[ia + 1], B_.p[ib - 2], B_.p[ib - 1], B_.p[ib], B_.p[ib + 1]);
-        if (q && inCell(q[0], q[1])) pairs.push([ra, rb, q]);
-      }
-      pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]).forEach(p => pairMarks.push(p[2]));
-    }
-
-    // the label: the cell's name where there is most room, away from the rail and the stations
-    const inside = edt(inv(cellM), K.w, K.h), clearM = raster(K, (x, P) => {
-      x.lineWidth = 2800 / G; for (const r of railL) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
-      for (const s of stIn) { const c = P(s.x, s.y); x.beginPath(); x.arc(c[0], c[1], 1800 / G, 0, 7); x.fill(); } });
-    let room = cellM.map((v, i) => (v && inside[i] > 8100 && !clearM[i] ? 1 : 0));
-    room = largest(whole(room, K));
-    const lpC = room.m.some(v => v) ? pole(room, K) : pole(whole(cellM, K), K);
-    const stNames = (cellP.stations && cellP.stations.length ? cellP.stations : (cellP.station ? [cellP.station] : [])).join(', ');
-    const label = { name: cid + (stNames ? '  ·  ' + stNames : ''), km2: Math.round(Math.abs(area(cellF)) / 1e6) + ' km²', x: lpC[0], y: lpC[1] };
-
-    // the numbers
-    const roadKm = { M: 0, A: 0, B: 0 };
-    for (const r of kRoads) for (let i = 2; i < r.p.length; i += 2) {
-      const L = Math.hypot(r.p[i] - r.p[i - 2], r.p[i + 1] - r.p[i - 1]), n = Math.max(1, Math.ceil(L / 20));
-      let c = 0; for (let k = 0; k < n; k++) if (inCell(r.p[i - 2] + (r.p[i] - r.p[i - 2]) * (k + 0.5) / n, r.p[i - 1] + (r.p[i + 1] - r.p[i - 1]) * (k + 0.5) / n)) c++;
-      if (roadKm[r.c] !== undefined) roadKm[r.c] += L * c / n / 1000;
-    }
-    Object.keys(roadKm).forEach(k => { roadKm[k] = R1(roadKm[k]); });
-    return { cid, cellF, cbb, look, townM, inCell, dist, ringD, roadD, kTowns, prims, areas, plines, small, zones, zoneLabels,
-             ringMarks, pairMarks, label, roadKm, stNames, km2: Math.round(Math.abs(area(cellF)) / 1e4) / 100,
-             primN: prim.length, primKm2: R1(prim.reduce((s, c) => s + c.n, 0) * G * G / 1e6), farmKm: R1(farmKm), buildKm: R1(buildKm) };
-  };
-  const C = [];
-  for (const cellP of cellsP) C.push(await work(cellP));
-  const cellOf = (x, y) => C.find(c => c.inCell(x, y));
-
-  // step 5's colours: the primary cells by size, over all the cells
-  const allPrim = C.flatMap(c => c.prims);
-  const lo = allPrim.length ? Math.log(Math.min(...allPrim.map(p => p.km2))) : 0, hi = allPrim.length ? Math.log(Math.max(...allPrim.map(p => p.km2))) : 1;
-  const sizeCol = t => { const u = Math.max(0, Math.min(1, t)) * 2, i = Math.min(1, Math.floor(u)), f = u - i;
-    return '#' + [0, 1, 2].map(j => Math.round(RAMP[i][j] + f * (RAMP[i + 1][j] - RAMP[i][j])).toString(16).padStart(2, '0').toUpperCase()).join(''); };
-  const primary = allPrim.map(p => Object.assign({}, p, { col: sizeCol((Math.log(p.km2) - lo) / Math.max(1e-9, hi - lo)) }));
-
-  // step 8: the anchors on the roads, and where an outline turns from a road to a town, over all the cells
-  say('Placing the anchors on ' + allId + '…'); await pause();
-  const marks = C.flatMap(c => c.ringMarks).concat(C.flatMap(c => c.pairMarks));
-  const road = [];
-  for (const q of marks) if (road.every(k => Math.hypot(q[0] - k.p[0], q[1] - k.p[1]) >= APART)) road.push({ p: q, town: C.some(c => c.look(c.townM, q[0], q[1])) });
-  const areas = [], home = [];
-  C.forEach(c => c.areas.forEach(a => { areas.push(a); home.push(c); }));
-  const per = areas.map(() => []);
-  areas.forEach((a, k) => road.forEach((m, rid) => {
-    if (a.outline.length < 4) return;
-    const t = project(a.outline, m.p[0], m.p[1]), q = at(a.outline, t);
-    if (Math.hypot(q[0] - m.p[0], q[1] - m.p[1]) < (m.town ? 1500 : NEAR_AREA)) per[k].push({ p: q, t, kind: 'road', id: 'r' + rid });
-  }));
-  const turns = [];
-  areas.forEach((a, k) => {
-    if (a.outline.length < 4) return;
-    const c = home[k], L = a.L, n = Math.max(24, Math.floor(L / 120));
-    let was = null;
-    for (let i = 0; i <= n; i++) {
-      const t = i * L / n, p = at(a.outline, t);
-      const now = c.dist(c.roadD, p[0], p[1]) < 100 || c.dist(c.ringD, p[0], p[1]) < 60;
-      if (was !== null && now !== was && !c.look(c.townM, p[0], p[1]) &&
-          per[k].concat(turns).every(q => Math.hypot(p[0] - q.p[0], p[1] - q.p[1]) >= APART)) {
-        const q = { p, t, kind: 'turn', id: 't' + turns.length }; turns.push(q); per[k].push(q);
-      }
-      was = now;
-    }
-  });
-  const circle = (x, y, r) => { const f = []; for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2; f.push(R1(x + r * Math.cos(a)), R1(y + r * Math.sin(a))); } return f; };
-  const areasOut = areas.map((a, k) => {
-    const c = home[k], abox = a.outline.length ? bbox(a.outline) : [0, 0, 0, 0], voids = [];
-    for (const t of (window.TCROSS_ ? [] : c.kTowns)) if (hit(t.bb, abox)) voids.push(t.p);
-    for (const w of waterV) if (w.a >= 5e4 && hit(w.bb, abox) && hit(w.bb, c.cbb) && w.p.some((v, i) => i % 2 === 0 && c.inCell(v, w.p[i + 1]))) voids.push(w.p);
-    for (const s of stIn) if (c.inCell(s.x, s.y)) voids.push(circle(s.x, s.y, CLEAR));
-    const fixed = per[k].slice().sort((u, v) => u.t - v.t).map(q => [R1(q.t), R1(q.p[0]), R1(q.p[1]), q.kind, q.id]);
-    return { id: a.id, cell: c.cid, outline: a.outline, fixed, voids };
-  });
-
-  // the edges two chosen cells share: red in the app, where their networks meet
-  const shared = [];
-  for (let a = 0; a < C.length; a++) for (let b = a + 1; b < C.length; b++) {
-    const f = C[a].cellF, B_ = C[b], bb = B_.cbb;
-    if (!hit(C[a].cbb, [bb[0] - 100, bb[1] - 100, bb[2] + 100, bb[3] + 100])) continue;
-    const pts = [], L = plen(f);
-    for (let t = 0; t <= L; t += 20) pts.push(at(f, t));
-    const on = pts.map(p => B_.dist(B_.ringD, p[0], p[1]) < 30);
-    const runs = []; let cur = null;
-    pts.forEach((p, i) => { if (on[i]) { if (!cur) { cur = []; runs.push(cur); } cur.push(R1(p[0]), R1(p[1])); } else cur = null; });
-    if (runs.length > 1 && on[0] && on[on.length - 1]) { const first = runs.shift(); runs[runs.length - 1] = runs[runs.length - 1].concat(first); }
-    for (const r of runs) if (r.length >= 6 && plen(r) >= 50) shared.push(r);
-  }
-  const sharedKm = shared.reduce((s, r) => s + plen(r), 0) / 1000;
-
-  // the labels of the cells round the window
-  const KO = { x0: 0, y1: Hm, w: Math.ceil(Wm / 50), h: Math.ceil(Hm / 50) };
-  KO.P = (x, y) => [(x - KO.x0) / 50, (KO.y1 - y) / 50];
-  const chosen = new Set(C.map(c => c.cid)), otherLabels = [];
-  for (const nb of (pkg.neighbours || [])) {
-    if (chosen.has(String(nb.id))) continue;
-    const f = closeRing(rel(flatOf(nb.boundary)));
-    if (!hit(bbox(f), view)) continue;
-    const m = raster(KO, (x, P) => { x.beginPath(); pathOn(x, P, f, true); x.fill(); });
-    if (!m.some(v => v)) continue;
-    const p = largest({ m, w: KO.w, h: KO.h, ox: 0, oy: 0 }), D = edt(inv(p.m), p.w, p.h);
-    let bi = 0, bd = -1; for (let i = 0; i < D.length; i++) if (p.m[i] && D[i] > bd) { bd = D[i]; bi = i; }
-    otherLabels.push({ id: String(nb.id), x: R1((bi % KO.w + 0.5) * 50), y: R1(Hm - (Math.floor(bi / KO.w) + 0.5) * 50) });
-  }
-
-  // the numbers
-  const nums = { cells: {}, station: {}, shared: Math.round(sharedKm * 100) / 100, roads: {}, primary: {}, zones: {} };
-  for (const c of C) {
-    nums.cells[c.cid] = c.km2; nums.station[c.cid] = c.stNames; nums.roads[c.cid] = c.roadKm;
-    nums.primary[c.cid] = { n: c.primN, km2: c.primKm2 };
-    nums.zones[c.cid] = { n: c.zones.length, farm: c.farmKm, build: c.buildKm };
-  }
-
-  // the soil classes every 100 m, for the spacing on good soil
-  const sw = Math.ceil((Wm + 100) / 100), sh = Math.ceil((Hm + 100) / 100), sg = new Uint8Array(sw * sh);
-  for (let j = 0; j < sh; j++) for (let i = 0; i < sw; i++) sg[j * sw + i] = cls(i * 100, Hm - j * 100);
-  let sgs = ''; for (let i = 0; i < sg.length; i += 8192) sgs += String.fromCharCode.apply(null, sg.subarray(i, i + 8192));
-  const soilGrid = { w: sw, h: sh, step: 100, x0: -50, y1: R1(Hm + 50), data: btoa(sgs) };
-
-  // the pictures over the window: 3200 px for 32 km, wider for a bigger window, up to 4800
-  say('Drawing the pictures for ' + allId + '…'); await pause();
   const PXW = Math.min(4800, Math.max(RW, Math.round(RW * Wm / 32000)));
   const k = PXW / Wm, RH = Math.round(Hm * k), PW = (x, y) => [x * k, (Hm - y) * k];
-  const gc = cnv(PXW, RH), gx = gc.getContext('2d');
-  gx.fillStyle = '#000'; gx.fillRect(0, 0, PXW, RH);
-  const TS = SITE.tile;
-  const under = SITE.ground.map(name => [name, ...name.split('_').map(Number)]).filter(([, e, n]) => hit([e, n, e + TS, n + TS], viewW))
-    .map(([name, e, n]) => [e, n, img(siteUrl('ground/' + name + '.png'))]);           // asked for together, drawn in order
-  for (const [e, n, im] of under) gx.drawImage(await im, (e - E0) * k, (N1 - n - TS) * k, TS * k, TS * k);
-  const center = [['highways', 4.2, 0], ['links', 2.6, 0], ['spurs', 1.4, 1]];
-  const centre = [];
-  for (const [kname, , spur] of center) for (const h of (pkg[kname] || [])) centre.push({ spur: !!spur, p: rel(flatOf(h.coords)), w: kname });
-  // the mould and its veins: the package's own pictures (Loop City live v3 on), else its roads drawn in their place
-  const PIC = pkg.pictures || {}, TB = PIC.tile_box || [E0, N0, E1, N1];
-  const onTile = async (x, url, alpha) => { x.globalAlpha = alpha;
-    x.drawImage(await img(url), (TB[0] - E0) * k, (N1 - TB[3]) * k, (TB[2] - TB[0]) * k, (TB[3] - TB[1]) * k); x.globalAlpha = 1; };
-  const mc = cnv(PXW, RH), mx = mc.getContext('2d');
-  mx.fillStyle = '#000'; mx.fillRect(0, 0, PXW, RH); mx.lineCap = mx.lineJoin = 'round';
-  if (PIC.trail) await onTile(mx, PIC.trail, 1);
-  else for (const [kname, w] of center) {
-    mx.strokeStyle = kname === 'spurs' ? 'rgba(150,70,220,0.7)' : '#B85CFF'; mx.lineWidth = w * 2.2;
-    mx.shadowColor = '#7A1FE0'; mx.shadowBlur = 18;
-    for (const c of centre.filter(c => c.w === kname)) { mx.beginPath(); pathOn(mx, PW, c.p, false); mx.stroke(); }
-  }
-  const vc = cnv(PXW, RH), vx = vc.getContext('2d');
-  vx.lineCap = vx.lineJoin = 'round'; vx.strokeStyle = 'rgba(150,150,150,0.55)';
-  if (PIC.veins) await onTile(vx, PIC.veins, 0.55);             // as the Python drew the mass: grey at 55%
-  else for (const [kname, w] of center) { vx.lineWidth = w * 2.4; for (const c of centre.filter(c => c.w === kname)) { vx.beginPath(); pathOn(vx, PW, c.p, false); vx.stroke(); } }
-  const sc = cnv(PXW, RH), sx = sc.getContext('2d');           // the soil, full inside the cells and faint outside
-  const cm = cnv(PXW, RH), cmx = cm.getContext('2d');
-  cmx.fillStyle = '#fff'; for (const c of C) { cmx.beginPath(); pathOn(cmx, PW, c.cellF, true); cmx.fill(); }
-  const inA = cmx.getImageData(0, 0, PXW, RH).data, sd = sx.createImageData(PXW, RH), pal = SOIL_PICK.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
-  for (let j = 0; j < RH; j++) for (let i = 0; i < PXW; i++) {
-    const c = cls((i + 0.5) / k, Hm - (j + 0.5) / k), o = (j * PXW + i) * 4;
-    if (c < pal.length) { sd.data[o] = pal[c][0]; sd.data[o + 1] = pal[c][1]; sd.data[o + 2] = pal[c][2]; sd.data[o + 3] = inA[o] > 127 ? 255 : 71; }
-  }
-  sx.putImageData(sd, 0, 0);
-  let KY = SITE.key, kc;
-  if (PIC.key && PIC.key_box) {                                  // the mould page's key plan: the run's cells, these in sand
-    const ki = await img(PIC.key);
-    KY = { w: 520, h: Math.round(520 * ki.naturalHeight / ki.naturalWidth), ext: PIC.key_box };
-    kc = cnv(KY.w, KY.h); kc.getContext('2d').drawImage(ki, 0, 0, KY.w, KY.h);
-  } else {                                                       // else the site's towns and rail, with the cells on them
-    kc = cnv(KY.w, KY.h);
-    const kx = kc.getContext('2d'), kk = KY.w / (KY.ext[2] - KY.ext[0]);
-    kx.drawImage(await img(KY.url), 0, 0);
-    const PK = (x, y) => [(x + E0 - KY.ext[0]) * kk, (KY.ext[3] - y - N0) * kk];
-    for (const c of C) { kx.beginPath(); pathOn(kx, PK, c.cellF, true); kx.fillStyle = 'rgba(255,255,255,0.27)'; kx.fill();
-      kx.strokeStyle = 'rgba(255,255,255,0.86)'; kx.lineWidth = 2; kx.stroke(); }
-  }
-
-  const kT = [...new Set(C.flatMap(c => c.kTowns))];
+  // the data, its keys in the order the one-go bake made them; what is not worked out yet is empty
   const data = {
-    origin: [E0, N0], size: [R1(Wm), R1(Hm)], pick: String(cellsP[0].station || C[0].cid),
-    img: { ground: gc.toDataURL('image/png'), mould: mc.toDataURL('image/jpeg', 0.9), veins: vc.toDataURL('image/png'),
-           soil: sc.toDataURL('image/png'), key: kc.toDataURL('image/png') },
-    key: { w: KY.w, h: KY.h, box: [KY.ext[0] - E0, KY.ext[1] - N0, KY.ext[2] - E0, KY.ext[3] - N0] },
-    cells: C.map(c => ({ id: c.cid, ring: c.cellF })), shared, cellLabels: C.map(c => c.label), otherLabels,
-    centrelines: centre.map(c => ({ spur: c.spur, p: c.p })), rail: railL,
-    roads: roadsV.filter(r => hit(r.bb, view)).map(r => ({ c: r.c, n: r.n, p: r.p })),
-    stations: stIn.filter(s => s.x > 200 && s.y > 200 && s.x < Wm - 200 && s.y < Hm - 200)
-                  .map(s => ({ id: s.id, x: R1(s.x), y: R1(s.y), cell: (cellOf(s.x, s.y) || {}).cid || '', kind: s.kind })),
-    townsAll: townsV.map(t => ({ a: t.a, p: t.p })), water: waterV.map(w => ({ a: Math.round(w.a / 1e2) / 1e4, p: w.p })),
-    towns: kT.map(t => t.p), primary, small: C.flatMap(c => c.small), plines: C.flatMap(c => c.plines),
-    zones: C.flatMap(c => c.zones), zoneLabels: C.flatMap(c => c.zoneLabels), areas: areasOut,
-    cellBox: Object.fromEntries(C.map(c => [c.cid, { e0: R1(c.cbb[0] - 400), n0: R1(c.cbb[1] - 400), area: R1(Math.abs(area(c.cellF))) }])),
-    soilGrid, nums };
-  data.bakeMs = Math.round(performance.now() - t0);
-  return data;
+    origin: [E0, N0], size: [R1(Wm), R1(Hm)], pick: String(cellsP[0].station || cellsP[0].id),
+    img: { ground: null, mould: null, veins: null, soil: null, key: null }, key: null,
+    cells: [], shared: [], cellLabels: [], otherLabels: [], centrelines: [], rail: railL, roads: [], stations: [], townsAll: [], water: [],
+    towns: [], primary: [], small: [], plines: [], zones: [], zoneLabels: [], areas: [], cellBox: {}, soilGrid: null,
+    nums: { cells: {}, station: {}, shared: 0, roads: {}, primary: {}, zones: {} } };
+  let roadsV, townsV, waterV, cls = null;
+  const C = [];
+  const cellOf = (x, y) => C.find(c => c.inCell(x, y));
+
+  // ---------------------------------------------------------------- the cells on their own 10 m grids (step 1 without them when made before)
+  const grids = async () => {
+    if (C.length) return;
+    for (const cellP of cellsP) {
+      const cid = String(cellP.id);
+      const cellF = closeRing(rel(flatOf(cellP.boundary)));
+      const holes = (cellP.holes || []).map(h => closeRing(rel(flatOf(h))));
+      const cbb = bbox(cellF);
+      const M = 1000, gx0 = Math.floor((cbb[0] - M) / G) * G, gy1 = Math.ceil((cbb[3] + M) / G) * G;
+      const K = { x0: gx0, y1: gy1, w: Math.ceil((cbb[2] + M - gx0) / G), h: Math.ceil((gy1 - cbb[1] + M) / G) };
+      K.P = (x, y) => [(x - K.x0) / G, (K.y1 - y) / G];
+      const idx = (x, y) => { const i = Math.floor((x - K.x0) / G), j = Math.floor((K.y1 - y) / G); return i < 0 || j < 0 || i >= K.w || j >= K.h ? -1 : j * K.w + i; };
+      const look = (m, x, y) => { const i = idx(x, y); return i >= 0 && m[i] === 1; };
+      const cellM = raster(K, (x, P) => { x.beginPath(); pathOn(x, P, cellF, true); for (const h of holes) pathOn(x, P, h, true); x.fill('evenodd'); });
+      const inCell = (x, y) => look(cellM, x, y);
+      // the distance to the cell's edge (the shared edge, the primary cells' lines and the anchors read it)
+      const ringM = raster(K, (x, P) => { x.lineWidth = 1; x.beginPath(); pathOn(x, P, cellF, true); x.stroke(); });
+      const ringD = edt(ringM, K.w, K.h);
+      const dist = (D, x, y) => { const i = idx(x, y); return i < 0 ? Infinity : Math.sqrt(D[i]) * G; };
+      const stNames = (cellP.stations && cellP.stations.length ? cellP.stations : (cellP.station ? [cellP.station] : [])).join(', ');
+      C.push({ cellP, cid, cellF, holes, cbb, K, idx, look, cellM, inCell, ringD, dist, stNames, km2: Math.round(Math.abs(area(cellF)) / 1e4) / 100 });
+      await pause();
+    }
+  };
+
+  // ---------------------------------------------------------------- 1: what steps 1 to 3 show
+  const s1 = async () => {
+    if (pre) { for (const key of Object.keys(pre)) if (key !== 'img' && key !== 'nums') data[key] = pre[key];
+      Object.assign(data.img, pre.img); Object.assign(data.nums, pre.nums); return; }
+    say('Reading the cells ' + allId + '…'); await pause();
+    await grids();
+    for (const c of C) {
+      const { cid, cellM, K, stNames } = c;
+      {
+        // the label: the cell's name where there is most room, away from the rail and the stations
+        const inside = edt(inv(cellM), K.w, K.h), clearM = raster(K, (x, P) => {
+          x.lineWidth = 2800 / G; for (const r of railL) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
+          for (const s of stIn) { const c = P(s.x, s.y); x.beginPath(); x.arc(c[0], c[1], 1800 / G, 0, 7); x.fill(); } });
+        let room = cellM.map((v, i) => (v && inside[i] > 8100 && !clearM[i] ? 1 : 0));
+        room = largest(whole(room, K));
+        const lpC = room.m.some(v => v) ? pole(room, K) : pole(whole(cellM, K), K);
+        c.label = { name: cid + (stNames ? '  ·  ' + stNames : ''), km2: Math.round(Math.abs(area(c.cellF)) / 1e6) + ' km²', x: lpC[0], y: lpC[1] };
+      }
+    }
+    data.pick = String(cellsP[0].station || C[0].cid);
+    data.cells = C.map(c => ({ id: c.cid, ring: c.cellF }));
+    // the edges two chosen cells share: red in the app, where their networks meet
+    const shared = [];
+    for (let a = 0; a < C.length; a++) for (let b = a + 1; b < C.length; b++) {
+      const f = C[a].cellF, B_ = C[b], bb = B_.cbb;
+      if (!hit(C[a].cbb, [bb[0] - 100, bb[1] - 100, bb[2] + 100, bb[3] + 100])) continue;
+      const pts = [], L = plen(f);
+      for (let t = 0; t <= L; t += 20) pts.push(at(f, t));
+      const on = pts.map(p => B_.dist(B_.ringD, p[0], p[1]) < 30);
+      const runs = []; let cur = null;
+      pts.forEach((p, i) => { if (on[i]) { if (!cur) { cur = []; runs.push(cur); } cur.push(R1(p[0]), R1(p[1])); } else cur = null; });
+      if (runs.length > 1 && on[0] && on[on.length - 1]) { const first = runs.shift(); runs[runs.length - 1] = runs[runs.length - 1].concat(first); }
+      for (const r of runs) if (r.length >= 6 && plen(r) >= 50) shared.push(r);
+    }
+    const sharedKm = shared.reduce((s, r) => s + plen(r), 0) / 1000;
+    // the labels of the cells round the window
+    const KO = { x0: 0, y1: Hm, w: Math.ceil(Wm / 50), h: Math.ceil(Hm / 50) };
+    KO.P = (x, y) => [(x - KO.x0) / 50, (KO.y1 - y) / 50];
+    const chosen = new Set(C.map(c => c.cid)), otherLabels = [];
+    for (const nb of (pkg.neighbours || [])) {
+      if (chosen.has(String(nb.id))) continue;
+      const f = closeRing(rel(flatOf(nb.boundary)));
+      if (!hit(bbox(f), view)) continue;
+      const m = raster(KO, (x, P) => { x.beginPath(); pathOn(x, P, f, true); x.fill(); });
+      if (!m.some(v => v)) continue;
+      const p = largest({ m, w: KO.w, h: KO.h, ox: 0, oy: 0 }), D = edt(inv(p.m), p.w, p.h);
+      let bi = 0, bd = -1; for (let i = 0; i < D.length; i++) if (p.m[i] && D[i] > bd) { bd = D[i]; bi = i; }
+      otherLabels.push({ id: String(nb.id), x: R1((bi % KO.w + 0.5) * 50), y: R1(Hm - (Math.floor(bi / KO.w) + 0.5) * 50) });
+    }
+    const center = [['highways', 4.2, 0], ['links', 2.6, 0], ['spurs', 1.4, 1]];
+    const centre = [];
+    for (const [kname, , spur] of center) for (const h of (pkg[kname] || [])) centre.push({ spur: !!spur, p: rel(flatOf(h.coords)), w: kname });
+    // the pictures over the window: 3200 px for 32 km, wider for a bigger window, up to 4800
+    say('Drawing the pictures for ' + allId + '…'); await pause();
+    const gc = cnv(PXW, RH), gx = gc.getContext('2d');
+    gx.fillStyle = '#000'; gx.fillRect(0, 0, PXW, RH);
+    const TS = SITE.tile;
+    const under = SITE.ground.map(name => [name, ...name.split('_').map(Number)]).filter(([, e, n]) => hit([e, n, e + TS, n + TS], viewW))
+      .map(([name, e, n]) => [e, n, img(siteUrl('ground/' + name + '.png'))]);           // asked for together, drawn in order
+    for (const [e, n, im] of under) gx.drawImage(await im, (e - E0) * k, (N1 - n - TS) * k, TS * k, TS * k);
+    // the mould and its veins: the package's own pictures (Loop City live v3 on), else its roads drawn in their place
+    const PIC = pkg.pictures || {}, TB = PIC.tile_box || [E0, N0, E1, N1];
+    const onTile = async (x, url, alpha) => { x.globalAlpha = alpha;
+      x.drawImage(await img(url), (TB[0] - E0) * k, (N1 - TB[3]) * k, (TB[2] - TB[0]) * k, (TB[3] - TB[1]) * k); x.globalAlpha = 1; };
+    const mc = cnv(PXW, RH), mx = mc.getContext('2d');
+    mx.fillStyle = '#000'; mx.fillRect(0, 0, PXW, RH); mx.lineCap = mx.lineJoin = 'round';
+    if (PIC.trail) await onTile(mx, PIC.trail, 1);
+    else for (const [kname, w] of center) {
+      mx.strokeStyle = kname === 'spurs' ? 'rgba(150,70,220,0.7)' : '#B85CFF'; mx.lineWidth = w * 2.2;
+      mx.shadowColor = '#7A1FE0'; mx.shadowBlur = 18;
+      for (const c of centre.filter(c => c.w === kname)) { mx.beginPath(); pathOn(mx, PW, c.p, false); mx.stroke(); }
+    }
+    const vc = cnv(PXW, RH), vx = vc.getContext('2d');
+    vx.lineCap = vx.lineJoin = 'round'; vx.strokeStyle = 'rgba(150,150,150,0.55)';
+    if (PIC.veins) await onTile(vx, PIC.veins, 0.55);             // as the Python drew the mass: grey at 55%
+    else for (const [kname, w] of center) { vx.lineWidth = w * 2.4; for (const c of centre.filter(c => c.w === kname)) { vx.beginPath(); pathOn(vx, PW, c.p, false); vx.stroke(); } }
+    let KY = SITE.key, kc;
+    if (PIC.key && PIC.key_box) {                                  // the mould page's key plan: the run's cells, these in sand
+      const ki = await img(PIC.key);
+      KY = { w: 520, h: Math.round(520 * ki.naturalHeight / ki.naturalWidth), ext: PIC.key_box };
+      kc = cnv(KY.w, KY.h); kc.getContext('2d').drawImage(ki, 0, 0, KY.w, KY.h);
+    } else {                                                       // else the site's towns and rail, with the cells on them
+      kc = cnv(KY.w, KY.h);
+      const kx = kc.getContext('2d'), kk = KY.w / (KY.ext[2] - KY.ext[0]);
+      kx.drawImage(await img(KY.url), 0, 0);
+      const PK = (x, y) => [(x + E0 - KY.ext[0]) * kk, (KY.ext[3] - y - N0) * kk];
+      for (const c of C) { kx.beginPath(); pathOn(kx, PK, c.cellF, true); kx.fillStyle = 'rgba(255,255,255,0.27)'; kx.fill();
+        kx.strokeStyle = 'rgba(255,255,255,0.86)'; kx.lineWidth = 2; kx.stroke(); }
+    }
+    Object.assign(data.img, { ground: gc.toDataURL('image/png'), mould: mc.toDataURL('image/jpeg', 0.9), veins: vc.toDataURL('image/png'), key: kc.toDataURL('image/png') });
+    data.key = { w: KY.w, h: KY.h, box: [KY.ext[0] - E0, KY.ext[1] - N0, KY.ext[2] - E0, KY.ext[3] - N0] };
+    Object.assign(data, { shared, cellLabels: C.map(c => c.label), otherLabels, centrelines: centre.map(c => ({ spur: c.spur, p: c.p })),
+      stations: stIn.filter(s => s.x > 200 && s.y > 200 && s.x < Wm - 200 && s.y < Hm - 200)
+                    .map(s => ({ id: s.id, x: R1(s.x), y: R1(s.y), cell: (cellOf(s.x, s.y) || {}).cid || '', kind: s.kind })),
+      cellBox: Object.fromEntries(C.map(c => [c.cid, { e0: R1(c.cbb[0] - 400), n0: R1(c.cbb[1] - 400), area: R1(Math.abs(area(c.cellF))) }])) });
+    for (const c of C) { data.nums.cells[c.cid] = c.km2; data.nums.station[c.cid] = c.stNames; }
+    data.nums.shared = Math.round(sharedKm * 100) / 100;
+  };
+
+  // ---------------------------------------------------------------- 4: the existing roads and towns
+  const s4 = async () => {
+    say('Reading the roads and towns under ' + allId + '…'); await pause();
+    const V = await vectors();
+    await grids();
+    roadsV = V.roads.filter(r => hit(r.bb, [E0 - 300, N0 - 300, E1 + 300, N1 + 300])).map(r => ({ c: r.c, n: r.n, p: rel(r.p) }));
+    roadsV.forEach(r => { r.bb = bbox(r.p); });
+    townsV = V.towns.filter(t => hit(t.bb, viewW)).map(t => ({ a: t.a, p: closeRing(rel(t.p)) }));
+    townsV.forEach(t => { t.bb = bbox(t.p); });
+    waterV = V.water.filter(w => hit(w.bb, viewW)).map(w => ({ a: w.a, p: closeRing(rel(w.p)) }));
+    waterV.forEach(w => { w.bb = bbox(w.p); });
+    for (const c of C) {
+      const { cellF, cbb, K, inCell } = c;
+      // the existing roads and towns that cut the cell
+      const touches = f => { for (let i = 0; i < f.length; i += 2) if (inCell(f[i], f[i + 1])) return true;
+        for (let i = 2; i < f.length; i += 2) { const L = Math.hypot(f[i] - f[i - 2], f[i + 1] - f[i - 1]), n = Math.floor(L / 20);
+          for (let k = 1; k < n; k++) if (inCell(f[i - 2] + (f[i] - f[i - 2]) * k / n, f[i - 1] + (f[i + 1] - f[i - 1]) * k / n)) return true; }
+        return false; };
+      c.kRoads = roadsV.filter(r => hit(r.bb, cbb) && touches(r.p));
+      c.kTowns = townsV.filter(t => t.a >= TOWN_MIN && hit(t.bb, cbb) && (touches(t.p) || (() => { for (let i = 0; i < cellF.length; i += 2) if (inPoly(t.p, cellF[i], cellF[i + 1])) return true; return false; })()));
+      c.townM = raster(K, (x, P) => { for (const t of c.kTowns) { x.beginPath(); pathOn(x, P, t.p, true); x.fill(); } });
+      const roadKm = { M: 0, A: 0, B: 0 };
+      for (const r of c.kRoads) for (let i = 2; i < r.p.length; i += 2) {
+        const L = Math.hypot(r.p[i] - r.p[i - 2], r.p[i + 1] - r.p[i - 1]), n = Math.max(1, Math.ceil(L / 20));
+        let cc = 0; for (let k = 0; k < n; k++) if (inCell(r.p[i - 2] + (r.p[i] - r.p[i - 2]) * (k + 0.5) / n, r.p[i - 1] + (r.p[i + 1] - r.p[i - 1]) * (k + 0.5) / n)) cc++;
+        if (roadKm[r.c] !== undefined) roadKm[r.c] += L * cc / n / 1000;
+      }
+      Object.keys(roadKm).forEach(k => { roadKm[k] = R1(roadKm[k]); });
+      data.nums.roads[c.cid] = roadKm;
+    }
+    const kT = [...new Set(C.flatMap(c => c.kTowns))];
+    Object.assign(data, { roads: roadsV.filter(r => hit(r.bb, view)).map(r => ({ c: r.c, n: r.n, p: r.p })),
+      townsAll: townsV.map(t => ({ a: t.a, p: t.p })), water: waterV.map(w => ({ a: Math.round(w.a / 1e2) / 1e4, p: w.p })), towns: kT.map(t => t.p) });
+  };
+
+  // ---------------------------------------------------------------- 5: the roads and towns cut each cell into primary cells
+  const s5 = async () => {
+    for (const c of C) {
+      const { cid, cellM, K, ringD, dist, kRoads, kTowns } = c;
+      say('Cutting ' + cid + ' into primary cells…'); await pause();
+      const knife = raster(K, (x, P) => {
+        x.lineWidth = 2 * HALF_ROAD / G;
+        for (const r of (window.WHOLE_ ? [] : kRoads)) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
+        for (const t of (window.TCROSS_ ? [] : kTowns)) { x.beginPath(); pathOn(x, P, t.p, true); x.fill(); }
+      });
+      const pieceM = cellM.map((v, i) => v & (1 - knife[i]));
+      const pc = comps(pieceM, K.w, K.h);
+      const prim = pc.list.filter(c => c.n * G * G >= MIN_PRIM).sort((a, b) => b.n - a.n);
+      const smallC = pc.list.filter(c => c.n * G * G < MIN_PRIM);
+      const eased = prim.map(c => ease(cut(pc.lab, K.w, c, 22)));
+      // the distance to the roads, for the anchors
+      const roadM = raster(K, (x, P) => { x.lineWidth = 1; for (const r of kRoads) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); } });
+      c.roadD = edt(roadM, K.w, K.h);
+      const prims = [], areas = [], plines = [];
+      eased.forEach((q, i) => {
+        const o = outer(q, K, 3), lp = pole(q, K), km2 = prim[i].n * G * G / 1e6;
+        const id = cid + '.' + (i + 1);
+        prims.push({ id, cell: cid, km2: Math.round(km2 * 100) / 100, ring: o ? o.f : [], lx: lp[0], ly: lp[1] });
+        const ol = o ? dp(o.f, SIMPLIFY) : [];
+        areas.push({ id, cell: cid, outline: ol, L: plen(ol) });
+        if (o) {                                            // the outline kept 140 m off the cell's edge, pieces of 80 m or more
+          let run = [];
+          const flush = () => { if (run.length >= 4 && plen(run) >= 80) plines.push(run); run = []; };
+          for (let k = 0; k < o.f.length; k += 2) { if (dist(ringD, o.f[k], o.f[k + 1]) >= 140) run.push(o.f[k], o.f[k + 1]); else flush(); }
+          flush();
+        }
+      });
+      c.small = smallC.map(c => outer(cut(pc.lab, K.w, c, 2), K, 5)).filter(Boolean).map(o => o.f);
+      Object.assign(c, { eased, prims, areas, plines, primN: prim.length, primKm2: R1(prim.reduce((s, c) => s + c.n, 0) * G * G / 1e6) });
+      data.nums.primary[cid] = { n: c.primN, km2: c.primKm2 };
+    }
+    // step 5's colours: the primary cells by size, over all the cells
+    const allPrim = C.flatMap(c => c.prims);
+    const lo = allPrim.length ? Math.log(Math.min(...allPrim.map(p => p.km2))) : 0, hi = allPrim.length ? Math.log(Math.max(...allPrim.map(p => p.km2))) : 1;
+    const sizeCol = t => { const u = Math.max(0, Math.min(1, t)) * 2, i = Math.min(1, Math.floor(u)), f = u - i;
+      return '#' + [0, 1, 2].map(j => Math.round(RAMP[i][j] + f * (RAMP[i + 1][j] - RAMP[i][j])).toString(16).padStart(2, '0').toUpperCase()).join(''); };
+    Object.assign(data, { primary: allPrim.map(p => Object.assign({}, p, { col: sizeCol((Math.log(p.km2) - lo) / Math.max(1e-9, hi - lo)) })),
+      small: C.flatMap(c => c.small), plines: C.flatMap(c => c.plines) });
+  };
+
+  // ---------------------------------------------------------------- 6: the soil classes (ALC, 50 m) under the window
+  const s6 = async () => {
+    say('Reading the soil under ' + allId + '…'); await pause();
+    const A = SITE.alc, alcIm = await img(siteUrl('alc.png'));
+    const ax0 = Math.floor((E0 - A.e0) / A.c) - 2, ay0 = Math.floor((A.n1 - N1) / A.c) - 2;
+    const aw = Math.ceil(Wm / A.c) + 5, ah = Math.ceil(Hm / A.c) + 5;
+    const ac = cnv(aw, ah), ax = ac.getContext('2d');
+    ax.fillStyle = '#FFF'; ax.fillRect(0, 0, aw, ah); ax.imageSmoothingEnabled = false;
+    const sx0 = Math.max(0, ax0), sy0 = Math.max(0, ay0), sx1 = Math.min(A.w, ax0 + aw), sy1 = Math.min(A.h, ay0 + ah);
+    if (sx1 > sx0 && sy1 > sy0) ax.drawImage(alcIm, sx0, sy0, sx1 - sx0, sy1 - sy0, sx0 - ax0, sy0 - ay0, sx1 - sx0, sy1 - sy0);
+    const ad = ax.getImageData(0, 0, aw, ah).data, alc = new Uint8Array(aw * ah);
+    for (let i = 0; i < alc.length; i++) alc[i] = ad[i * 4];
+    cls = (x, y) => { const c = Math.floor((x + E0 - A.e0) / A.c) - ax0, r = Math.floor((A.n1 - (y + N0)) / A.c) - ay0;
+      return c < 0 || r < 0 || c >= aw || r >= ah ? 255 : alc[r * aw + c]; };
+    // the soil classes every 100 m, for the spacing on good soil
+    const sw = Math.ceil((Wm + 100) / 100), sh = Math.ceil((Hm + 100) / 100), sg = new Uint8Array(sw * sh);
+    for (let j = 0; j < sh; j++) for (let i = 0; i < sw; i++) sg[j * sw + i] = cls(i * 100, Hm - j * 100);
+    let sgs = ''; for (let i = 0; i < sg.length; i += 8192) sgs += String.fromCharCode.apply(null, sg.subarray(i, i + 8192));
+    data.soilGrid = { w: sw, h: sh, step: 100, x0: -50, y1: R1(Hm + 50), data: btoa(sgs) };
+    // its picture, full inside the cells and faint outside
+    const sc = cnv(PXW, RH), sx = sc.getContext('2d');
+    const cm = cnv(PXW, RH), cmx = cm.getContext('2d');
+    cmx.fillStyle = '#fff'; for (const c of C) { cmx.beginPath(); pathOn(cmx, PW, c.cellF, true); cmx.fill(); }
+    const inA = cmx.getImageData(0, 0, PXW, RH).data, sd = sx.createImageData(PXW, RH), pal = SOIL_PICK.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+    for (let j = 0; j < RH; j++) for (let i = 0; i < PXW; i++) {
+      const c = cls((i + 0.5) / k, Hm - (j + 0.5) / k), o = (j * PXW + i) * 4;
+      if (c < pal.length) { sd.data[o] = pal[c][0]; sd.data[o + 1] = pal[c][1]; sd.data[o + 2] = pal[c][2]; sd.data[o + 3] = inA[o] > 127 ? 255 : 71; }
+    }
+    sx.putImageData(sd, 0, 0);
+    data.img.soil = sc.toDataURL('image/png');
+  };
+
+  // ---------------------------------------------------------------- 7: the soil splits each primary cell again
+  const s7 = async () => {
+    for (const c of C) {
+      const { cid, cellM, K, townM, eased } = c;
+      say('Splitting ' + cid + ' by the soil…'); await pause();
+      let keep = new Uint8Array(K.w * K.h);
+      for (let j = 0; j < K.h; j++) for (let i = 0; i < K.w; i++) {
+        const p = j * K.w + i;
+        if (cellM[p]) { const c = cls(K.x0 + (i + 0.5) * G, K.y1 - (j + 0.5) * G); keep[p] = c === 0 || c === 1 ? 1 : 0; }
+      }
+      const sr = SMOOTH / G;
+      keep = grow(keep, K.w, K.h, sr); keep = shrink(keep, K.w, K.h, 2 * sr); keep = grow(keep, K.w, K.h, sr);
+      { const kc = comps(keep, K.w, K.h), big = new Set(kc.list.filter(c => c.n * G * G >= MIN_ZONE).map(c => c.id));
+        for (let i = 0; i < keep.length; i++) keep[i] = big.has(kc.lab[i]) ? 1 : 0; }
+      const zones = [], zoneLabels = [];
+      let farmKm = 0, buildKm = 0;
+      eased.forEach(q => {
+        const n = q.m.length, at_ = (i) => { const x = i % q.w, y = (i - x) / q.w, X = x + q.ox, Y = y + q.oy; return X < 0 || Y < 0 || X >= K.w || Y >= K.h ? -1 : Y * K.w + X; };
+        const fm = new Uint8Array(n);
+        for (let i = 0; i < n; i++) if (q.m[i]) { const g = at_(i); fm[i] = g >= 0 && keep[g] ? 1 : 0; }
+        // (24 Nov) each piece's pixels gathered in one pass over the grid, not one pass per piece: the same pieces, in the same order
+        const lists = (c, keep) => { const at = new Int32Array(c.list.length + 1), L = []; c.list.forEach((k, j) => { if (keep(k)) { at[k.id] = L.length + 1; L.push({ k, idx: new Int32Array(k.n), f: 0 }); } });
+          for (let i = 0; i < n; i++) { const j = at[c.lab[i]]; if (j) { const e = L[j - 1]; e.idx[e.f++] = i; } } return L; };
+        const maskOf = idx => { const z = new Uint8Array(n); for (let t = 0; t < idx.length; t++) z[idx[t]] = 1; return z; };
+        const pieces = (m, min) => lists(comps(m, q.w, q.h), k => k.n * G * G >= min).map(e => ({ m: maskOf(e.idx), n: e.k.n }));
+        const farm = pieces(fm, MIN_PIECE);
+        const used = new Uint8Array(n); farm.forEach(z => z.m.forEach((v, i) => { if (v) used[i] = 1; }));
+        const rest = q.m.map((v, i) => v & (1 - used[i])), rc = comps(rest, q.w, q.h);
+        const build = [], slivers = [];
+        for (const e of lists(rc, () => true)) { if (e.k.n * G * G >= MIN_PIECE) build.push({ m: maskOf(e.idx), n: e.k.n }); else slivers.push({ idx: e.idx, n: e.k.n }); }
+        // a sliver joins the zone it touches most. (24 Nov) Read off one map of which zone each pixel is in, over the
+        // sliver's own pixels: before, every sliver walked the whole grid once per zone (ten seconds on a big cell)
+        const all = farm.concat(build), zl = new Int32Array(n);
+        all.forEach((z, j) => { for (let i = 0; i < n; i++) if (z.m[i]) zl[i] = j + 1; });
+        for (const s of slivers) {
+          if (!all.length) { const z = { m: maskOf(s.idx), n: s.n }; build.push(z); all.push(z); for (const i of s.idx) zl[i] = 1; continue; }
+          const cnt = new Int32Array(all.length + 1);
+          for (let t = 0; t < s.idx.length; t++) { const i = s.idx[t], x = i % q.w;
+            const a = x > 0 ? zl[i - 1] : 0, b = x < q.w - 1 ? zl[i + 1] : 0, c = i >= q.w ? zl[i - q.w] : 0, e = i + q.w < n ? zl[i + q.w] : 0;
+            if (a) cnt[a]++; if (b && b !== a) cnt[b]++; if (c && c !== a && c !== b) cnt[c]++; if (e && e !== a && e !== b && e !== c) cnt[e]++; }
+          let bj = 0, bc = -1;
+          for (let j = 0; j < all.length; j++) if (cnt[j + 1] > bc) { bc = cnt[j + 1]; bj = j; }
+          const z = all[bj]; for (let t = 0; t < s.idx.length; t++) { z.m[s.idx[t]] = 1; zl[s.idx[t]] = bj + 1; } z.n += s.n;
+        }
+        // the towns taken out; pieces of 2 ha or more. (24 Nov) each piece gathered in one pass, as above
+        const clean = L => { const out = [];
+          for (const z of L) { const m = new Uint8Array(n); for (let i = 0; i < n; i++) if (z.m[i]) { const g = at_(i); m[i] = g >= 0 && townM[g] ? 0 : 1; }
+            for (const e of lists(comps(m, q.w, q.h), k => k.n * G * G >= 2e4)) out.push({ m: maskOf(e.idx), n: e.k.n }); }
+          return out.sort((a, b) => b.n - a.n); };
+        for (const [kind, L] of [['farm', clean(farm)], ['build', clean(build)]]) for (const z of L) {
+          const p = Object.assign({}, q, { m: z.m }), rs = rings(p, K, 8);
+          zones.push({ kind, rings: rs.map(r => r.f) });
+          if (kind === 'farm') farmKm += z.n * G * G / 1e6; else buildKm += z.n * G * G / 1e6;
+          if (z.n * G * G >= 1.5e6) { const lp = pole(p, K); zoneLabels.push({ t: (z.n * G * G / 1e6).toFixed(1), x: lp[0], y: lp[1] }); }
+        }
+      });
+      Object.assign(c, { zones, zoneLabels });
+      data.nums.zones[cid] = { n: zones.length, farm: R1(farmKm), build: R1(buildKm) };
+    }
+    Object.assign(data, { zones: C.flatMap(c => c.zones), zoneLabels: C.flatMap(c => c.zoneLabels) });
+  };
+
+  // ---------------------------------------------------------------- 8: the anchors on the roads, and where an outline turns from a road to a town
+  const s8 = async () => {
+    say('Placing the anchors on ' + allId + '…'); await pause();
+    for (const c of C) {
+      const { cellF, kRoads, inCell } = c;
+      // the marks in this cell: where a road crosses its edge, and where two differently named roads meet inside it
+      const ringMarks = [], pairMarks = [];
+      for (const r of kRoads) for (let i = 2; i < r.p.length; i += 2) for (let k = 2; k < cellF.length; k += 2) {
+        const q = cross(r.p[i - 2], r.p[i - 1], r.p[i], r.p[i + 1], cellF[k - 2], cellF[k - 1], cellF[k], cellF[k + 1]);
+        if (q) ringMarks.push(q);
+      }
+      { const B = 400, cellsOf = new Map(), key = (a, b) => a * 100003 + b;
+        kRoads.forEach((r, ri) => { for (let i = 2; i < r.p.length; i += 2) {
+          const a0 = Math.floor(Math.min(r.p[i - 2], r.p[i]) / B), a1 = Math.floor(Math.max(r.p[i - 2], r.p[i]) / B);
+          const b0 = Math.floor(Math.min(r.p[i - 1], r.p[i + 1]) / B), b1 = Math.floor(Math.max(r.p[i - 1], r.p[i + 1]) / B);
+          for (let a = a0; a <= a1; a++) for (let b = b0; b <= b1; b++) { const kk = key(a, b); if (!cellsOf.has(kk)) cellsOf.set(kk, []); cellsOf.get(kk).push([ri, i]); } } });
+        const seen = new Set(), pairs = [];
+        for (const list of cellsOf.values()) for (let u = 0; u < list.length; u++) for (let w = u + 1; w < list.length; w++) {
+          let [ra, ia] = list[u], [rb, ib] = list[w];
+          if (ra === rb) continue;
+          if (ra > rb) { [ra, ia, rb, ib] = [rb, ib, ra, ia]; }
+          const A_ = kRoads[ra], B_ = kRoads[rb];
+          if (A_.n && A_.n === B_.n) continue;
+          const tag = ra + ':' + ia + ':' + rb + ':' + ib;
+          if (seen.has(tag)) continue;
+          seen.add(tag);
+          const q = cross(A_.p[ia - 2], A_.p[ia - 1], A_.p[ia], A_.p[ia + 1], B_.p[ib - 2], B_.p[ib - 1], B_.p[ib], B_.p[ib + 1]);
+          if (q && inCell(q[0], q[1])) pairs.push([ra, rb, q]);
+        }
+        pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]).forEach(p => pairMarks.push(p[2]));
+      }
+      Object.assign(c, { ringMarks, pairMarks });
+    }
+    const marks = C.flatMap(c => c.ringMarks).concat(C.flatMap(c => c.pairMarks));
+    const road = [];
+    for (const q of marks) if (road.every(k => Math.hypot(q[0] - k.p[0], q[1] - k.p[1]) >= APART)) road.push({ p: q, town: C.some(c => c.look(c.townM, q[0], q[1])) });
+    const areas = [], home = [];
+    C.forEach(c => c.areas.forEach(a => { areas.push(a); home.push(c); }));
+    const per = areas.map(() => []);
+    areas.forEach((a, k) => road.forEach((m, rid) => {
+      if (a.outline.length < 4) return;
+      const t = project(a.outline, m.p[0], m.p[1]), q = at(a.outline, t);
+      if (Math.hypot(q[0] - m.p[0], q[1] - m.p[1]) < (m.town ? 1500 : NEAR_AREA)) per[k].push({ p: q, t, kind: 'road', id: 'r' + rid });
+    }));
+    const turns = [];
+    areas.forEach((a, k) => {
+      if (a.outline.length < 4) return;
+      const c = home[k], L = a.L, n = Math.max(24, Math.floor(L / 120));
+      let was = null;
+      for (let i = 0; i <= n; i++) {
+        const t = i * L / n, p = at(a.outline, t);
+        const now = c.dist(c.roadD, p[0], p[1]) < 100 || c.dist(c.ringD, p[0], p[1]) < 60;
+        if (was !== null && now !== was && !c.look(c.townM, p[0], p[1]) &&
+            per[k].concat(turns).every(q => Math.hypot(p[0] - q.p[0], p[1] - q.p[1]) >= APART)) {
+          const q = { p, t, kind: 'turn', id: 't' + turns.length }; turns.push(q); per[k].push(q);
+        }
+        was = now;
+      }
+    });
+    const circle = (x, y, r) => { const f = []; for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2; f.push(R1(x + r * Math.cos(a)), R1(y + r * Math.sin(a))); } return f; };
+    const areasOut = areas.map((a, k) => {
+      const c = home[k], abox = a.outline.length ? bbox(a.outline) : [0, 0, 0, 0], voids = [];
+      for (const t of (window.TCROSS_ ? [] : c.kTowns)) if (hit(t.bb, abox)) voids.push(t.p);
+      for (const w of waterV) if (w.a >= 5e4 && hit(w.bb, abox) && hit(w.bb, c.cbb) && w.p.some((v, i) => i % 2 === 0 && c.inCell(v, w.p[i + 1]))) voids.push(w.p);
+      for (const s of stIn) if (c.inCell(s.x, s.y)) voids.push(circle(s.x, s.y, CLEAR));
+      const fixed = per[k].slice().sort((u, v) => u.t - v.t).map(q => [R1(q.t), R1(q.p[0]), R1(q.p[1]), q.kind, q.id]);
+      return { id: a.id, cell: c.cid, outline: a.outline, fixed, voids };
+    });
+    data.areas = areasOut;
+  };
+
+  const run = { 1: s1, 4: s4, 5: s5, 6: s6, 7: s7, 8: s8 }, done = new Set();
+  let chain = Promise.resolve();
+  // every stage up to n, one after another; asked again while working, it waits for the work already under way
+  const upTo = n => (chain = chain.then(async () => {
+    for (const s of STAGES) if (s <= n && !done.has(s)) { const t = performance.now(); await run[s](); done.add(s); B.ms[s] = Math.round(performance.now() - t);
+      if (window.__woolStage) window.__woolStage(s); }
+    if (done.size === STAGES.length && data.bakeMs === undefined) data.bakeMs = Math.round(performance.now() - t0);
+  }));
+  const B = { data, upTo, done, ms: {}, pre: !!pre };
+  return B;
 }
 
 // ------------------------------------------------------------------ the package: from the mould page, or from a file
@@ -4952,29 +5046,56 @@ const BAKED = {
         ts.sort((a, b) => a[1] - b[1]).slice(0, ts.length - 3).forEach(([a]) => st.delete(a)); }
     } catch (e) {} }
 };
+// (24 Nov) the example's step 1, made before (source/make-example.cjs) from this very package, this bake and this site:
+// its data and its pictures, so the example opens on step 1 at once. Anything else (or #nopre) works step 1 out here.
+const BAKE_HASH = fnv(BAKE_SELF ? BAKE_SELF.textContent : '');
+async function examplePre(pkg) {
+  try {
+    const r = await fetch('example/step1.json?b=' + BAKE_HASH); if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.guard || j.guard.bake !== BAKE_HASH || j.guard.pkg !== fnv(JSON.stringify(pkg))) { console.warn('wool: example/step1.json is out of date; step 1 is worked out here'); return null; }
+    const url = f => fetch('example/' + f + '?b=' + BAKE_HASH).then(q => { if (!q.ok) throw new Error(f); return q.blob(); })
+      .then(bl => new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(bl); }));
+    const keys = Object.keys(j.img), got = await Promise.all(keys.map(k => url(j.img[k])));
+    return Object.assign({}, j.data, { img: Object.fromEntries(keys.map((k, i) => [k, got[i]])) });
+  } catch (e) { console.warn('wool: the example could not be read ready made', e); return null; }
+}
+const liveNote = data => { document.body.dataset.live = JSON.stringify({ cell: data.cells.map(c => c.id).join(' + '), shared_km: data.nums.shared, ms: data.bakeMs,
+  primary: data.primary.length, zones: data.zones.length, anchors: data.areas.reduce((s, a) => s + a.fixed.length, 0), roads: data.roads.length }); };
 async function start(pkg) {
   if (busy) return;
   if (window.__LIVE_DATA__) { try { sessionStorage.setItem(STORE, JSON.stringify(pkg)); } catch (e) {} location.reload(); return; }
   busy = true;
   try {
     window.__BD_PKG__ = pkg;
-    const bk = /[#&]rebake/.test(location.hash) ? null : BAKED.key(pkg);
-    let data = bk ? await BAKED.get(bk) : null;
-    if (data) { data = data.data; data.fromStore = true; say('Opening ' + data.cells.map(c => c.id).join(' + ') + ', baked before…'); await pause(); }
-    else { data = await bake(pkg); if (bk) await BAKED.put(bk, data); }
-    window.__LIVE_DATA__ = data;
     const h0 = window.__LC_HASH0__ !== undefined ? window.__LC_HASH0__ : location.hash;      // the address as it came, before the head added step=4
-    const auto = pkg === window.__PKG_INLINE__ && window.__LC_SAMPLE__ && !/[#&](step=|noauto|test|steps)/.test(h0);   // (24 Nov) the example runs its steps once
-    if (!/[#&]step=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search + '#step=4');
-    if (auto) history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/([#&])step=\d+/, '$1step=3'));
+    const example = pkg === window.__PKG_INLINE__ && !!window.__LC_SAMPLE__;
+    const whole = /[#&](run|test|bdtest|edittest|thr|bdall|bdfilm|bdpkg|steps)/.test(h0);     // the page's own tests want every step first
+    const bk = /[#&]rebake/.test(location.hash) || example ? null : BAKED.key(pkg);
+    let B = null;
+    if (example && !/[#&]nopre/.test(h0)) { const pre = await examplePre(pkg); if (pre) B = baker(pkg, pre); }
+    if (!B && bk) { const got = await BAKED.get(bk);
+      if (got) { got.data.fromStore = true; B = { data: got.data, upTo: async () => {}, done: new Set(STAGES), ms: {} };
+        say('Opening ' + got.data.cells.map(c => c.id).join(' + ') + ', baked before…'); await pause(); } }
+    if (!B) B = baker(pkg, null);
+    window.__WOOL_BAKER__ = B; window.__woolUpTo = n => B.upTo(n); window.__WOOL_GUARD__ = { bake: BAKE_HASH, pkg: fnv(JSON.stringify(pkg)) };
+    // the step it opens on: the example on step 1, still; cells from step 1 or a file on step 4, as before
+    const asked = /[#&]step=(\d+)/.exec(h0), st = asked ? +asked[1] : example ? 1 : 4;
+    if (!asked) history.replaceState(null, '', location.pathname + location.search + (/[#&]step=/.test(location.hash) ? location.hash.replace(/([#&])step=\d+/, '$1step=' + st) : '#step=' + st));
+    const first = whole ? 8 : Math.min(8, st <= 3 ? 1 : st <= 8 ? st : 8);
+    await B.upTo(first);
+    const data = window.__LIVE_DATA__ = B.data;
     const s = document.createElement('script');
     s.textContent = $('appSrc').textContent;
     document.body.appendChild(s);
     const n = $('liveCell'); if (n) n.textContent = data.cellLabels.map(l => l.name).join('   |   ') || data.pick;
     $('liveStart').style.display = 'none';
-    if (auto && window.__lcAuto) setTimeout(window.__lcAuto, 600);
-    document.body.dataset.live = JSON.stringify({ cell: data.cells.map(c => c.id).join(' + '), shared_km: data.nums.shared, ms: data.bakeMs, primary: data.primary.length, zones: data.zones.length,
-      anchors: data.areas.reduce((s, a) => s + a.fixed.length, 0), roads: data.roads.length });
+    liveNote(data);
+    if (example) { const demo = () => window.__lcDemo && window.__lcDemo();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demo); else demo(); }
+    // the rest is worked out behind, a moment later, for cells of your own: the example waits for its demo or a step
+    const rest = async () => { await B.upTo(8); liveNote(data); if (bk && !data.fromStore) await BAKED.put(bk, data); };
+    if (B.done.size === STAGES.length) liveNote(data); else if (!example) setTimeout(rest, 1200);
   } catch (e) {
     busy = false;
     say('Could not open the cell: ' + e.message);
@@ -4999,75 +5120,132 @@ else if (stored) start(JSON.parse(stored));
 if (window.opener) { try { window.opener.postMessage({ type: 'wool-ready' }, '*'); } catch (e) {} }
 })();
 </script>
-<script>/* (24 Nov 2026) the example plays itself once: opened on its own with no cell handed to it, the page walks the
-   example (station P2 and its two neighbours) through steps 3 to 9, relaxes the wool (10) and traces the roads to
-   their hierarchy (11 to 16), then stops there. Any button, slider or key of yours stops it and the page is yours.
-   Only the example plays; cells from step 1 or a file wait for Run as before. #noauto keeps the example still. */
-window.__lcAuto = function () {
-  if (typeof S === 'undefined' || typeof setStep !== 'function' || typeof relax !== 'function') return;
-  const A = window.__LC_AUTO__ = { on: true, step: 3, log: [], t0: performance.now() };
-  const ZH = window.__ZH || {}, RX = window.__ZH_RX || [];
-  Object.assign(ZH, { 'Example': '范例', 'Station P2 and its two neighbours': '车站 P2 与相邻两个单元', 'Your own cells →': '用我的单元 →',
-    'Stop': '停止', 'Running the steps on the example': '正在范例上运行各步', 
-    'Done · step 16, the road hierarchy': '已完成 · 第 16 步 道路分级', 'Stopped': '已停止',
-    'Change a setting and press Run, or bring your own cells from step 1.': '可以改参数后点「运行」，或从第 1 步带来你自己的单元。',
-    'The wool relaxing, live': '毛线正在实时松弛', 'Tracing the roads': '正在描出道路' });
-  RX.push([/^Step (\d+) of 16$/, '第 $1 / 16 步']);
+<script>/* (24 Nov 2026) the example opens on step 1, still. "▶ Demo" then works the method out on it step by step, in this
+   browser: each step is computed (the bar says how long it took), grows on the map from station P2 and holds a moment;
+   step 10 is the wool relaxing, live; 11 to 16 trace the roads to their hierarchy. Stop it any time; any button,
+   slider or key of yours stops it too, and a step clicked is worked out up to there. Only the example has the bar. */
+window.__lcDemo = function () {
+  if (typeof S === 'undefined' || typeof setStep !== 'function' || typeof relax !== 'function' || document.getElementById('lcAuto')) return;
+  const A = window.__LC_AUTO__ = { on: false, step: 1, log: [], state: 'idle' };
+  const SEQ = [2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 22, 23, 24, 25, 26];
+  const shown = k => (k > 20 ? k - 10 : k);
+  const zh = () => /^zh/i.test(document.documentElement.lang || '');
+  const t = (en, cn) => (zh() ? cn : en);
   const css = document.createElement('style');
   css.textContent = `#lcAuto{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:55;display:flex;align-items:center;gap:10px;
     max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 6px 6px 14px;border-radius:999px;background:rgba(22,22,24,.9);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);color:#ECECEC;
     font:13px/1.3 'DM Sans',system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.45)}
-  #lcAuto .dot{width:8px;height:8px;border-radius:50%;background:#E8A33D;flex:none;animation:lcAutoP 1.6s ease-in-out infinite}
-  #lcAuto.done .dot,#lcAuto.stopped .dot{animation:none;background:#8A8A8A}#lcAuto.done .dot{background:#E8A33D}
-  #lcAuto b{font-weight:600}#lcAuto .t{color:#A8A8A8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #lcAuto .bar{width:64px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden;flex:none}
-  #lcAuto .bar i{display:block;height:100%;width:0;background:#E8A33D;transition:width .5s}
-  #lcAuto button,#lcAuto a{font:inherit;font-size:12.5px;border-radius:999px;padding:6px 11px;cursor:pointer;text-decoration:none;white-space:nowrap;flex:none}
+  #lcAuto .dot{width:8px;height:8px;border-radius:50%;background:#8A8A8A;flex:none}
+  #lcAuto.play .dot{background:#5FF2FF;box-shadow:0 0 10px #5FF2FF;animation:lcAutoP 1.6s ease-in-out infinite}
+  #lcAuto.calc .dot{background:#E8A33D;box-shadow:0 0 10px #E8A33D}
+  #lcAuto b{font-weight:600}#lcAuto .t{color:#A8A8A8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-variant-numeric:tabular-nums}
+  #lcAuto .bar{width:64px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden;flex:none;display:none}
+  #lcAuto.play .bar{display:block}#lcAuto.play .w{display:none}
+  #lcAuto .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1FA9C9,#5FF2FF);transition:width .5s}
+  #lcAuto button,#lcAuto a{font:inherit;font-size:12.5px;border-radius:999px;padding:6px 12px;cursor:pointer;text-decoration:none;white-space:nowrap;flex:none}
+  #lcAuto .go{background:#5FF2FF;color:#001418;border:0;font-weight:600}
   #lcAuto .stop{background:transparent;border:1px solid rgba(255,255,255,.22);color:#ECECEC}
   #lcAuto a{background:#F2F2F2;color:#000;border:0}
-  #lcAuto.done .bar,#lcAuto.done .stop,#lcAuto.stopped .bar,#lcAuto.stopped .stop{display:none}
   @keyframes lcAutoP{50%{opacity:.35}}
-  @media (max-width:760px){#lcAuto{left:12px;transform:none;top:calc(66px + env(safe-area-inset-top));max-width:calc(100vw - 64px);font-size:12px;gap:8px}#lcAuto .bar{display:none}#lcAuto .w{display:none}}`;
+  #lcGrow{position:absolute;inset:0;pointer-events:none;z-index:2}
+  @media (max-width:760px){#lcAuto{left:12px;transform:none;top:calc(66px + env(safe-area-inset-top));max-width:calc(100vw - 64px);font-size:12px;gap:8px}#lcAuto .bar{display:none!important}#lcAuto .w{display:none}}`;
   document.head.appendChild(css);
-  const el = document.createElement('div'); el.id = 'lcAuto'; el.setAttribute('role', 'status');
-  el.innerHTML = '<span class="dot"></span><span><b>Example</b><span class="w"> · <span>Station P2 and its two neighbours</span></span></span>' +
-    '<span class="t"><span class="n">Step 3 of 16</span></span><span class="bar"><i></i></span>' +
-    '<button type="button" class="stop">Stop</button><a href="../loop-city-mould-growth/index.html">Your own cells →</a>';
+  const el = document.createElement('div'); el.id = 'lcAuto'; el.setAttribute('role', 'status'); el.setAttribute('translate', 'no');
+  el.innerHTML = '<span class="dot"></span><span><b class="ex"></b><span class="w"> · <span class="where"></span></span></span>' +
+    '<span class="t"></span><span class="bar"><i></i></span><button type="button" class="go"></button><button type="button" class="stop"></button><a href="../loop-city-mould-growth/index.html"></a>';
   document.body.appendChild(el);
-  if (window.__zhWalk) window.__zhWalk(el);
-  const $n = el.querySelector('.n'), $t = el.querySelector('.t'), $bar = el.querySelector('.bar i');
-  const say = (k, what) => { A.step = k; $n.textContent = 'Step ' + k + ' of 16'; $bar.style.width = Math.round((k - 2) / 14 * 100) + '%';
-    if (what !== undefined) { $t.title = what; } A.log.push([k, Math.round((performance.now() - A.t0) / 100) / 10]); };
-  const stop = (why) => { if (!A.on) return; A.on = false; A.why = why; document.removeEventListener('pointerdown', onUser, true);
-    document.removeEventListener('keydown', onKey, true); document.removeEventListener('input', onUser, true);
-    el.className = why === 'done' ? 'done' : 'stopped';
-    $t.textContent = why === 'done' ? 'Done · step 16, the road hierarchy' : 'Stopped'; $t.title = 'Change a setting and press Run, or bring your own cells from step 1.';
-    if (window.__zhWalk) window.__zhWalk(el);
+  const $t = el.querySelector('.t'), $bar = el.querySelector('.bar i'), $go = el.querySelector('.go'), $stop = el.querySelector('.stop');
+  let note = '';
+  const render = () => {
+    el.className = A.state === 'calc' ? 'play calc' : A.state === 'play' ? 'play' : A.state;
+    el.querySelector('.ex').textContent = t('Example', '范例');
+    el.querySelector('.where').textContent = t('Station P2 and its two neighbours', '车站 P2 与相邻两个单元');
+    el.querySelector('a').textContent = t('Your own cells →', '用我的单元 →');
+    const k = shown(A.step), of = t('Step ' + k + ' of 16', '第 ' + k + ' / 16 步');
+    $t.textContent = A.state === 'idle' ? t('Step 1 of 16 · press Demo to work out the rest', '第 1 / 16 步 · 点「演示」逐步生成')
+      : A.state === 'done' ? t('Done · step 16 · ', '已完成 · 第 16 步 · ') + t('worked out in ', '计算共 ') + secs(A.calc)
+      : A.state === 'stopped' ? t('Stopped · ', '已停止 · ') + of
+      : of + (note ? ' · ' + note : '');
+    $go.textContent = A.state === 'done' ? t('▶ Again', '▶ 再演示') : A.state === 'stopped' ? t('▶ Carry on', '▶ 继续') : t('▶ Demo', '▶ 演示');
+    $go.hidden = A.state === 'play' || A.state === 'calc'; $stop.hidden = !$go.hidden; $stop.textContent = t('Stop', '停止');
+    $bar.style.width = Math.round((shown(A.step) - 1) / 15 * 100) + '%';
   };
-  const onUser = e => { if (!A.on || el.contains(e.target) || (e.target.closest && e.target.closest('#langbar,.l2-icon'))) return;   // language and folding panels are not taking over
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  const say = (k, what) => { A.step = k; note = what || ''; render(); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));      // the bar painted before the work starts
+  const secs = ms => (ms < 100 ? (ms / 1000).toFixed(2) : (ms / 1000).toFixed(1)) + t(' s', ' 秒');
+  const until = async (ok, ms) => { const t0 = performance.now(); while (A.on && !ok()) { if (performance.now() - t0 > ms) throw new Error('timed out'); await wait(120); } };
+  const bdDone = () => typeof BD !== 'undefined' && !BD.busy && (BD.res === null || BD.key === JSON.stringify(bdParams()) + '|' + (S.relaxId || 0));
+  // the step grows on the map: the new picture opens out from station P2 over the last, a bright rim at its edge
+  let grow = null;
+  const snap = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; c.getContext('2d').drawImage(cv, 0, 0); return c; };
+  const reveal = (before, after, ms) => new Promise(done => {
+    const o = document.createElement('canvas'); o.id = 'lcGrow'; o.width = cv.width; o.height = cv.height;
+    o.style.cssText = 'position:absolute;left:' + cv.offsetLeft + 'px;top:' + cv.offsetTop + 'px;width:' + cv.clientWidth + 'px;height:' + cv.clientHeight + 'px;pointer-events:none;z-index:2';
+    cv.parentNode.appendChild(o);
+    const g = o.getContext('2d'), st = DATA.stations.find(q => q.id === DATA.pick) || DATA.stations[0];
+    const px = (st ? sx(st.x) : W / 2) * DPR, py = (st ? sy(st.y) : Hh / 2) * DPR;
+    const R = Math.max(Math.hypot(px, py), Math.hypot(o.width - px, py), Math.hypot(px, o.height - py), Math.hypot(o.width - px, o.height - py)) + 40;
+    const t0 = performance.now(), ease = u => 1 - Math.pow(1 - u, 2.2);
+    const end = () => { if (grow !== stopGrow) return; grow = null; o.remove(); done(); };
+    const stopGrow = end; grow = stopGrow;
+    const frame = () => { if (grow !== stopGrow) return;
+      const u = Math.min(1, (performance.now() - t0) / ms), r = R * ease(u);
+      g.globalCompositeOperation = 'source-over'; g.drawImage(before, 0, 0);
+      g.save(); g.beginPath(); g.arc(px, py, r, 0, 7); g.clip(); g.drawImage(after, 0, 0); g.restore();
+      const rim = g.createRadialGradient(px, py, Math.max(0, r - 26 * DPR), px, py, r);
+      rim.addColorStop(0, 'rgba(95,242,255,0)'); rim.addColorStop(1, 'rgba(95,242,255,' + (0.35 * (1 - u)).toFixed(3) + ')');
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = rim; g.beginPath(); g.arc(px, py, r, 0, 7); g.fill();
+      if (u < 1) requestAnimationFrame(frame); else end(); };
+    frame();
+  });
+  const stop = why => { if (!A.on) return; A.on = false; A.why = why; if (grow) grow(); A.state = why === 'done' ? 'done' : 'stopped'; note = ''; render(); };
+  const onUser = e => { if (!A.on || el.contains(e.target) || (e.target.closest && e.target.closest('#langbar,.l2-icon'))) return;
+    if (e.target === cv && grow) grow();                                   // a hand on the map: the step shows at once
     if (e.type === 'input' || (e.target.closest && e.target.closest('button,input,select,label,a,[data-step]'))) stop('user'); };
   const onKey = e => { if (A.on && !e.metaKey && !e.ctrlKey && !e.altKey && e.key !== 'Shift') stop('user'); };
   document.addEventListener('pointerdown', onUser, true); document.addEventListener('keydown', onKey, true); document.addEventListener('input', onUser, true);
-  el.querySelector('.stop').onclick = () => { stopRun(); stop('user'); };
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  const until = async (ok, ms) => { const t = performance.now(); while (A.on && !ok()) { if (performance.now() - t > ms) throw new Error('timed out'); await wait(250); } };
-  const bdDone = () => typeof BD !== 'undefined' && !BD.busy && (BD.res === null || BD.key === JSON.stringify(bdParams()) + '|' + (S.relaxId || 0));
-  (async () => {
+  $stop.onclick = () => { stopRun(); stop('user'); };
+  // one step: worked out (timed), drawn, grown from P2, held
+  const one = async k => {
+    const before = snap(), stage = k <= 3 ? 1 : k <= 8 ? k : 8;
+    const Bk = window.__WOOL_BAKER__;
+    if (Bk && !Bk.done.has(stage)) {
+      A.state = 'calc'; say(k, t('working it out…', '计算中…')); await frame();
+      const t0 = performance.now(); await window.__woolUpTo(stage); const ms = performance.now() - t0; A.calc += ms; A.log.push([shown(k), Math.round(ms)]);
+      if (!A.on) return; A.state = 'play'; say(k, t('computed in ', '计算 ') + secs(ms));
+    } else { A.state = 'play'; say(k, k > 20 ? '' : t('read', '读取')); }
+    if (k === 10) {
+      setStep(10, true); A.state = 'calc'; say(10, t('the wool relaxing, live', '毛线实时松弛中'));
+      const t0 = performance.now(); if (!S.relaxed) { relax(); await until(() => S.relaxed && !S.busy, 600000); }
+      const ms = performance.now() - t0; A.calc += ms; A.log.push([10, Math.round(ms)]); if (!A.on) return;
+      A.state = 'play'; say(10, t('relaxed in ', '松弛 ') + secs(ms)); await wait(700); return;
+    }
+    if (k > 20) {                                                          // the roads are traced the moment the step is set: say so first
+      A.state = 'calc'; say(k, t('tracing the roads…', '描出道路中…')); await frame();
+      const t0 = performance.now(); setStep(k, true); const work = !bdDone(); await until(bdDone, 600000);      // kept from a step before: read
+      const ms = performance.now() - t0; if (!A.on) return;
+      if (work) { A.calc += ms; A.log.push([shown(k), Math.round(ms)]); }
+      A.state = 'play'; say(k, work ? t('computed in ', '计算 ') + secs(ms) : t('read', '读取'));
+    } else setStep(k, true);
+    draw(); if (!A.on) return;
+    await reveal(before, snap(), 1000); if (!A.on) return;
+    await wait(400);
+  };
+  const play = async from => {
+    A.on = true; if (!from) { A.calc = 0; A.log = []; }
     try {
-      setStep(3); say(3); await wait(2200);
-      for (const k of [4, 5, 6, 7, 8, 9]) { if (!A.on) return; setStep(k); say(k); await wait(k === 8 || k === 9 ? 1800 : 1400); }
-      if (!A.on) return;
-      say(10, 'The wool relaxing, live'); relax();
-      await until(() => S.relaxed && !S.busy, 600000); if (!A.on) return;
-      await wait(900);
-      for (const k of [21, 22, 23, 24, 25, 26]) {
-        if (!A.on) return; setStep(k, true); say(k - 10, 'Tracing the roads');
-        await wait(300); await until(bdDone, 600000); if (!A.on) return; await wait(k === 26 ? 0 : 1500);
-      }
-      A.ms = Math.round(performance.now() - A.t0); stop('done');
+      if (from === 0 && S.step !== 1) { setStep(1, true); await wait(300); }
+      for (const k of SEQ.slice(from)) { if (!A.on) return; await one(k); A.at = SEQ.indexOf(k) + 1; }
+      if (A.on) { A.ms = A.calc; stop('done'); }
     } catch (err) { console.error(err); stop('error'); }
-  })();
+  };
+  $go.onclick = () => { const from = A.state === 'stopped' && S.step !== 1 ? Math.max(0, SEQ.indexOf(S.step) + 1) : 0;    // carry on after the step on show
+    if (from >= SEQ.length) return; A.state = 'play'; render(); play(from); };
+  render();
+  if (/[#&]demo\b/.test(location.hash)) $go.click();
 };
 </script>
 <script>
