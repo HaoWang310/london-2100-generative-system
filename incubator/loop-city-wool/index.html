@@ -2420,7 +2420,15 @@ function resize() {
   schedule();
 }
 let pending = false;
-function schedule() { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; draw(); }); } }
+// (24 Nov) while the wool relaxes the picture is redrawn at most every 80 ms, or twice as long as a drawing takes, so the
+// page leaves the workers the computer: the relaxing still shows, the result is the same and is drawn the moment it is done
+let drawMs = 0, drawAt = 0;
+function schedule() {
+  if (pending) return; pending = true;
+  const go = () => requestAnimationFrame(() => { pending = false; const t = performance.now(); draw(); drawAt = performance.now(); drawMs = drawAt - t; });
+  const wait = S.busy ? Math.max(80, 2 * drawMs) - (performance.now() - drawAt) : 0;
+  if (wait > 0) setTimeout(go, wait); else go();
+}
 
 // ---------------------------------------------------------------- drawing
 function path(c, p, closed) {
