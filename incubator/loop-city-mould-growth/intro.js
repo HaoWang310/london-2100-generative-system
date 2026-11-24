@@ -84,6 +84,52 @@
     return s;
   }
   function delay(e, d, o) { e.style.setProperty('--d', d.toFixed(2) + 's'); if (o !== undefined) e.style.setProperty('--o', o.toFixed(2) + 's'); return e; }
+  /* a radial's growth: GROW seconds from its London end to its far end, quick at first and easing off */
+  var GROW = 1.6, PIECE = 5;                         // seconds; the length of a piece, in frame units
+  var ease = function (u) { return 1 - Math.pow(1 - u, 1.35); }, easeInv = function (t) { return 1 - Math.pow(1 - t, 1 / 1.35); };
+  function track(r) {                               // the radial's points (from its London end) and lengths along it
+    if (r._pts) return r._pts;
+    var v = r.d.replace(/M/g, ' ').trim().split(/[\s,]+/).map(Number), P = [], L = [0];
+    for (var k = 0; k + 1 < v.length; k += 2) P.push([v[k], v[k + 1]]);
+    if (P.length > 1 && Math.hypot(P[P.length - 1][0] - r.a[0], P[P.length - 1][1] - r.a[1]) < Math.hypot(P[0][0] - r.a[0], P[0][1] - r.a[1])) P.reverse();
+    for (k = 1; k < P.length; k++) L.push(L[k - 1] + Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]));
+    return (r._pts = { P: P, L: L, tot: L[L.length - 1] });
+  }
+  function pointAt(T_, s) {                         // the point at length s along the track
+    var P = T_.P, L = T_.L, k = 1; while (k < L.length - 1 && L[k] < s) k++;
+    var u = (s - L[k - 1]) / Math.max(1e-9, L[k] - L[k - 1]); u = Math.max(0, Math.min(1, u));
+    return [P[k - 1][0] + (P[k][0] - P[k - 1][0]) * u, P[k - 1][1] + (P[k][1] - P[k - 1][1]) * u];
+  }
+  function timeAt(r, x, y) {                        // when the head passes the track's point nearest (x, y)
+    var T_ = track(r), b = 0, bd = Infinity;
+    T_.P.forEach(function (p, k) { var dd = (p[0] - x) * (p[0] - x) + (p[1] - y) * (p[1] - y); if (dd < bd) { bd = dd; b = k; } });
+    return r._t0 + GROW * ease(T_.L[b] / T_.tot);
+  }
+  function grow(G, r, i, width, dash, colour, t0, out) {   // G: { g: the close view's group, css: the heads' keyframes, dashed: the dotted pieces }
+    var T_ = track(r), n = Math.max(8, Math.min(80, Math.round(T_.tot / PIECE)));
+    for (var k = 0; k < n; k++) {
+      var s0 = T_.tot * k / n, s1 = T_.tot * (k + 1) / n + (dash ? 0 : 0.25), pts = [pointAt(T_, s0)];
+      for (var j = 0; j < T_.P.length; j++) if (T_.L[j] > s0 && T_.L[j] < s1) pts.push(T_.P[j]);
+      pts.push(pointAt(T_, Math.min(T_.tot, s1)));
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      pts.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
+      var pad = 1, piece = { box: [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad].map(function (v) { return +v.toFixed(2); }),
+        d: 'M' + pts.map(function (p) { return p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join(' ') };
+      var e = line(piece, 'lci-gp', width, dash, colour);
+      if (dash) { e.dataset.s = s0.toFixed(3); G.dashed.push(e); }
+      G.g.appendChild(delay(e, t0 + GROW * ease(k / n), out));
+    }
+    /* the head: a frame-sized box whose dot sits at its top left, moved in percent of the frame along the track */
+    var M = 32, kf = [];
+    for (var m = 0; m <= M; m++) {
+      var tau = m / M, p = pointAt(T_, T_.tot * easeInv(tau)), op = tau < 0.04 ? tau / 0.04 : tau > 0.88 ? (1 - tau) / 0.12 : 1;
+      kf.push((tau * 100).toFixed(2) + '% { transform:translate(' + pct(p[0], D.W) + ',' + pct(p[1], D.H) + '); opacity:' + op.toFixed(2) + '; }');
+    }
+    G.css.push('@keyframes lciHead' + i + ' { ' + kf.join(' ') + ' }');
+    var h = mk('div', 'lci-head' + (r.proposed ? ' lci-new' : '')); h.appendChild(mk('i'));
+    h.style.setProperty('--hn', 'lciHead' + i); h.style.setProperty('--hs', (1 / Z.k).toFixed(4));
+    G.g.appendChild(delay(h, t0));
+  }
   /* a point of the frame, where it is on the stage: as it is, or in the close view of scene 2 */
   var Z = D.zoom;
   function at(x, y, close) {
@@ -136,13 +182,17 @@
     /* the radials twice: drawn fine for the close view of scene 2 (a line inside the camera is enlarged with it), and
        at their own width once the camera is back out; the one hands over to the other as the camera arrives */
     var gRadZ = mk('div', 'lci-g lci-zr'), gRad = delay(mk('div', 'lci-g lci-dimB'), T[2] + 2.0);
+    /* 24 Nov 2026 · the close view's radials grow along their track, out of London: each is cut into short pieces that
+       light one after another (opacity only, so the browser keeps it moving while the page computes), with a bright
+       head running ahead of them on a path of keyframes (transform only); the stations light as the head passes */
+    var headCss = [], dashed = [], GR = { g: gRadZ, css: headCss, dashed: dashed };
     D.radials.forEach(function (r, i) {
       var w = r.proposed ? 1.8 : 1.6, dash = r.proposed ? '1.5 5' : '', c = r.proposed ? NEW : '';
-      var z = line(r, 'lci-grow', w * 1.6 / Z.k, dash ? (1.5 * 1.6 / Z.k).toFixed(2) + ' ' + (5 * 1.6 / Z.k).toFixed(2) : '', c);
-      z.style.transformOrigin = pct(r.a[0] - r.box[0], r.box[2]) + ' ' + pct(r.a[1] - r.box[1], r.box[3]);   // grown out of its London end
-      gRadZ.appendChild(delay(z, T[1] + 1.0 + i * 0.35, T[2] + 1.2));
+      r._t0 = T[1] + 1.0 + i * 0.35;
+      grow(GR, r, i, w * 1.6 / Z.k, dash ? (1.5 * 1.6 / Z.k).toFixed(2) + ' ' + (5 * 1.6 / Z.k).toFixed(2) : '', c, r._t0, T[2] + 1.2);
       gRad.appendChild(delay(line(r, 'lci-seg', w, dash, c), T[2] + 1.0));
     });
+    if (headCss.length) { var hs = document.createElement('style'); hs.textContent = headCss.join('\n'); box.appendChild(hs); }
     var gHigh = delay(mk('div', 'lci-g lci-dimB'), T[3] + 0.1);
     D.highSpeed.forEach(function (p, i) { gHigh.appendChild(delay(line(p, 'lci-seg', 1.5, '7 5'), T[2] + 2.0 + i * 0.4)); });
     var gOrb = mk('div', 'lci-g');
@@ -163,16 +213,15 @@
     /* the labels, over the camera and not moved by it: the words stay their size in the close view */
     var gLab = mk('div', 'lci-g lci-labs'), labs = [];
     D.radials.forEach(function (r, i) {
-      var t = T[1] + 1.2 + i * 0.35;
+      var t = T[1] + 1.0 + i * 0.35;
       var end = place(mk('div', 'lci-end'), at(r.a[0], r.a[1], true)); end.appendChild(mk('b'));
       gLab.appendChild(delay(end, t, T[2] - 0.4));
       /* the line's other stations, where the close view shows them: they light up one after another outwards from
          London once the line has grown (a wave down the line), and go out the other way, outermost first, before the
          camera pulls back */
       var vis = r.stops.filter(function (st) { var q = at(st.x, st.y, true); return q[0] >= 4 && q[1] >= 4 && q[0] <= D.W - 4 && q[1] <= D.H - 4; });
-      var grown = T[1] + 1.0 + i * 0.35 + 1.1;
       vis.forEach(function (st, k) {
-        st._t = grown + k * 0.06; st._o = T[2] - 0.45 - (vis.length - 1 - k) * 0.03;
+        st._t = timeAt(r, st.x, st.y) + 0.03; st._o = T[2] - 0.45 - (vis.length - 1 - k) * 0.03;
         var d = place(mk('div', 'lci-stop' + (st.key ? ' lci-x' : '') + (r.proposed ? ' lci-new' : '')), at(st.x, st.y, true));
         if (st.key) d.appendChild(mk('b'));
         gLab.appendChild(delay(d, st._t, st._o));
@@ -181,7 +230,7 @@
       var side = Math.abs(dx) > 0.8 ? 'd' : Math.abs(dy) > 0.8 ? 'r' : (dx < 0 ? 'l' : 'r');
       var e = label(at(r.lab[0], r.lab[1], true), side, 'lci-lr' + (r.proposed ? ' lci-new' : '')); e.dataset.group = 'r';
       var nm = e.appendChild(mk('b')), gl = e.appendChild(mk('i')), lo = e.appendChild(mk('span')), tm = r.terminus ? e.appendChild(mk('em')) : null;
-      gLab.appendChild(delay(e, t + 0.5, T[2] - 0.4));
+      gLab.appendChild(delay(e, t + 0.7, T[2] - 0.4));
       labs.push([e, function (z) {
         var L = r.line, isNew = L.status === 'proposed', building = L.status === 'building';
         nm.textContent = isNew ? (z ? '新线' : 'New line') : L.en;
@@ -265,6 +314,8 @@
       stage.style.width = w + 'px'; stage.style.height = h + 'px';
       stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (r.height - h) / 2 + 'px';
       box.classList.toggle('lci-small', w < 560);
+      var per = (1.5 + 5) * 1.6 / Z.k, sc = w / D.W;   // a dotted piece's dash starts where the one before it left off
+      dashed.forEach(function (e) { var q = e.firstChild; if (q) q.setAttribute('stroke-dashoffset', ((+e.dataset.s * sc) % per).toFixed(3)); });
       turn();
     }
     /* each label on the side of its point it asks for, unless it would leave the frame or cover a label shown with it:
