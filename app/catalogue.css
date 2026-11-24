@@ -168,8 +168,10 @@
 .cs-inner { max-width: 620px; margin: 0 auto; }
 .cs-kicker { font: 500 11px/1.5 var(--mono); letter-spacing: .1em; color: var(--warn); }
 .cat-story h2 { margin: 10px 0 20px; font: 700 clamp(25px, 7.4vw, 40px)/1.18 var(--font); letter-spacing: -.02em; }
-.cat-story figure { margin: 0 0 22px; height: clamp(170px, 30vh, 360px); border-radius: 16px; overflow: hidden; border: 1px solid var(--hairline-strong); background: var(--surface-1); }
-.cat-story figure img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(.82) contrast(1.05); }
+/* 24 Nov 2026: the whole cover on every page, at its own 3 : 2, neither cropped nor dimmed: the layered covers carry
+   their labels at the right edge, which a zoom or a crop cut off */
+.cat-story figure { margin: 0 0 22px; aspect-ratio: 3 / 2; border-radius: 16px; overflow: hidden; border: 1px solid var(--hairline-strong); background: var(--surface-1); }
+.cat-story figure img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .cat-story p, .cat-story li { margin: 0; font-size: 15px; line-height: 1.75; color: var(--text-2); }
 .cat-story p + p, .cat-story ul + p, .cat-story p + ul { margin-top: 10px; }
 .cat-story ul { margin: 0; padding: 0; list-style: none; }
@@ -177,6 +179,12 @@
 .cat-story li + li { margin-top: 6px; }
 .cat-story li::before { content: ""; position: absolute; left: 0; top: .88em; width: 6px; height: 1px; background: var(--text-3); }
 .cat-story strong { color: var(--text); font-weight: 600; }
+/* more of the page below the bottom bar: a fade over its last lines (cs-more, set by catalogue.js) */
+.cat-story { --cs-fade: 0; }
+.cat-story.cs-more { --cs-fade: 1; }
+.cs-foot { position: relative; }
+.cs-foot::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 56px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), #000); opacity: var(--cs-fade); transition: opacity .25s; }
 .cs-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hairline); }
 .cs-foot button { height: 40px; padding: 0 12px; border: 0; border-radius: 12px; background: none; color: var(--text-2); font: 500 12px var(--mono); letter-spacing: .06em; cursor: pointer; }
 .cs-foot button:disabled { opacity: .3; cursor: default; }

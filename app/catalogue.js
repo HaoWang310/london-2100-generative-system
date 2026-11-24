@@ -69,23 +69,23 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
     panel.style.top = `${Math.round(Math.max(16, Math.min(H - ph - 16, r.top)))}px`;
   }
   // A finger (the ⓘ): the introduction as pages, one section per screen — a progress bar along the top, swipe or
-  // ← / → to turn, × to close; on the last page "next" becomes "open the app". Each page shows the cover, framed a
-  // little differently, under the section's lead (its large heading; the section name when there is none).
+  // ← / → to turn, × to close; on the last page "next" becomes "open the app". Each page shows the whole cover under the
+  // section's lead (its large heading; the section name when there is none). 24 Nov 2026: whole, not framed differently
+  // on each page, since the layered covers carry their labels at the edge; a fade over the bottom bar says the page
+  // goes on below.
   function openStory(item, cardEl, num) {
     closePanel();
     const secs = item.detail.sections, n = secs.length;
-    const frames = [[1, 50, 50], [1.35, 28, 45], [1.35, 72, 55], [1.6, 50, 35]];
     let at = 0;
     const bars = secs.map(() => h('i'));
     const count = h('span', { class: 'cs-count' });
     const prev = h('button', { type: 'button', class: 'cs-prev', onclick: () => go(at - 1) }, '← ' + t('cat.story.prev'));
     const next = h('button', { type: 'button', class: 'cs-next', onclick: () => at < n - 1 ? go(at + 1) : (closePanel(), cardEl.click()) });
     const track = h('div', { class: 'cs-track' }, secs.map((sec, k) => {
-      const [z, x, y] = frames[k % frames.length];
       return h('section', { class: 'cs-page', 'aria-label': pick(sec.h) }, h('div', { class: 'cs-inner' },
         h('div', { class: 'cs-kicker' }, `${num} · ${pick(item.title).split(' · ')[0]} / ${String(k + 1).padStart(2, '0')} ${pick(sec.h)}`),
         h('h2', {}, pick(sec.lead) || pick(sec.h)),
-        item.cover ? h('figure', {}, h('img', { src: pick(item.cover), alt: '', style: `transform:scale(${z});transform-origin:${x}% ${y}%` })) : null,
+        item.cover ? h('figure', {}, h('img', { src: pick(item.cover), alt: '', decoding: 'async' })) : null,
         (sec.body || []).map(b => b.list ? h('ul', {}, b.list.map(li => h('li', {}, rich(pick(li))))) : h('p', {}, rich(pick(b.p))))));
     }));
     const show = k => {
@@ -95,9 +95,17 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
       prev.disabled = k === 0;
       next.textContent = k < n - 1 ? t('cat.story.next') + ' →' : t('cat.story.open') + ' →';
       next.classList.toggle('is-open', k === n - 1);
+      more();
+    };
+    // is there more of the page in view below the bottom bar?
+    const more = () => {
+      const pg = track.children[at];
+      if (!panel?.classList.contains('cat-story')) return;
+      panel.classList.toggle('cs-more', Boolean(pg) && pg.scrollTop + pg.clientHeight < pg.scrollHeight - 8);
     };
     const go = k => { k = Math.max(0, Math.min(n - 1, k)); track.scrollTo({ left: k * track.clientWidth, behavior: 'smooth' }); show(k); };
     let tick = 0;
+    for (const pg of track.children) pg.addEventListener('scroll', () => { if (pg === track.children[at]) more(); }, { passive: true });
     track.addEventListener('scroll', () => { cancelAnimationFrame(tick); tick = requestAnimationFrame(() => { const k = Math.round(track.scrollLeft / Math.max(1, track.clientWidth)); if (k !== at) show(k); }); }, { passive: true });
     panel = h('div', { class: 'cat-story', role: 'dialog', 'aria-modal': 'true', 'aria-label': pick(item.title) },
       h('div', { class: 'cs-top' }, h('div', { class: 'cs-bars' }, bars),
@@ -107,7 +115,9 @@ export function createCatalogue(root, { onOpenWorkspace, onOpenApp } = {}) {
     panel.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(at + 1); if (e.key === 'ArrowLeft') go(at - 1); });
     document.body.appendChild(panel); panelFor = cardEl; root.classList.add('story-open');   // top level, as above
     show(0);
-    requestAnimationFrame(() => { panel?.classList.add('is-in'); panel?.querySelector('.cs-close')?.focus({ preventScroll: true }); });
+    for (const im of panel.querySelectorAll('figure img')) im.addEventListener('load', more, { once: true });   // the cover's height changes what fits
+    if (typeof ResizeObserver === 'function') new ResizeObserver(more).observe(track);   // gone with the story
+    requestAnimationFrame(() => { more(); panel?.classList.add('is-in'); panel?.querySelector('.cs-close')?.focus({ preventScroll: true }); });
     document.addEventListener('keydown', onKey);
   }
   function hideSoon() { clearTimeout(hideTimer); hideTimer = setTimeout(closePanel, 180); }
