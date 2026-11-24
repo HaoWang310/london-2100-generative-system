@@ -19,6 +19,96 @@
   var root = document.documentElement;
   function zh() { return /^zh/i.test(root.lang || '') || /^zh/i.test((document.body && document.body.lang) || ''); }
   function mk(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; e.setAttribute('translate', 'no'); return e; }
+  /* The sheet follows the finger (24 Nov 2026), as the sheets of the iPhone's own apps do. A finger can take it by the
+     handle or by the whole head (the name and the status line; the head's own buttons stay buttons). While it moves the
+     sheet's height is the finger's, with the panel's contents shown underneath; on release it settles, open or folded,
+     by the way it was flicked or, when it was let go slowly, by how far it was pulled (a quarter of the way is enough). A tap on the handle or the head opens or
+     folds it, as before, and so does + / –; both glide. Everything is set on the elements themselves, so an app with a
+     sheet of its own (Loop City step 1) can use it too:
+
+       L2Phone.drag({ sheet, body, grips: [elements], isOpen: () => bool, set: open => {…} })   →   { to(open) }
+
+     body is the part that shows only when the sheet is open; set(open) is the app's own open / fold (its classes, its
+     labels). The open sheet stands as high as its contents need, at most 72 % of the screen. */
+  function drag(o) {
+    var sheet = o.sheet, body = o.body, grips = (o.grips || []).filter(Boolean), d = null, timer = 0, ends = null;
+    var calm = false; try { calm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { /* older browsers */ }
+    if (!sheet || !body) return null;
+    function screenH() { return (window.visualViewport && window.visualViewport.height) || window.innerHeight; }
+    function hgt(v) {
+      if (v == null) { sheet.style.removeProperty('height'); sheet.style.removeProperty('max-height'); return; }
+      sheet.style.setProperty('height', Math.round(v) + 'px', 'important'); sheet.style.setProperty('max-height', 'none', 'important');
+    }
+    function showBody(v) { if (v) body.style.setProperty('display', 'block', 'important'); else body.style.removeProperty('display'); }
+    function glide(v) { sheet.style.setProperty('transition', v ? 'height .32s cubic-bezier(.2,.8,.2,1)' : 'none', 'important'); }
+    function now() { return sheet.getBoundingClientRect().height; }
+    /* call with the sheet's height fixed and its contents shown: the folded height, and the open one */
+    function folded() { return now() - body.getBoundingClientRect().height; }
+    function opened(f) { return Math.max(f, Math.min(screenH() * 0.72, f + body.scrollHeight)); }
+    function finish() {
+      clearTimeout(timer); timer = 0; if (ends) { sheet.removeEventListener('transitionend', ends); ends = null; }
+      sheet.style.removeProperty('transition'); hgt(null); showBody(false);
+    }
+    /* to(open): glide from wherever the sheet stands to open or folded */
+    function to(open) {
+      if (d) return;
+      var from = now();
+      finish(); hgt(from); showBody(true);
+      var f = folded(), target = open ? opened(f) : f;
+      o.set(!!open);                                     // the app's own state first: its classes, its labels
+      if (calm || Math.abs(target - from) < 2) { finish(); return; }
+      glide(false); void sheet.offsetHeight;
+      glide(true); hgt(target);
+      ends = function (e) { if (e.target === sheet && e.propertyName === 'height') finish(); };
+      sheet.addEventListener('transitionend', ends);
+      timer = setTimeout(finish, 420);                   // in case the transition never reports its end
+    }
+    function down(ev) {
+      if (d || (ev.button != null && ev.button > 0)) return;
+      var b = ev.target.closest && ev.target.closest('button, a, input, select, textarea, label, [role="button"], [role="tab"]');
+      if (b && grips.indexOf(b) < 0) return;             // the head's own buttons (+ / –) are not handles
+      d = { id: ev.pointerId, grip: ev.currentTarget, y0: ev.clientY, y: ev.clientY, t: performance.now(), v: 0, moved: false };
+      try { d.grip.setPointerCapture(ev.pointerId); } catch (e) { /* older browsers */ }
+    }
+    function move(ev) {
+      if (!d || ev.pointerId !== d.id) return;
+      var dy = ev.clientY - d.y0;
+      if (!d.moved) {
+        if (Math.abs(dy) < 6) return;
+        d.moved = true; d.h0 = now();
+        finish(); hgt(d.h0); showBody(true); glide(false);
+        d.f = folded(); d.max = opened(d.f);
+      }
+      var h = d.h0 - dy;
+      if (h > d.max) h = d.max + (h - d.max) * 0.25;     // a little give past either end, as on the iPhone
+      if (h < d.f) h = Math.max(d.f - 40, d.f - (d.f - h) * 0.25);
+      hgt(h);
+      var t = performance.now(), dt = t - d.t;
+      if (dt > 0) d.v = 0.7 * ((ev.clientY - d.y) / dt) + 0.3 * d.v;   // px per ms, downward positive
+      d.y = ev.clientY; d.t = t;
+      ev.preventDefault();
+    }
+    function up(ev) {
+      if (!d || ev.pointerId !== d.id) return;
+      var g = d; d = null;
+      try { g.grip.releasePointerCapture(ev.pointerId); } catch (e) { /* already released */ }
+      if (!g.moved) { if (ev.type === 'pointerup') to(!o.isOpen()); return; }
+      if (performance.now() - g.t > 120) g.v = 0;        // held still before letting go: no flick
+      /* let go slowly: a quarter of the way in the direction it was pulled is enough to go there */
+      var span = Math.max(1, g.max - g.f), was = o.isOpen(), cur = now();
+      var open = g.v < -0.35 ? true : g.v > 0.35 ? false : was ? cur > g.max - span * 0.25 : cur > g.f + span * 0.25;
+      to(open);
+    }
+    grips.forEach(function (g) {
+      g.style.touchAction = 'none'; g.style.cursor = 'grab';
+      g.addEventListener('pointerdown', down);
+      g.addEventListener('pointermove', move);
+      g.addEventListener('pointerup', up);
+      g.addEventListener('pointercancel', up);
+    });
+    return { to: to };
+  }
+
   function init(o) {
     if (!root.classList.contains('l2phone') || !o || !o.sheet) return null;
     var sheet = o.sheet, isZh = o.zh || zh;
@@ -75,19 +165,12 @@
       if (name.textContent !== n) name.textContent = n;
       if (status.textContent !== s) status.textContent = s;
     }
-    fold.onclick = function () { open(!root.classList.contains('l2ph-open')); };
-    var drag = null;
-    handle.addEventListener('pointerdown', function (ev) { drag = { id: ev.pointerId, y: ev.clientY }; try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* older browsers */ } });
-    handle.addEventListener('pointerup', function (ev) {
-      if (!drag || ev.pointerId !== drag.id) return;
-      var dy = ev.clientY - drag.y; drag = null;
-      if (Math.abs(dy) < 8) open(!root.classList.contains('l2ph-open'));        // a tap
-      else open(dy < 0);                                                         // dragged up: open; down: fold
-    });
-    handle.addEventListener('pointercancel', function () { drag = null; });
+    /* the handle and the whole head take the finger; the sheet follows it (drag above) */
+    var pull = drag({ sheet: sheet, body: body, grips: [handle, head], isOpen: function () { return root.classList.contains('l2ph-open'); }, set: open });
+    fold.onclick = function () { var v = !root.classList.contains('l2ph-open'); if (pull) pull.to(v); else open(v); };
     open(false); showDisplay(false);
     setInterval(label, 500);
     return { open: open, display: showDisplay, body: body, quick: quick, head: head };
   }
-  window.L2Phone = { is: function () { return root.classList.contains('l2phone'); }, init: init };
+  window.L2Phone = { is: function () { return root.classList.contains('l2phone'); }, init: init, drag: drag };
 })();

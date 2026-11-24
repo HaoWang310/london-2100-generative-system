@@ -734,14 +734,22 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
     if (window.__TS_INSETS) window.__TS_INSETS(); };
   const handle = document.createElement('button'); handle.type = 'button'; handle.className = 'sheetHandle'; handle.setAttribute('aria-label', 'Show or hide the control panel'); p.prepend(handle);
   let drag = null;
-  handle.addEventListener('pointerdown', e => { drag = { id: e.pointerId, y: e.clientY, h: p.getBoundingClientRect().height, moved: false }; handle.setPointerCapture(e.pointerId); });
-  handle.addEventListener('pointermove', e => { if (!drag || e.pointerId !== drag.id) return; const dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dy) < 6) return;
+  /* 24 Nov 2026: the whole head (the name, the site line) takes the finger too, as in the other apps; its buttons stay buttons */
+  const grips = [handle, p.querySelector('.ts-head')].filter(Boolean);
+  const down = e => { if (drag) return; const btn = e.target.closest('button, a, input, select, label, [role="button"]'); if (btn && btn !== handle) return;
+    drag = { id: e.pointerId, y: e.clientY, h: p.getBoundingClientRect().height, moved: false, g: e.currentTarget }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) {} };
+  const mv = e => { if (!drag || e.pointerId !== drag.id) return; const dy = e.clientY - drag.y; if (!drag.moved && Math.abs(dy) < 6) return;
     if (!drag.moved){ drag.moved = true; p.classList.remove('collapsed'); p.classList.add('sheetDragging'); }
-    p.style.height = Math.max(72, Math.min(FULL(), drag.h - dy)) + 'px'; });
+    p.style.height = Math.max(72, Math.min(FULL(), drag.h - dy)) + 'px';
+    const t = performance.now(); if (drag.t && t > drag.t) drag.v = 0.7 * (e.clientY - drag.ly) / (t - drag.t) + 0.3 * (drag.v || 0); drag.t = t; drag.ly = e.clientY; };
   const end = e => { if (!drag || e.pointerId !== drag.id) return; const d = drag; drag = null; p.classList.remove('sheetDragging');
     if (!d.moved){ set(p.classList.contains('collapsed') ? 'half' : 'folded'); return; }
-    const h = p.getBoundingClientRect().height; set(h < HALF() * 0.55 ? 'folded' : h < (HALF() + FULL()) / 2 ? 'half' : 'full'); };
-  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+    const h = p.getBoundingClientRect().height, v = performance.now() - (d.t || 0) > 120 ? 0 : (d.v || 0);
+    /* a flick (24 Nov 2026) goes one step the way it was thrown; let go slowly, the nearest step */
+    const order = ['folded', 'half', 'full'], near = h < HALF() * 0.55 ? 'folded' : h < (HALF() + FULL()) / 2 ? 'half' : 'full';
+    const from = d.h < HALF() * 0.55 ? 0 : d.h < (HALF() + FULL()) / 2 ? 1 : 2;
+    set(v < -0.35 ? order[Math.min(2, from + 1)] : v > 0.35 ? order[Math.max(0, from - 1)] : near); };
+  for (const g of grips){ g.style.touchAction = 'none'; g.addEventListener('pointerdown', down); g.addEventListener('pointermove', mv); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end); }
   if (b) b.onclick = () => set(p.classList.contains('collapsed') ? 'half' : 'folded');
   set('folded');
   addEventListener('resize', () => set(p.dataset.sheet || 'folded'));

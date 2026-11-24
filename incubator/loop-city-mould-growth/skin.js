@@ -500,17 +500,14 @@
       if (fold) { fold.textContent = open ? '–' : '+'; }
       tips();
     }
-    if (fold) fold.onclick = function () { sheet(!root.classList.contains('lcph-open')); };
-    var drag = null;
-    handle.addEventListener('pointerdown', function (ev) { drag = { id: ev.pointerId, y: ev.clientY }; try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* older browsers */ } });
-    function dragEnd(ev) {
-      if (!drag || ev.pointerId !== drag.id) return;
-      var dy = ev.clientY - drag.y; drag = null;
-      if (Math.abs(dy) < 8) sheet(!root.classList.contains('lcph-open'));      // a tap
-      else sheet(dy < 0);                                                       // dragged up: open; down: fold
-    }
-    handle.addEventListener('pointerup', dragEnd);
-    handle.addEventListener('pointercancel', function () { drag = null; });
+    /* 24 Nov 2026: the sheet follows the finger, by the handle or the whole head, and glides open or folded (the one
+       sheet of the other apps, ../../shared/ui/phone.js L2Phone.drag); a tap, and + / –, open or fold it as before */
+    var pull = window.L2Phone && window.L2Phone.drag ? window.L2Phone.drag({
+      sheet: PL, body: $('panelScrollL'), grips: [handle, hl],
+      isOpen: function () { return root.classList.contains('lcph-open'); }, set: sheet
+    }) : null;
+    if (fold) fold.onclick = function () { var v = !root.classList.contains('lcph-open'); if (pull) pull.to(v); else sheet(v); };
+    if (!pull) handle.onclick = function () { sheet(!root.classList.contains('lcph-open')); };
 
     /* Display */
     /* the language switch (24 Nov 2026): at the top right, level with Display, as in the other apps

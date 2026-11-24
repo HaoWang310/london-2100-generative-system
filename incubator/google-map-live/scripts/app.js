@@ -2870,21 +2870,27 @@ if(IS_PHONE){
   handle.type='button';handle.className='sheetHandle';handle.setAttribute('aria-label','Show or hide the control panel');
   panel.prepend(handle);
   let drag=null;
-  handle.addEventListener('pointerdown',event=>{
-    drag={id:event.pointerId,y:event.clientY,h:panel.getBoundingClientRect().height,moved:false};handle.setPointerCapture(event.pointerId);
-  });
-  handle.addEventListener('pointermove',event=>{
+  /* 24 Nov 2026: the whole head (the title and its lines) takes the finger too, as in the other apps; its buttons stay buttons */
+  const grips=[handle,panel.querySelector(':scope > .head')].filter(Boolean);
+  const down=event=>{
+    if(drag)return;const btn=event.target.closest('button,a,input,select,label,[role="button"],[role="group"]');if(btn&&btn!==handle)return;
+    drag={id:event.pointerId,y:event.clientY,h:panel.getBoundingClientRect().height,moved:false};try{event.currentTarget.setPointerCapture(event.pointerId);}catch(e){}
+  };
+  const mv=event=>{
     if(!drag||event.pointerId!==drag.id)return;const dy=event.clientY-drag.y;if(!drag.moved&&Math.abs(dy)<6)return;
     if(!drag.moved){drag.moved=true;panel.classList.remove('collapsed');panel.classList.add('sheetDragging');}
     panel.style.height=Math.max(72,Math.min(SHEET_FULL(),drag.h-dy))+'px';
-  });
+    const t=performance.now();if(drag.t&&t>drag.t)drag.v=0.7*(event.clientY-drag.ly)/(t-drag.t)+0.3*(drag.v||0);drag.t=t;drag.ly=event.clientY;
+  };
   const end=event=>{
     if(!drag||event.pointerId!==drag.id)return;const d=drag;drag=null;panel.classList.remove('sheetDragging');
     if(!d.moved){setSheet(panel.classList.contains('collapsed')?'half':'folded');return;}
-    const h=panel.getBoundingClientRect().height;
-    setSheet(h<SHEET_HALF()*0.55?'folded':h<(SHEET_HALF()+SHEET_FULL())/2?'half':'full');
+    const h=panel.getBoundingClientRect().height,v=performance.now()-(d.t||0)>120?0:(d.v||0);
+    /* a flick (24 Nov 2026) goes one step the way it was thrown; let go slowly, the nearest step */
+    const order=['folded','half','full'],step=x=>x<SHEET_HALF()*0.55?0:x<(SHEET_HALF()+SHEET_FULL())/2?1:2,from=step(d.h);
+    setSheet(v<-0.35?order[Math.min(2,from+1)]:v>0.35?order[Math.max(0,from-1)]:order[step(h)]);
   };
-  handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  for(const g of grips){g.style.touchAction='none';g.addEventListener('pointerdown',down);g.addEventListener('pointermove',mv);g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);}
   setSheet('folded');   // the map first
   window.addEventListener('resize',()=>{if(panel.dataset.sheet&&panel.dataset.sheet!=='folded')setSheet(panel.dataset.sheet);});
 }
