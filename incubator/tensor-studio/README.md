@@ -1,5 +1,7 @@
 # Tensor Studio · 张量场工作室
 
+> **打开时不再闪白 · No white flash on opening (24 Nov 2026).** 打开页面时原来依次出现白底、黑底、一张默认的彩色图，最后才是「第 1 步」（模拟手机上白底要停十秒左右）：深色主题由引擎设置，而引擎要等场地数据读完才启动；流程模式的脚本又晚一步到，把画面重置一次。现在页面第一帧就是该有的颜色（单独打开：上次选的主题，第一次为深色；从伦敦地图打开：跟地图，底是透明的），画布中间显示「正在载入场地…」，等引擎和流程模式都画好了才揭开；电脑上两块面板一并等待，手机上收起的底部卡和「显示」按钮不变。三个脚本改为和场地数据同时下载，执行顺序不变。只改了 `index.html`，`app.js`、`scripts/` 和算法都没动：改动前后第 1 步的画面逐像素相同，播放全流程后的路网相同（160 条道路、236 个路口）。载入失败时，提示显示在屏幕中间。
+
 > **手机界面 · The phone (23 Nov 2026).** 手机布局（v8.47 起本 app 自带）与其他 app 对齐：「显示」按钮从右上角移到左上角并带同一个图标，显示面板整宽、只占上半屏（`skin.css`）；打开底部的卡会收起显示面板，打开显示面板会收起卡（`phone.js`）。引擎和电脑上的界面不变。只在手机模拟里验证过。 The app's own phone layout (since v8.47) now matches the other apps: the Display button is at the top left with the same mark, the display panel is full width in the upper half (`skin.css`), and opening the sheet folds the display panel and the other way round (`phone.js`). Checked in phone emulation only.
 
 > **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`。只改颜色、字体和圆角，控件位置和 `app.js` 都没动。颜色只留给图例（显示面板里的色点、配色、图例）和警告。浅色外观只改地图，面板保持黑色。网址加 `#noskin` 显示原来的界面。

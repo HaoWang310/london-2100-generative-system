@@ -1,6 +1,39 @@
 <!doctype html>
 <html lang="zh-CN" translate="no"><head><meta charset="utf-8"><meta name="google" content="notranslate"><title>Tensor Studio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// (24 Nov 2026) the page's colours before its first paint. The theme (and, from the London map, the see-through ground)
+// used to be set by the engine, which starts only after the site's data has been read: until then the page stood white,
+// several seconds on a phone, with the dark panels already on it. The same rule as app.js boot(): from the map, the
+// map's style; on its own, the theme last chosen, dark the first time. html.ts-boot keeps the plan covered by a
+// "loading" mark until the engine and the process mode have both drawn (it is taken off in the start script below).
+(function(){ var r = document.documentElement, host = null, t = null, stored = null, sys = null;
+  try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) {}
+  var fromMap = !!(host && typeof host.view === 'function');
+  try { t = localStorage.getItem('ts7-theme'); stored = localStorage.getItem('tensorStudio.uiLanguage'); } catch (e) {}
+  try { var f = (navigator.languages && navigator.languages[0]) || navigator.language || ''; sys = f ? (/^zh\b/i.test(f) ? 'zh' : 'en') : null; } catch (e) {}
+  r.setAttribute('data-theme', fromMap ? (host.mapTheme === 'dark' ? 'dark' : 'light') : (t === 'light' ? 'light' : 'dark'));
+  if (fromMap) r.setAttribute('data-bm', 'map');
+  r.classList.add('ts-boot');
+  window.__TS_BOOT = { lang: (host && host.lang) || stored || sys || 'zh', fromMap: fromMap };
+})();
+</script>
+<style>
+html.ts-boot #view canvas{visibility:hidden}
+html.ts-boot #hud{display:none!important}
+/* on a computer the two panels wait as well: they stood with the free mode's controls and were then refilled with the
+   process mode's steps. The phone's folded sheet and its Display button do not change, so they stay. */
+html.ts-boot:not(.phoneUi) #panel,html.ts-boot:not(.phoneUi) #displayPanel,html.ts-boot:not(.phoneUi) #tsResize{visibility:hidden}
+#tsBoot{display:none}
+html.ts-boot #tsBoot{display:flex;position:fixed;z-index:10;left:50%;top:50%;transform:translate(-50%,-50%);align-items:center;gap:10px;max-width:calc(100% - 48px);padding:10px 16px;border-radius:14px;
+ background:rgba(14,14,16,.9);border:1px solid #2f2f34;color:#a1a1a6;font:500 13px/1.3 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;white-space:nowrap;pointer-events:none}
+#tsBoot i{flex:none;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,.22);border-top-color:#f5f5f7;animation:tsBootSpin .9s linear infinite}
+@keyframes tsBootSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#tsBoot i{animation:none}}
+/* it could not start: the message itself, in the middle, where the phone's sheet does not cover it */
+html.ts-boot.ts-boot-fail #tsBoot{display:none}
+html.ts-boot.ts-boot-fail #hud{display:block!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important}
+</style>
 <style>:root{
  --shell-height:52px;
  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
@@ -525,7 +558,9 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
 <div id="bmAttrib" hidden></div>
 <div id="wrap">
  <div id="view"><canvas id="c"></canvas>
-  <div id="hud">loading…</div></div>
+  <div id="hud">loading…</div>
+  <div id="tsBoot" role="status"><i aria-hidden="true"></i><span id="tsBootText">正在载入场地…</span></div>
+  <script>try { if (window.__TS_BOOT && window.__TS_BOOT.lang !== 'zh') document.getElementById('tsBootText').textContent = 'Loading the site…'; } catch (e) {}</script></div>
  <div id="panel" class="ts-panel">
 <div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.48.1" data-en="Station P2 example · v8.48.1">车站 P2 示例 · v8.48.1</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1" data-i18n-title data-zh-title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理" data-en-title="Buildings of 1,500 m² footprint or more stay and the streets go round them; the rest may go" title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理"><span data-i18n data-zh="保留大建筑" data-en="Keep the large ones">保留大建筑</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
@@ -734,6 +769,13 @@ import { floodForSite } from './scripts/flood_risk.js?v=8.48.1';
 import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.48.1';
 const V = '8.48.1', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
+// (24 Nov 2026) the engine, the animation and the process mode are fetched now, beside the site's data, not one after
+// the other once the data has been worked through. They still run in the same order, below.
+for (const f of ['app.js', 'scripts/env_anim.js', 'scripts/process.js']){ const l = document.createElement('link'); l.rel = 'preload'; l.as = 'script'; l.href = f + '?v=' + V; document.head.append(l); }
+// The plan is uncovered when the process mode has set its first step (or said it is off) and that has been drawn:
+// before, the engine's own picture showed for a moment and was then replaced. A failure leaves its message in the middle.
+const booted = () => requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('ts-boot')));
+const bootFail = () => document.documentElement.classList.add('ts-boot-fail');
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
 // v8.48.1 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
@@ -770,12 +812,12 @@ try {
   // (v8.7) the process mode (default) opens on step 1 with nothing grown; scripts/process.js runs it
   try { window.__TS_PROCESS_ON = localStorage.getItem('tensorStudio.flowMode') !== 'free'; } catch (e){ window.__TS_PROCESS_ON = true; }
   const s = document.createElement('script'); s.src = 'app.js?v=' + V;
-  s.onload = () => { const ea = document.createElement('script'); ea.src = 'scripts/env_anim.js?v=' + V; document.body.append(ea); ea.onload = ea.onerror = () => { const p = document.createElement('script'); p.src = 'scripts/process.js?v=' + V; p.onerror = () => hud(zh ? '流程模式加载失败' : 'The process mode failed to load'); document.body.append(p); }; };
-  s.onerror = () => hud(zh ? '引擎加载失败' : 'The engine failed to load');
+  s.onload = () => { const ea = document.createElement('script'); ea.src = 'scripts/env_anim.js?v=' + V; document.body.append(ea); ea.onload = ea.onerror = () => { const p = document.createElement('script'); p.src = 'scripts/process.js?v=' + V; p.onload = booted; p.onerror = () => { hud(zh ? '流程模式加载失败' : 'The process mode failed to load'); booted(); }; document.body.append(p); }; };
+  s.onerror = () => { hud(zh ? '引擎加载失败' : 'The engine failed to load'); bootFail(); };
   document.body.append(s);
 } catch (error){
   console.error('Tensor Studio', error);
-  hud((zh ? '无法打开场地：' : 'Could not open the site: ') + (error?.message || error));
+  hud((zh ? '无法打开场地：' : 'Could not open the site: ') + (error?.message || error)); bootFail();
   host?.fail?.(error);
 }
 
