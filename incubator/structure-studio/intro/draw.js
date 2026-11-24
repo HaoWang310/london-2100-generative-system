@@ -77,7 +77,7 @@ function create(G0, opt) {
        L(`${name}，${s.landHa} ha。上一步在这里长出 ${s.roads} 条街道：主干 ${s.km1} km，其余 ${s.km2} km。地面已经有一张网。`, `${name}, ${s.landHa} ha. The previous step grew ${s.roads} streets here: ${s.km1} km of main streets, ${s.km2} km of others. The ground already has a net.`)],
       [L('问题 · 沿路建，只是更宽的街', 'The problem · along the streets, it is just a wider street'),
        L(`把主干和贯通路直接做成 20 m 宽的走廊：${s.blocks} 个街区（中位数 ${s.blockHa} ha），${s.T}% 的路口是丁字口。读起来是加宽的街道，不是纤维网。`, `Make the main and through streets into 20 m corridors: ${s.blocks} blocks (median ${s.blockHa} ha), and ${s.T}% of the junctions are T-junctions. It reads as wider streets, not a fibre net.`)],
-      [L('先例 · Frei Otto 湿毛线', "Precedent · Frei Otto's wet wool threads"),
+      [L('先例 · 湿毛线找形', 'Precedent · wet-thread form-finding'),
        L('一圈锚点之间拉着略松的毛线，浸湿后相邻的线互相吸住、并成束：路径总长变短，节点自然成三岔，线束之间围出透镜形的室。', 'Slack wool threads tied across a ring are wetted: neighbouring threads cling and merge into bundles. The paths get shorter, the junctions become three-way, and lens-shaped cells open between the bundles.')],
       [L('规则 · 同一个场，两张网', 'The rule · one field, two nets'),
        L(`走廊不复制街道，而由街道背后的同一个场决定：方向顺场；核心密、外围疏（节点间距 ${D && D.P ? D.P.sCore : 95} → ${D && D.P ? D.P.sOut : 260} m）；主线离开主路；塔立在主吸引点上。`, `The corridors do not copy the streets; the field behind the streets decides them: direction along the field; dense at the cores, sparse further out (node spacing ${D && D.P ? D.P.sCore : 95} → ${D && D.P ? D.P.sOut : 260} m); the primaries keep off the main streets; the towers stand on the main attractors.`)],
@@ -111,7 +111,7 @@ function create(G0, opt) {
     const pt = seg(t, 1.6, 3.4); if (pt > 0 && fade < 1) { let k = 0; for (const j of D.junc) { if (j[2] !== 'T') continue; k++; const ph = pt * 1.25 - (k % 37) / 37; if (ph < 0 || ph > 0.5) continue; const p = PP(j), r = 3 + ph * 22; g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.strokeStyle = `rgba(255,179,122,${(1 - ph * 2) * (1 - fade)})`; g.lineWidth = 1.4; g.stroke(); } }
     statBlock([[S.blocks, L(`个街区，中位数 ${S.blockHa} ha`, `blocks, median ${S.blockHa} ha`)], [S.T + '%', L('路口是丁字口', 'junctions are T'), JC.T]], seg(t, 1.2, 1.8));
     const la = seg(t, 3.6, 4.3); if (la > 0) { g.save(); g.globalAlpha *= la; text(L('= 加宽的街道', '= a wider street'), Wd / 2, Hd * (nar() ? 0.15 : 0.11), nar() ? 22 : 30, '#fff', 'center', 600); text(L('不是纤维网', 'not a fibre net'), Wd / 2, Hd * (nar() ? 0.15 : 0.11) + 24, 14, 'rgba(245,245,247,.6)', 'center'); g.restore(); } }
-  // ---------------------------------------------------------------- scene 3: Frei Otto's wet wool threads (a simulation, intro/wool.json)
+  // ---------------------------------------------------------------- scene 3: wet wool threads, the form-finding precedent (a simulation, intro/wool.json)
   function wool(cx, cy, R, f) { if (!W0) return; const F = W0.F, x = f * (F.length - 1), i = Math.min(F.length - 2, Math.floor(x)), u = x - i, A = F[i], B = F[i + 1];
     g.strokeStyle = 'rgba(255,255,255,.92)'; g.lineWidth = 1; g.beginPath();
     for (let k = 0; k < A.length; k++) { const a = A[k], b = B[k]; for (let j = 0; j < a.length; j += 2) { const X = cx + (a[j] + (b[j] - a[j]) * u) / 1000 * R, Y = cy - (a[j + 1] + (b[j + 1] - a[j + 1]) * u) / 1000 * R; j ? g.lineTo(X, Y) : g.moveTo(X, Y); } } g.stroke();
