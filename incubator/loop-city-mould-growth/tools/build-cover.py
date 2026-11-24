@@ -8,7 +8,7 @@ London map's cover (assets/catalogue/london-map.webp), each labelled on the righ
 
 All four share the page's frame (CFG.map.extentBNG), so they stand exactly over each other.
 
-    python3 incubator/loop-city-mould-growth/tools/build-cover.py      # writes assets/catalogue/loop-city-mould-growth.webp
+    python3 incubator/loop-city-mould-growth/tools/build-cover.py      # writes assets/catalogue/loop-city-mould-growth-v2.webp
 
 Needs numpy, Pillow and OpenCV; fonts DM Sans (Linux path below)."""
 import json, os
@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.join(HERE, '..')
 ROOT = os.path.join(APP, '..', '..')
 RES = os.path.join(ROOT, 'modules', '01-loop-city', 'result')
-OUT = os.path.join(ROOT, 'assets', 'catalogue', 'loop-city-mould-growth.webp')
+OUT = os.path.join(ROOT, 'assets', 'catalogue', 'loop-city-mould-growth-v2.webp')
 FONT = '/usr/share/fonts/truetype/google-fonts/ofl/dmsans/DMSans[opsz,wght].ttf'
 
 K = 2                                   # drawn at twice the size, then halved
