@@ -1409,6 +1409,9 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
 <script>var LANG = 'en'; function trc(s) { return LANG === 'zh' && typeof zhOf === 'function' ? (zhOf(s) ?? s) : s; }</script>
 <script type="text/plain" id="solverSrc">// The app's own wool solver (02_App/Wool + Slime 3D - v5), with one addition: voids the threads stay out of.
 // Made by _build/make_wool_solver_voids.py; the app itself is untouched.
+// (24 Nov 2026) faster, the same result: each void keeps a coarse grid (squares no edge crosses are wholly in or out,
+// and the nearest edge is looked for in the squares round a point); one grid over all the voids' boxes lets a point far
+// from every town skip them; the magnet pairs hash on numbers, not strings; lengths by sqrt, not hypot.
 
 /* Wool/Kangaroo-style 2D relaxation worker. Compatible with this page's existing protocol. */
 (function(){
@@ -1479,8 +1482,22 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
         if (R[i] < minX) minX = R[i]; if (R[i] > maxX) maxX = R[i];
         if (R[i + 1] < minY) minY = R[i + 1]; if (R[i + 1] > maxY) maxY = R[i + 1];
       }
-      return { R: R, bb: [minX, minY, maxX, maxY] };
+      const G = 48, gw = (maxX - minX) / G || 1, gh = (maxY - minY) / G || 1, cell = new Int8Array(G * G), segs = new Array(G * G);
+      for (let i = 0, j = R.length - 2; i < R.length; j = i, i += 2) {
+        const c0 = Math.min(G - 1, Math.max(0, Math.floor((Math.min(R[i], R[j]) - minX) / gw))), c1 = Math.min(G - 1, Math.floor((Math.max(R[i], R[j]) - minX) / gw));
+        const r0 = Math.min(G - 1, Math.max(0, Math.floor((Math.min(R[i + 1], R[j + 1]) - minY) / gh))), r1 = Math.min(G - 1, Math.floor((Math.max(R[i + 1], R[j + 1]) - minY) / gh));
+        for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { cell[r * G + c] = 2; (segs[r * G + c] = segs[r * G + c] || []).push(i); }
+      }
+      const v = { R: R, bb: [minX, minY, maxX, maxY], G: G, gw: gw, gh: gh, cell: cell, segs: segs };
+      for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) if (cell[r * G + c] !== 2) cell[r * G + c] = rayIn(R, minX + (c + 0.5) * gw, minY + (r + 0.5) * gh) ? 1 : 0;
+      return v;
     });
+    S0.vgrid = null;
+    if (S0.voids.length) { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (const v of S0.voids) { a = Math.min(a, v.bb[0]); b = Math.min(b, v.bb[1]); c = Math.max(c, v.bb[2]); d = Math.max(d, v.bb[3]); }
+      const G = 160, gw = (c - a) / G || 1, gh = (d - b) / G || 1, m = new Uint8Array(G * G);
+      for (const v of S0.voids) { const c0 = Math.min(G - 1, Math.max(0, Math.floor((v.bb[0] - a) / gw))), c1 = Math.min(G - 1, Math.floor((v.bb[2] - a) / gw)), r0 = Math.min(G - 1, Math.max(0, Math.floor((v.bb[1] - b) / gh))), r1 = Math.min(G - 1, Math.floor((v.bb[3] - b) / gh));
+        for (let r = r0; r <= r1; r++) for (let q = c0; q <= c1; q++) m[r * G + q] = 1; }
+      S0.vgrid = { a: a, b: b, c: c, d: d, G: G, gw: gw, gh: gh, m: m }; }
     S0.NA = S0.anchors.length/2;
     S0.T = S0.threads.length/3;
     S0.N = S0.NA + S0.T*(S0.S-1);
@@ -1508,6 +1525,10 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
   function inVoid(v, x, y) {
     const R = v.R, bb = v.bb;
     if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) return false;
+    { const c = Math.min(v.G - 1, Math.floor((x - bb[0]) / v.gw)), r = Math.min(v.G - 1, Math.floor((y - bb[1]) / v.gh)), k = v.cell[r * v.G + c]; if (k !== 2) return k === 1; }
+    return rayIn(R, x, y);
+  }
+  function rayIn(R, x, y) {
     let c = false;
     for (let i = 0, j = R.length - 2; i < R.length; j = i, i += 2) {
       const xi = R[i], yi = R[i + 1], xj = R[j], yj = R[j + 1];
@@ -1517,6 +1538,24 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
   }
 
   function pushOut(v, x, y) {
+    const R = v.R, G = v.G, bb = v.bb, m = Math.min(v.gw, v.gh), c0 = Math.min(G - 1, Math.floor((x - bb[0]) / v.gw)), r0 = Math.min(G - 1, Math.floor((y - bb[1]) / v.gh));
+    let bx = x, by = y, bd = Infinity, bi = -1;
+    for (let k = 0; k < G; k++) {
+      for (let r = r0 - k; r <= r0 + k; r++) { if (r < 0 || r >= G) continue;
+        for (let c = c0 - k; c <= c0 + k; c++) { if (c < 0 || c >= G || (Math.abs(r - r0) !== k && Math.abs(c - c0) !== k)) continue;
+          const L = v.segs[r * G + c]; if (!L) continue;
+          for (let u = 0; u < L.length; u++) { const i = L[u], j = i === 0 ? R.length - 2 : i - 2;
+            const ax = R[j], ay = R[j + 1], vx = R[i] - ax, vy = R[i + 1] - ay, l2 = vx * vx + vy * vy;
+            let t = l2 > 0 ? ((x - ax) * vx + (y - ay) * vy) / l2 : 0;
+            t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const qx = ax + vx * t, qy = ay + vy * t, d = (qx - x) * (qx - x) + (qy - y) * (qy - y);
+            if (d < bd || (d === bd && i < bi)) { bd = d; bx = qx; by = qy; bi = i; } } } }
+      if (bi >= 0 && bd < (k * m) * (k * m)) break;
+    }
+    if (bi >= 0) return [bx, by];
+    return pushOut0(v, x, y);
+  }
+  function pushOut0(v, x, y) {
     const R = v.R;
     let bx = x, by = y, bd = Infinity;
     for (let i = 0, j = R.length - 2; i < R.length; j = i, i += 2) {
@@ -1544,7 +1583,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
       const x=S0.P[2*i], y=S0.P[2*i+1], cx=Math.floor(x*inv), cy=Math.floor(y*inv);
       let accepted=0, scanned=0;
       for (let oy=-1;oy<=1 && accepted<5;oy++) for (let ox=-1;ox<=1 && accepted<5;ox++) {
-        const arr=cells.get((cx+ox)+','+(cy+oy)); if (!arr) continue;
+        const arr=cells.get((cx+ox)*1048576+(cy+oy)); if (!arr) continue;
         // scan newest points first; nearby points along other crossing threads are usually recent enough
         for (let q=arr.length-1; q>=0 && accepted<5 && scanned<48; q--,scanned++) {
           const j=arr[q];
@@ -1554,7 +1593,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
           if (d2>1e-8 && d2<r2) { A.push(i); B.push(j); accepted++; }
         }
       }
-      const key=cx+','+cy; let bucket=cells.get(key); if (!bucket) cells.set(key,bucket=[]); bucket.push(i);
+      const key=cx*1048576+cy; let bucket=cells.get(key); if (!bucket) cells.set(key,bucket=[]); bucket.push(i);
     }
     S0.pairsA=A; S0.pairsB=B; S0.lastPairIter=S0.stepCount;
   }
@@ -1575,7 +1614,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
         const target=S0.baseRest[t]*over;
         for (let k=0;k<S0.S;k++) {
           const i=idx(t,k), j=idx(t,k+1);
-          const dx=P[2*j]-P[2*i], dy=P[2*j+1]-P[2*i+1], d=Math.hypot(dx,dy)||1e-9;
+          const dx=P[2*j]-P[2*i], dy=P[2*j+1]-P[2*i+1], d=Math.sqrt(dx*dx+dy*dy)||1e-9;
           if (tension && d<=target) continue;
           const corr=(d-target)/d*0.5;
           addGoal(mx,my,mw,i, dx*corr, dy*corr, wLen);
@@ -1597,7 +1636,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
       if (S0.stepCount-S0.lastPairIter>=6 || !S0.pairsA.length) rebuildMagnetPairs();
       const r=Math.max(0.001,+p.magR||0.001), A=S0.pairsA, B=S0.pairsB;
       for (let q=0;q<A.length;q++) {
-        const i=A[q], j=B[q], dx=P[2*j]-P[2*i], dy=P[2*j+1]-P[2*i+1], d=Math.hypot(dx,dy)||1e-9;
+        const i=A[q], j=B[q], dx=P[2*j]-P[2*i], dy=P[2*j+1]-P[2*i+1], d=Math.sqrt(dx*dx+dy*dy)||1e-9;
         if (d>=r) continue;
         const fall=(1-d/r), pull=Math.min(r*0.12, (r-d)*0.22);
         const w=wMag*(0.2+0.8*fall);
@@ -1617,19 +1656,19 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
     for (let i=0;i<n;i++) {
       let gx=mw[i]>0?mx[i]/mw[i]:0, gy=mw[i]>0?my[i]/mw[i]:0;
       let vx=V[2*i]*mom+gx*(1-mom+0.12), vy=V[2*i+1]*mom+gy*(1-mom+0.12);
-      const sp=Math.hypot(vx,vy); if (sp>maxStep) { const f=maxStep/sp; vx*=f; vy*=f; }
+      const sp=Math.sqrt(vx*vx+vy*vy); if (sp>maxStep) { const f=maxStep/sp; vx*=f; vy*=f; }
       let x=P[2*i]+vx, y=P[2*i+1]+vy;
       if (p.inside && S0.bounds) {
         const minX=S0.bounds[0], minY=S0.bounds[1], maxX=S0.bounds[2], maxY=S0.bounds[3];
         if (x<minX){x=minX;vx=0;} else if(x>maxX){x=maxX;vx=0;}
         if (y<minY){y=minY;vy=0;} else if(y>maxY){y=maxY;vy=0;}
       }
-      if (S0.voids && S0.voids.length) {
+      const vg = S0.vgrid; if (S0.voids && S0.voids.length && x >= vg.a && x <= vg.c && y >= vg.b && y <= vg.d && vg.m[Math.min(vg.G - 1, Math.floor((y - vg.b) / vg.gh)) * vg.G + Math.min(vg.G - 1, Math.floor((x - vg.a) / vg.gw))]) {
         for (let v = 0; v < S0.voids.length; v++) {
           if (inVoid(S0.voids[v], x, y)) { const q = pushOut(S0.voids[v], x, y); x = q[0]; y = q[1]; vx = 0; vy = 0; break; }
         }
       }
-      P[2*i]=x; P[2*i+1]=y; V[2*i]=vx; V[2*i+1]=vy; moveSum+=Math.hypot(vx,vy);
+      P[2*i]=x; P[2*i+1]=y; V[2*i]=vx; V[2*i+1]=vy; moveSum+=Math.sqrt(vx*vx+vy*vy);
     }
     S0.stepCount++; S0.iter += S0.iterStride;
     return moveSum/Math.max(1,n);
@@ -3329,7 +3368,13 @@ function bhHierarchy(R, opt) {
   for (const c of DATA.cells) { gI.beginPath(); for (let i = 0; i < c.ring.length; i += 2) gI[i ? 'lineTo' : 'moveTo']((c.ring[i] - x0) / gs, (y1 - c.ring[i + 1]) / gs); gI.closePath(); gI.fill(); gI.stroke(); }
   const idat = gI.getImageData(0, 0, gw, gh).data, inside = new Uint8Array(gw * gh); for (let i = 0; i < gw * gh; i++) inside[i] = idat[4 * i + 3] > 100 ? 1 : 0;
   const isIn = (x, y) => { const k = gi(x, y); return k >= 0 && inside[k] === 1; };
-  const field = mask => { const d = bdEDT(mask, gw, gh, false), o = new Float32Array(gw * gh); for (let i = 0; i < o.length; i++) o[i] = Math.sqrt(d[i]) * gs; return o; };
+  // (24 Nov) the distance to a mask, kept for the last few masks: the A-road search asks again and again for the same
+  // network (after a place no road can reach, nothing changed), so a mask seen before (compared in full) is not worked out again
+  const FM = [], field = mask => {
+    for (let k = 0; k < FM.length; k++) { const e = FM[k], m = e.m; let same = true; for (let i = 0; i < m.length; i++) if (m[i] !== mask[i]) { same = false; break; }
+      if (same) { if (k) { FM.splice(k, 1); FM.unshift(e); } window.__bhHit = (window.__bhHit || 0) + 1; return e.o; } }
+    const d = bdEDT(mask, gw, gh, false), o = new Float32Array(gw * gh); for (let i = 0; i < o.length; i++) o[i] = Math.sqrt(d[i]) * gs;
+    FM.unshift({ m: Uint8Array.from(mask), o }); if (FM.length > 6) FM.pop(); return o; };
   const mark = (mask, p) => { for (let i = 0; i < p.length; i += 2) { const k = gi(p[i], p[i + 1]); if (k >= 0) mask[k] = 1; } };
   const at = (F, x, y) => { const k = gi(x, y); return k < 0 ? 1e9 : F[k]; };
   // ---- the cell boundary as points
