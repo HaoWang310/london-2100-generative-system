@@ -1,5 +1,7 @@
 # Structure Studio · 结构工作室（Linear Farm 走廊）
 
+> **手机上平面图居中 · The plan centred on a phone (24 Nov 2026).** 手机上平面图原来画在屏幕外（模拟器全黑，iPhone 15 Plus 上只剩右上角一小块）：画图区域按"左面板右边缘到右面板左边缘"计算，而手机上的参数面板是整屏宽的底部卡，被当成了左面板。现在手机上的画图区域是整个屏幕宽度，从「显示」按钮下方到收起的底部卡上方，和张量场一样居中、缩放到正好放下；逐步生成时的步骤标题（如「01 张量场」）放在「显示」按钮下方并缩小，说明文字最多两行，打开显示面板时隐藏。比例尺和指北针按同一区域定位。只在手机布局下生效，电脑端不变（改动前后平面图和标题的位置相同）。改动在 `index.html`（`phoneRect()`）和 `skin.css`。
+
 > **手机界面 · The phone (23 Nov 2026).** 手机上换成统一的手机布局（`shared/ui/phone.css`、`phone.js`，本 app 的接线在 `phone.js`）：模型铺满屏幕，左上角「显示」打开视图、视口、显示模式和图层（整宽、上半屏），功能面板成为底部的卡，收起时留名称、场地和「逐步生成 / 暂停 / 立即完成」；「室列表」按钮移到卡的上方，任一面板打开时隐藏。iPad 和电脑不变。布局只在手机模拟里验证过，三维画面在那里无法载入，需要在真机上看一次。 On a phone the page takes the shared phone layout (wired in this app's `phone.js`): Display (top left) opens the views, display modes and layers, the process panel is a sheet along the bottom that folds to its name, the site and the three run buttons, and the room-list button stands above the sheet. The layout was checked in phone emulation, where the 3D view could not load; it needs one look on a real phone.
 
 > **界面统一（2026-11-22）。** 与其他 app 同一套界面：黑、白和半透明的白，DM Sans，读 `shared/ui/tokens.css` 和 `shared/ui/studio.css`；本 app 的变量在 `skin.css` 里对应到共用变量。只改颜色、字体和圆角，控件和引擎都没动。颜色只留给图例和警告。网址加 `#noskin` 显示原来的界面。
