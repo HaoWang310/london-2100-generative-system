@@ -1,5 +1,7 @@
 # Structure Studio · 结构工作室（Linear Farm 走廊）
 
+> **开场短片 · The opening film (24 Nov 2026).** 打开页面时先播一部约 31 秒、五幕的短片，盖住载入和生成的等待，讲这一步在研究里做什么：① 地面：张量场长出的街道，路口大多是丁字口；② 问题：把主干和贯通路直接做成 20 m 走廊，只得到一块块街区——加宽的街道；③ 先例：Frei Otto 湿毛线，线并成束、节点成三岔（24 根线的模拟）；④ 规则：同一个场推出两张网（分解轴测：场、地面网、架空网、农田，四条关联逐条亮起）；⑤ 立起来：第 6 步的结构用 WebGL 画出——整张网升到真实标高、层间距拉开看坡道怎样把三层缝在一起、镜头推近大塔（完整的三片壳和外皮、三层退台塔座）、合回真实层高，最后淡回平面，正好接上页面停住的张量场画面（不再重播 00 / 01）。数字和线条都由当前打开的场地实算（`intro/data.js`），换场地照样成立。第 1–4 幕在后台线程里画（`intro/worker.js`），页面算结构时不卡；结构到第 3 幕末还没好就停在那里等。"跳过"或 Esc 随时关掉，结构好了以后"进入"或 Enter。每次打开都播；网址加 `#nointro`、`#noskin`、`?embed=1`，在别的页面的框里，或系统"减少动态效果"时不播；生成流程里"▶ 开场短片"再看一遍。 On opening, a five-scene film of about 31 s covers the loading and tells what this step does: the streets the tensor field grew (mostly T-junctions); why corridors along them would only be wider streets; Frei Otto's wet wool threads; one field giving two nets (an exploded axonometric); and the step-6 structure standing up in WebGL — rising, its levels pulled apart to show the ramps weaving them, a close look at a tower, back to true heights and the plan, which is the page's own first picture. All of it is computed from the site that is open. Scenes 1–4 are drawn in a worker, so they keep moving while the page builds. Skip/Esc at any time; Enter once the structure is ready. Every visit; not with `#nointro`, `#noskin`, `?embed=1`, in a frame, or with reduced motion; "▶ Opening film" plays it again.
+
 > **手机上平面图居中 · The plan centred on a phone (24 Nov 2026).** 手机上平面图原来画在屏幕外（模拟器全黑，iPhone 15 Plus 上只剩右上角一小块）：画图区域按"左面板右边缘到右面板左边缘"计算，而手机上的参数面板是整屏宽的底部卡，被当成了左面板。现在手机上的画图区域是整个屏幕宽度，从「显示」按钮下方到收起的底部卡上方，和张量场一样居中、缩放到正好放下；逐步生成时的步骤标题（如「01 张量场」）放在「显示」按钮下方并缩小，说明文字最多两行，打开显示面板时隐藏。比例尺和指北针按同一区域定位。只在手机布局下生效，电脑端不变（改动前后平面图和标题的位置相同）。改动在 `index.html`（`phoneRect()`）和 `skin.css`。
 
 > **手机界面 · The phone (23 Nov 2026).** 手机上换成统一的手机布局（`shared/ui/phone.css`、`phone.js`，本 app 的接线在 `phone.js`）：模型铺满屏幕，左上角「显示」打开视图、视口、显示模式和图层（整宽、上半屏），功能面板成为底部的卡，收起时留名称、场地和「逐步生成 / 暂停 / 立即完成」；「室列表」按钮移到卡的上方，任一面板打开时隐藏。iPad 和电脑不变。布局只在手机模拟里验证过，三维画面在那里无法载入，需要在真机上看一次。 On a phone the page takes the shared phone layout (wired in this app's `phone.js`): Display (top left) opens the views, display modes and layers, the process panel is a sheet along the bottom that folds to its name, the site and the three run buttons, and the room-list button stands above the sheet. The layout was checked in phone emulation, where the 3D view could not load; it needs one look on a real phone.
@@ -52,6 +54,13 @@ planting towers sit on the tensor field's attractors and major junctions. Buildi
 | `deck.test.mjs` | 第 6 步的回归测试 |
 | `nav.test.mjs` | 三维视口导航的回归测试 |
 | `robust.test.mjs` | 规则普适性测试：14 种条件（种子、生成模式、拉扯、核心位置、红线离塔很近）下塔座、走廊和坡道旁边板边的规则都要成立 |
+| `intro/intro.js` | 开场短片：盖住载入、计时、跳过 / 进入、播完交给页面（`SSIntro`） |
+| `intro/data.js` | 开场短片的数据：从快照、第 5 步、第 6 步实算（任意场地） |
+| `intro/draw.js` | 开场短片的画面（第 1–4 幕、字幕、进度），后台线程和页面共用 |
+| `intro/worker.js` | 后台线程：在 OffscreenCanvas 上画第 1–4 幕，结构没好就在第 3 幕末等 |
+| `intro/scene5.js` | 第 5 幕：第 6 步的结构、塔座和塔，WebGL（页面自己的 three.js） |
+| `intro/wool.json` | 第 3 幕的湿毛线模拟（`tools/build-intro-wool.mjs` 生成） |
+| `intro.test.mjs` | 开场短片的数据和页面接线测试 |
 | `docs/DESIGN.md` | 生成逻辑与设计规则 |
 | `docs/DATA.md` | 输入快照与输出格式 |
 | `docs/CHANGELOG.md` | 版本记录 |

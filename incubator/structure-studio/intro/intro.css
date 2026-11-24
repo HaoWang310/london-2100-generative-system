@@ -1,0 +1,22 @@
+/* Structure Studio · the opening film (intro/intro.js). Black, white and semi-transparent white, DM Sans, like the page. */
+#ssIntro{position:fixed;inset:0;z-index:1000;background:#000;color:#f5f5f7;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif;overflow:hidden;opacity:1;transition:opacity .6s ease;touch-action:none;-webkit-user-select:none;user-select:none}
+#ssIntro.ssi-out{opacity:0;pointer-events:none}
+#ssIntro canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#ssIntro .ssi-gl{opacity:0}
+#ssIntro .ssi-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;transition:opacity .5s ease}
+#ssIntro.ssi-play .ssi-card{opacity:0;pointer-events:none}
+#ssIntro .ssi-card b{display:block;font-size:clamp(26px,4vw,40px);font-weight:600;letter-spacing:-.01em}
+#ssIntro .ssi-card span{display:block;margin-top:8px;font-size:15px;color:rgba(245,245,247,.62)}
+#ssIntro .ssi-card em{display:block;margin-top:14px;font-style:normal;font-size:13px;color:rgba(245,245,247,.45)}
+#ssIntro .ssi-card i{display:block;width:160px;height:2px;margin:22px auto 0;background:rgba(255,255,255,.14);position:relative;overflow:hidden;border-radius:2px}
+/* transform only, so it keeps moving while the page is busy */
+#ssIntro .ssi-card i::after{content:"";position:absolute;inset:0;width:40%;background:#fff;border-radius:2px;animation:ssi-run 1.4s ease-in-out infinite;will-change:transform}
+@keyframes ssi-run{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+#ssIntro button{font:600 13px/1 inherit;color:#f5f5f7;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:10px 16px;min-height:38px;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+#ssIntro button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#ssIntro .ssi-skip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px))}
+#ssIntro .ssi-enter{position:absolute;right:calc(24px + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));background:#fff;color:#000;border-color:#fff;opacity:0;pointer-events:none;transition:opacity .4s}
+#ssIntro.ssi-play.ssi-ready .ssi-enter{opacity:1;pointer-events:auto}
+@media (max-width:600px){#ssIntro .ssi-enter{bottom:auto;top:calc(14px + env(safe-area-inset-top,0px));right:calc(86px + env(safe-area-inset-right,0px))}}
+html.ssi-on,html.ssi-on body{overflow:hidden}
+@media (prefers-reduced-motion:reduce){#ssIntro .ssi-card i::after{animation:none}}
