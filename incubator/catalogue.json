@@ -160,6 +160,97 @@
         "zh": "第 1 步：黏菌与城市生长在整条环线上同时运行（2025–2100），读取现有的高速公路和 A 级道路，得出干净的单元；选一个或多个单元，交给毛线带。",
         "en": "Step 1: the slime mould and the city growth run together over the whole loop (2025-2100), reading the existing motorways and A roads, and give clean cells; pick one or several and hand them to the wool bands."
       },
+      "detail": {
+        "subtitle": "Loop City · Step 1 · A Loop to Grow Along",
+        "sections": [
+          {
+            "h": {
+              "zh": "研究定位",
+              "en": "Research position"
+            },
+            "lead": {
+              "zh": "让伦敦沿着一条环线生长，而不是继续向外摊开",
+              "en": "London grown along a loop, not spread further outwards"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "在绿带之外修一条 412 km 的地面环线和 17 个车站，把未来的增长引到车站周围。城市怎样沿环线长出来，不是画出来的：让黏菌从车站出发，与城市一起从 2025 年长到 2100 年。黏菌在这里是一种寻找高效网络的模型，它留下的主干就是新城区的骨架。",
+                  "en": "A 412 km loop above ground and 17 stations, beyond the Green Belt, draw future growth to the stations. How the city grows along it is not drawn by hand: a slime mould is released at the stations and grows with the city from 2025 to 2100. Here the mould is a model of how an efficient network finds itself; the trunks it leaves become the frame of the new districts."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "数据层",
+              "en": "Data layers"
+            },
+            "lead": {
+              "zh": "四层数据，叠在同一张图上",
+              "en": "Four layers, on one sheet"
+            },
+            "body": [
+              {
+                "list": [
+                  {
+                    "zh": "**铁路**：六条放射线沿真实线路（OpenStreetMap 轨道），用官方线路名；321 km 隧道高速环线连接 6 个一级站；412 km 地面中速环线串起全部 17 个车站（6 个一级站、8 个二级站、3 个机场站）",
+                    "en": "**Rail**: six radials on real lines (OpenStreetMap track), under their official names; a 321 km high-speed loop in tunnel joins the 6 primary stations; a 412 km medium-speed loop above ground runs through all 17 (6 primary, 8 secondary, 3 for the airports)"
+                  },
+                  {
+                    "zh": "**现有道路**：OS Open Zoomstack 的高速公路、A 级路和干线，黏菌会沿着它们走",
+                    "en": "**Existing roads**: motorways, A roads and trunk routes from OS Open Zoomstack, which the mould follows"
+                  },
+                  {
+                    "zh": "**保护用地**：绿带、杰出自然风景区（AONB）与国家公园（Natural England）",
+                    "en": "**Protected land**: the Green Belt, Areas of Outstanding Natural Beauty and the national parks (Natural England)"
+                  },
+                  {
+                    "zh": "**土壤**：农业用地分级（Natural England），决定农田落在哪里",
+                    "en": "**Soil**: the Agricultural Land Classification (Natural England), which decides where farming goes"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "生长与提取",
+              "en": "Growth and cells"
+            },
+            "lead": {
+              "zh": "黏菌与城市一起长一百年",
+              "en": "The mould and the city, grown together for a century"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "点「运行百年」，黏菌从 17 个车站出发，城市、农田和道路随它逐年生长。铁路两侧留出自由走廊，越往伦敦方向地面对黏菌越不利，所以它沿环线成网，不长进伦敦。百年结束后，从黏菌的干道读出一个个单元：每次运行都不同，因为黏菌没有固定的随机种子。",
+                  "en": "Press Run the century: the mould sets out from the 17 stations and the city, its farming and its roads grow with it year by year. A free corridor runs either side of the rail, and the ground turns against the mould towards London, so it makes a net along the loop and stays out of the city. When the century ends, cells are read from the mould’s highways; every run is different, as the mould has no fixed random seed."
+                }
+              }
+            ]
+          },
+          {
+            "h": {
+              "zh": "交给下一步",
+              "en": "On to the next step"
+            },
+            "lead": {
+              "zh": "选一个单元，送往第 2 步",
+              "en": "Choose a cell, send it to step 2"
+            },
+            "body": [
+              {
+                "p": {
+                  "zh": "在地图上选一个或几个单元，送往第 2 步毛线带。之后依次是第 3 步张量底、张量场工作室和结构工作室：从整条环线一直落到街道和结构。",
+                  "en": "Choose one cell or several on the map and send them to step 2, the wool bands; then step 3, the tensor base, Tensor Studio and Structure Studio: from the whole loop down to the streets and the structure."
+                }
+              }
+            ]
+          }
+        ]
+      },
       "tags": [
         {
           "zh": "黏菌",
