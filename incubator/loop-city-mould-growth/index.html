@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("lcskin");/* 23 Nov 2026: a phone is known before anything is laid out, so the map is sized and fitted to the whole screen from the start */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("lcphone");}catch(e){}/* 24 Nov 2026: the opening story's map first, ahead of the page's own large images, so the story never starts on an empty frame (intro.js): its base map (a smaller copy on a phone) and the Green Belt layer it lights up (the file the page loads itself: half size on a touch device, as LITE decides) */try{if(!/[?&]embed=1\b/.test(location.search)&&!/[#&]nointro\b/.test(h0)){var c0=/[#&]lite\b/.test(h0)?true:/[#&]nolite\b/.test(h0)?false:((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches);[d0.classList.contains("lcphone")?"img/intro/base-s.webp":"img/intro/base.webp",c0?"img/half/greenbelt.webp":"img/greenbelt.webp"].forEach(function(u){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=u;l.setAttribute("fetchpriority","high");document.head.appendChild(l);});}}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="skin.css?v=10"><link rel="stylesheet" href="intro.css?v=6"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/base_dark.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
+<head><script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("lcskin");/* 23 Nov 2026: a phone is known before anything is laid out, so the map is sized and fitted to the whole screen from the start */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("lcphone");}catch(e){}/* 24 Nov 2026: the opening story's map first, ahead of the page's own large images, so the story never starts on an empty frame (intro.js): its base map (a smaller copy on a phone) and the Green Belt layer it lights up; then the dark map, at the size the page will show it (half on a touch device, as LITE decides: a phone no longer fetches the full one it never shows) */try{var c0=/[#&]lite\b/.test(h0)?true:/[#&]nolite\b/.test(h0)?false:((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches),pl=function(u,hi){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=u;if(hi)l.setAttribute("fetchpriority","high");document.head.appendChild(l);};if(!/[?&]embed=1\b/.test(location.search)&&!/[#&]nointro\b/.test(h0)){pl(d0.classList.contains("lcphone")?"img/intro/base-s.webp":"img/intro/base.webp",1);pl(c0?"img/half/greenbelt.webp":"img/greenbelt.webp",1);}pl(c0?"img/half/base_dark.webp":"img/base_dark.webp",0);}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="skin.css?v=10"><link rel="stylesheet" href="intro.css?v=6"><link rel="preload" as="image" href="img/base_light_sheet.webp"><link rel="preload" as="image" href="img/m_build.webp"><link rel="preload" as="image" href="img/m_soil.webp"><link rel="preload" as="image" href="img/m_zone.webp">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -333,7 +333,7 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
 </head>
 <body>
 <!-- 24 Nov 2026: the opening story, on the screen before the rest of the page is read (intro.js) -->
-<script src="intro-data.js?v=4"></script><script src="intro.js?v=5"></script>
+<script src="intro-data.js?v=4"></script><script src="intro.js?v=6"></script>
 
 <div id="panelL"><div id="panelScrollL">
   <div class="panelHead">The two models</div>
@@ -7982,6 +7982,70 @@ window.GROWTH_DATA = {"crs":"EPSG:27700","mPerPx":35.0,"size":[4286,3514],"corne
     ];
   };
 
+  /* 24 Nov 2026: the same fields again, with the three smoothings worked out side by side in background threads.
+     The four draws come from the one generator in the same order as in noiseParts (the box field's, then the three
+     ridged fields'), so every number drawn is the same; each thread is handed one draw and runs on it the very
+     gaussFilter and refl of this file (their own source, passed to it) and the same steps as ridged(), so each field
+     comes back the same to the last bit. Only the time changes: the three smoothings, most of the preparation's
+     first third, run at once and off the page's thread, which stays free. Resolves to the cached entry; null where
+     background threads cannot be had (the caller then uses noiseParts). */
+  var RIDGED_WORKER = null;
+  function ridgedWorkerUrl() {
+    if (RIDGED_WORKER) return RIDGED_WORKER;
+    var src = refl.toString() + "\n" + gaussFilter.toString() + "\n" +
+      "onmessage = function (e) {\n" +
+      "  var d = e.data, a = gaussFilter(new Float32Array(d.buf), d.sigma, d.w, d.h), N = d.w * d.h, mean = 0, sd = 0, q;\n" +
+      "  for (q = 0; q < N; q++) mean += a[q];\n" +
+      "  mean /= N;\n" +
+      "  for (q = 0; q < N; q++) sd += (a[q] - mean) * (a[q] - mean);\n" +
+      "  sd = Math.sqrt(sd / N) + 1e-9;\n" +
+      "  for (q = 0; q < N; q++) { var t = 1 - Math.abs((a[q] - mean) / sd); a[q] = t <= 0 ? 0 : Math.pow(t, d.pw); }\n" +
+      "  postMessage({ buf: a.buffer }, [a.buffer]);\n" +
+      "};\n";
+    RIDGED_WORKER = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+    return RIDGED_WORKER;
+  }
+  World.prototype.noiseAsync = function (seed, progress) {
+    var i;
+    for (i = 0; i < this.noiseCache.length; i++) if (this.noiseCache[i].seed === seed) return Promise.resolve(this.noiseCache[i]);
+    if (typeof Worker === "undefined" || typeof Blob === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) return null;
+    var self = this, w = this.w, h = this.h, N = this.N, C = this.C, rng = sfc32(seed), j, url;
+    try { url = ridgedWorkerUrl(); } catch (e) { return null; }
+    var n0 = normals(rng, N), n1 = normals(rng, N), n2 = normals(rng, N), n3 = normals(rng, N);   // the order noiseParts draws them
+    var done = 0, say = function () { done++; if (progress) try { progress(done / 5); } catch (e) {} };
+    function smooth(n, sigmaM, pw) {
+      return new Promise(function (ok, no) {
+        var wk;
+        try { wk = new Worker(url); } catch (e) { no(e); return; }
+        wk.onmessage = function (e) { wk.terminate(); say(); ok(new Float32Array(e.data.buf)); };
+        wk.onerror = function (e) { wk.terminate(); no(e && e.message ? new Error(e.message) : e); };
+        wk.postMessage({ buf: n.buffer, sigma: sigmaM / C, pw: pw, w: w, h: h }, [n.buffer]);
+      });
+    }
+    var jobs = [smooth(n1, 400, 2.2), smooth(n2, 950, 2.0), smooth(n3, 1900, 1.8)];
+    // the box field on this thread meanwhile, exactly as in noiseParts
+    var box = Math.max(3, Math.round(1050 / C) | 1);
+    var Fb = boxFilter(n0, box, w, h), lo = 1e9, hi = -1e9, F;
+    for (j = 0; j < N; j++) { if (Fb[j] < lo) lo = Fb[j]; if (Fb[j] > hi) hi = Fb[j]; }
+    F = new Float32Array(N);
+    for (j = 0; j < N; j++) F[j] = (Fb[j] - lo) / (hi - lo + 1e-9);
+    say();
+    return Promise.all(jobs).then(function (r) {
+      var r1 = r[0], r2 = r[1], r3 = r[2];
+      for (var k = 0; k < self.noiseCache.length; k++) if (self.noiseCache[k].seed === seed) return self.noiseCache[k];
+      var V = new Float32Array(N), vmax = 0;
+      for (j = 0; j < N; j++) { V[j] = 0.45 * r1[j] + 0.35 * r2[j] + 0.20 * r3[j]; if (V[j] > vmax) vmax = V[j]; }
+      for (j = 0; j < N; j++) V[j] /= (vmax + 1e-9);
+      var JIT = new Float32Array(N);
+      for (j = 0; j < N; j++) JIT[j] = (0.70 + 0.60 * F[j]) * (0.80 + 0.40 * V[j]);
+      var Z = { seed: seed, F: F, V: V, JIT: JIT };
+      self.noiseCache.push(Z);
+      if (self.noiseCache.length > 2) self.noiseCache.shift();
+      say();
+      return Z;
+    });
+  };
+
   // ------------------------------------------------------------------ a run
   function run(world, Pin) {
     var w = world.w, h = world.h, N = world.N, C = world.C, CELLKM2 = world.cellKm2;
@@ -8359,9 +8423,10 @@ window.GROWTH_DATA = {"crs":"EPSG:27700","mPerPx":35.0,"size":[4286,3514],"corne
   }
   function keyOf(Pin) { var P = settingsOf(Pin); return PARAMS.map(function (d) { return d.id + "=" + P[d.id]; }).join(";"); }
   function noiseParts(world, Pin) { return world.noiseParts(settingsOf(Pin).seed); }
+  function noiseAsync(world, Pin, progress) { return world.noiseAsync(settingsOf(Pin).seed, progress); }
 
   window.GrowthSim = { World: World, run: run, PARAMS: PARAMS, K: K, classAt: classAt, PPK: PPK, Y0: Y0, Y1: Y1,
-                       keyOf: keyOf, noiseParts: noiseParts };
+                       keyOf: keyOf, noiseParts: noiseParts, noiseAsync: noiseAsync };
 })();
 
 </script>
@@ -9613,9 +9678,13 @@ function frame(){
   /* 23 Nov 2026: while the growth model is being prepared (S.prepBusy) the map is drawn when the view or the
      canvas has changed, and otherwise twice a second: drawing the whole sheet every frame took about a fifth
      of the preparation. Nothing is lost: anything else that changes shows within half a second. */
-  if(S.prepBusy){
+  /* 24 Nov 2026: and while the opening story covers the page (LCIntro.covering) nobody sees the map at all, so it
+     is drawn only when the view or the canvas changes, when a layer is still being made, and otherwise every four
+     seconds, which keeps it ready underneath; the story hands over only after a fresh frame (intro.js). */
+  const covered = !!(window.LCIntro && window.LCIntro.covering);
+  if(S.prepBusy || covered){
     const v = S.view, now0 = performance.now(), sig = v.k + "," + v.x + "," + v.y + "," + view.width + "," + view.height;
-    if(sig === S._prepSig && now0 - (S._prepAt || 0) < 500 && !(typeof LITE !== "undefined" && LITE.more)){ requestAnimationFrame(frame); return; }
+    if(sig === S._prepSig && now0 - (S._prepAt || 0) < (covered ? 4000 : 500) && !(typeof LITE !== "undefined" && LITE.more)){ requestAnimationFrame(frame); return; }
     S._prepSig = sig; S._prepAt = now0;
   }
   // The whole loop is wrapped so one bad frame can never kill the animation
@@ -10900,8 +10969,15 @@ async function startGrowthSoft(params){
     await new Promise(ok => requestAnimationFrame(() => setTimeout(ok, 60)));   // let the map be painted first
     if(S.gdrv !== before){ done(); return false; }
     S.prepBusy = true;
-    const parts = (typeof GrowthSim.noiseParts === "function") ? GrowthSim.noiseParts(S.world, P) : [];
-    const A = parts.length ? 34 : 0, B = parts.length ? 59 : 38;            // where the fields end, where the years begin
+    /* 24 Nov 2026: the fields in background threads where the browser has them (GrowthSim.noiseAsync: the same
+       fields, to the last bit), the page's thread left free meanwhile; a part at a time here otherwise.
+       `#noworker` in the address takes the old road, to compare. */
+    let threaded = false;
+    const pr = (!/[#&]noworker\b/.test(location.hash || "") && typeof GrowthSim.noiseAsync === "function") ? GrowthSim.noiseAsync(S.world, P, f => say(34*f)) : null;
+    if(pr){ try { await pr; threaded = true; } catch(e){ threaded = false; } }
+    if(S.gdrv !== before){ done(); return false; }
+    const parts = (!threaded && typeof GrowthSim.noiseParts === "function") ? GrowthSim.noiseParts(S.world, P) : [];
+    const A = parts.length || threaded ? 34 : 0, B = parts.length || threaded ? 59 : 38;   // where the fields end, where the years begin
     for(let i=0;i<parts.length;i++){
       parts[i]();
       say(A*(i+1)/parts.length);

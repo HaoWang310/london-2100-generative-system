@@ -97,6 +97,7 @@
   var NEW = '#E3B47B';   // the two new radials, in the warm tone the page uses for growth
 
   var live = null;   // the cover on the screen, if any
+  var covering = false;   // the cover hides the page entirely (not handing over): the page need not draw its map
 
   function open(story, again) {
     if (live) return;
@@ -305,6 +306,16 @@
       if (done) return; done = true;
       clearInterval(timer); removeEventListener('resize', fit); document.removeEventListener('keydown', key, true);
       if (!again) { try { localStorage.setItem(KEY, '1'); } catch (e) { /* private mode */ } }
+      /* the page has drawn its map only now and then under the cover (frame() in index.html, LCIntro.covering):
+         ask it for a fresh frame, and hand over once that frame has had time to be drawn */
+      covering = false;
+      try { if (typeof S !== 'undefined' && S) S._prepAt = 0; } catch (e) { /* no page underneath */ }   // eslint-disable-line no-undef
+      var handed = false;
+      function hand() { if (handed) return; handed = true; handOver(); }
+      requestAnimationFrame(function () { requestAnimationFrame(hand); });
+      setTimeout(hand, 400);                    // a page that is not being shown gets no frames
+    }
+    function handOver() {
       var to = calm ? null : sheet(), wait = 0;
       if (to) {
         var r = stage.getBoundingClientRect(), k = to.w / r.width;
@@ -347,7 +358,7 @@
     }
 
     skip.onclick = close;
-    document.body.appendChild(box); live = box;
+    document.body.appendChild(box); live = box; covering = true;
     fit(); words();
     addEventListener('resize', fit);
     document.addEventListener('keydown', key, true);
@@ -367,7 +378,9 @@
   window.LCIntro = {
     /* the whole story again, over the page as it stands */
     replay: function () { if (D && document.body && !calm) open(true, true); else if (D && document.body) open(false, true); },
-    get open() { return !!live; }
+    get open() { return !!live; },
+    /* read by the page's frame(): while true the map is drawn only now and then */
+    get covering() { return covering && !!live; }
   };
   if (off) return;
   var force = /[#&]intro\b/.test(hash);
