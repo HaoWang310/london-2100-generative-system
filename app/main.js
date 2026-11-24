@@ -12,6 +12,7 @@ import { SCALES, TOOLS, SIMULATIONS, exporters } from './registry.js';
 import { createWorkspaceStore, SCALE_ORDER } from '../shared/state/index.js';
 import { childInput, createBundle, validateBundle, defaultParams } from '../shared/schemas/index.js';
 import { createMapViewer, ROAD_STYLE, HIERARCHY_ORDER } from '../shared/map-viewer/index.js';
+import { mountPhoneWorkspace } from './phone.js';
 import { t, pick, toggleLang, getLang, applyI18n, onLangChange } from '../shared/i18n/index.js';
 import { h, renderParams, renderStats, toast, download, mountLangSwitch, isTouchScreen } from '../shared/ui/index.js';
 import { createIntro } from './intro.js';
@@ -29,6 +30,7 @@ const storage = (() => { try { localStorage.setItem('l2100.t', '1'); return loca
 const store = createWorkspaceStore({ storage, key: BUILD.releasePath ? `l2100.workspace@${BUILD.releasePath}` : 'l2100.workspace' });
 
 let viewer = null;
+let phoneWS = null;      // the workspace on a phone (phone.js): the sheet, Display and the scale menu
 let activeTool = null;          // null | 'integration' | 'export' | a simulation's key ('loop')
 const simTools = {};            // key -> a simulation's tool, created the first time it is opened
 let progress = 1;               // timeline position for the current result
@@ -317,6 +319,7 @@ function render() {
     viewer.setProgress(isSim(activeTool) ? 1 : progress);
     viewer.setPanelDocked?.(isSim(activeTool));            // in a simulation the map display panel hugs the map's right edge
   }
+  phoneWS?.update({ simContainer: isSim(activeTool) ? simTools[activeTool]?.container : null });
 }
 
 function renderChrome() {
@@ -537,7 +540,7 @@ function togglePhoneMenu(btn) {
   let menu = $('phoneMenu');
   if (menu) { menu.remove(); return; }
   const close = () => { menu?.remove(); document.removeEventListener('pointerdown', outside, true); };
-  const outside = e => { if (!e.target.closest('#phoneMenu, .ps-more')) close(); };
+  const outside = e => { if (!e.target.closest('#phoneMenu, .ps-more, .ws-more')) close(); };
   menu = h('div', { id: 'phoneMenu', class: 'phone-menu', role: 'menu' },
     h('button', { type: 'button', role: 'menuitem', onclick: () => { close(); exportWorkspace(); } }, t('ws.save')),
     h('button', { type: 'button', role: 'menuitem', onclick: () => { close(); $('importWorkspace').click(); } }, t('ws.open')),
@@ -647,6 +650,9 @@ async function boot() {
   $('appviewBack').addEventListener('click', () => { location.hash = 'catalogue'; });
   // One language switch design everywhere; all of them drive the same setting.
   for (const id of ['langToggle', 'introLang', 'catLang', 'appLang']) mountLangSwitch($(id));
+  // a phone: the workspace takes the one phone layout of the apps (phone.js); render() keeps it in step
+  phoneWS = mountPhoneWorkspace({ onMore: togglePhoneMenu });
+  render();
   $('catHome').addEventListener('click', () => { location.hash = ''; });
   const toCatalogue = () => { stop(); location.hash = 'catalogue'; };
   $('brandHome').addEventListener('click', toCatalogue);
@@ -684,6 +690,7 @@ async function boot() {
   async function startWorkspaceMap() {
     viewer = await createMapViewer($('map'), {
       theme: 'dark',
+      inset: () => phoneWS?.inset() || null,          // a phone: frame the scale clear of the Display row and the folded sheet
       onSelect: id => {
         const e = store.current();
         if (activeTool || !e?.result?.children?.some(c => c.id === id)) return;
@@ -695,6 +702,7 @@ async function boot() {
       onView3D: on => { view3D = on; $('view2d').setAttribute('aria-pressed', String(!on)); $('view3d').setAttribute('aria-pressed', String(on)); }
     });
     $('mapLoading').classList.add('done');
+    if (phoneWS) { phoneWS.adoptMapPanel(); viewer.resize(); }
     const cur = store.current();
     viewer.fit(cur.input?.boundary || cur.result?.boundary, { animate: false });
     if (!cur.result) await runEntry(cur, { animate: false });

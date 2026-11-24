@@ -51,7 +51,7 @@
   if (window.L2Phone && L2Phone.is()) {
     L.classList.remove('l2-col'); R.classList.remove('l2-col');
     L2Phone.init({
-      sheet: L, display: R, quick: [$('saveSite')], hide: [h1, hb.querySelector('.l2-icon'), colR, hr], zh: isZh,
+      sheet: L, display: R, quick: [$('saveSite')], hide: [h1, hb.querySelector('.l2-icon'), colR, hr], zh: isZh, lang: $('langbar'),
       title: function () { return h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : 'Loop City'; },
       status: function () { var c = $('cellsLine'); return c ? c.textContent.replace(/\s+/g, ' ').trim() : ''; }
     });

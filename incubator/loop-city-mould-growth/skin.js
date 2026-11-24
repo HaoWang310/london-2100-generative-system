@@ -513,6 +513,9 @@
     handle.addEventListener('pointercancel', function () { drag = null; });
 
     /* Display */
+    /* the language switch (24 Nov 2026): at the top right, level with Display, as in the other apps
+       (../../shared/ui/phone.css, .l2ph-lang); the zoom buttons go below it (skin.css) */
+    if ($('langbar')) { $('langbar').classList.add('l2ph-lang'); document.body.appendChild($('langbar')); root.classList.add('l2ph-lang-top'); }
     var db = el('button', 'lcph-disp'); db.type = 'button';
     db.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 2 5.6 9 9.2l7-3.6L9 2Z"></path><path d="m2 9.2 7 3.6 7-3.6"></path><path d="m2 12.6 7 3.6 7-3.6"></path></svg>';
     var dbt = el('span', '', 'Display', '显示'); db.appendChild(dbt);

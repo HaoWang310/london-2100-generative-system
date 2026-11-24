@@ -105,11 +105,12 @@ export function createPanel(container, ctl, { display, onDisplay = () => {} }) {
     el.reset = null;
 
     // run
-    el.run = h('button', { type: 'button', class: 'btn primary lc01-run', onclick: () => ctl.run() }, T('Run the century'));
+    // data-phone-quick: on a phone the workspace shows these in the folded sheet (app/phone.js)
+    el.run = h('button', { type: 'button', class: 'btn primary lc01-run', 'data-phone-quick': '', onclick: () => ctl.run() }, T('Run the century'));
     el.status = h('p', { class: 'muted small lc01-status' });
     el.bar = h('i');
     el.cost = h('p', { class: 'lc01-note small' }, T('Run the century grows one of your own with the engine: a minute or more on a desk, longer and heavier on a phone. Every run is different: the mould has no fixed random seed.'));
-    el.back = h('button', { type: 'button', class: 'btn lc01-back', onclick: () => ctl.showPublished() }, T('Back to the published result'));
+    el.back = h('button', { type: 'button', class: 'btn lc01-back', 'data-phone-quick': '', onclick: () => ctl.showPublished() }, T('Back to the published result'));
     container.append(h('div', { class: 'lc01-sec' }, h('div', { class: 'eyebrow' }, T('Run')), el.run, el.status, h('div', { class: 'lc01-prog' }, el.bar), el.cost, el.back));
 
     // figures

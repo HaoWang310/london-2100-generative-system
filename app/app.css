@@ -186,3 +186,58 @@ body.ws-resizing iframe { pointer-events: none; }
   .ps-chip { padding: 0 11px; font-size: 12.5px; }
   .timeline { font-size: 12px; }
 }
+
+/* ==== a phone (24 Nov 2026): the workspace takes the one phone layout of the apps (../shared/ui/phone.css, app/phone.js).
+   html.l2phone is set in index.html's head: a touch screen whose short side is under 600 px. The map fills the screen
+   under the top bar; the inspector is the sheet along the bottom (folded: the name, the status, the time bar, the main
+   actions); Display at the top left opens 2D / 3D, the map's display panel and the legend; the language switch stands
+   at the top right. A narrow window on a computer keeps the stacked layout above. */
+html.l2phone .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); grid-template-areas: "top" "stage"; }
+html.l2phone .sidenav, html.l2phone .crumbs, html.l2phone .ws-rz, html.l2phone .phone-scales, html.l2phone .version { display: none !important; }
+html.l2phone .topbar { gap: 10px; padding: 0 8px 0 14px; min-width: 0; }
+html.l2phone .brand-sub { display: none; }
+html.l2phone .brand-name { color: var(--text-2); }
+html.l2phone .top-actions { display: none; }
+html.l2phone .ws-scale { all: unset; display: flex; align-items: center; gap: 6px; min-width: 0; height: 44px; padding: 0 6px; font-weight: 600; font-size: 15px;
+  color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+html.l2phone .ws-scale span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.l2phone .ws-scale i { font-style: normal; font-size: 11px; color: var(--text-2); flex: none; }
+html.l2phone .ws-more { all: unset; margin-left: auto; flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; letter-spacing: .05em; color: var(--text-2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+html.l2phone .phone-menu { position: fixed; z-index: 80; min-width: 200px; max-width: calc(100vw - 16px); padding: 6px; border-radius: 14px; background: rgba(28,28,31,.98);
+  border: 1px solid var(--hairline-strong); box-shadow: 0 12px 32px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+html.l2phone .phone-menu button { height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 10px; text-align: left; border: 0; border-radius: 9px; background: none;
+  color: var(--text); font: inherit; font-size: 15px; }
+html.l2phone .phone-menu button:active { background: var(--surface-2); }
+html.l2phone .phone-menu button:disabled { opacity: .4; }
+html.l2phone .phone-menu button[aria-checked="true"] { background: #fff; color: #000; }
+html.l2phone .phone-menu .num { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 12px; opacity: .6; min-width: 18px; }
+html.l2phone .ws-menu-sep { height: 1px; margin: 4px 8px; background: var(--hairline); }
+/* the sheet: the time bar under its head, the main actions in a row; the description, parameters and figures inside */
+html.l2phone .inspector { border: 0; }
+html.l2phone .inspector .timeline { height: 44px; padding: 0 16px; gap: 10px; background: none; border: 0; flex: none; }
+html.l2phone .inspector .timeline .play { width: 44px; height: 44px; }
+html.l2phone .inspector .tl-status { display: none; }
+html.l2phone .inspector .tl-label { min-width: 0; }
+html.l2phone .l2ph-quick #inspActions, html.l2phone .l2ph-quick #inspActions .row { display: contents; }   /* each button its own share of the row */
+html.l2phone .l2ph-quick .btn { flex: 1 1 0; min-width: 0; min-height: 44px; border-radius: 12px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.l2phone .l2ph-quick .btn[hidden] { display: none; }
+html.l2phone .l2ph-body .insp-head { padding-top: 4px; }
+/* Display: 2D / 3D, the map's display panel, the legend */
+html.l2phone #wsDisplay { padding: 14px 16px 16px; color: var(--text); }
+html.l2phone #wsDisplay .ws-dsec { padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+html.l2phone #wsDisplay .ws-dsec .seg { display: flex; width: 100%; height: 44px; box-sizing: border-box; padding: 3px; border-radius: 12px; margin-top: 8px; }
+html.l2phone #wsDisplay .ws-dsec .seg button { flex: 1; height: auto; border-radius: 9px; font-size: 15px; }
+html.l2phone #wsDisplay .ws-dsec .seg button[aria-pressed="true"] { background: #fff; color: #000; }
+html.l2phone #wsDisplay .dp { position: static !important; width: auto !important; height: auto !important; max-height: none !important; margin: 0; border: 0; border-radius: 0;
+  background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible; }
+html.l2phone #wsDisplay .dp-head, html.l2phone #wsDisplay .dp-rz { display: none !important; }
+html.l2phone #wsDisplay .dp-body { display: block !important; padding: 12px 0 0; overflow: visible; }
+html.l2phone #wsDisplay .dp-tile { height: 44px; font-size: 14px; }
+html.l2phone #wsDisplay .dp-row { min-height: 44px; font-size: 14px; }
+html.l2phone #wsDisplay .dp-search input { height: 44px; font-size: 16px; }
+html.l2phone #wsDisplay .insp-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+/* what floats on the map stands clear of the Display row above and the folded sheet below */
+html.l2phone .map-hint { top: 68px; max-width: calc(100% - 32px); }
+html.l2phone .map-badge { bottom: calc(var(--ws-fold, 190px) + 12px); max-width: calc(100% - 24px); box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.l2phone .stage .maplibregl-ctrl-bottom-left, html.l2phone .stage .maplibregl-ctrl-bottom-right { bottom: var(--ws-fold, 190px); }
