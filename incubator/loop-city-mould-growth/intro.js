@@ -12,8 +12,9 @@
    The fifth scene is the page's own opening picture, so the cover ends by sliding its frame onto the map's sheet
    and clearing. Lines, stations and labels are the page's own and OpenStreetMap's (intro-data.js).
 
-   - First visit: the whole story; it waits on scene 5 until the model is ready, "Skip" at any time (Enter / Esc too).
-   - Later visits: the still fifth scene until the map is on the screen, then the page as before.
+   - Every visit (24 Nov 2026: no longer the first only, so the catalogue and a shared link always tell it): the whole
+     story; it waits on scene 5 until the model is ready, "Skip" at any time (Enter / Esc too). With the system's
+     "reduce motion" on: the still fifth scene until the map is on the screen, then the page as before.
    - "Watch the introduction" in the left panel plays it again. `#intro` in the address plays it, `#nointro` never does.
    - Not shown with `#noskin`, nor in the frame the workspace keeps out of sight (`?embed=1`).
    Nothing in the model is touched: this is a cover over the page. See intro.css for why it is built of small boxes. */
@@ -22,8 +23,6 @@
   var root = document.documentElement, D = window.LC_INTRO_DATA;
   var hash = location.hash || '';
   var off = !root.classList.contains('lcskin') || /[?&]embed=1\b/.test(location.search || '') || /[#&]nointro\b/.test(hash) || !D || !document.body;
-  var KEY = 'loopCity1.introSeen';
-  var seen = false; try { seen = localStorage.getItem(KEY) === '1'; } catch (e) { /* private mode: the story each time */ }
   var calm = false; try { calm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { /* older browsers */ }
   /* the dark base map the page itself will draw: half size on a touch device, as the page decides (LITE in index.html) */
   var lite = false;
@@ -322,7 +321,6 @@
     function close() {
       if (done) return; done = true;
       clearInterval(timer); removeEventListener('resize', fit); document.removeEventListener('keydown', key, true);
-      if (!again) { try { localStorage.setItem(KEY, '1'); } catch (e) { /* private mode */ } }
       /* the page has drawn its map only now and then under the cover (frame() in index.html, LCIntro.covering):
          ask it for a fresh frame, and hand over once that frame has had time to be drawn */
       covering = false;
@@ -400,6 +398,5 @@
     get covering() { return covering && !!live; }
   };
   if (off) return;
-  var force = /[#&]intro\b/.test(hash);
-  open((force || !seen) && !calm, false);
+  open(!calm, false);
 })();
