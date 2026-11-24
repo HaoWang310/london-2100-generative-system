@@ -103,7 +103,7 @@ def cell(d, f):
 L1 = over(L1, lines(R['vectors']['cells']['features'], cell))
 
 # ---- the stack: each layer seen from above and in front, lifted apart
-cx = 470 * K
+cx = 418 * K
 TW, BW, PH = 570 * K, 660 * K, 196 * K          # the plane's far edge, near edge, depth on the cover
 CY = [172 * K, 310 * K, 448 * K, 586 * K]       # 01 at the top
 def quad(cy):
@@ -146,7 +146,7 @@ def spaced(x, y, s, f, fill, track):
     for ch in s:
         d.text((x, y), ch, font=f, fill=fill); x += d.textlength(ch, font=f) + track
     return x
-LX = 868 * K
+LX = 800 * K
 LABELS = [('01', 'SLIME MOULD · 2100', 'CELLS READ FROM ITS HIGHWAYS'),
           ('02', 'LOOP CITY RAIL', '412 KM ORBITAL · 17 STATIONS'),
           ('03', 'EXISTING ROADS', 'MOTORWAYS · A ROADS · TRUNK'),
@@ -155,14 +155,15 @@ for cy, (n, title, sub) in zip(CY, LABELS):
     q = quad(cy); ex = (q[1][0] + q[2][0]) / 2
     d.ellipse([ex - 3 * K, cy - 3 * K, ex + 3 * K, cy + 3 * K], fill=(255, 255, 255, 200))
     d.line([(ex, cy), (LX - 14 * K, cy)], fill=(255, 255, 255, 110), width=K)
-    spaced(LX - 4 * K, cy - 15 * K, n, font(10, 400), (160, 160, 166, 255), 1 * K)
-    spaced(LX + 18 * K, cy - 18 * K, title, font(15, 600), (245, 245, 247, 255), 2.2 * K)
-    spaced(LX + 18 * K, cy + 4 * K, sub, font(10, 400), (150, 150, 156, 255), 1.6 * K)
+    # 24 Nov 2026: the labels at 1.5 times the map cover's size, so they can be read on a phone's introduction pages
+    spaced(LX - 4 * K, cy - 22 * K, n, font(14, 400), (160, 160, 166, 255), 1.5 * K)
+    spaced(LX + 24 * K, cy - 26 * K, title, font(22, 600), (245, 245, 247, 255), 3 * K)
+    spaced(LX + 24 * K, cy + 6 * K, sub, font(15, 400), (160, 160, 166, 255), 2.2 * K)
 # the top right: what the page runs, as the map's cover names its themes
-x0 = 940 * K; y0 = 92 * K
+x0 = 900 * K; y0 = 70 * K
 for i, c in enumerate([(90, 90, 96), (160, 160, 166), (245, 245, 247), WARM, GREEN]):
-    d.ellipse([x0 + i * 13 * K, y0, x0 + i * 13 * K + 6 * K, y0 + 6 * K], fill=c + (255,))
-spaced(x0 - 2 * K, y0 + 14 * K, '2025 → 2100', font(10, 400), (160, 160, 166, 255), 2 * K)
+    d.ellipse([x0 + i * 19 * K, y0, x0 + i * 19 * K + 9 * K, y0 + 9 * K], fill=c + (255,))
+spaced(x0 - 2 * K, y0 + 20 * K, '2025 → 2100', font(15, 400), (160, 160, 166, 255), 3 * K)
 
 out = img.convert('RGB').resize((CW // K, CH // K), Image.LANCZOS)
 out.save(OUT, 'WEBP', quality=90, method=6)
