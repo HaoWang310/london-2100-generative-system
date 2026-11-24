@@ -140,3 +140,6 @@ html.lcskin .lc-introlink { display:block; margin:-6px 0 16px; padding:0; border
   font:600 12.5px/1.4 inherit; font-family:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px; text-decoration-color:rgba(255,255,255,.3); }
 html.lcskin .lc-introlink:hover { color:#fff; }
 html.lcskin .lc-introlink:focus-visible { outline:2px solid #fff; outline-offset:3px; border-radius:4px; }
+/* 24 Nov 2026 · opened from the catalogue on a phone, the shell's language switch floats at the top right (12 px in,
+   44 px high): the top row, with Skip, stands below it */
+@media (max-width:760px) { html.l2-shell-lang .lci-top { padding-top:68px; } }

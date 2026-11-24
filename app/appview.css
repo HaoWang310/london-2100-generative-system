@@ -6,6 +6,7 @@
   will-change: clip-path;
 }
 .appview-bar {
+  position: relative; z-index: 2;   /* above the app, for the language switch that floats over it on a phone */
   display: flex; align-items: center; gap: 8px; padding: 0 10px 0 8px;
   background: rgba(0,0,0,.82); backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
   border-bottom: 1px solid var(--hairline);
@@ -26,10 +27,12 @@
   .appview-external span { display: none; }
   .appview-title-full { display: none; }
   .appview-title-short { display: inline; }
-}
-/* the smallest phones (375 px: SE, mini): "← Catalogue" alone took 107 px and left the title 81, less than
-   "Tensor Studio" needs. The back button is the arrow; its word stays for screen readers. */
-@media (max-width: 400px) {
-  .appview-back { padding-left: 10px; padding-right: 10px; }
-  .appview-back span[data-i18n] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* 24 Nov 2026 · a phone: the bar holds the way back, the title and the link out; the language switch floats over the
+     app's top right corner, level with its Display button at the top left (../shared/ui/phone.css: 12 px in, 44 px
+     high, black with a fine edge, 14 px corners). The app learns it from the class "l2-shell-lang" on its <html>. */
+  #appLang { position: absolute; top: calc(100% + 13px); right: 12px; }   /* 100% is the bar less its 1 px edge: level with Display, 12 px into the app */
+  #appLang.seg { box-sizing: border-box; height: 44px; padding: 3px; gap: 2px; border-radius: 14px; background: #000;
+    border: 1px solid rgba(255,255,255,.22); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  #appLang.seg button { height: 36px; min-width: 48px; padding: 0 12px; border-radius: 11px; font: 600 15px/1 var(--font, system-ui, sans-serif); color: rgba(255,255,255,.6); }
+  #appLang.seg button[aria-pressed="true"] { background: #fff; color: #000; }
 }

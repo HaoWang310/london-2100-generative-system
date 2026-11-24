@@ -284,7 +284,10 @@ function draw() {
   furniture(T, light);
 }
 function furniture(T, light) {
-  const nx = W - 34, ny = 46;                                   // north: a circle, a line to the rim, N above
+  // north: a circle, a line to the rim, N above. Opened from the catalogue on a phone (24 Nov 2026) the shell's language
+  // switch floats over the top right corner (to 56 px down): the symbol stands below it.
+  const shellSwitch = document.documentElement.classList.contains('l2-shell-lang') && innerWidth <= 760;
+  const nx = W - 34, ny = shellSwitch ? 98 : 46;
   cx.strokeStyle = T.furn; cx.fillStyle = T.furn; cx.lineWidth = 1.4;
   cx.beginPath(); cx.arc(nx, ny, 11, 0, 7); cx.stroke(); cx.beginPath(); cx.moveTo(nx, ny); cx.lineTo(nx, ny - 11); cx.stroke();
   cx.font = "10px 'DM Sans',system-ui,sans-serif"; cx.textAlign = 'center'; cx.textBaseline = 'alphabetic'; cx.fillText('N', nx, ny - 15);

@@ -270,3 +270,8 @@ html.lcskin.lcphone #zoombar button { width:44px; min-width:44px; height:44px; p
 /* the notes that sat at the foot of the screen: above the sheet */
 html.lcskin.lcphone #lcPrep { left:50%; right:auto; top:auto; bottom:calc(141px + 12px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:69; height:44px; }
 
+/* 24 Nov 2026 · opened from the catalogue on a phone, the shell's language switch floats at the top right, level with
+   Display (html.l2-shell-lang): the zoom buttons go down the side below it, and step aside while the display panel,
+   which then spans the top, is open (two fingers still zoom) */
+html.lcskin.lcphone.l2-shell-lang #zoombar { top:68px; }
+html.lcskin.lcphone.l2-shell-lang.lcph-disp-open #zoombar { display:none; }
