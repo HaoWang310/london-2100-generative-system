@@ -101,7 +101,6 @@
 @keyframes lciOut   { from { opacity:1; } to { opacity:0; } }
 @keyframes lciGbIn  { from { opacity:0; } to { opacity:.2; } }
 @keyframes lciGbOut { from { opacity:.2; } to { opacity:.08; } }
-@keyframes lciGrow  { from { opacity:0; transform:scale(.02); } 12% { opacity:1; } to { opacity:1; transform:scale(1); } }
 @keyframes lciPop   { from { opacity:0; transform:scale(.2); } 60% { opacity:1; transform:scale(1.25); } to { opacity:1; transform:scale(1); } }
 @keyframes lciDimA  { from { opacity:1; } to { opacity:.72; } }
 @keyframes lciDimB  { from { opacity:1; } to { opacity:.45; } }
@@ -114,7 +113,15 @@
 #lcIntro.lci-story .lci-gb      { opacity:0; animation:lciGbIn 1s ease-out var(--d) both, lciGbOut 1s ease var(--o) forwards; }
 #lcIntro.lci-story .lci-dimA    { animation:lciDimA .9s ease var(--d) both; }
 #lcIntro.lci-story .lci-dimB    { animation:lciDimB .9s ease var(--d) both; }
-#lcIntro.lci-story .lci-grow    { opacity:0; animation:lciGrow 1.5s cubic-bezier(.22,.61,.36,1) var(--d) both, lciOut .4s ease var(--o) forwards; }
+#lcIntro.lci-story .lci-gp      { opacity:0; animation:lciIn .18s ease-out var(--d) both, lciOut .4s ease var(--o) forwards; }
+/* the growing head (24 Nov 2026): a frame-sized box moved along the radial by its own keyframes; its dot at the top left,
+   drawn 1/k as large because the camera enlarges it k times */
+.lci-head { inset:0; width:100%; height:100%; pointer-events:none; }
+.lci-head i { position:absolute; left:0; top:0; width:calc(8px * var(--hs)); height:calc(8px * var(--hs)); margin:calc(-4px * var(--hs)) 0 0 calc(-4px * var(--hs));
+  border-radius:50%; background:#fff; box-shadow:0 0 calc(6px * var(--hs)) calc(2px * var(--hs)) rgba(255,255,255,.9), 0 0 calc(18px * var(--hs)) calc(6px * var(--hs)) rgba(255,255,255,.35); }
+.lci-head.lci-new i { box-shadow:0 0 calc(6px * var(--hs)) calc(2px * var(--hs)) rgba(255,236,210,.95), 0 0 calc(18px * var(--hs)) calc(6px * var(--hs)) rgba(227,180,123,.5); }
+.lci-head { opacity:0; }
+#lcIntro.lci-story .lci-head    { animation:var(--hn) 1.6s linear var(--d) both; }
 #lcIntro.lci-story .lci-seg     { opacity:0; animation:lciIn .5s ease-out var(--d) both; }
 #lcIntro.lci-story .lci-dot i   { opacity:0; animation:lciPop .5s ease-out var(--d) both; }
 #lcIntro.lci-story .lci-dot b   { animation:lciPulse 2.6s ease-out var(--o) infinite; }
