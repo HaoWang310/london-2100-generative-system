@@ -32,6 +32,11 @@
       : ((navigator.maxTouchPoints || 0) > 0 && matchMedia('(pointer: coarse)').matches);
   } catch (e) { lite = false; }
   var DARK = lite ? 'img/half/base_dark.webp' : 'img/base_dark.webp';
+  /* the Green Belt as the page itself draws it (its own layer, the file the page loads), to light up in scene 1 */
+  var BELT = lite ? 'img/half/greenbelt.webp' : 'img/greenbelt.webp';
+  /* the story's map: a smaller copy on a phone, whose frame is a third as wide (the head of index.html asks for the same
+     file first, ahead of the page's own large images) */
+  var BASE = root.classList.contains('lcphone') ? 'img/intro/base-s.webp' : 'img/intro/base.webp';
 
   /* when each scene begins, in seconds */
   var T = [0, 4, 10, 15.5, 21.5], END = 23.5;
@@ -95,8 +100,9 @@
 
   function open(story, again) {
     if (live) return;
-    var zh = isZh(), t0 = performance.now(), done = false, storyOver = !story, readyAt = 0, timer = 0, swapped = false;
-    var box = mk('div', story ? 'lci-story' : 'lci-still'); box.id = 'lcIntro';
+    var zh = isZh(), opened = performance.now(), t0 = opened, done = false, storyOver = !story, readyAt = 0, timer = 0, swapped = false, started = false;
+    /* the cover waits, black, until its map has come: the story is told on the map, never on an empty frame */
+    var box = mk('div', 'lci-wait'); box.id = 'lcIntro';
     box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
 
     /* top: where we are, and the way out */
@@ -111,14 +117,16 @@
     delay(cam, T[1]); cam.style.setProperty('--o', T[2].toFixed(2) + 's');
 
     var gBase = delay(mk('div', 'lci-g lci-base lci-dimA'), T[1] + 1.4);
-    var img = mk('img', 'lci-img'); img.alt = ''; img.decoding = 'async'; img.src = 'img/intro/base.webp';
-    var ctr = mk('img', 'lci-img'); ctr.alt = ''; ctr.decoding = 'async'; ctr.src = 'img/intro/centre.webp';
+    var img = mk('img', 'lci-img'); img.alt = ''; img.decoding = 'async'; img.setAttribute('fetchpriority', 'high'); img.src = BASE;
+    /* the middle of London at full size is wanted only for scene 2: asked for once the map has come */
+    var ctr = mk('img', 'lci-img'); ctr.alt = ''; ctr.decoding = 'async';
     place(ctr, [D.centre[0], D.centre[1]]); ctr.style.width = pct(D.centre[2], D.W); ctr.style.height = pct(D.centre[3], D.H);
     gBase.appendChild(delay(img, 0.1)); gBase.appendChild(delay(ctr, 0.1));
-    var gb = document.createElementNS(NS, 'svg');
-    gb.setAttribute('viewBox', '0 0 ' + D.W + ' ' + D.H); gb.setAttribute('class', 'lci-gb'); gb.setAttribute('aria-hidden', 'true');
-    gb.setAttribute('preserveAspectRatio', 'none');
-    gb.innerHTML = '<path d="' + D.greenbelt + '" fill="#9EBE7A" fill-rule="evenodd"/>';
+    /* the Green Belt: the page's own layer used as a mask over a flat green, so its edge is the map's edge */
+    var gb = mk('div', 'lci-gb'), belt = new Image(), beltReady = false;
+    belt.onload = function () { beltReady = true; var u = 'url("' + BELT + '")'; gb.style.webkitMaskImage = u; gb.style.maskImage = u; };
+    belt.onerror = function () { beltReady = true; gb.style.display = 'none'; };
+    belt.src = BELT;
     gBase.appendChild(delay(gb, 0.7, T[1] + 0.2));
     /* the page's own dark map, lines and all, for the last scene (the same file the page loads, so it comes once) */
     var dark = mk('img', 'lci-img lci-dark'); dark.alt = ''; dark.decoding = 'async';
@@ -316,7 +324,18 @@
       if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); }
       else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); e.stopImmediatePropagation(); }   // not the page's free mould, under a cover
     }
+    /* the story starts only once its map is on the screen: the base map decoded and the Green Belt's layer in. A story
+       still waiting after WAIT seconds is not told: the still last picture is shown instead, as on a later visit */
+    var WAIT = 12;
+    function begin(asStory) {
+      if (started || done) return; started = true;
+      if (!asStory) { story = false; storyOver = true; }
+      box.classList.remove('lci-wait'); box.classList.add(story ? 'lci-story' : 'lci-still');
+      if (!ctr.src) ctr.src = 'img/intro/centre.webp';
+      t0 = performance.now(); turn();
+    }
     function tick() {
+      if (!started) { status(); return; }
       var now = performance.now(), el = (now - t0) / 1000;
       if (isZh() !== zh) words(); else status();
       /* the last scene: the page's own map, with its lines, takes over from the drawing once it has come */
@@ -334,6 +353,15 @@
     document.addEventListener('keydown', key, true);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!done) turn(); });
     timer = setInterval(tick, 250);
+    var mapIn = false;
+    (img.decode ? img.decode() : new Promise(function (ok, no) { img.onload = ok; img.onerror = no; }))
+      .then(function () { mapIn = true; }, function () { mapIn = true; });
+    var waited = setInterval(function () {
+      var w = (performance.now() - opened) / 1000;
+      if (started || done) { clearInterval(waited); return; }
+      if (mapIn && (beltReady || w > 4)) { clearInterval(waited); begin(true); }
+      else if (w > (story ? WAIT : 2)) { clearInterval(waited); begin(false); }
+    }, 100);
   }
 
   window.LCIntro = {
