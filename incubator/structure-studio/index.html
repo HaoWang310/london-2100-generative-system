@@ -713,8 +713,10 @@ function applyScheme3(id, quiet) { const sc = SCHEMES3.find(x => x.id === id) ||
 // 图例跟着当前视图：平面用平面的配色，三维用三维的
 function syncLegend() { const three = mode === '3d', sc2 = SCHEMES.find(x => x.id === SCHEME) || SCHEMES[0], sc3 = scheme3();
   $('lgFarm').style.background = three ? grad3Css(sc3) : gradCss(sc2); $('lgWater').style.background = three ? rgb(sc3.water) : PAL.water; $('lgWater').style.borderColor = three ? rgb(sc3.wline) : ''; $('lgRoadRow').style.display = three ? '' : 'none'; $('lgRoad').style.background = rgb(sc3.road); }
-const SCHEME_KEY = 'structureStudio.scheme';
-let SCHEME = 'M';
+/* 24 Nov 2026: the 2D default is Sunset (N), the catalogue cover's colours. The choice is kept only when a swatch is
+   clicked, under a new key: the old one was written on every visit, so every browser that had opened the app kept M. */
+const SCHEME_KEY = 'structureStudio.scheme2d';
+let SCHEME = 'N';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
 function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.toggle('three', three); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
@@ -731,7 +733,7 @@ function prewarm(id) { if (!F || !F.grid || F.grid.RES !== 2 || DEMO.on || id ==
   const sv = JSON.parse(JSON.stringify(PAL)), sid = SCHEME, pb = planBase; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o))); SCHEME = id;
   try { makePlanBase(); } finally { for (const k in PAL) delete PAL[k]; Object.assign(PAL, sv); SCHEME = sid; planBase = pb; } }
 function applyScheme(id, quiet) { const sc = SCHEMES.find(x => x.id === id) || SCHEMES[0]; SCHEME = sc.id; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o)));
-  try { localStorage.setItem(SCHEME_KEY, sc.id); } catch (e) {}
+  if (!quiet) { try { localStorage.setItem(SCHEME_KEY, sc.id); } catch (e) {} }   // a swatch clicked: remembered
   $('lgFarm').style.background = gradCss(sc); $('lgWater').style.background = PAL.water; $('lgRed').style.borderTopColor = PAL.red; $('lgTower').style.borderColor = PAL.red; $('lgTower').style.background = PAL.tower; $('lgBld').style.background = rgb(PAL.bld);
   const mid = PAL.grad ? PAL.grad[Math.floor(PAL.grad.length / 2)][1] : null;
   if (typeof MAT !== 'undefined') { if (mid) MAT.farm.color.setHex(hex3(mid)); else MAT.farm.color.set(PAL.farm); MAT.deck.color.set(PAL.deck); MAT.towW.color.set(PAL.tower); MAT.bld.color.setHex(hex3(PAL.bld)); MAT.bldS.color.setHex(hex3(PAL.bld.map(v => v * .8 | 0))); }
@@ -1605,7 +1607,7 @@ $('dmLogic').onchange = async e => { if (!DEMO.on) return; DEMO.playing = false;
 addEventListener('keydown', e => { if (!DEMO.on) return; if (e.key === 'Escape') demoExit(); else if (!DEMO.full) return; else if (e.key === ' ') { e.preventDefault(); $('dmPlay').click(); } else if (e.key === 'ArrowRight') $('dmNext').click(); else if (e.key === 'ArrowLeft') $('dmPrev').click(); });
 addEventListener('resize', () => { if (DEMO.on && mode === '2d') dmFit(); });
 syncPrimAng();
-try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'M'; } catch (e) {} applyScheme(SCHEME, true);
+try { SCHEME = localStorage.getItem(SCHEME_KEY) || 'N'; } catch (e) {} applyScheme(SCHEME, true);
 try { SCHEME3 = localStorage.getItem(SCHEME3_KEY) || 'aurora'; } catch (e) {} applyScheme3(SCHEME3, true);
 boot();
 </script>
