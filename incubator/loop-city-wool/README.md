@@ -6,6 +6,8 @@
 >
 > **修正 · Fix (22 Nov 2026).** 中文下「由毛线生成的路网」这一组滑块（第 11–17 步用）以前不会出现，旧的道路等级滑块也没有被隐藏：页面按英文标题找位置，换成中文后找不到。现在按 id 找。 In Chinese the group "The network, from the wool" (the sliders of steps 11 to 17) was never built and the older road-hierarchy sliders stayed on show: the page looked its headings up by their English text. They are now found by id.
 >
+> **精简 · Removed (24 Nov 2026).** 删掉了已经不起作用的旧第 11–16 步：右侧「道路等级」一组（道路颜色、C/B/A/M 线宽、真实宽度、支线站点、第 12 步红色现有道路）、左侧 8 个旧道路等级参数、4 个旧图层（道路等级、倒角道路、地块、胶囊站点）、「读取道路」按钮、旧的分阶段读路面板和旧的选地块面板，以及只有它们用到的代码（旧读路、旧交通站点、放大后的路口细节、三段旧道路脚本和旧测试钩子），页面从约 11 000 行减到约 4 800 行。第 1–17 步的画面、数字、选地块和单元包与删之前逐项相同（深色、浅色各拍一遍）。地址里的 `#step=11` 到 `#step=17` 打开按钮上同号的步骤。 The older steps 11 to 16, which nothing reached any more, are gone with every control, layer and test that only they used (about 6 000 lines); steps 1 to 17 give the same pictures, numbers, picked parcels and package as before.
+>
 > **范例 · The example (24 Nov 2026).** 单独打开（没有交来单元）时载入内置范例：车站 P2 的单元和沿环线的两个相邻单元——西南 A3 机场站的单元和东侧一块农业单元（`sample-cells.js`，第 1 步按默认设置跑一次百年后导出的单元包 v2：C66 P2 + C60 A3 + C77）。载入后页面自己把各步运行一遍：第 3 步出现三个单元，第 4–9 步每步停一两秒，第 10 步实时松弛，第 11–16 步描出道路并分级，停在第 16 步；地图上方的提示条显示进度，「停止」或点任何按钮、拖任何滑块（语言和收起面板除外）都会停下，交还给你。只有范例会自动运行；由第 1 步打开或用「打开单元包…」时用交来的单元，和以前一样按「运行」。`?sample` 强制范例，`#nosample` 不载入，`#noauto` 载入但不自动运行，网址里自带 `#step=` 时也不自动运行。第 1 步每次运行的单元都不同，所以你自己跑出的编号和边界会和范例不一样。实测（本机，桌面尺寸，20 Mbps）：约 28 秒出现范例（其中烘焙约 20 秒），自动运行约 45 秒，约 74 秒停在第 16 步。`four-cells.html` 只是跳转到这里。 Opened on its own, the page loads its example: station P2's cell and its two neighbours along the orbital (A3's cell to the south-west, a farming cell to the east; a version-2 package from one default run of step 1), then runs the steps on it by itself and stops at step 16, with a small bar over the map; Stop, or any button or slider of yours, hands the page back. Cells from step 1 or a file wait for Run as before. `#noauto` keeps the example still.
 
 > This folder is now step 2, the wool bands: `index.html` (page 02) and `four-cells.html` (page 02b). Step 1 is `incubator/loop-city-mould-growth/` (page 01) and step 3 is `incubator/loop-city-tensor-base/` (page 03). The pages are unchanged except for the one line that opens the next step. The file names below are the older ones.
@@ -25,7 +27,7 @@ Three pages that work as one chain. Each is a single self-contained HTML file: o
 
 1. Open page 01 and press Run. Allow pop-ups for the page when the browser asks: the other pages open from it.
 2. Click a cell, shift-click neighbours to add them, then double-click or press "Open in the wool".
-3. In page 02 go through the steps. Step 10: Run relaxes the wool. Steps 11 to 16 build the road network and the parcels.
+3. In page 02 go through the steps. Step 10: Run relaxes the wool. Steps 11 to 17 build the road network and the parcels, and step 17 takes parcels to page 03.
 4. Step 17: click an urban parcel, shift-click for more, double-click to open them in page 03.
 5. In page 03, save the site for the tensor field.
 
