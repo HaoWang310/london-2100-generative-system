@@ -2425,15 +2425,23 @@ function threads(lines, straight, alpha) {
   // threads run together, so a bundle turns to the main path
   const C = LK();
   ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, off.width, off.height); ox.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ox.globalCompositeOperation = 'lighter'; ox.lineJoin = 'round'; ox.lineCap = 'round';
+  ox.globalCompositeOperation = 'source-over'; ox.lineJoin = 'round'; ox.lineCap = 'round';      // single threads do not add up: they stay the secondary colour
   const trace = () => { ox.beginPath();
     for (const list of lines) for (const t of (list || [])) {
       ox.moveTo(sx(t[0]), sy(t[1]));
       if (straight) ox.lineTo(sx(t[2]), sy(t[3]));
       else for (let i = 2; i < t.length; i += 2) ox.lineTo(sx(t[i]), sy(t[i + 1]));
     } };
-  trace(); ox.strokeStyle = pxCss(C.sec, straight ? 0.42 : 0.55); ox.lineWidth = 0.8 * V.lw; ox.stroke();
-  if (!straight) { ox.strokeStyle = pxCss(C.main, 0.16); ox.lineWidth = 1.8 * V.lw; ox.stroke(); }
+  trace(); ox.strokeStyle = pxCss(C.sec, straight ? 0.42 : 0.6); ox.lineWidth = 0.8 * V.lw; ox.stroke();
+  if (!straight) {                                // where threads run together the main colour adds up and takes the secondary's place: bundles
+    if (!PX.b || PX.b.width !== off.width || PX.b.height !== off.height) { PX.b = document.createElement('canvas'); PX.b.width = off.width; PX.b.height = off.height; }
+    const bx = PX.b.getContext('2d'); bx.setTransform(1, 0, 0, 1, 0, 0); bx.clearRect(0, 0, PX.b.width, PX.b.height); bx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    bx.globalCompositeOperation = 'lighter'; bx.lineJoin = 'round'; bx.lineCap = 'round'; bx.beginPath();
+    for (const list of lines) for (const t of (list || [])) { bx.moveTo(sx(t[0]), sy(t[1])); for (let i = 2; i < t.length; i += 2) bx.lineTo(sx(t[i]), sy(t[i + 1])); }
+    bx.strokeStyle = pxCss(C.main, 0.16); bx.lineWidth = 1.6 * V.lw; bx.stroke();
+    ox.save(); ox.setTransform(1, 0, 0, 1, 0, 0); ox.globalCompositeOperation = 'destination-out'; ox.drawImage(PX.b, 0, 0);
+    ox.globalCompositeOperation = 'lighter'; ox.drawImage(PX.b, 0, 0); ox.restore();
+  }
   ox.globalCompositeOperation = 'source-over';
   cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = alpha; cx.drawImage(off, 0, 0); cx.restore();
 }
