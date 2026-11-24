@@ -268,7 +268,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
-<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=1"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="skin.css?v=2">
+<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=1"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="skin.css?v=3">
 </head>
 <body>
 <div id="view">
@@ -755,7 +755,17 @@ function drawVec(ctx, X, k, o) {
   // 红线：结构场地外缘（含跨水部分），规划红线的点划线画法
   ctx.strokeStyle = PAL.red; ctx.lineWidth = 2.1 * k; ctx.setLineDash([18 * k, 5 * k, 3 * k, 5 * k]); for (const Q of F.site.footPolys) { path(Q, true); ctx.stroke(); } ctx.setLineDash([]);
   ctx.restore(); }
+// 24 Nov 2026 · the phone (../../shared/ui/phone): the control panel is the sheet along the bottom, the full width of the
+// screen, and the display panel opens over the top. freeRect took the sheet for the left panel, so the plan was drawn
+// from its right edge, off the screen (on a 430 px phone only a corner showed). On a phone the drawing area is the
+// whole width, from under the Display button to the top of the folded sheet, as in Tensor Studio.
+function phoneRect() { if (!document.documentElement.classList.contains('l2phone')) return null;
+  const sh = document.querySelector('.l2ph-sheet'), open = document.documentElement.classList.contains('l2ph-open');
+  if (sh && !open) { const t = sh.getBoundingClientRect().top; if (t > 0 && t < innerHeight) phoneRect.fold = innerHeight - t; }
+  const cb = document.body.classList.contains('cards-on') ? 200 : 0, bottom = innerHeight - (phoneRect.fold || 141) - cb;
+  return { x: 0, y: 64, w: innerWidth, h: Math.max(120, bottom - 64) }; }
 function freeRect() { // 两侧浮动面板之间的空白区（比例尺、指北针放在这里）
+  const ph = phoneRect(); if (ph) return ph;
   const a = $('panel').getBoundingClientRect(), b = document.querySelector('.displayPanel').getBoundingClientRect(), cb = document.body.classList.contains('cards-on') ? 200 : 0;
   const x = a.width ? a.right + 6 : 0, x2 = b.width ? b.left - 6 : innerWidth; return { x, y: 64, w: Math.max(120, x2 - x), h: Math.max(120, innerHeight - 64 - cb - 8) }; }
 function drawFurniture(ctx, X, pxPerM, R, k, sb) { // sb：可选，比例尺左下角位置 [x, y] // 坐标十字（英国国家网格整百米）、比例尺、指北针
@@ -870,7 +880,7 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   if (Lf.towers)   for (const t of F.towers) { ctx.fillStyle = PAL.tower; if (SS.tower && SS.tower.feet && t[5]) { for (const Fp of SS.tower.feet(t)) { ctx.beginPath(); Fp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); } } else { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fill(); } }   // 三片塔的塔脚
   if (only) return cv;
   planBase = cv; FC.set(fk, cv); while (FC.size > 4) FC.delete(FC.keys().next().value); }
-function viewRect() { const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
+function viewRect() { const ph = phoneRect(); if (ph) return ph; const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 // 平面视图被拖动 / 缩放后：平时重画；逐步操作（演示）里由演示循环重画，只需清掉按屏幕坐标累积的粒子轨迹层
 function planMoved() { if (DEMO.on) { DEMO.trail = DEMO.trail2 = null; } else drawPlan(); }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
@@ -1244,6 +1254,9 @@ function dmLayerBridge() { const g = F.grid, im = new ImageData(g.W, g.H); for (
   const cv = document.createElement('canvas'); cv.width = g.W; cv.height = g.H; cv.getContext('2d').putImageData(im, 0, 0); return cv; }
 function dmFit() { const g = F.grid;
   if (DEMO.full) { const w = innerWidth, h = innerHeight, top = 120, bot = 110; PV.s = Math.min((w - 80) / g.W, (h - top - bot) / g.H) * 0.96; PV.ox = (w - g.W * PV.s) / 2 + 60; PV.oy = top + (h - top - bot - g.H * PV.s) / 2; }
+  else if (phoneRect()) { const R = phoneRect(), hd = $('dmHead'); hd.style.left = '14px'; hd.style.top = R.y + 'px';   // the phone: the heading under the Display button, the plan centred below it
+    const top = Math.min(R.h * 0.35, (hd.getBoundingClientRect().height || 64) + 10), bot = 10, side = 24;
+    PV.s = Math.min((R.w - side) / g.W, (R.h - top - bot) / g.H) * 0.96; PV.ox = R.x + (R.w - g.W * PV.s) / 2; PV.oy = R.y + top + (R.h - top - bot - g.H * PV.s) / 2; }
   else { const R = freeRect(), top = 96, bot = 40; PV.s = Math.min((R.w - 40) / g.W, (R.h - top - bot) / g.H) * 0.96; PV.ox = R.x + (R.w - g.W * PV.s) / 2; PV.oy = R.y + top + (R.h - top - bot - g.H * PV.s) / 2; const hd = $('dmHead'); hd.style.left = (R.x + 18) + 'px'; hd.style.top = '22px'; }
   DEMO.trail = DEMO.trail2 = null; }
 // 粒子：场流（顺张量场）与走廊流（顺走廊中心线）

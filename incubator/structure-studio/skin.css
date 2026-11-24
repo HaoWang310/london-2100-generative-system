@@ -23,3 +23,10 @@ html.l2ui.l2phone #axis { left:10px !important; bottom:calc(141px + 12px + env(s
 html.l2ui.l2phone #cbShow { left:50% !important; bottom:calc(141px + 12px + env(safe-area-inset-bottom)) !important; min-height:44px; }
 html.l2ui.l2phone.l2ph-disp-open #cbShow, html.l2ui.l2phone.l2ph-open #cbShow { display:none !important; }
 html.l2ui.l2phone #cardBar { left:8px !important; right:8px !important; width:auto !important; bottom:calc(141px + 8px + env(safe-area-inset-bottom)) !important; }
+/* 24 Nov 2026 · the step's heading of the step-by-step run, under the Display button and the width of the screen:
+   at its computer size (a 46 px number, up to 560 px wide) it covered most of a phone's plan */
+html.l2ui.l2phone #dmHead { gap:10px !important; max-width:calc(100vw - 68px) !important; }   /* the north arrow stands at the top right */
+html.l2ui.l2phone #dmHead b { font-size:28px !important; }
+html.l2ui.l2phone #dmName { font-size:16px !important; }
+html.l2ui.l2phone #dmSub { font-size:12px !important; line-height:1.4 !important; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+html.l2ui.l2phone.l2ph-disp-open #dmHead { display:none !important; }
