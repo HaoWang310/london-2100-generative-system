@@ -36,4 +36,5 @@ test('the page plays the film first, hands over without replaying the tensor fie
   assert.ok(html.indexOf('SSIntro.onSnap(SNAP, name)') < html.indexOf('SITE = SS.prepareSite(SNAP); SITE4 = null'), 'the snapshot goes to the film before the page starts computing');
   const w = readFileSync(new URL('intro/worker.js', dir), 'utf8'); assert.ok(w.includes("importScripts('data.js' + (self.location.search || ''), 'draw.js' + (self.location.search || ''))"));
   const js = readFileSync(new URL('intro/intro.js', dir), 'utf8'); for (const k of ['nointro', 'embed=1', 'prefers-reduced-motion', "classList.contains('l2ui')", 'transferControlToOffscreen']) assert.ok(js.includes(k), k);
+  assert.ok(!/window\.parent\s*!==\s*window/.test(js), 'the catalogue opens the app in a frame: being framed must not stop the film');
 });
