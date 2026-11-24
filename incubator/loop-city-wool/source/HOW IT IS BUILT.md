@@ -6,7 +6,7 @@ Page 02 is a copy of the Loop City live wool page (v16) whose text is patched by
 |---|---|
 | `bands.js` | The network from the wool: threads read as bands on a 28 m grid, joined to the existing roads and the cell edge, tidied, small blocks merged, the result as edges and parcels. `window.Bands.run(input, params)`. |
 | `bands_hier.js` | The road hierarchy by spacing: boundary highway, primary road, A road, B road; whole existing roads raised first. |
-| `bands_app.js` | Settings, sliders, layers, the drawing at true widths, parcel use from the growth result, the Chinese of the new labels. |
+| `bands_app.js` | Settings, sliders, layers, the drawing at true widths, parcel use from the growth result, the Chinese of the new labels. Since 24 Nov its colours come from the page's palettes (`bdC()` reads `LK()`), and the masses and parcels are drawn as particles. |
 | `bands_pick.js` | Step 17: picking urban parcels (and parks), the parcel package for page 03. |
 
 `bands.js` goes into the page head; the other three are placed inside the app script just before its `draw()` function. Steps 11 to 17 are numbered 21 to 27 inside the page. The older steps 11 to 16 (and the three road scripts they needed) were taken out on 24 Nov 2026; `#step=11` to `#step=17` in the address open the steps the buttons show.
