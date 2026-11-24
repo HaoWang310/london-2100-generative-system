@@ -1,6 +1,8 @@
 /* Pop-out app viewer */
 .appview {
   position: fixed; inset: 0; z-index: 58; background: #000; display: grid; grid-template-rows: 44px 1fr;
+  /* one column, the screen's width: a long title used to widen it (to 538 px on a 375 px phone) and the app was cut on the right */
+  grid-template-columns: minmax(0, 1fr);
   will-change: clip-path;
 }
 .appview-bar {
@@ -11,7 +13,8 @@
 }
 .appview.is-open .appview-bar { opacity: 1; }
 .appview-back { gap: 6px; }
-.appview-title { font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appview-title { font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.appview-title-short { display: none; }
 .appview-bar .sp { flex: 1; }
 .appview-external { text-decoration: none; font-size: 12px; }
 .appview-frame { position: relative; min-height: 0; background: #0b0b0c; }
@@ -19,4 +22,14 @@
   opacity: 0; transition: opacity .35s cubic-bezier(.2,0,0,1); }
 .appview-frame iframe.is-loaded { opacity: 1; }
 .appview-loading { z-index: 1; }
-@media (max-width: 760px) { .appview-external span { display: none; } }
+@media (max-width: 760px) {
+  .appview-external span { display: none; }
+  .appview-title-full { display: none; }
+  .appview-title-short { display: inline; }
+}
+/* the smallest phones (375 px: SE, mini): "← Catalogue" alone took 107 px and left the title 81, less than
+   "Tensor Studio" needs. The back button is the arrow; its word stays for screen readers. */
+@media (max-width: 400px) {
+  .appview-back { padding-left: 10px; padding-right: 10px; }
+  .appview-back span[data-i18n] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

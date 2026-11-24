@@ -41,6 +41,12 @@ for (const item of items) {
       assert.equal(typeof item.title?.[k], 'string', `title.${k} missing`);
       assert.ok(item.title[k].trim(), `title.${k} is empty`);
     }
+    // the phone's bar shows "short" when there is one: both languages, and short (about as long as "Tensor Studio")
+    if (item.short !== undefined) for (const k of ['zh', 'en']) {
+      assert.equal(typeof item.short?.[k], 'string', `short.${k} missing`);
+      assert.ok(item.short[k].trim(), `short.${k} is empty`);
+      assert.ok([...item.short[k]].length <= 18, `short.${k} "${item.short[k]}" is longer than 18 characters`);
+    }
     assert.ok(STATUS.includes(item.status), `status must be one of ${STATUS.join(', ')}`);
     if (item.desc !== undefined) for (const k of ['zh', 'en'])
       assert.equal(typeof item.desc[k], 'string', `desc.${k} must be text`);
