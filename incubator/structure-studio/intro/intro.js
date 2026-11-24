@@ -30,13 +30,14 @@
     var Dr = null, T = [0, 4.5, 9.5, 14.5, 19.5], END = 30.8, XF = 0.6;   // draw.js comes later in the page: read when the snapshot arrives
     me.closed = false; me.replay = !!opts.replay; me.cb = null; me.skippedEarly = false; me.structure = false;
     var root = document.createElement('div'); root.id = 'ssIntro'; root.setAttribute('lang', zh ? 'zh-CN' : 'en'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', L('开场：结构工作室在做什么', 'Opening: what Structure Studio does'));
-    root.innerHTML = '<canvas class="ssi-gl"></canvas><canvas class="ssi-film"></canvas><canvas class="ssi-top"></canvas>' +
-      '<div class="ssi-card"><b>' + L('结构工作室', 'Structure Studio') + '</b><span>' + L('Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets') + '</span><i></i><em>' + L('正在载入场地…', 'Loading the site…') + '</em></div>' +
+    root.innerHTML = '<div class="ssi-card"><b>' + L('结构工作室', 'Structure Studio') + '</b><span>' + L('Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets') + '</span><i></i><em>' + L('正在载入场地…', 'Loading the site…') + '</em></div>' +
+      // the canvases lie over the card: the film's first frame covers it, even while the page is too busy to hide it
+      '<canvas class="ssi-gl"></canvas><canvas class="ssi-film"></canvas><canvas class="ssi-top"></canvas>' +
       '<button type="button" class="ssi-skip">' + L('跳过', 'Skip') + '</button><button type="button" class="ssi-enter">' + L('进入 ›', 'Enter ›') + '</button>';
     (document.body || de).appendChild(root); de.classList.add('ssi-on');
     var cvGL = root.querySelector('.ssi-gl'), cvFilm = root.querySelector('.ssi-film'), cvTop = root.querySelector('.ssi-top'), ctxTop = cvTop.getContext('2d');
     var W = innerWidth, Hh = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), low = Math.min(W, Hh) < 600 || (navigator.maxTouchPoints || 0) > 0;
-    var worker = null, film = null, top = null, s5 = null, t0 = 0, hold = 0, holdAt = null, started = false, raf = 0, data = null, deck = null, name = opts.name || '';
+    var worker = null, pendSnap = null, film = null, top = null, s5 = null, t0 = 0, hold = 0, holdAt = null, started = false, raf = 0, data = null, deck = null, name = opts.name || '';
     me.root = root;
     function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
       if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(W, Hh, dpr); }
@@ -45,17 +46,19 @@
     addEventListener('resize', onResize); document.addEventListener('keydown', onKey, true);
     root.querySelector('.ssi-skip').onclick = function () { me.close(); };
     root.querySelector('.ssi-enter').onclick = function () { me.close(); };
+    // the worker is made right away, while the page is still loading: Chrome starts a worker only when the page's
+    // main thread is free, and once the page has its site it is busy building the structure for seconds
+    if (canMove) {
+      try { var off = cvFilm.transferControlToOffscreen(); worker = new Worker('intro/worker.js' + (V ? '?v=' + V : ''));
+        worker.onmessage = function (e) { var m = e.data; if (m.type === 'started') begin(m.t0); else if (m.type === 'hold') { hold = m.hold; me.clockOK = true; } else if (m.type === 'snap') { data = Object.assign(data || {}, m.data); if (top) top.setSnap(m.data); else pendSnap = m.data; } };
+        worker.onerror = function () { me.close(); };
+        worker.postMessage({ type: 'init', canvas: off, w: W, h: Hh, dpr: dpr, lang: zh ? 'zh' : 'en' }, [off]); } catch (e) { worker = null; }
+    }
     // ---------------------------------------------------------------- the ground (snapshot) → the worker, or drawn here
     me.snap = function (snap, nm) { if (me.closed || me.hasSnap) return; me.hasSnap = true; name = nm || name; zh = lang() !== 'en';
       Dr = window.SSIntroDraw; if (!Dr || !window.SSIntroData) { me.close(); return; } T = Dr.T; END = Dr.END; XF = Dr.XF;
-      if (canMove) {
-        try { var off = cvFilm.transferControlToOffscreen(); worker = new Worker('intro/worker.js' + (V ? '?v=' + V : ''));
-          worker.onmessage = function (e) { var m = e.data; if (m.type === 'ready') begin(); else if (m.type === 'hold') hold = m.hold; else if (m.type === 'snap') { data = Object.assign(data || {}, m.data); top && top.setSnap(m.data); } };
-          worker.onerror = function () { me.close(); };
-          worker.postMessage({ type: 'init', canvas: off, w: W, h: Hh, dpr: dpr, lang: zh ? 'zh' : 'en', name: name }, [off]);
-          worker.postMessage({ type: 'snap', snap: snap }); } catch (e) { worker = null; }
-      }
-      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: name }); top.resize(W, Hh, dpr);
+      if (worker) worker.postMessage({ type: 'snap', snap: snap, name: name, lang: zh ? 'zh' : 'en' });
+      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: name }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }
       if (!worker) {                       // older browsers: everything drawn here (it stops while the page builds)
         film = Dr.create(cvFilm.getContext('2d'), { lang: zh ? 'zh' : 'en', name: name }); film.resize(W, Hh, dpr);
         var A = SSIntroData.fromSnap(snap); data = Object.assign(data || {}, A); film.setSnap(A); top.setSnap(A);
@@ -70,7 +73,7 @@
       data = Object.assign(data || {}, B);
       if (worker) worker.postMessage({ type: 'structure', data: B, deck: deck }); if (film) { film.setStructure(B); if (deck) film.setDeck(deck); }
       top.setStructure(B); if (deck) top.setDeck(deck);
-      if (started) { var tn = (now() - t0) / 1000 - hold; if (tn > Dr.HOLD) hold += tn - Dr.HOLD; }   // the worker held at the end of scene 3 for as long
+      if (!worker && started) { var tn = (now() - t0) / 1000 - hold; if (tn > Dr.HOLD) hold += tn - Dr.HOLD; }   // drawn here: it held at the end of scene 3 for as long (the worker says so itself)
       me.structure = true; root.classList.add('ssi-ready');
       // scene 5: built a moment later, so the worker keeps the screen moving meanwhile
       setTimeout(function () { if (me.closed || !DK) return; try { build5(F, SITE, DK); } catch (e) { console.warn('opening film, scene 5', e); s5 = null; } }, 60);
@@ -90,11 +93,11 @@
       }, 40);
     }
     // ---------------------------------------------------------------- the clock
-    function begin() { if (started || me.closed) return; started = true; t0 = now(); root.classList.add('ssi-play'); if (worker) worker.postMessage({ type: 'start', t0: t0 }); raf = requestAnimationFrame(tick); }
+    function begin(at) { if (started || me.closed) return; started = true; t0 = at || now(); root.classList.add('ssi-play'); raf = requestAnimationFrame(tick); }
     function tick() { if (me.closed) return; raf = requestAnimationFrame(tick);
       var t = (now() - t0) / 1000 - hold, waiting = false;
       if (!worker) { if (!me.structure && t >= Dr.HOLD) { if (holdAt == null) holdAt = now(); t = Dr.HOLD; waiting = true; } else if (holdAt != null) { hold += (now() - holdAt) / 1000; holdAt = null; t = (now() - t0) / 1000 - hold; } film.frame(Math.min(t, END), { waiting: waiting }); }
-      var five = t >= T[4] && me.structure, lt = t - T[4];
+      var five = t >= T[4] && me.structure && (!worker || me.clockOK), lt = t - T[4];   // with a worker: only once it has said how long it held
       ctxTop.setTransform(1, 0, 0, 1, 0, 0); ctxTop.clearRect(0, 0, cvTop.width, cvTop.height); ctxTop.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (five) {
         var out = Dr.seg(lt, 9.8, 10.8);
@@ -103,7 +106,7 @@
         if (out > 0) top.endPlan(out);
         top.caption(Math.min(t, END)); top.pips(Math.min(t, END));
       } else cvGL.style.opacity = '0';
-      if (t >= END + 0.2) me.close();
+      if (t >= END + 0.2 && (!worker || me.clockOK)) me.close();
     }
     // ---------------------------------------------------------------- the end (Skip, Enter, Esc or the last frame): the page goes on
     me.onDone = function (cb) { me.cb = cb; };
@@ -115,8 +118,8 @@
       root.classList.add('ssi-out'); de.classList.remove('ssi-on');
       setTimeout(function () { if (s5) s5.dispose(); s5 = null; if (root.parentNode) root.parentNode.removeChild(root); }, 650);
       if (cur === me) cur = null; };
-    // nothing to show after 20 s (the snapshot never came): leave the page alone
-    setTimeout(function () { if (!started) me.close(); }, 20000);
+    // the snapshot never came in 20 s: leave the page alone
+    setTimeout(function () { if (!started && !me.hasSnap) me.close(); }, 20000);
   }
 
   window.SSIntro = {
