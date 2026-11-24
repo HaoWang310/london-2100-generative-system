@@ -664,6 +664,8 @@ async function boot() {
   const route = async () => {
     // options after the screen name (…#workspace?shadowR=2400) are for the pages, not part of the name
     const screen = location.hash.replace('#', '').split('?')[0] || (new URLSearchParams(location.search).has('nointro') ? 'workspace' : 'intro');
+    // a phone: the workspace's sheet, Display and language switch show on the workspace only (app.css, html.l2-ws)
+    document.documentElement.classList.toggle('l2-ws', !screen.startsWith('app/') && screen !== 'intro' && screen !== 'catalogue');
     if (screen.startsWith('app/')) {
       // An incubator app, popped out over the catalogue.
       const item = await catalogue.item(screen.slice(4));
