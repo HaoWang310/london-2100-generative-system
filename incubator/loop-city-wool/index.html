@@ -4482,11 +4482,19 @@ function rings(p, K, tol) {                             // a mask's outlines in 
 }
 const outer = (p, K, tol) => rings(p, K, tol).reduce((a, b) => (Math.abs(b.a) > Math.abs(a ? a.a : 0) ? b : a), null);
 function pole(p, K) {                                   // the point farthest inside: polylabel on the grid
-  const D = edt(inv(p.m), p.w, p.h);
+  // (24 Nov) worked on the mask's own box and one pixel round it (inside the grid): the nearest pixel outside the
+  // mask is always within that ring, so the same point comes out, from a far smaller grid
+  let x0 = p.w, y0 = p.h, x1 = -1, y1 = -1;
+  for (let y = 0, i = 0; y < p.h; y++) for (let x = 0; x < p.w; x++, i++) if (p.m[i]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return [K.x0, K.y1];
+  x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(p.w - 1, x1 + 1); y1 = Math.min(p.h - 1, y1 + 1);
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1, cm = new Uint8Array(cw * ch);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) cm[y * cw + x] = p.m[(y + y0) * p.w + x + x0] ? 0 : 1;
+  const D = edt(cm, cw, ch);
   let bi = -1, bd = -1;
-  for (let i = 0; i < D.length; i++) if (p.m[i] && D[i] > bd) { bd = D[i]; bi = i; }
+  for (let i = 0; i < D.length; i++) if (!cm[i] && D[i] > bd) { bd = D[i]; bi = i; }
   if (bi < 0) return [K.x0, K.y1];
-  const x = bi % p.w, y = (bi - x) / p.w;
+  const x = (bi % cw) + x0, y = (bi - (bi % cw)) / cw + y0;
   return [R1(K.x0 + (x + p.ox + 0.5) * G), R1(K.y1 - (y + p.oy + 0.5) * G)];
 }
 const whole = (m, K) => ({ m, w: K.w, h: K.h, ox: 0, oy: 0 });
@@ -4612,20 +4620,29 @@ async function bake(pkg) {
       const n = q.m.length, at_ = (i) => { const x = i % q.w, y = (i - x) / q.w, X = x + q.ox, Y = y + q.oy; return X < 0 || Y < 0 || X >= K.w || Y >= K.h ? -1 : Y * K.w + X; };
       const fm = new Uint8Array(n);
       for (let i = 0; i < n; i++) if (q.m[i]) { const g = at_(i); fm[i] = g >= 0 && keep[g] ? 1 : 0; }
-      const pieces = (m, min) => { const c = comps(m, q.w, q.h); return c.list.map(k => { const z = new Uint8Array(n); for (let i = 0; i < n; i++) if (c.lab[i] === k.id) z[i] = 1; return { m: z, n: k.n }; }).filter(z => z.n * G * G >= min); };
+      // (24 Nov) each piece's pixels gathered in one pass over the grid, not one pass per piece: the same pieces, in the same order
+      const lists = (c, keep) => { const at = new Int32Array(c.list.length + 1), L = []; c.list.forEach((k, j) => { if (keep(k)) { at[k.id] = L.length + 1; L.push({ k, idx: new Int32Array(k.n), f: 0 }); } });
+        for (let i = 0; i < n; i++) { const j = at[c.lab[i]]; if (j) { const e = L[j - 1]; e.idx[e.f++] = i; } } return L; };
+      const maskOf = idx => { const z = new Uint8Array(n); for (let t = 0; t < idx.length; t++) z[idx[t]] = 1; return z; };
+      const pieces = (m, min) => lists(comps(m, q.w, q.h), k => k.n * G * G >= min).map(e => ({ m: maskOf(e.idx), n: e.k.n }));
       const farm = pieces(fm, MIN_PIECE);
       const used = new Uint8Array(n); farm.forEach(z => z.m.forEach((v, i) => { if (v) used[i] = 1; }));
       const rest = q.m.map((v, i) => v & (1 - used[i])), rc = comps(rest, q.w, q.h);
       const build = [], slivers = [];
-      for (const k of rc.list) { const z = new Uint8Array(n); for (let i = 0; i < n; i++) if (rc.lab[i] === k.id) z[i] = 1; (k.n * G * G >= MIN_PIECE ? build : slivers).push({ m: z, n: k.n }); }
-      for (const s of slivers) {                          // a sliver joins the zone it touches most
-        const all = farm.concat(build);
-        if (!all.length) { build.push(s); continue; }
+      for (const e of lists(rc, () => true)) { if (e.k.n * G * G >= MIN_PIECE) build.push({ m: maskOf(e.idx), n: e.k.n }); else slivers.push({ idx: e.idx, n: e.k.n }); }
+      // a sliver joins the zone it touches most. (24 Nov) Read off one map of which zone each pixel is in, over the
+      // sliver's own pixels: before, every sliver walked the whole grid once per zone (ten seconds on a big cell)
+      const all = farm.concat(build), zl = new Int32Array(n);
+      all.forEach((z, j) => { for (let i = 0; i < n; i++) if (z.m[i]) zl[i] = j + 1; });
+      for (const s of slivers) {
+        if (!all.length) { const z = { m: maskOf(s.idx), n: s.n }; build.push(z); all.push(z); for (const i of s.idx) zl[i] = 1; continue; }
+        const cnt = new Int32Array(all.length + 1);
+        for (let t = 0; t < s.idx.length; t++) { const i = s.idx[t], x = i % q.w;
+          const a = x > 0 ? zl[i - 1] : 0, b = x < q.w - 1 ? zl[i + 1] : 0, c = i >= q.w ? zl[i - q.w] : 0, e = i + q.w < n ? zl[i + q.w] : 0;
+          if (a) cnt[a]++; if (b && b !== a) cnt[b]++; if (c && c !== a && c !== b) cnt[c]++; if (e && e !== a && e !== b && e !== c) cnt[e]++; }
         let bj = 0, bc = -1;
-        all.forEach((z, j) => { let c = 0;
-          for (let i = 0; i < n; i++) if (s.m[i]) { const x = i % q.w; if ((x > 0 && z.m[i - 1]) || (x < q.w - 1 && z.m[i + 1]) || z.m[i - q.w] || z.m[i + q.w]) c++; }
-          if (c > bc) { bc = c; bj = j; } });
-        const z = all[bj]; s.m.forEach((v, i) => { if (v) z.m[i] = 1; }); z.n += s.n;
+        for (let j = 0; j < all.length; j++) if (cnt[j + 1] > bc) { bc = cnt[j + 1]; bj = j; }
+        const z = all[bj]; for (let t = 0; t < s.idx.length; t++) { z.m[s.idx[t]] = 1; zl[s.idx[t]] = bj + 1; } z.n += s.n;
       }
       const clean = L => { const out = [];                 // the towns taken out; pieces of 2 ha or more
         for (const z of L) { const m = z.m.map((v, i) => { if (!v) return 0; const g = at_(i); return g >= 0 && townM[g] ? 0 : 1; });
@@ -4859,12 +4876,36 @@ async function bake(pkg) {
 // ------------------------------------------------------------------ the package: from the mould page, or from a file
 let busy = false;
 const STORE = 'loopCity.wool.pkg';
+// (24 Nov) what bake() made is kept in the browser (IndexedDB), keyed by the package and by this script's own text,
+// so the same cells open again at once, and any change to the method or the site data makes it bake afresh.
+// The last three are kept; a browser that will not keep them simply bakes every time.
+const BAKE_SELF = document.currentScript;
+const fnv = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return (x >>> 0).toString(36); };
+const BAKED = {
+  db: null,
+  open() { if (this.db) return this.db;
+    return (this.db = new Promise((ok, no) => { const r = indexedDB.open('loop-city-wool', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('baked');
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); },
+  key(pkg) { return fnv(JSON.stringify(pkg)) + '.' + fnv(BAKE_SELF ? BAKE_SELF.textContent : '') + '.' + String(JSON.stringify(pkg).length); },
+  async get(k) { try { const db = await this.open(); return await new Promise(ok => { const q = db.transaction('baked').objectStore('baked').get(k); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); }); } catch (e) { return null; } },
+  async put(k, data) { try { const db = await this.open(), st = db.transaction('baked', 'readwrite').objectStore('baked');
+      st.put({ t: Date.now(), data }, k);
+      const all = await new Promise(ok => { const q = st.getAllKeys(); q.onsuccess = () => ok(q.result); q.onerror = () => ok([]); });
+      if (all.length > 3) { const ts = await Promise.all(all.map(a => new Promise(ok => { const q = st.get(a); q.onsuccess = () => ok([a, q.result ? q.result.t : 0]); q.onerror = () => ok([a, 0]); })));
+        ts.sort((a, b) => a[1] - b[1]).slice(0, ts.length - 3).forEach(([a]) => st.delete(a)); }
+    } catch (e) {} }
+};
 async function start(pkg) {
   if (busy) return;
   if (window.__LIVE_DATA__) { try { sessionStorage.setItem(STORE, JSON.stringify(pkg)); } catch (e) {} location.reload(); return; }
   busy = true;
   try {
-    window.__BD_PKG__ = pkg; const data = await bake(pkg);
+    window.__BD_PKG__ = pkg;
+    const bk = /[#&]rebake/.test(location.hash) ? null : BAKED.key(pkg);
+    let data = bk ? await BAKED.get(bk) : null;
+    if (data) { data = data.data; data.fromStore = true; say('Opening ' + data.cells.map(c => c.id).join(' + ') + ', baked before…'); await pause(); }
+    else { data = await bake(pkg); if (bk) await BAKED.put(bk, data); }
     window.__LIVE_DATA__ = data;
     const h0 = window.__LC_HASH0__ !== undefined ? window.__LC_HASH0__ : location.hash;      // the address as it came, before the head added step=4
     const auto = pkg === window.__PKG_INLINE__ && window.__LC_SAMPLE__ && !/[#&](step=|noauto|test|steps)/.test(h0);   // (24 Nov) the example runs its steps once
