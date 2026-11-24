@@ -45,6 +45,7 @@ git push -u origin module/04-tensor-roads/streamline-step
   "cover": "assets/catalogue/my-app.webp",
   "status": "incubating",
   "title": { "zh": "中文名称", "en": "English name" },
+  "short": { "zh": "短名", "en": "Short name" },
   "desc":  { "zh": "一句话说明。", "en": "One-line description." },
   "tags":  [{ "zh": "标签", "en": "Tag" }],
   "owner": "你的 GitHub 用户名"
@@ -52,6 +53,7 @@ git push -u origin module/04-tensor-roads/streamline-step
 ```
 
 `status` 可选 `ready`（可用）、`incubating`（孵化中）、`planned`（规划中）。封面建议 1200×800、深色，可以不填。
+`short` 可以不填：手机上打开 app 时顶栏显示的短名，长度和 “Tensor Studio”“张量场工作室” 差不多；不填就显示 `title`，放不下时末尾是省略号。
 
 ## 新建模块
 

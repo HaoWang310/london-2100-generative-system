@@ -95,6 +95,18 @@ function followPages(frame, alive, onPage) {
   check();
 }
 
+// The bar's title: the full name, and on a phone the short one ("short" in catalogue.json, as short as "Tensor Studio")
+// when the app has one. appview.css shows one or the other; a name that still does not fit ends in "…".
+function setTitle(el, item) {
+  const full = pick(item.title), short = item.short ? pick(item.short) : '';
+  el.title = full;
+  if (!short || short === full) { el.textContent = full; return; }
+  const a = document.createElement('span'), b = document.createElement('span');
+  a.className = 'appview-title-full'; a.textContent = full;
+  b.className = 'appview-title-short'; b.textContent = short;
+  el.replaceChildren(a, b);
+}
+
 const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const EASE = 'cubic-bezier(.16,1,.3,1)';
 
@@ -121,7 +133,7 @@ export function createAppView(root, { items: loadItems } = {}) {
 
   onLangChange(() => {
     if (!current) return;
-    title.textContent = pick(current.title);
+    setTitle(title, current);
     pushLanguage(iframe, current);
     for (const [frame, item] of nested) {
       if (!frame.isConnected) { nested.delete(frame); continue; }
@@ -179,7 +191,7 @@ export function createAppView(root, { items: loadItems } = {}) {
       const gen = ++generation;
       current = item; origin = coverEl || null;
       loadItems?.().then(list => { items = list || []; }).catch(() => {});
-      title.textContent = pick(item.title);
+      setTitle(title, item);
       external.href = item.href;
 
       // Fresh frame each time: heavy apps (live traffic, 3D) shouldn't keep running once closed.
