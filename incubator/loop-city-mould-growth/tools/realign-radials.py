@@ -16,7 +16,8 @@ Marshes, up to 1.3 km from the line. This tool traces both along the OpenStreetM
 
 What it does not touch: the light sheet the model classifies (img/base_light_sheet.webp) already shows the real track
 where it is, and nothing in the model reads HW_RAIL, so a century run gives the same result as before. The other four
-radials are left as they are (P1 and P2 already lie within about 5 m of their track; P3 and P5 are new lines).
+radials are left as they are (P1 and P2 already follow their track, HS2's route and the East Coast Main Line, to within about a pixel: median
+8 m and 4 m, at most 38 m and 28 m; P3 and P5 are new lines).
 
     python3 tools/realign-radials.py            (numpy, scipy, Pillow, opencv-python)
 
