@@ -197,7 +197,7 @@ function buildOnce(site, P, EXCL, RX) {
   // 次节点（街区中心）：影响范围内局部加密，中心处间距减到约 (1 − 0.35·强度)
   const secK = p => { let k = 1; for (const a of secs) { const R = Math.max(220, a.reach * 1.6), d = dist(p, a.p); if (d < R) { const t = 1 - d / R; k = Math.min(k, 1 - 0.35 * a.s * t * t * (3 - 2 * t)); } } return k; };
   const spacing = p => (P.sCore + (P.sOut - P.sCore) * coreT(p)) * (secs.length ? secK(p) : 1);
-  // 生成模式：v0 全局拉伸 · v1 局部场流线行 · v2 各向异性分格 · radial 放射蛛网 · dual 双向流线格网 · frei Frei Otto 湿毛线 · vein 叶脉生长 · slime 黏菌
+  // 生成模式：v0 全局拉伸 · v1 局部场流线行 · v2 各向异性分格 · radial 放射蛛网 · dual 双向流线格网 · frei 湿毛线 · vein 叶脉生长 · slime 黏菌
   const MODE = P.mode || (P.logic === 'v1' || +P.v1 >= 0.5 ? 'v1' : 'v0');
   const V1 = MODE === 'v1' || MODE === 'dual';           // 流线行布点
   const WORLD = MODE !== 'v0' && MODE !== 'radial';       // 直接在场地坐标里布点（不经过压缩空间）
@@ -354,7 +354,7 @@ function buildOnce(site, P, EXCL, RX) {
           if (ok) { out.push(q); const k = gx + ',' + gy; if (!H3.has(k)) H3.set(k, []); H3.get(k).push(q); } } return out; };
       for (const S of strands) for (let k = 1; k < S.length; k++) stampLine(S[k - 1], S[k]);
       if (MODE === 'frei') {
-        // Frei Otto 湿毛线：场地边上两两连线（多 6% 长度），线与线相互吸引并拢，长度约束拉住；主线作为不动的线参与吸引
+        // 湿毛线：场地边上两两连线（多 6% 长度），线与线相互吸引并拢，长度约束拉住；主线作为不动的线参与吸引
         const B = site.footPolys.slice().sort((a, b) => Math.abs(polyArea(b)) - Math.abs(polyArea(a)))[0], Bc = [...B, B[0]], cum = [0]; for (let k = 1; k < Bc.length; k++) cum.push(cum[k - 1] + dist(Bc[k], Bc[k - 1]));
         const bpt = u => { u = ((u % cum[cum.length - 1]) + cum[cum.length - 1]) % cum[cum.length - 1]; let k = 1; while (cum[k] < u) k++; const f = (u - cum[k - 1]) / (cum[k] - cum[k - 1] || 1); return add(Bc[k - 1], mul(sub(Bc[k], Bc[k - 1]), f)); };
         const diam = Math.hypot(lx1 - lx0, ly1 - ly0), meanSp = (P.sCore + P.sOut) / 2, nT = Math.round(clamp(cum[cum.length - 1] / (meanSp * 0.5), 30, 140)), TH = [];
