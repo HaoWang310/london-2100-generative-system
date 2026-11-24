@@ -129,7 +129,11 @@ if(maplibregl.default&&!maplibregl.Map)maplibregl=maplibregl.default;
 maplibregl.addProtocol('ea-terrain-local',createTerrainLocalLoader({
   imageUrl:new URL('assets/terrain/overview.webp',location.href).href,bounds:TERRAIN_3857,tileSize:TERRAIN_TILE_SIZE}));
 
-const panelPad=()=>({top:40,bottom:60,left:40,right:($('panel')?.offsetWidth||0)+40});
+// On a phone (24 Nov 2026, ../../shared/ui/phone) the panel is the sheet along the bottom, the screen's width: the map
+// keeps clear of the Display and language row above and of the folded sheet below, not of a panel at the right.
+const panelPad=()=>document.documentElement.classList.contains('l2phone')
+  ?{top:72,bottom:170,left:24,right:24}
+  :{top:40,bottom:60,left:40,right:($('panel')?.offsetWidth||0)+40};
 
 map=new maplibregl.Map({
   container:'map',style:STYLE_URL,bounds:LOOP_BOUNDS,fitBoundsOptions:{padding:panelPad()},
