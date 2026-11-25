@@ -121,13 +121,6 @@ html.l2ui .lk-big { font-size:44px; font-weight:700; letter-spacing:-.02em; line
 html.l2ui .lk-bigsub { font-size:13px; color:var(--l2-ink3); margin:4px 0 8px; }
 html.l2ui #lkBody table.nums tr.lk-hide { display:none; }
 html.l2ui .lk-mini { display:block; width:100%; margin-top:10px; border:1px solid var(--l2-bd); border-radius:var(--l2-r); cursor:pointer; background:#0A0A0A; }
-html.l2ui .lk-pals { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
-html.l2ui .lk-pal { display:flex; flex-direction:column; padding:0; border:1px solid var(--l2-bd); border-radius:12px; overflow:hidden; background:#0A0A0A; color:#fff; font:inherit; cursor:pointer; text-align:left; }
-html.l2ui .lk-pal.on { border:2px solid #fff; }
-html.l2ui .lk-pal .im { display:block; height:44px; background:center/cover; }
-html.l2ui .lk-pal .st { display:flex; height:4px; } html.l2ui .lk-pal .st i { flex:1; }
-html.l2ui .lk-pal .nm { font-size:11px; line-height:1.25; padding:6px 7px 7px; color:var(--l2-ink2); }
-html.l2ui .lk-pal.on .nm { color:#fff; font-weight:600; }
 html.l2ui .lk-fold { border-top:1px solid var(--l2-line); margin-top:14px; }
 html.l2ui .lk-fold + .lk-fold { margin-top:0; }
 html.l2ui .lk-fh { width:100%; display:flex; align-items:center; gap:8px; height:46px; padding:0; background:none; border:0; color:#fff; font:inherit; font-size:14px; font-weight:600; cursor:pointer; text-align:left; }
@@ -317,3 +310,4 @@ html.lcflow #left .l2-adv, html.lcflow #left .btns:has(#run), html.lcflow #left 
 #lcFlow a.up { display:block; margin-top:10px; padding:9px 12px; border-radius:12px; border:1px solid #2A2A2E; color:#DADADA; font-size:12px; text-decoration:none; }
 #lcFlow a.up:hover { border-color:var(--c); color:#fff; }
 html.l2phone #lcFlow .run { position:static; box-shadow:none; }
+html.l2ui #lkPals { margin-top:4px; }      /* (25 Nov 2026) the palettes as three dots: shared/ui/swatches.css */

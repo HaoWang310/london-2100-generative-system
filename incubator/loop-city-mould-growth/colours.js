@@ -222,5 +222,28 @@
   if (typeof lang0 === 'function') window.setLang = function () { var r = lang0.apply(this, arguments); relabel(); return r; };
   if ($('langbar')) $('langbar').addEventListener('click', function () { setTimeout(relabel, 0); setTimeout(relabel, 300); });
   relabel(); setTimeout(function () { relabel(); apply(); }, 900);
+  /* ---- (25 Nov 2026) the looks and the cell palettes as every app's palettes are shown (shared/ui/swatches.css): three
+     dots and the name. A look's dots are the mould from faint to busy; a cell palette's are urban, rural and the grey of
+     the cells that are neither. Only the buttons' faces: what they do is unchanged. */
+  var hexOf = function (c) { return '#' + c.map(function (v) { return ('0' + Math.round(v).toString(16)).slice(-2); }).join(''); };
+  var DOTS = { spark: ['#3A3F48', '#9AA4B4', '#FFFFFF'], spectrum: ['#5B2EFF', '#FF2D8F', '#00E5FF'] };
+  function dotsOf(b) {
+    if (b.dataset.cell) { var c = CELLS.filter(function (q) { return q.key === b.dataset.cell; })[0]; return c ? [c.u, c.r, '#555555'] : null; }
+    var k = b.dataset.key; if (DOTS[k]) return DOTS[k];
+    var L = LOOKS.LIST.filter(function (q) { return q.key === k; })[0], sw = L && L.sw;
+    if (!sw || !/^#[0-9a-f]{6}$/i.test(sw)) return null;
+    var c0 = hx(sw); return [hexOf(c0.map(function (v) { return v * 0.35; })), hexOf(c0.map(function (v) { return v * 0.65; })), sw];
+  }
+  function dots() {
+    document.querySelectorAll('.lookRow').forEach(function (row) { row.classList.add('l2sw-grid'); });
+    document.querySelectorAll('.lookBtn:not(.l2sw)').forEach(function (b) {
+      var d = dotsOf(b), sp = b.querySelector('span'); if (!d || !sp) return;
+      var old = b.querySelector('i'); if (old) old.remove();
+      var w = document.createElement('span'); w.className = 'l2sw-d';
+      d.forEach(function (c) { var i = document.createElement('i'); i.style.background = c; w.appendChild(i); });
+      sp.classList.add('l2sw-n'); b.insertBefore(w, sp); b.classList.add('l2sw');
+    });
+  }
+  dots(); setTimeout(dots, 900); setTimeout(dots, 3000);
   window.LC_COLOURS = { apply: apply, PAIR: PAIR, CELLS: CELLS, cell: function (k) { if (k && CELLS.some(function (c) { return c.key === k; })) { cellKey = k; apply(); } return cellKey; } };
 })();

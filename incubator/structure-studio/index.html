@@ -156,18 +156,7 @@ body.demo-on #panel,body.demo-on .displayPanel,body.demo-on #cardBar,body.demo-o
 .dmSeg button.on{background:#f5f5f7!important;color:#121214!important}
 #dmProg{position:absolute;left:12px;right:12px;bottom:5px;height:2px;background:rgba(255,255,255,.12);border-radius:1px}
 #dmProg i{display:block;height:100%;width:0;background:#f5f5f7;border-radius:1px}
-.swGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px}
-.swChip{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:#a1a1a6;text-align:center;line-height:1.2}
-.swChip i{display:block;width:100%;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.14);box-sizing:border-box}
-.swChip:hover i{border-color:rgba(255,255,255,.5)}
-.swChip.on{color:#f5f5f7}.swChip.on i{border:2px solid #f5f5f7}
-.swChip:focus-visible i{outline:2px solid #f5f5f7;outline-offset:2px}
-/* 三维配色卡：一张卡上能看出农田（底色渐变）、道路（彩色曲线）、结构（白块）各是什么颜色 */
-.swGrid.three{grid-template-columns:1fr 1fr;gap:10px 8px}
-.swGrid.three .swChip{align-items:stretch;text-align:left;gap:5px}
-.swGrid.three .swChip i{position:relative;height:36px;overflow:hidden}
-.swGrid.three .swChip i svg{position:absolute;inset:0;width:100%;height:100%}
-.swGrid.three .swChip i b{position:absolute;right:6px;top:8px;bottom:8px;width:22px;border-radius:4px;background:#fff}
+/* (25 Nov 2026) the palettes as three dots: shared/ui/swatches.css */
 .displayPanel .dpLegend i.lgLine{height:0;border:0;border-top:2px dashed #e0412f;border-radius:0;vertical-align:3px}
 .displayPanel .dpStats{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
 .displayPanel .dpStats b{display:block;font-size:14px;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums;color:#f5f5f7}
@@ -268,7 +257,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
-<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
+<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
 <link rel="stylesheet" href="intro/intro.css?v=0.9.39">
 </head>
 <body>
@@ -725,12 +714,13 @@ const SCHEME_KEY = 'structureStudio.scheme2d';
 let SCHEME = 'N';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
-function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.toggle('three', three); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
-  if (three) { for (const sc of SCHEMES3) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME3 ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME3); b.dataset.s3 = sc.id; b.title = L(sc.zh, sc.en);
-      const i = document.createElement('i'); i.style.background = grad3Css(sc); i.innerHTML = `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.glow)}" stroke-opacity=".45" stroke-width="7" stroke-linecap="round" vector-effect="non-scaling-stroke"/><path d="M8 28 C 40 26, 62 12, 92 16 S 128 30, 150 12" fill="none" stroke="${rgb(sc.road)}" stroke-width="2.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><b></b>`;
-      const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en); b.append(i, t); b.onclick = () => applyScheme3(sc.id); g.appendChild(b); } return; }
-  for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
-    b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('i'); i.style.background = gradCss(sc); const t = document.createElement('span'); t.textContent = L(sc.zh, sc.en);
+function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.add('l2sw-grid'); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
+  if (three) { for (const sc of SCHEMES3) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip l2sw' + (sc.id === SCHEME3 ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME3); b.dataset.s3 = sc.id; b.title = L(sc.zh, sc.en);
+      const i = document.createElement('span'); i.className = 'l2sw-d'; i.innerHTML = [sc.grad[0][1], sc.grad[sc.grad.length - 1][1], sc.road].map(c => `<i style="background:${rgb(c)}"></i>`).join('');   // the parcels' core, their edge, the roads
+      const t = document.createElement('span'); t.className = 'l2sw-n'; t.textContent = L(sc.zh, sc.en); b.append(i, t); b.onclick = () => applyScheme3(sc.id); g.appendChild(b); } return; }
+  for (const sc of SCHEMES) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip l2sw' + (sc.id === SCHEME ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME);
+    b.title = sc.id + ' · ' + L(sc.zh, sc.en); const i = document.createElement('span'); i.className = 'l2sw-d'; const gs = sc.o.grad, mid = gs.reduce((a, q) => Math.abs(q[0] - 0.45) < Math.abs(a[0] - 0.45) ? q : a, gs[0]);   // the core, the middle, the edge
+    i.innerHTML = [gs[0][1], mid[1], gs[gs.length - 1][1]].map(c => `<i style="background:${rgb(c)}"></i>`).join(''); const t = document.createElement('span'); t.className = 'l2sw-n'; t.textContent = L(sc.zh, sc.en);
     b.append(i, t); b.onclick = () => { clearTimeout(prewarm.t); applyScheme(sc.id); };
     b.onpointerenter = () => { clearTimeout(prewarm.t); prewarm.t = setTimeout(() => prewarm(sc.id), 90); }; b.onpointerleave = () => clearTimeout(prewarm.t); g.appendChild(b); } }
 // 鼠标停在色卡上时先在后台画好那套配色的底图，点下去就是现成的
