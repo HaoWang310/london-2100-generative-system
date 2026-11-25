@@ -105,10 +105,11 @@ function applyTint(id, quiet){ const K = tintColours(id); TINT = K.T[0]; if (!FR
   void c0; void c1; void c2; void c3; void c4;
   syncTints(); if (!quiet){ setTheme(THEME); try { syncEnv(); } catch (e) {} if (window.ENVANIM && ENVANIM.on){ const k = ENVANIM.k; ENVANIM.stop(); ENVANIM.start(k); } } }
 function syncTints(){ const box = document.getElementById('tints'), nm = document.getElementById('tintName'); if (!box) return; const zh = typeof TS_LANG === 'undefined' || TS_LANG === 'zh';
-  if (!box.children.length) for (const [id, z, e, c] of TINTS){ const b = document.createElement('button'); b.type = 'button'; b.dataset.tint = id; b.title = z + ' · ' + e; b.setAttribute('aria-label', z + ' ' + e);
-    b.innerHTML = '<i style="background:linear-gradient(90deg,' + c[1] + ' 0%,' + c[2] + ' 38%,' + c[3] + ' 70%,' + c[4] + ' 100%)"></i>'; b.onclick = () => applyTint(id); box.append(b); }
-  for (const b of box.children) b.classList.toggle('on', b.dataset.tint === TINT);
-  if (nm){ const T = TINTS.find(x => x[0] === TINT); nm.textContent = String(TINTS.indexOf(T) + 1).padStart(2, '0') + ' ' + (zh ? T[1] : T[2]); } }
+  box.classList.add('l2sw-grid');        // (25 Nov 2026) three dots and the name, as every app's palettes (shared/ui/swatches.css)
+  if (!box.children.length) for (const [id, z, e, c] of TINTS){ const b = document.createElement('button'); b.type = 'button'; b.className = 'l2sw'; b.dataset.tint = id; b.title = z + ' · ' + e; b.setAttribute('aria-label', z + ' ' + e);
+    b.innerHTML = '<span class="l2sw-d">' + [c[2], c[3], c[4]].map(x => '<i style="background:' + x + '"></i>').join('') + '</span><span class="l2sw-n"></span>'; b.onclick = () => applyTint(id); box.append(b); }
+  for (const b of box.children){ b.classList.toggle('on', b.dataset.tint === TINT); const T = TINTS.find(x => x[0] === b.dataset.tint), n = b.querySelector('.l2sw-n'); if (T && n) n.textContent = zh ? T[1] : T[2]; }
+  if (nm) nm.textContent = ''; }
 let FIELDMODE = 'move', FROZEN = false, FLINES = null;
 function setTheme(t){ GIMG = null; THEME = t; P = PAL[t]; document.documentElement.setAttribute('data-theme', t);
   for (const b of document.querySelectorAll('#theme button')) b.classList.toggle('on', b.dataset.t === t);

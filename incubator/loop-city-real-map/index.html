@@ -6,7 +6,7 @@
 <title>Loop City · real map</title>
 <script>/* 24 Nov 2026: a phone is known before anything is laid out, as in the other apps (../../shared/ui/phone.css) */
 try{var d0=document.documentElement,h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}</script>
-<link rel="stylesheet" href="../../shared/ui/phone.css?v=2">
+<link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 <style>
 :root{--map-bg:#161616;--panel:#141414f0;--line:#2c2c2c;--ink:#d8d8d8;--mute:#8a8a8a;--on:#e6e6e6;--accent:#f5f5f7;
@@ -52,6 +52,7 @@ input[type=range]{width:110px;accent-color:var(--accent)}
 .sw input:checked+span:before{transform:translateX(14px);background:var(--sw-on-knob)}
 .sw input:focus-visible+span{outline:2px solid var(--on)}
 select{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 4px;font:inherit;width:150px}
+.ownCols{margin-top:4px}.ownCols summary{cursor:pointer;color:var(--mute);font-size:12px;padding:4px 0;list-style:none}.ownCols summary::before{content:"› ";}.ownCols[open] summary::before{content:"⌄ ";}
 .colours{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:6px}
 .colours label{display:flex;align-items:center;justify-content:space-between}
 input[type=color]{width:34px;height:20px;border:1px solid var(--line);border-radius:4px;background:none;padding:0;cursor:pointer}
@@ -243,6 +244,7 @@ html.l2phone #north { left:auto; right:16px; top:68px; bottom:auto; }
           <option value="custom" data-i18n="pCustom" disabled>Own colours</option>
         </select>
       </div>
+      <details class="ownCols"><summary data-i18n="pCustom">Own colours</summary>
       <div class="colours">
         <label><span data-i18n="cLand">Land</span><input type="color" id="c_land"></label>
         <label><span data-i18n="cWater">Water</span><input type="color" id="c_water"></label>
@@ -252,6 +254,7 @@ html.l2phone #north { left:auto; right:16px; top:68px; bottom:auto; }
         <label><span data-i18n="cBuild">Buildings</span><input type="color" id="c_buildings"></label>
         <label><span data-i18n="cText">Labels</span><input type="color" id="c_labels"></label>
       </div>
+      </details>
     </section>
 
     <div id="status"></div>
@@ -295,5 +298,29 @@ html.l2phone #north { left:auto; right:16px; top:68px; bottom:auto; }
 })();
 </script>
 <script type="module" src="scripts/app.js?v=lc14"></script>
+<script type="module">
+// (25 Nov 2026) the palettes as cards with three dots (roads, green, water), as every app shows its palettes
+// (shared/ui/swatches.css). The list itself stays the page's own <select>, hidden: a card sets it and fires its change.
+import { PALETTES } from './scripts/osm_basemap_themes.js';
+const sel = document.getElementById('palette'), row = sel && sel.closest('.row');
+if (sel && row) {
+  const grid = document.createElement('div'); grid.className = 'l2sw-grid'; grid.setAttribute('role', 'radiogroup'); grid.setAttribute('aria-label', 'Palette');
+  row.after(grid); row.style.display = "none";
+  const short = t => t.replace(/\s*[（(].*$/, '');
+  const build = () => {
+    grid.textContent = '';
+    for (const o of sel.options) { const P = PALETTES[o.value]; if (!P || o.hidden) continue;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'l2sw' + (sel.value === o.value ? ' on' : ''); b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(sel.value === o.value)); b.title = o.textContent;
+      b.innerHTML = '<span class="l2sw-d">' + [P.motorway, P.park, P.water].map(c => `<i style="background:${c}"></i>`).join('') + '</span><span class="l2sw-n"></span>';
+      b.querySelector('.l2sw-n').textContent = short(o.textContent);
+      b.onclick = () => { sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); build(); };
+      grid.appendChild(b); } };
+  let key = '';
+  const sync = () => { const k = sel.value + '|' + [...sel.options].map(o => o.hidden ? 0 : 1).join('') + '|' + document.documentElement.lang; if (k !== key) { key = k; build(); } };
+  sel.addEventListener('change', sync); document.addEventListener('click', () => setTimeout(sync, 0)); document.addEventListener('input', () => setTimeout(sync, 0));
+  setInterval(sync, 1000); sync();
+}
+</script>
 </body>
 </html>

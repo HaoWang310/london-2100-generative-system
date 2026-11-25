@@ -181,9 +181,9 @@ html.lcskin #rv2View .rv2seg button { background:#000; border-color:rgba(255,255
 html.lcskin #rv2View .rv2seg button.on { background:#fff; border-color:#fff; color:#000; }
 
 /* the look buttons, twelve of them now */
-html.lcskin .lookRow { grid-template-columns:repeat(2,1fr); gap:8px; }
-html.lcskin .lookBtn { padding:8px 10px; border-radius:12px; border-color:rgba(255,255,255,.22); background:#000; font-size:12.5px; }
-html.lcskin .lookBtn.on { border-color:#fff; }
+html.lcskin .lookRow:not(.l2sw-grid) { grid-template-columns:repeat(2,1fr); gap:8px; }
+html.lcskin .lookBtn:not(.l2sw) { padding:8px 10px; border-radius:12px; border-color:rgba(255,255,255,.22); background:#000; font-size:12.5px; }
+html.lcskin .lookBtn.on:not(.l2sw) { border-color:#fff; }
 html.lcskin #lcPairRow { margin:12px 0 4px; }
 
 /* The older parcel method (parcels from the yearly roads) and its four sliders in The network are not shown: their code and controls stay on the page, and #noskin shows them. */
