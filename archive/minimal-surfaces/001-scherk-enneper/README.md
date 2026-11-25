@@ -4,6 +4,7 @@
 - **用途标签**：立面 · 结构 · 可打印（暂定）
 - **来源**：Matthias Weber，Minimal Surface Repository → Singly Periodic → Scherk-Enneper
   （minimalsurfaces.blog/home/repository/singly-periodic/scherk-enneper/）
+- **参考图**：`reference/原图-1.png`、`reference/原图-2.png`、`reference/名称.png`（你发来的截图）
 - **原始文件**：`source/Enneper-Scherk.nb`（Mathematica 10.3）、`source/Enneper-Scherk.cdf`（Mathematica 11.2）
 
 ## 构造

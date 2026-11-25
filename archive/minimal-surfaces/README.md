@@ -24,20 +24,30 @@
 
 ```
 archive/minimal-surfaces/
-├── README.md              本文件：分类方式 + 文字清单
-├── index.html             目录 app（卡片 / 清单视图，点开即三维预览、调参、导出 STL）
-├── 001-scherk-enneper/
-│   ├── README.md          公式、参数、验证记录
-│   ├── preview.jpg        预览图
-│   └── source/            原作者文件（.nb / .cdf）
-└── 002-helicoidal-karcher-scherk/
-    └── …                  同上
+├── README.md                     本文件：分类方式 + 文字清单
+├── index.html                    目录 app（卡片 / 清单视图，点开即三维预览、调参、导出 STL）
+├── 001-scherk-enneper/           B · 单周期 · 周期 Enneper 端
+│   ├── README.md                 公式、参数、验证记录
+│   ├── preview.jpg               app 渲染的预览图
+│   ├── reference/                你给的原图截图（原图-1、原图-2、名称）
+│   └── source/                   原作者 Mathematica 文件（.nb / .cdf）
+└── 002-helicoidal-karcher-scherk/ B · 单周期 · 螺旋面端
+    ├── README.md
+    ├── preview.jpg
+    ├── reference/                你给的原图截图（原图-16端、原图-4端）
+    └── source/
+        ├── *.nb / *.cdf          原作者 Mathematica 文件
+        └── povray/k{k}-a{a}/     原作 POV-Ray 场景、网格、渲染图（11 组）
 ```
+
+每个曲面文件夹都是同一结构：`reference/`（你发来的图）、`source/`（原作者文件）、`README.md`（公式与验证）、`preview.jpg`。
+
+> 注意：本仓库是公开的。`source/` 和 `reference/` 里是原作者（M. Weber 等）的文件和渲染图，各 README 已注明出处。
 
 本地预览：直接用浏览器打开 `index.html`（需要联网加载 three.js）。
 
 ## 收录一个新曲面
 
-1. 新建 `NNN-名称/` 文件夹，放入原图、来源文件和 `README.md`（公式、参数、来源）
+1. 新建 `NNN-名称/` 文件夹：原图放 `reference/`，原作者文件放 `source/`，再写 `README.md`（公式、参数、来源）
 2. 在上面的文字清单里加一行
 3. 在 `index.html` 的 `SURFACES` 列表里加一条（有公式的再加三维生成器）
