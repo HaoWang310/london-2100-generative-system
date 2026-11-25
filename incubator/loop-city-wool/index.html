@@ -2075,7 +2075,7 @@ const G = (function () {
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
   // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
   // by source/make-example.cjs: the bake it was made from, and its files
-  var EXV = /*EXV*/'pq8opj:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var EXV = /*EXV*/'jb1njm:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
   if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ if (/^veins\./.test(f)) return;       // (25 Nov) the veins are for step 2: asked for once step 1 is drawn
