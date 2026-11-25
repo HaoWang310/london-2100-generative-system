@@ -2001,10 +2001,11 @@ const G = (function () {
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
   // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
   // by source/make-example.cjs: the bake it was made from, and its files
-  var EXV = /*EXV*/'8z3a3k:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var EXV = /*EXV*/'pq8opj:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
   if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
-    EXV.split(':')[1].split(',').forEach(function(f){ pre('example/' + f + '?b=' + EXV.split(':')[0], 'fetch', true); }); }
+    EXV.split(':')[1].split(',').forEach(function(f){ if (/^veins\./.test(f)) return;       // (25 Nov) the veins are for step 2: asked for once step 1 is drawn
+      var h = 'example/' + f + '?b=' + EXV.split(':')[0]; if (/^(step1\.json|key\.)/.test(f)) pre(h, 'fetch', true); else pre(h, 'image'); }); }
   window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=2"><\/script>');
   if (want) (function(){ var g = document.getElementById('liveStart');          // the overlay is above: dressed at once, not when the page is in
     if (!g) return; var zh = false; try { zh = localStorage.getItem('woolAppsLang') === 'zh'; } catch (e) {} var lh = /lang=(en|zh)/.exec(location.hash); if (lh) zh = lh[1] === 'zh';
@@ -2086,7 +2087,10 @@ const loadImg = (k, first) => {
   if (first) { toLoad++; im.onload = () => { if (--toLoad === 0) ready(); }; } else im.onload = () => schedule();
   im.src = DATA.img[k]; IMG[k] = im;
 };
-for (const k of Object.keys(DATA.img)) if (DATA.img[k]) loadImg(k, true);
+// (25 Nov) the veins are first drawn on step 2: asked for a moment after the page is in, or at once on step 2 or 3
+for (const k of Object.keys(DATA.img)) if (DATA.img[k] && k !== 'veins') loadImg(k, true);
+const veinsSoon = () => { if (DATA.img.veins && !IMG.veins) loadImg('veins', false); };
+setTimeout(veinsSoon, 1500);
 // a flat polyline's box: [x0, y0, x1, y1]
 const bbox = p => { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (let i = 0; i < p.length; i += 2) { a = Math.min(a, p[i]); c = Math.max(c, p[i]); b = Math.min(b, p[i + 1]); d = Math.max(d, p[i + 1]); }
@@ -3214,15 +3218,26 @@ function fcDraw(spec, alpha) {                   // the faces on the map; while 
   const k = p.mpp / S.view.mpp, x = (p.cx - S.view.cx) / S.view.mpp + W / 2 - p.W / 2 * k, y = Hh / 2 - (p.cy - S.view.cy) / S.view.mpp - p.Hh / 2 * k;
   cx.save(); cx.globalAlpha = alpha; cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; cx.drawImage(p.cv, x, y, p.W * k, p.Hh * k); cx.restore();
 }
-function fcSmooth(key) {                        // the textures of steps 1 to 3 as smooth fields (what the particles were drawn from), white, alpha the value
-  return pxTex('smooth|' + key, () => { const pr = { mould: () => { const t = pxField('mould'), b = pxBlur(t, PX.W, PX.H, 9), p = new Float32Array(t.length);
+const FC_SM = new Map();
+function fcSmooth(key) {                        // (25 Nov) the smooth picture if made; else null, and it is made when the computer is free
+  const src = key === 'veins' ? IMG.veins : IMG.mould; if (!src || !src.complete || !src.naturalWidth) return null;
+  if (FC_SM.has(key)) return FC_SM.get(key);
+  if (!FC.smQ) { FC.smQ = 1; const go = () => { FC.smQ = 0; const t = performance.now(); let made = 0;
+      for (const k of ['mould', 'mouldCore', 'veins']) { const im = k === 'veins' ? IMG.veins : IMG.mould; if (FC_SM.has(k) || !im || !im.complete || !im.naturalWidth) continue;
+        FC_SM.set(k, fcSmoothMake(k)); made++; if (performance.now() - t > 40) break; }
+      if (made) schedule(); if (['mould', 'mouldCore', 'veins'].some(k => !FC_SM.has(k) && (k === 'veins' ? IMG.veins : IMG.mould))) fcSmooth(key); };
+    (window.requestIdleCallback || (f => setTimeout(f, 60)))(go, { timeout: 900 }); }
+  return null;
+}
+function fcSmoothMake(key) {                    // the textures of steps 1 to 3 as smooth fields (what the particles were drawn from), white, alpha the value
+  return (() => { const pr = { mould: () => { const t = pxField('mould'), b = pxBlur(t, PX.W, PX.H, 9), p = new Float32Array(t.length);
         for (let i = 0; i < t.length; i++) { const rg = Math.min(1, Math.max(0, (t[i] - b[i]) * 3.2)); p[i] = Math.pow(t[i], 2.2) * 0.35 + Math.pow(rg, 1.2) * 0.75; } return p; },
       mouldCore: () => { const t = pxField('mould'), p = new Float32Array(t.length); for (let i = 0; i < t.length; i++) p[i] = Math.pow(Math.max(0, (t[i] - 0.6) / 0.4), 1.6); return p; },
       veins: () => { const t = pxField('veins'), b = pxBlur(t, PX.W, PX.H, 9), p = new Float32Array(t.length);
         for (let i = 0; i < t.length; i++) { const rg = Math.min(1, Math.max(0, (t[i] - b[i]) * 3.2)); p[i] = Math.pow(t[i], 2.2) * 0.12 + Math.pow(rg, 1.2) * 0.9; } return p; } }[key];
     pxGrid(); const p = pr(), c = pxCanvas(PX.W, PX.H), g = c.getContext('2d'), im = g.createImageData(PX.W, PX.H), d = im.data;
     for (let i = 0; i < p.length; i++) { d[4 * i] = d[4 * i + 1] = d[4 * i + 2] = 255; d[4 * i + 3] = Math.round(Math.min(1, p[i]) * 255); }
-    g.putImageData(im, 0, 0); return c; });
+    g.putImageData(im, 0, 0); return c; })();
 }
 function fcPicture(im, col, a) {                 // steps 1 to 3: a baked picture (the mould, the veins) in a palette colour, as light
   if (!im || !(a > 0)) return;
@@ -3977,9 +3992,10 @@ function draw() {
   cx = gx;
   try {
     if (on('mould')) { const k = op('mould') * (step === 1 ? 1 : 0.6);
-      fcPicture(fcSmooth('mould'), C.main, 0.75 * k); fcPicture(fcSmooth('mouldCore'), pxMix(C.main, C.white, 0.5), 0.5 * k);      // (25 Nov) the mould itself, smooth, in the palette: no grains
+      { const sm = fcSmooth('mould'), sc = sm && fcSmooth('mouldCore');      // (25 Nov) the mould itself, smooth, in the palette: no grains (until it is made: the picture, tinted)
+        if (sm && sc) { fcPicture(sm, C.main, 0.75 * k); fcPicture(sc, pxMix(C.main, C.white, 0.5), 0.5 * k); } else fcPicture(IMG.mould, C.main, 0.8 * k); }
       if (step === 1) { pxPath(DATA.centrelines.filter(c => !c.spur).map(c => c.p), C.main, 0.7, 0.55 * k); pxStars(PX.junc || (PX.junc = pxJunctions(DATA.centrelines.map(c => c.p))), C.main, 0.7, 0.55 * k); } }
-    if (on('veins')) fcPicture(fcSmooth('veins'), C.main, 1.0 * op('veins'));
+    if (on('veins')) { veinsSoon(); const sm = fcSmooth('veins'); if (sm) fcPicture(sm, C.main, 1.0 * op('veins')); else if (IMG.veins && IMG.veins.complete) fcPicture(IMG.veins, C.main, 0.9 * op('veins')); }
     // (25 Nov) soil, primary cells and zones are faces (fcDraw, above), not particles
     if (on('centre')) { const k = op('centre'), C2 = DATA.centrelines.filter(c => !c.spur).map(c => c.p);
       pxPath(C2, C.main, step === 2 ? 1.0 : 0.75, (step === 2 ? 0.9 : 0.6) * k);
@@ -4001,6 +4017,7 @@ function draw() {
   } finally { cx = main; }
   main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.globalCompositeOperation = 'lighter'; main.drawImage(PX.gl, 0, 0); main.restore();
   pxBloom();
+  if (!FC.shown) { FC.shown = 1; const g = document.getElementById('liveStart'); if (g) g.style.display = 'none'; }
   // on top, crisp: rail, the existing roads' numbers, the parcels taken, stations, names
   main.globalCompositeOperation = 'source-over';
   if (on('rail')) { main.globalAlpha = op('rail'); for (const r of DATA.rail) rail(r.p, r.kind); main.globalAlpha = 1; }
@@ -4060,6 +4077,7 @@ function setStep(n, keepRun) {
 window.__woolStage = s => {
   if (s >= 4) { EXIST = DATA.roads.filter(r => EX_CLS[r.c]); townBox = DATA.towns.map(bbox); }
   if (s === 6) { SOIL = soilOf(); if (DATA.img.soil && !IMG.soil) loadImg('soil', false); }
+  if (s === 2 || s === 3) veinsSoon();
   for (const k of [...PX.tex.keys()]) if (/^(primary|small|zone|soil)/.test(k)) PX.tex.delete(k);
   if (s === 8 && toLoad === 0) { DATA.areas.forEach(prepArea); rebuildNet(); }
   if (toLoad === 0) { legend(); nums(); schedule(); }
@@ -5207,7 +5225,7 @@ async function examplePre(pkg) {
     if (!j.guard || j.guard.bake !== BAKE_HASH || j.guard.pkg !== fnv(JSON.stringify(pkg))) { console.warn('wool: example/step1.json is out of date; step 1 is worked out here'); return null; }
     const url = f => fetch('example/' + f + '?b=' + BAKE_HASH).then(q => { if (!q.ok) throw new Error(f); return q.blob(); })
       .then(bl => new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(bl); }));
-    const keys = Object.keys(j.img), got = await Promise.all(keys.map(k => url(j.img[k])));
+    const keys = Object.keys(j.img), got = await Promise.all(keys.map(k => k === 'key' ? url(j.img[k]) : 'example/' + j.img[k] + '?b=' + BAKE_HASH));   // (25 Nov) no data urls: no second decode
     return Object.assign({}, j.data, { img: Object.fromEntries(keys.map((k, i) => [k, got[i]])) });
   } catch (e) { console.warn('wool: the example could not be read ready made', e); return null; }
 }
@@ -5241,7 +5259,8 @@ async function start(pkg) {
     s.textContent = $('appSrc').textContent;
     document.body.appendChild(s);
     const n = $('liveCell'); if (n) n.textContent = data.cellLabels.map(l => l.name).join('   |   ') || data.pick;
-    $('liveStart').style.display = 'none';
+    // (25 Nov) the cover stays until the map is drawn (draw() takes it away), so the page never shows an empty map
+    setTimeout(() => { $('liveStart').style.display = 'none'; }, 20000);
     liveNote(data);
     if (example) { const demo = () => window.__lcDemo && window.__lcDemo();
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demo); else demo(); }
