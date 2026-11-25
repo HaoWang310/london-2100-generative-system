@@ -56,7 +56,7 @@
 
   // ---------------------------------------------------------------- the sixteen steps (and the way out, 17)
   // each: title, what it did (with the numbers), why, settings [label, value, slider id], results [value, label], legend rows to show
-  function info(k) {
+  function info0(k) {
     var n = DATA.nums, c3 = DATA.cells.length, k5 = K();
     switch (k) {
       case 1: return { t: T('The network the slime mould found is the new town’s frame', '黏菌找到的网，就是新城的骨架'),
@@ -65,9 +65,9 @@
         prm: [[T('From', '来源'), T('step 1, the whole loop', '第 1 步：整环')], [T('Cells taken', '带来的单元'), DATA.cells.map(function (c) { return c.id; }).join(' · ')]],
         res: [[c3, T('cells', '个单元')], [DATA.stations.filter(function (s) { return s.cell; }).length, T('stations in them', '个车站')]], leg: 2 };
       case 2: return { t: T('The veins drawn in to centrelines', '菌脉收成中心线'),
-        did: T('Where the trail is over 0.20 it is a vein; each vein is thinned to its centreline. A vein that ends is a spur (dashed).', '路径值大于 0.20 的地方是菌脉，每条菌脉细化成它的中心线；末端的支脉用虚线。'),
+        did: T('Where the trail is over ' + vein() + ' it is a vein; each vein is thinned to its centreline. A vein that ends is a spur (dashed).', '路径值大于 ' + vein() + ' 的地方是菌脉，每条菌脉细化成它的中心线；末端的支脉用虚线。'),
         why: T('A vein is a band; only a line can close round a cell.', '菌脉是一条条「带」，只有线才能围出单元的边界。'),
-        prm: [[T('Vein: trail over', '菌脉阈值'), '0.20']],
+        prm: [[T('Vein: trail over', '菌脉阈值'), vein()]],
         res: [[DATA.centrelines.filter(function (c) { return !c.spur; }).length, T('centrelines', '条中心线')], [DATA.centrelines.filter(function (c) { return c.spur; }).length, T('spurs', '条支脉')]], leg: 3 };
       case 3: return { t: T('The centrelines close three cells', '中心线围出单元'),
         did: T('The cells the centrelines close: ', '中心线围出的单元：') + DATA.cells.map(function (c) { return c.id + ' ' + f(n.cells[c.id], 1) + ' km²'; }).join(' · ') + T('. The bright edge is the one two cells share.', '。亮线是两个单元共享的边。'),
@@ -168,6 +168,42 @@
     return null;
   }
 
+  // (25 Nov 2026) the whole loop. The vein threshold is the one the package was made with (an older package does not
+  // say: a dash). A cell that is already a town is not woven: step 5 says so and why, steps 8 to 15 are passed over,
+  // step 16 shows the roads that are there. A cell with no urban parcel says so at steps 15 and 17.
+  function vein() { return typeof veinEdge === 'function' ? veinEdge() : '—'; }
+  var OFF = [8, 9, 10, 21, 22, 23, 24, 25];
+  function info(k) {
+    var x = info0(k); if (!x || typeof WS === 'undefined') return x;
+    var b = WS.built(), all = WS.allBuilt(), min = (K().MIN_PRIM || 3e6) / 1e6, one = DATA.cells.length === 1;
+    var big = function (id) { var a = WS.largest(id); return a >= 0.05 && a < min ? f(a, 1) + ' km²' : a < 0.05 ? T('no piece left', '没有成块的土地') : T('under ', '不到 ') + min + ' km²'; };
+    var left = function (id) { var a = WS.largest(id);       // the reason, in a sentence
+      return a >= 0.05 && a < min ? T('With its roads and towns cut out, the largest piece left is ' + f(a, 1) + ' km²: less than the ' + min + ' km² that can be woven.', '切掉道路和城镇后，剩下最大的一块只有 ' + f(a, 1) + ' km²，不到可编织的 ' + min + ' km²。')
+        : a < 0.05 ? T('With its roads and towns cut out, no piece of open land is left to weave.', '切掉道路和城镇后，没有剩下可以编织的成块土地。')
+        : T('With its roads and towns cut out, every piece left is under the ' + min + ' km² that can be woven.', '切掉道路和城镇后，剩下的每一块都不到可编织的 ' + min + ' km²。'); };
+    if (k === 5 && all) {
+      var top = b.slice().sort(function (p, q) { return WS.largest(q) - WS.largest(p); })[0];
+      x.note = T(one ? 'This cell is already a town: it stays as it is.' : 'These cells are already towns: they stay as they are.', one ? '这个单元已经是城市，保留现状。' : '这些单元已经是城市，保留现状。');
+      x.noteWhy = left(top) + T(' Steps 8 to 15 are passed over.', '第 8 到 15 步跳过。');
+      x.act = { t: T('Back to step 1: choose it with its neighbours', '回到第 1 步，和邻居一起选'), href: '../loop-city-mould-growth/index.html' };
+    } else if (k === 5 && b.length) {
+      x.note = T('Already towns, kept as they are and not woven: ', '已经是城市、保留现状、不编织的单元：') + b.map(function (id) { return id + T(' (largest piece ', '（最大一块 ') + big(id) + T(')', '）'); }).join(T(', ', '、'));
+      x.noteWhy = T('The other cells are woven as usual.', '其余单元照常编织。');
+    }
+    if (all && OFF.indexOf(k) >= 0) return { t: x.t, off: true, did: T('Already a town: nothing is woven here, so this step is passed over.', '这个单元已经是城市，不编织：这一步跳过。'), why: '', prm: [], res: [], leg: 0 };
+    if (all && k === 26) { x.note = T('No new road is made here: the map shows the roads that are there.', '这里不新建道路：地图只显示现有道路。'); x.res = []; }
+    if (k === 25 && !all && WS.urban() === 0) { x.note = T('This cell has no urban parcel: it is all farming or park.', '这个单元没有城市地块，全部是农业或公园。');
+      x.noteWhy = T('By the rule, only urban parcels go on to the tensor field.', '按规则只有城市地块进入张量场。'); }
+    if (k === 27) { var st = WS.stop();
+      if (st === 'built') { x.did = T('Nothing is taken from this cell.', '这个单元不选取地块。'); x.note = T('This cell is already a town and stays as it is.', '这个单元已经是城市，保留现状。'); x.noteWhy = T('There is no parcel to hand to the tensor field.', '没有地块可以交给张量场。'); }
+      else if (st === 'nourban') { x.note = T('No urban parcel to hand to the tensor field.', '没有城市地块可以交给张量场。'); x.noteWhy = T('This cell is all farming or park; the map can still be clicked.', '这个单元全部是农业或公园；地图仍然可以点击查看。'); } }
+    return x;
+  }
+  function noteHTML(x) { if (!x.note) return '';
+    return '<div class="nb"><b>' + esc(x.note) + '</b>' + (x.noteWhy ? '<span>' + esc(x.noteWhy) + '</span>' : '') +
+      (x.act ? '<a class="go" href="' + x.act.href + '" target="_blank" rel="noopener">' + esc(x.act.t) + ' ›</a>' : '') + '</div>'; }
+  window.__lcNote = noteHTML; window.__lcOff = function (k) { return typeof WS !== 'undefined' && WS.allBuilt() && OFF.indexOf(k) >= 0; };
+
   // ---------------------------------------------------------------- the card
   var card = null, chap = null, nav = null;
   function build() {
@@ -215,13 +251,14 @@
     var kick = (ch ? T('Chapter ' + ch.n + ' · ' + ch.en, CHZ(ch.n) + ' · ' + ch.zh) : T('The way out', '出口')) + '<span>' + (k === 28 ? T('After step 16', '第 16 步之后') : k === 27 ? T('Step 17', '第 17 步') : T('Step ' + shown(k) + ' of 16', '第 ' + shown(k) + ' / 16 步')) + '</span>';
     var h = '<div class="k">' + kick + '</div><h3>' + esc(x.t) + '</h3>';
     h += '<div class="l">' + T('What it did', '做了什么') + '</div><p>' + esc(x.did) + '</p>';
-    h += '<div class="l">' + T('Why', '为什么') + '</div><p>' + esc(x.why) + '</p>';
+    if (x.why) h += '<div class="l">' + T('Why', '为什么') + '</div><p>' + esc(x.why) + '</p>';
+    h += noteHTML(x);
     if (x.prm.length) { h += '<div class="l">' + T('Settings', '参数') + '</div><div class="prm">';
       x.prm.forEach(function (p) { h += '<div' + (p[2] && $(p[2]) ? ' class="set" data-set="' + p[2] + '" title="' + T('Change it', '调整') + '"' : '') + '><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b>' + (p[2] && $(p[2]) ? '<i>' + T('change', '调整') + ' ›</i>' : '') + '</div>'; });
       h += '</div>'; }
     if (x.res.length || !x.extra) h += '<div class="l">' + T('What came out', '结果') + '</div>';
     if (x.res.length) { h += '<div class="res">'; x.res.forEach(function (r) { h += '<div><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + '</span></div>'; }); h += '</div>'; }
-    else if (!x.extra) h += '<p class="wait">' + (k > 20 && !S.relaxed ? T('Relax the wool first (step 10).', '先松弛毛线（第 10 步）。') : T('Working it out…', '计算中…')) + '</p>';
+    else if (!x.extra && !x.off && !x.note) h += '<p class="wait">' + (k > 20 && !S.relaxed ? T('Relax the wool first (step 10).', '先松弛毛线（第 10 步）。') : T('Working it out…', '计算中…')) + '</p>';
     if (x.extra) h += x.extra;
     var lg = $('legend'), rows = lg ? [].slice.call(lg.children, 0, x.leg || 3) : [];
     if (rows.length) h += '<div class="lg">' + rows.map(function (r) { return '<div>' + r.innerHTML + '</div>'; }).join('') + '</div>';

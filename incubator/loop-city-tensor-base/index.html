@@ -191,7 +191,9 @@ function siteFile() {
             'The short "junction" roads cross the site edge at the wool junctions, so the tensor app anchors its main streets there.',
             'From the wool bands page: M is the boundary highway (the cell edge, 90 m), A the primary road (60 m), B the A road (48 m), C the B road (24 to 30 m); the existing roads are among them, each with its class.',
             'Parks: features.parks and bng.parks list the parks taken with the parcels. A park stays a park: the tensor field must not run on it. The site ring is the urban parcels only.',
-            'No elevation or buildings in this file: the site data has none at this scale. The tensor app takes its own terrain, or runs flat.'],
+            'No elevation or buildings in this file: the site data has none at this scale. The tensor app takes its own terrain, or runs flat.',
+            'run and cell_keys say which century of step 1 the parcels come from. Only cells of one run fit together: sites with different run.id must not be joined.'],
+    run: PK.run || null, cells: PK.cells || [], cell_keys: PK.cell_keys || {},      // (25 Nov 2026) the century these parcels come from: the run's name (its seed and a mark of its cells) and each cell's key
     parcels: PK.parcels.map(d => d.id), size: { across_m: Math.round(T.check.side), area_ha: Math.round(T.check.area / 100) / 100 },
     ring: T.ring, features: T.features,
     bng: { ring: closeRing(PK.site.rings[0] || PK.parcels[0].outline), window: PK.window,
@@ -325,6 +327,8 @@ function panel() {
   const rows = [['Across, the larger side', fmt(C.side / 1000, 2) + ' km' + tick(okSide)], ['Area', fmt(C.area / 1e4, 1) + ' ha' + tick(okArea)],
                 ['Anchors at wool junctions', fmt(PK.site.junctions.length)], ['Roads in the site file', fmt(PK.T.features.roads.length)]];
   if (PK.site.rings.length > 1) rows.push(['Pieces', fmt(PK.site.rings.length)]);
+  { const ks = Object.values(PK.cell_keys || {});      // (25 Nov 2026) which century of step 1 these parcels come from
+    rows.push(['Cell key', ks.length ? ks.join('<br>') : trc(window.__LC_SAMPLE__ && PK === window.__TEST_PKG__ ? 'Example · from an earlier run' : 'Older package')]); }
   $('site').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
   $('verdict').innerHTML = !okSide ? '<span class="no">Too wide for the tensor app, which runs up to 3.6 km across. Take fewer parcels.</span>'
     : !okArea ? '<span class="no">Too small for the tensor app, which needs at least 2 ha.</span>'
@@ -405,6 +409,7 @@ const ZH_RX = [["^Relaxing: (\\d+) of (\\d+) primary cells finished$", "松弛�
 const EN_TITLE = document.title;
 const norm = t => String(t).replace(/\s+/g, ' ').trim();
 Object.assign(ZH, { 'A park taken with the parcels is solid green: it stays a park and the tensor field does not run on it.': '随地块一并选取的公园显示为实心绿色：它保持为公园，张量场不在其上生成。', 'park': '公园' });
+Object.assign(ZH, { 'Cell key': '单元身份', 'Older package': '旧地块包', 'Example · from an earlier run': '范例 · 来自较早的一次运行' });
 ZH_RX.push([new RegExp('^(.+) · park$'), '$1 · 公园'], [new RegExp('^([0-9.,]+) ha · stays a park, no tensor field$'), '$1 公顷 · 保持为公园，不生成张量场']);
 function zhOf(t) {
   const k = norm(t); if (!k) return null;

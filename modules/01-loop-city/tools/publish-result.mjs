@@ -114,7 +114,8 @@ const inPage = async ({ every, quality }) => {
     base: { stations: tidy(L.stations()), rails: tidy({ type: 'FeatureCollection', features: [...L.proposed().features.filter(f => f.properties.kind !== 'radial'), ...L.radials().features] }) },
     stats: { roadKm: num('cRoad1'), builtKm2: num('cBuilt'), farmKm2: num('cFarm'), cells: cells.features.length, highwayKm: km('highway'), linkKm: km('link'),
       stationsInCell: cells.features.reduce((s, f) => s + (f.properties.stations ? String(f.properties.stations).split(' ').filter(Boolean).length : 0), 0) },
-    sliders, engineVersion: L.version, note: document.getElementById('yearNote')?.textContent || ''
+    sliders, engineVersion: L.version, note: document.getElementById('yearNote')?.textContent || '',
+    run: { seed: L.seed ?? null, id: L.runId ?? null }      // (25 Nov 2026) the seed and the run's name: cells with this run name fit together
   };
 };
 
@@ -145,7 +146,7 @@ try {
   const id = createHash('sha256').update(growthBin).digest('hex').slice(0, 10);
   const result = {
     format: 1, id, publishedAt: new Date().toISOString(), source: APP, pageHash, pageCommit, engineVersion: r.engineVersion, centurySeconds: seconds,
-    years: [2025, 2100], frame: r.frame, sliders: r.sliders, stats: r.stats,
+    years: [2025, 2100], frame: r.frame, sliders: r.sliders, stats: r.stats, run: r.run,
     growth: { file: 'growth.bin.gz', width: r.growth.width, height: r.growth.height, palette: r.growth.palette, counts: r.growth.counts, events: r.growth.events, rawBytes: r.growth.rawBytes },
     mould: { width: r.mould.width, height: r.mould.height, every: EVERY, of: r.mould.of, lut: r.mould.lut },
     base: r.base, vectors: r.vectors

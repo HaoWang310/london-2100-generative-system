@@ -1,5 +1,7 @@
 # Loop City · 第 3 步 张量场底图 · Step 3, the base for the tensor field
 
+> **运行名与单元身份 · The run and the cells' keys (25 Nov 2026).** 地块包带来的 `run`（运行名和种子）和 `cell_keys`（每个单元的身份）原样写进张量场用地文件，面板的「场地」里多一行「单元身份」。旧地块包没有这两项，显示「旧地块包」；范例来自较早的一次运行。只有运行名相同的地块才能拼在一起。 The `run` (its name and seed) and `cell_keys` a parcel package brings are written into the tensor site file, and the Site table has a Cell key row. An older package has neither. Only parcels of one run fit together.
+
 > **手机界面 · The phone (23 Nov 2026).** 手机上换成统一的手机布局（`shared/ui/phone.css`、`phone.js`）：地图铺满屏幕，左上角「显示」打开外观和图层（整宽、上半屏），功能面板成为底部的卡，收起时留名称、所选地块和「保存张量场用地文件」。iPad 和电脑不变。只在手机模拟里验证过。 On a phone the page takes the shared phone layout: Display (top left) opens the look and the layers, and the process panel is a sheet along the bottom that folds to its name, the parcels and the save button. Checked in phone emulation only.
 
 > **界面 · Interface (22 Nov 2026).** 与其他 app 统一：黑白、DM Sans、两个悬浮面板，读 `shared/ui/tokens.css`。`skin.css` 和 `skin.js` 只加面板头、所在步骤和返回第 2 步的按钮；每个控件的 id 与事件不变。图层色块保留颜色（地图的图例），不合格的数值用警告红。网址加 `#noskin` 显示原来的界面。 One interface with the other apps: black and white, DM Sans, two floating panels, reading `shared/ui/tokens.css`. The layer swatches keep their colour (they are the key to the map); a figure that fails shows in the warning red. `#noskin` shows the old interface.
