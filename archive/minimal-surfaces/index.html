@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>极小曲面目录</title>
+<style>
+/* VOICE: quiet studio instrument, nothing competes with the form
+   IDEA: a lit physical model on a black plinth at an AADRL crit
+   PICTURE: the exact Weber Scherk–Enneper surface, full screen, orbitable
+   COLOUR and TYPE: black ground, olive front face + lavender back face (as the reference), ice-white accent; SF / PingFang
+   LAYOUT: full viewport, one floating glass panel, one four-button dock */
+:root{color-scheme:dark;--ink:#E8ECF2;--mute:#8A94A3;--line:rgba(255,255,255,.08);--glass:rgba(20,22,26,.74);--acc:#D9E3F0}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;min-height:100%;background:#000;color:var(--ink);font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip}
+body.v{overflow:hidden;height:100%}
+#viewer{display:none}body.v #viewer{display:block}body.v #home{display:none}
+#home{max-width:1240px;margin:0 auto;padding:clamp(28px,5vw,64px) max(5vw,16px) 64px}
+.hero h1{margin:0;font-size:clamp(32px,5vw,48px);line-height:1.05;font-weight:600;letter-spacing:-.01em}
+.hero p{margin:10px 0 0;color:var(--mute);font-size:15px}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:28px 0 8px}
+.seg{display:inline-flex;padding:3px;border:1px solid #2A2F36;border-radius:999px}
+.seg button{height:34px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:#C9D1DC;font:inherit;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#0b0d10}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags button{height:34px;padding:0 14px;border:1px solid #2A2F36;border-radius:999px;background:transparent;color:#C9D1DC;font:inherit;font-size:13px;cursor:pointer}
+.tags button.on{background:var(--acc);border-color:var(--acc);color:#0b0d10}
+.cat{margin-top:40px;border-top:1px solid #1C2026;padding-top:18px}
+.cat h2{margin:0;font-size:20px;font-weight:500;display:flex;align-items:baseline;gap:10px}
+.cat h2 small{color:var(--mute);font-size:13px;font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px}
+.card{all:unset;display:block;cursor:pointer;border:1px solid #1C2026;border-radius:16px;overflow:hidden;background:#07080a;transition:border-color .2s}
+.card:hover,.card:focus-visible{border-color:var(--acc)}
+.card img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:#000}
+.card .meta{padding:12px 14px 14px}
+.card .no{color:#8C9A78;font-size:12px}
+.card .nm{font-size:16px;margin:2px 0 6px;color:#fff}
+.card .sub{color:var(--mute);font-size:12px}
+.pill{display:inline-block;margin:8px 4px 0 0;padding:2px 8px;border:1px solid #2A2F36;border-radius:999px;font-size:11px;color:#C9D1DC}
+.empty{border:1px dashed #2A2F36;border-radius:16px;aspect-ratio:3/4;display:grid;place-items:center;color:#4A525C;font-size:13px;max-width:260px}
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:14px}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #1C2026;vertical-align:top}
+th{color:var(--mute);font-weight:400;font-size:12px}
+td a{color:#fff;text-decoration:none;border-bottom:1px solid #3A414B}
+.back{all:unset;pointer-events:auto;cursor:pointer;color:var(--mute);font-size:13px;display:inline-flex;align-items:center;gap:4px;height:32px;margin-bottom:4px}
+.back:hover{color:#fff}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:5.5em}.stack td::before{content:attr(data-l);float:inline-start;width:5em;margin-inline-start:-5.5em;color:var(--mute)}}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+#ref{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.5;display:none}
+.title{position:fixed;top:20px;left:24px;pointer-events:none}
+.title b{display:block;font-weight:500;font-size:17px;letter-spacing:.01em}
+.title span{color:var(--mute);font-size:13px}
+.panel{position:fixed;top:16px;right:16px;width:264px;max-height:calc(100% - 110px);overflow:auto;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);border:1px solid var(--line);border-radius:16px;padding:0 16px}
+.panel>button{all:unset;display:flex;justify-content:space-between;align-items:center;width:100%;height:44px;cursor:pointer;color:var(--mute);font-size:13px}
+.panel>button svg{width:16px;height:16px;transition:transform .2s}
+.panel.closed>button svg{transform:rotate(-90deg)}
+.panel.closed .body{display:none}
+.body{padding-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.chips button{height:30px;padding:0 11px;border:1px solid #2A2F36;border-radius:999px;background:transparent;color:#C9D1DC;font:inherit;font-size:12px;cursor:pointer}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:#0b0d10}
+.row{padding:4px 0}
+.row label{display:flex;justify-content:space-between;font-size:13px;color:#C9D1DC}
+.row output{color:#fff;font-variant-numeric:tabular-nums}
+.row.hide{display:none}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:linear-gradient(var(--acc),var(--acc)) 0 0/var(--p,50%) 100% no-repeat,#2A2F36}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;margin-top:-7px;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+input[type=range]::-moz-range-track{height:2px;background:#2A2F36}
+input[type=range]::-moz-range-progress{height:2px;background:var(--acc)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:#fff}
+input:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
+.dock{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:4px;padding:5px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);border:1px solid var(--line);border-radius:999px}
+.dock button{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#C9D1DC;display:grid;place-items:center;cursor:pointer;transition:background .15s,color .15s}
+.dock button:hover{background:rgba(255,255,255,.08)}
+.dock button.on{color:#0b0d10;background:var(--acc)}
+.dock svg{width:20px;height:20px}
+.stat{position:fixed;left:24px;bottom:30px;color:#5E6773;font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,8px);background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:600px){.panel{top:auto;bottom:84px;left:12px;right:12px;width:auto;max-height:55%}.stat{display:none}.title{top:16px;left:18px}.toast{bottom:150px}}
+@media(prefers-reduced-motion:reduce){.toast,.panel>button svg{transition:none}}
+</style>
+</head>
+<body>
+<main id="home">
+  <header class="hero"><h1>极小曲面目录</h1><p id="count"></p></header>
+  <div class="bar">
+    <div class="tags" id="tags" aria-label="建筑用途"></div>
+    <div class="seg" role="tablist"><button type="button" data-v="cards" class="on">卡片</button><button type="button" data-v="list">清单</button></div>
+  </div>
+  <div id="cards"></div>
+  <div id="list" hidden></div>
+</main>
+<div id="viewer">
+<canvas id="c" tabindex="0" aria-label="Scherk–Enneper 极小曲面三维预览，拖动旋转，滚轮缩放"></canvas>
+<img id="ref" alt="">
+<div class="title"><button type="button" class="back" id="back">‹ 目录</button><b id="v-name">Scherk–Enneper</b><span id="v-sub">带周期 Enneper 端的 Scherk 鞍塔 · M. Weber</span></div>
+
+<section class="panel" id="panel">
+  <button type="button" id="tog" aria-expanded="true" aria-controls="body">参数
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg>
+  </button>
+  <div class="body" id="body">
+    <div class="chips" id="chips"></div>
+    <div id="rows"></div>
+  </div>
+</section>
+
+<nav class="dock" aria-label="工具">
+  <button type="button" id="b-reset" aria-label="回到原图视角" title="回到原图视角">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>
+  </button>
+  <button type="button" id="b-wire" class="on" aria-label="参数网格线" aria-pressed="true" title="参数网格线">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16"/></svg>
+  </button>
+  <button type="button" id="b-ref" aria-label="叠加参考图" aria-pressed="false" title="叠加参考图">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="9.5" cy="10" r="1.6"/><path d="M5 17l4.5-4.5 3 3 2.5-2.5 4 4"/></svg>
+  </button>
+  <button type="button" id="b-stl" aria-label="导出 STL" title="导出 STL">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg>
+  </button>
+</nav>
+<input type="file" id="file" accept="image/*" hidden>
+
+<div class="stat" id="stat"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 目录数据 ---------- */
+const TAGS = ['屋面','立面','结构','景观','可打印'];
+const CATS = [
+  {id:'A', name:'非周期', desc:'有限全曲率，不重复'},
+  {id:'B', name:'单周期', desc:'沿一个方向重复'},
+  {id:'C', name:'双周期', desc:'沿一个平面重复'},
+  {id:'D', name:'三周期 TPMS', desc:'沿空间三个方向重复'}
+];
+const ENDS = {annular:'环状端 · 鞍塔翼', enneper:'Enneper 端', catenoid:'悬链面端', helicoid:'螺旋面端', planar:'平面端'};
+const SURFACES = [
+  {id:'s001', no:'001', name:'Scherk–Enneper', zh:'带周期 Enneper 端的 Scherk 鞍塔', cat:'B', end:'enneper',
+   tags:['立面','结构','可打印'], method:'Weierstrass 数值积分', source:'M. Weber · Minimal Surface Repository（Mathematica notebook）',
+   params:'端数 2k · 摆动 a · 截取半径 · 周期数', added:'2026-11-25',
+   thumb:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAHgAWgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5UooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDT8OaKfEOs2+mCbyDNvw+3djahbpkemOtdf/AMKm/wCoz/5Lf/Z1h/Dc48aad9ZP/RTV62GrGvJxSaJbZ583wo2/8xj/AMlv/s6zNY8AvpdnNcpfiYxKW2mLbkDrzuPavUnas+8jEqlSOtc8a076sV2eIUV0XiLwpPpsklxaI0lpgsRnJj/xHv8An61ztdsZJq6LCiiimAUUUUAFFFaf/CL69/0BNT/8BX/wosBmUVqf8Ivrx/5gmp/+Ar/4VFc6BrFlA1xdaVfwQpjdJLbuqrk4GSRjqRTswKFFFFIAoorS0DRX17UBaLKIQFLs5XdgDjp35IpN2V2Bm0V3/wDwqobd39s/+S3/ANnXJa/or6DqBtGlEwKh1cLtyDx07cg1MakZOyYrmbRRRVjCiir9toGsXsC3FrpV/PC+dskVu7K2Dg4IGOoNFgKFFan/AAi+vD/mCan/AOAr/wCFJ/wi+vf9ATU//AV/8KdmBmUUUUgCiiigAooooAK63R/AL6pZw3L34hMqhtoi3YB6c7h2qp4d8KT6lJHcXaNHaYDAE4Mn+A9/y9a9Ns4xEoUDpWFW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'}
+];
+let tagOn = null, view = 'cards';
+function renderHome(){
+  const list = SURFACES.filter(x => !tagOn || x.tags.includes(tagOn));
+  $('#count').textContent = `按周期性与端的类型分类 · 已收录 ${SURFACES.length} 个曲面`;
+  $('#tags').innerHTML = ['全部', ...TAGS].map(t => `<button type="button" data-t="${esc(t)}" class="${(t==='全部'?!tagOn:tagOn===t)?'on':''}">${esc(t)}</button>`).join('');
+  $('#cards').innerHTML = CATS.map(c => {
+    const items = list.filter(x => x.cat === c.id);
+    return `<section class="cat"><h2>${c.id} · ${esc(c.name)} <small>${esc(c.desc)} · ${items.length}</small></h2>
+      <div class="grid">${items.length ? items.map(x => `<button type="button" class="card" data-id="${x.id}">
+        <img src="${x.thumb}" alt="${esc(x.name)} 预览">
+        <div class="meta"><div class="no">${c.id} · ${esc(ENDS[x.end]||'')} · ${x.no}</div><div class="nm">${esc(x.name)}</div>
+        <div class="sub">${esc(x.zh)}</div>${x.tags.map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div></button>`).join('')
+        : '<div class="empty">待收录</div>'}</div></section>`;
+  }).join('');
+  $('#list').innerHTML = `<table class="stack"><thead><tr><th>编号</th><th>名称</th><th>分类</th><th>端的类型</th><th>生成方法</th><th>来源</th><th>用途标签</th></tr></thead><tbody>${
+    list.map(x => `<tr><td>${x.no}</td><td><a href="#${x.id}">${esc(x.name)}</a></td><td>${x.cat} · ${esc(CATS.find(c=>c.id===x.cat).name)}</td><td>${esc(ENDS[x.end]||'')}</td><td>${esc(x.method)}</td><td>${esc(x.source)}</td><td>${x.tags.map(esc).join(' · ')}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+$('#tags').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; tagOn = b.dataset.t === '全部' ? null : b.dataset.t; renderHome(); });
+document.querySelector('.seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; view = b.dataset.v;
+  for (const x of document.querySelectorAll('.seg button')) x.classList.toggle('on', x === b);
+  $('#cards').hidden = view !== 'cards'; $('#list').hidden = view !== 'list';
+});
+$('#cards').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) location.hash = c.dataset.id; });
+$('#back').addEventListener('click', () => { location.hash = ''; });
+renderHome();
+
+/* 预设：取自 M. Weber 的 Mathematica notebook "Singly Periodic Scherk Surface with Enneper Ends" */
+const PRESETS = [
+  {id:'ref', name:'原图', k:3, a:0.70,  r:1.20, n:3},
+  {id:'k3',  name:'6 端 · 长翼', k:3, a:0.99, r:4.50, n:3},
+  {id:'k2',  name:'4 端', k:2, a:0.995, r:4.50, n:3},
+  {id:'k1',  name:'2 端', k:1, a:0.995, r:6.70, n:3},
+  {id:'k8',  name:'车轮', k:8, a:0.999, r:5.50, n:1}
+];
+const P = {k:3, a:0.70, r:1.20, n:3, t:1.0, op:50};
+const SPEC = [
+  ['k','端数 2k',1,8,1, v => String(2*v)],
+  ['a','摆动 a',0.5,0.999,0.001, v => v.toFixed(3)],
+  ['r','截取半径',0.3,7,0.05, v => v.toFixed(2)],
+  ['n','周期数',1,6,1, v => String(v)],
+  ['t','厚度 mm',0,3,0.1, v => v.toFixed(1)],
+  ['op','参考图透明度',0,100,1, v => v+'%']
+];
+const MM = 10; // 1 模型单位 = 10 mm
+
+$('#chips').innerHTML = PRESETS.map(p => `<button type="button" data-id="${p.id}">${p.name}</button>`).join('');
+$('#rows').innerHTML = SPEC.map(([k,lab,mn,mx,st]) =>
+  `<div class="row${k==='op'?' hide':''}" id="row-${k}"><label for="s-${k}"><span>${lab}</span><output id="o-${k}"></output></label>
+   <input type="range" id="s-${k}" min="${mn}" max="${mx}" step="${st}" value="${P[k]}"></div>`).join('');
+
+function syncUI(){
+  for (const [k,,mn,mx,,fmt] of SPEC){
+    const s = $('#s-'+k); s.value = P[k];
+    s.style.setProperty('--p', ((P[k]-mn)/(mx-mn)*100)+'%');
+    $('#o-'+k).textContent = fmt(+P[k]);
+  }
+  for (const b of document.querySelectorAll('#chips button')){
+    const p = PRESETS.find(x => x.id === b.dataset.id);
+    b.classList.toggle('on', p.k===P.k && Math.abs(p.a-P.a)<1e-9 && Math.abs(p.r-P.r)<1e-9 && p.n===P.n);
+  }
+}
+
+const panel = $('#panel'), tog = $('#tog');
+function setPanel(open){ panel.classList.toggle('closed', !open); tog.setAttribute('aria-expanded', open); }
+tog.addEventListener('click', () => setPanel(panel.classList.contains('closed')));
+if (innerWidth < 600) setPanel(false);
+
+let toastT;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ---------- Weierstrass 数据（Weber）----------
+   G(z)  = c · z^{k-1} (z^{2k} − a^{2k}) / (z^{2k} − a^{−2k}),  c = (1 − a^{−2k}) / (1 − a^{2k})
+   dh(z) = i · z^{k-1} (z^{2k} − a^{2k})(z^{2k} − a^{−2k}) / (z^{2k} − 1)^3
+   X = Re ∫ ( (1/G − G)/2 · dh,  i(1/G + G)/2 · dh,  dh ),  起点 e^{iπ/(2k)}
+   参数域：z = (1 + 2/(−1 + i e^{u+iv}))^{1/k},  u ∈ [0, rmax],  v ∈ [π/2, π]       */
+const GLX = [-Math.sqrt(0.6), 0, Math.sqrt(0.6)], GLW = [5/9, 8/9, 5/9];
+
+function makeOmega(k, a){
+  const A = a**(2*k), B = a**(-2*k), c = (1-B)/(1-A);
+  return function(zr, zi, out){
+    // powers
+    let pr = 1, pi = 0;                     // z^{k-1}
+    for (let i=0; i<k-1; i++){ const t = pr*zr - pi*zi; pi = pr*zi + pi*zr; pr = t; }
+    let Zr = pr*zr - pi*zi, Zi = pr*zi + pi*zr; // z^k
+    const t2 = Zr*Zr - Zi*Zi; Zi = 2*Zr*Zi; Zr = t2; // z^{2k}
+    const ar = Zr - A, br = Zr - B, mr = Zr - 1, im = Zi;
+    // den = (Z-1)^3
+    let dr = mr*mr - im*im, di = 2*mr*im; const d3r = dr*mr - di*im, d3i = dr*im + di*mr;
+    const dd = d3r*d3r + d3i*d3i, ir = d3r/dd, ii = -d3i/dd; // 1/den
+    // ZA*ZB
+    const qr = ar*br - im*im, qi = ar*im + im*br;
+    // dh = i * z^{k-1} * q / den
+    let hr = pr*qr - pi*qi, hi = pr*qi + pi*qr;
+    let tr = hr*ir - hi*ii, ti = hr*ii + hi*ir;
+    const dhr = -ti, dhi = tr;
+    // Gdh = i c z^{2k-2} ZA^2 / den
+    const z2r = pr*pr - pi*pi, z2i = 2*pr*pi;
+    const a2r = ar*ar - im*im, a2i = 2*ar*im;
+    hr = z2r*a2r - z2i*a2i; hi = z2r*a2i + z2i*a2r;
+    tr = hr*ir - hi*ii; ti = hr*ii + hi*ir;
+    const gr = -c*ti, gi = c*tr;
+    // dhG = (i/c) ZB^2 / den
+    const b2r = br*br - im*im, b2i = 2*br*im;
+    tr = b2r*ir - b2i*ii; ti = b2r*ii + b2i*ir;
+    const hgr = -ti/c, hgi = tr/c;
+    out[0] = (hgr - gr)/2;  out[1] = (hgi - gi)/2;             // ω1
+    const sr = (hgr + gr)/2, si = (hgi + gi)/2;
+    out[2] = -si; out[3] = sr;                                  // ω2 = i(dhG+Gdh)/2
+    out[4] = dhr; out[5] = dhi;                                 // ω3
+  };
+}
+function zmap(u, v, k){
+  const e = Math.exp(u), er = e*Math.cos(v), ei = e*Math.sin(v);
+  const dr = -1 - ei, di = er;           // -1 + i e^s
+  const dd = dr*dr + di*di;
+  const tr = 1 + 2*dr/dd, ti = -2*di/dd; // t
+  const r = Math.hypot(tr, ti), th = Math.atan2(ti, tr);
+  const rk = r**(1/k), tk = th/k;
+  return [rk*Math.cos(tk), rk*Math.sin(tk)];
+}
+
+/* 基本曲面片：NU×NV 个单元，Gauss–Legendre 沿参数线积分 */
+const NU = 36, NV = 18, SUB = 4, LU = 4, LV = 2;
+function patch(k, a, rmax){
+  const om = makeOmega(k, a), o = new Float64Array(6);
+  const nu = NU*SUB+1, nv = NV*SUB+1;
+  const Zr = new Float64Array(nu*nv), Zi = new Float64Array(nu*nv);
+  for (let i=0; i<nu; i++) for (let j=0; j<nv; j++){
+    const z = zmap(rmax*i/(nu-1), Math.PI/2 + Math.PI/2*j/(nv-1), k);
+    Zr[i*nv+j] = z[0]; Zi[i*nv+j] = z[1];
+  }
+  function seg(p, q, acc){ // acc += Re ∫_p^q ω
+    const ar = Zr[p], ai = Zi[p], dr = Zr[q]-ar, di = Zi[q]-ai;
+    let s0r=0,s0i=0,s1r=0,s1i=0,s2r=0,s2i=0;
+    for (let g=0; g<3; g++){
+      const x = (1+GLX[g])/2;
+      om(ar + dr*x, ai + di*x, o);
+      s0r += GLW[g]*o[0]; s0i += GLW[g]*o[1];
+      s1r += GLW[g]*o[2]; s1i += GLW[g]*o[3];
+      s2r += GLW[g]*o[4]; s2i += GLW[g]*o[5];
+    }
+    acc[0] += (s0r*dr - s0i*di)/2; acc[1] += (s1r*dr - s1i*di)/2; acc[2] += (s2r*dr - s2i*di)/2;
+  }
+  const X = new Float64Array(nu*nv*3);
+  const acc = [0,0,0];
+  for (let j=nv-2; j>=0; j--){ seg(j+1, j, acc); X[j*3]=acc[0]; X[j*3+1]=acc[1]; X[j*3+2]=acc[2]; }
+  for (let j=0; j<nv; j++){
+    acc[0]=X[j*3]; acc[1]=X[j*3+1]; acc[2]=X[j*3+2];
+    for (let i=1; i<nu; i++){
+      seg((i-1)*nv+j, i*nv+j, acc);
+      const q = (i*nv+j)*3; X[q]=acc[0]; X[q+1]=acc[1]; X[q+2]=acc[2];
+    }
+  }
+  const d0 = [X[0], X[1], X[2]];
+  const W = NV+1, out = new Float64Array((NU+1)*W*3);
+  for (let i=0; i<=NU; i++) for (let j=0; j<=NV; j++){
+    const s = ((i*SUB)*nv + j*SUB)*3, d = (i*W+j)*3;
+    out[d] = X[s]-d0[0]; out[d+1] = X[s+1]-d0[1]; out[d+2] = X[s+2]-d0[2];
+  }
+  // Gauss 法向（用于确定正反面）
+  const zc = zmap(rmax*0.5, Math.PI*0.75, k);
+  return {pos: out, h: -d0[2], zc};
+}
+
+/* 用 notebook 中同样的对称操作拼出完整曲面 */
+function assemble(k, a, rmax, nPer){
+  const {pos, h} = patch(k, a, rmax);
+  const W = NV+1, nV = (NU+1)*W;
+  const baseTri = [];
+  for (let i=0; i<NU; i++) for (let j=0; j<NV; j++){
+    const p = i*W+j, q = p+W;
+    baseTri.push(p, q, p+1, p+1, q, q+1);
+  }
+  const baseLine = [];
+  for (let i=0; i<=NU; i+=LU) for (let j=0; j<NV; j++) baseLine.push(i*W+j, i*W+j+1);
+  for (let j=0; j<=NV; j+=LV) for (let i=0; i<NU; i++) baseLine.push(i*W+j, (i+1)*W+j);
+  // 变换：{m: 3x3, o: offset, f: 是否翻转绕向}
+  const I3 = [1,0,0, 0,1,0, 0,0,1];
+  const mul = (A,B) => { const C = new Array(9).fill(0); for (let r=0;r<3;r++) for (let c=0;c<3;c++) for (let t=0;t<3;t++) C[r*3+c]+=A[r*3+t]*B[t*3+c]; return C; };
+  const mv = (A,v) => [A[0]*v[0]+A[1]*v[1]+A[2]*v[2], A[3]*v[0]+A[4]*v[1]+A[5]*v[2], A[6]*v[0]+A[7]*v[1]+A[8]*v[2]];
+  const comp = (T2, T1) => ({m: mul(T2.m, T1.m), o: mv(T2.m, T1.o).map((x,i)=>x+T2.o[i]), f: T1.f !== T2.f});
+  let ts = [{m:I3, o:[0,0,0], f:false}];
+  const Ry = {m:[-1,0,0, 0,1,0, 0,0,-1], o:[0,0,0], f:true};
+  ts = ts.concat(ts.map(t => comp(Ry, t)));
+  const th = Math.PI/2/k, nx = Math.cos(th), ny = Math.sin(th);
+  const Rf = {m:[1-2*nx*nx, -2*nx*ny, 0, -2*nx*ny, 1-2*ny*ny, 0, 0,0,1], o:[0,0,0], f:true};
+  ts = ts.concat(ts.map(t => comp(Rf, t)));
+  let rot = [];
+  for (let i=0; i<k; i++){ const c = Math.cos(2*Math.PI*i/k), s = Math.sin(2*Math.PI*i/k);
+    const R = {m:[c,-s,0, s,c,0, 0,0,1], o:[0,0,0], f:false}; rot = rot.concat(ts.map(t => comp(R, t))); }
+  ts = rot;
+  const Rz = {m:[1,0,0, 0,1,0, 0,0,-1], o:[0,0,2*h], f:true};
+  ts = ts.concat(ts.map(t => comp(Rz, t)));
+  const per = 4*h; let tr = [];
+  for (let m=0; m<nPer; m++) tr = tr.concat(ts.map(t => comp({m:I3, o:[0,0,m*per], f:false}, t)));
+  // 与原作 CDF 的朝向一致：z 取反
+  tr = tr.map(t => comp({m:[1,0,0, 0,1,0, 0,0,-1], o:[0,0,0], f:true}, t));
+  const nT = tr.length;
+  const P3 = new Float32Array(nT*nV*3), idx = new Uint32Array(nT*baseTri.length), lin = new Uint32Array(nT*baseLine.length);
+  let zmin = Infinity, zmax = -Infinity;
+  tr.forEach((t, c) => {
+    const b = c*nV, M = t.m, O = t.o;
+    for (let v=0; v<nV; v++){
+      const x = pos[v*3], y = pos[v*3+1], z = pos[v*3+2];
+      const X = M[0]*x+M[1]*y+M[2]*z+O[0], Y = M[3]*x+M[4]*y+M[5]*z+O[1], Z = M[6]*x+M[7]*y+M[8]*z+O[2];
+      // 数学坐标 (x,y,z) → three (x, z, −y)
+      P3[(b+v)*3] = X; P3[(b+v)*3+1] = Z; P3[(b+v)*3+2] = -Y;
+      if (Z<zmin) zmin = Z; if (Z>zmax) zmax = Z;
+    }
+    const ib = c*baseTri.length;
+    for (let q=0; q<baseTri.length; q+=3){
+      if (t.f){ idx[ib+q] = b+baseTri[q]; idx[ib+q+1] = b+baseTri[q+2]; idx[ib+q+2] = b+baseTri[q+1]; }
+      else { idx[ib+q] = b+baseTri[q]; idx[ib+q+1] = b+baseTri[q+1]; idx[ib+q+2] = b+baseTri[q+2]; }
+    }
+    const lb = c*baseLine.length;
+    for (let q=0; q<baseLine.length; q++) lin[lb+q] = b+baseLine[q];
+  });
+  const zc = (zmin+zmax)/2;
+  for (let v=1; v<P3.length; v+=3) P3[v] -= zc;
+  return {pos:P3, idx, lin, per};
+}
+
+if (!window.THREE || !THREE.OrbitControls){
+  toast('三维库加载失败，请刷新页面');
+} else {
+
+const canvas = $('#c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 1000);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a2d33, 0.75));
+const key = new THREE.DirectionalLight(0xffffff, 0.75); scene.add(key); scene.add(key.target);
+
+// 原图配色：正面橄榄绿，背面灰紫，暗色参数网格线
+const front = new THREE.MeshLambertMaterial({color:0x5E6A47, side:THREE.FrontSide, polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1});
+const back  = new THREE.MeshLambertMaterial({color:0xA9AECB, side:THREE.BackSide,  polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1});
+const lineMat = new THREE.LineBasicMaterial({color:0x1b1e1a, transparent:true, opacity:0.55});
+let group = null, cur = null, wire = true, radius = 1;
+
+function rebuild(){
+  cur = assemble(P.k, P.a, P.r, P.n);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(cur.pos, 3));
+  g.setIndex(new THREE.BufferAttribute(cur.idx, 1));
+  g.computeVertexNormals();
+  const lg = new THREE.BufferGeometry();
+  lg.setAttribute('position', g.attributes.position);
+  lg.setIndex(new THREE.BufferAttribute(cur.lin, 1));
+  if (group){ scene.remove(group); group.children.forEach(o => o.geometry.dispose()); }
+  group = new THREE.Group();
+  group.add(new THREE.Mesh(g, front), new THREE.Mesh(g, back));
+  const lines = new THREE.LineSegments(lg, lineMat); lines.visible = wire; group.add(lines);
+  scene.add(group);
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  const s = new THREE.Vector3(); g.boundingBox.getSize(s);
+  const newR = g.boundingSphere.radius;
+  // 保持视角方向，只调整距离
+  const dir = camera.position.clone().sub(controls.target);
+  if (dir.lengthSq() > 0 && radius > 0) camera.position.copy(controls.target).add(dir.multiplyScalar(newR/radius));
+  radius = newR;
+  camera.near = radius/100; camera.far = radius*40; camera.updateProjectionMatrix();
+  $('#stat').textContent = `${(cur.idx.length/3).toLocaleString()} 个三角面 · ${Math.round(s.x*MM)} × ${Math.round(s.z*MM)} × ${Math.round(s.y*MM)} mm`;
+}
+
+// 原图视角：沿 x 轴正侧面、略微俯视、透视（对应原作渲染）
+function refView(){
+  const d = radius*3.3, el = THREE.MathUtils.degToRad(8);
+  controls.target.set(0,0,0);
+  camera.position.set(d*Math.cos(el), d*Math.sin(el), 0);
+  camera.fov = THREE.MathUtils.radToDeg(2*Math.atan(radius*1.04/d/Math.min(1, camera.aspect)));
+  camera.updateProjectionMatrix(); controls.update();
+}
+
+let pending = false;
+function schedule(){ if (!pending){ pending = true; requestAnimationFrame(() => { pending = false; rebuild(); }); } }
+for (const [k] of SPEC){
+  $('#s-'+k).addEventListener('input', e => {
+    P[k] = +e.target.value; syncUI();
+    if (k === 'op'){ $('#ref').style.opacity = P.op/100; return; }
+    if (k === 't') return;
+    schedule();
+  });
+}
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const p = PRESETS.find(x => x.id === b.dataset.id);
+  Object.assign(P, {k:p.k, a:p.a, r:p.r, n:p.n}); syncUI(); rebuild(); refView();
+});
+
+$('#b-reset').addEventListener('click', refView);
+$('#b-wire').addEventListener('click', e => {
+  wire = !wire; group.children[2].visible = wire;
+  const b = e.currentTarget; b.classList.toggle('on', wire); b.setAttribute('aria-pressed', wire);
+});
+
+// 参考图叠加
+const ref = $('#ref'), bRef = $('#b-ref');
+let refUrl = null;
+bRef.addEventListener('click', () => {
+  if (ref.style.display === 'block'){
+    ref.style.display = 'none'; bRef.classList.remove('on'); bRef.setAttribute('aria-pressed','false');
+    $('#row-op').classList.add('hide');
+  } else if (refUrl){
+    ref.style.display = 'block'; bRef.classList.add('on'); bRef.setAttribute('aria-pressed','true');
+    $('#row-op').classList.remove('hide');
+  } else $('#file').click();
+});
+$('#file').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  if (refUrl) URL.revokeObjectURL(refUrl);
+  refUrl = URL.createObjectURL(f); ref.src = refUrl; ref.style.opacity = P.op/100;
+  ref.style.display = 'block'; bRef.classList.add('on'); bRef.setAttribute('aria-pressed','true');
+  $('#row-op').classList.remove('hide'); setPanel(true);
+  toast('参考图已叠加，拖动视角对齐');
+});
+
+// ---------- STL（带厚度的闭合壳体）+ ZIP ----------
+function shell(){
+  const src = cur.pos, idx = cur.idx, nV = src.length/3;
+  // 合并重合顶点
+  const map = new Map(), remap = new Uint32Array(nV), P = [];
+  const q = 1e5;
+  for (let v=0; v<nV; v++){
+    const key = Math.round(src[v*3]*q)+','+Math.round(src[v*3+1]*q)+','+Math.round(src[v*3+2]*q);
+    let id = map.get(key);
+    if (id === undefined){ id = P.length/3; map.set(key, id); P.push(src[v*3], src[v*3+1], src[v*3+2]); }
+    remap[v] = id;
+  }
+  const T = [];
+  for (let i=0; i<idx.length; i+=3){
+    const a = remap[idx[i]], b = remap[idx[i+1]], c = remap[idx[i+2]];
+    if (a!==b && b!==c && a!==c) T.push(a,b,c);
+  }
+  const n = P.length/3, N = new Float64Array(n*3);
+  for (let i=0; i<T.length; i+=3){
+    const a = T[i]*3, b = T[i+1]*3, c = T[i+2]*3;
+    const ux = P[b]-P[a], uy = P[b+1]-P[a+1], uz = P[b+2]-P[a+2], vx = P[c]-P[a], vy = P[c+1]-P[a+1], vz = P[c+2]-P[a+2];
+    const nx = uy*vz-uz*vy, ny = uz*vx-ux*vz, nz = ux*vy-uy*vx;
+    for (const p of [a,b,c]){ N[p]+=nx; N[p+1]+=ny; N[p+2]+=nz; }
+  }
+  const half = (+$('#s-t').value)/MM/2;
+  if (half <= 0) return {P, T};
+  const O = new Float64Array(n*6);
+  for (let v=0; v<n; v++){
+    const l = Math.hypot(N[v*3], N[v*3+1], N[v*3+2]) || 1;
+    for (let c=0; c<3; c++){ const d = N[v*3+c]/l*half; O[v*3+c] = P[v*3+c]+d; O[n*3+v*3+c] = P[v*3+c]-d; }
+  }
+  const S = [];
+  for (let i=0; i<T.length; i+=3){ S.push(T[i], T[i+1], T[i+2]); S.push(T[i]+n, T[i+2]+n, T[i+1]+n); }
+  // 边界边：只被一个三角形使用
+  const E = new Map();
+  for (let i=0; i<T.length; i+=3) for (let e=0; e<3; e++){
+    const a = T[i+e], b = T[i+(e+1)%3], key = a<b ? a+'_'+b : b+'_'+a;
+    const r = E.get(key); if (r) r.c++; else E.set(key, {a, b, c:1});
+  }
+  for (const {a, b, c} of E.values()) if (c === 1) S.push(a, b, b+n, a, b+n, a+n);
+  return {P:O, T:S};
+}
+function stl(){
+  const {P, T} = shell(), nT = T.length/3;
+  const buf = new ArrayBuffer(84 + 50*nT), dv = new DataView(buf);
+  const head = 'Scherk-Enneper (M. Weber), mm, Z up';
+  for (let i=0; i<head.length; i++) dv.setUint8(i, head.charCodeAt(i));
+  dv.setUint32(80, nT, true);
+  const p = v => [P[v*3]*MM, -P[v*3+2]*MM, P[v*3+1]*MM];
+  let o = 84;
+  for (let k=0; k<nT; k++){
+    const a = p(T[k*3]), b = p(T[k*3+1]), c = p(T[k*3+2]);
+    const ux = b[0]-a[0], uy = b[1]-a[1], uz = b[2]-a[2], vx = c[0]-a[0], vy = c[1]-a[1], vz = c[2]-a[2];
+    const nx = uy*vz-uz*vy, ny = uz*vx-ux*vz, nz = ux*vy-uy*vx, ln = Math.hypot(nx, ny, nz) || 1;
+    for (const f of [nx/ln, ny/ln, nz/ln, ...a, ...b, ...c]){ dv.setFloat32(o, f, true); o += 4; }
+    dv.setUint16(o, 0, true); o += 2;
+  }
+  return new Uint8Array(buf);
+}
+const CRC = (() => { const t = new Uint32Array(256); for (let n=0; n<256; n++){ let c = n; for (let k=0; k<8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8){ let c = 0xFFFFFFFF; for (let i=0; i<u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function put(dv, list){ list.forEach(([o,v,s]) => s === 4 ? dv.setUint32(o, v, true) : dv.setUint16(o, v, true)); }
+function zip(name, data){
+  const nm = new TextEncoder().encode(name), crc = crc32(data), sz = data.length;
+  const lh = new DataView(new ArrayBuffer(30));
+  put(lh, [[0,0x04034b50,4],[4,20,2],[6,0x0800,2],[8,0,2],[10,0,2],[12,0x21,2],[14,crc,4],[18,sz,4],[22,sz,4],[26,nm.length,2],[28,0,2]]);
+  const cd = new DataView(new ArrayBuffer(46));
+  put(cd, [[0,0x02014b50,4],[4,20,2],[6,20,2],[8,0x0800,2],[10,0,2],[12,0,2],[14,0x21,2],[16,crc,4],[20,sz,4],[24,sz,4],[28,nm.length,2],[30,0,2],[32,0,2],[34,0,2],[36,0,2],[38,0,4],[42,0,4]]);
+  const cdOff = 30 + nm.length + sz, cdSize = 46 + nm.length;
+  const end = new DataView(new ArrayBuffer(22));
+  put(end, [[0,0x06054b50,4],[4,0,2],[6,0,2],[8,1,2],[10,1,2],[12,cdSize,4],[16,cdOff,4],[20,0,2]]);
+  return new Blob([lh.buffer, nm, data, cd.buffer, nm, end.buffer]);
+}
+
+let dl = null;
+if (window.claude && claude.use) claude.use('downloads').then(d => { dl = d; }).catch(() => {});
+$('#b-stl').addEventListener('click', async () => {
+  if (!dl){ toast('这个视图暂时不能下载，请在 claude.ai 打开本页'); return; }
+  const tag = `k${P.k}-a${P.a}-r${P.r}-n${P.n}-t${P.t}mm`;
+  try {
+    await dl.save({filename:`scherk-enneper-${tag}.zip`, data:zip(`scherk-enneper-${tag}.stl`, stl())});
+    toast('已导出 STL（zip 压缩包内）');
+  } catch (e){
+    const c = e && e.code;
+    toast(c === 'declined' ? '已取消导出' : c === 'rate_limited' ? '稍等片刻再试' : c === 'host_unavailable' ? '请在浏览器或电脑上打开本页导出' : '导出失败，请重试');
+  }
+});
+
+function resize(){
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+function route(){
+  const x = SURFACES.find(y => y.id === location.hash.slice(1));
+  document.body.classList.toggle('v', !!x);
+  if (x){ $('#v-name').textContent = x.no + ' · ' + x.name; $('#v-sub').textContent = x.zh + ' · M. Weber'; resize(); refView(); }
+  else window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+syncUI(); resize(); rebuild(); route();
+(function loop(){
+  requestAnimationFrame(loop);
+  if (!document.body.classList.contains('v')) return;
+  controls.update();
+  key.position.copy(camera.position).add(new THREE.Vector3(0, radius, 0)); key.target.position.copy(controls.target);
+  renderer.render(scene, camera);
+})();
+}
+}
+</script>
+</body>
+</html>
