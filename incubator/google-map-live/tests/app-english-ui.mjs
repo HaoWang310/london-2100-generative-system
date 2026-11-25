@@ -14,6 +14,9 @@ const paths=[
  'scripts/drainage_worker.js',
  'scripts/terrain_local.js',
  'scripts/terrain_worker.js',
+ 'scripts/planning_layers.js',
+ 'scripts/relief_local.js',
+ 'scripts/relief_worker.js',
  'scripts/osm_basemap_themes.js',
  'scripts/street_traffic.js',
  'scripts/map_atmosphere.js',
@@ -33,8 +36,8 @@ for(const path of paths){
 }
 const html=readFileSync('index.html','utf8'),app=readFileSync('scripts/app.js','utf8');   // v3.39.1: the page's code lives in scripts/app.js
 assert.match(html,/<html\s+lang="en"/i,'HTML document language must be English');
-assert.match(app,/APP_VERSION='3\.43\.6-english'/,'page must use English module build');
-assert.match(html,/scripts\/app\.js\?v=3\.43\.6-english/,'page must load its code with the current build id');
-assert.match(html,/ui_language\.js\?v=3\.43\.6-english/,
+assert.match(app,/APP_VERSION='3\.44\.0-english'/,'page must use English module build');
+assert.match(html,/scripts\/app\.js\?v=3\.44\.0-english/,'page must load its code with the current build id');
+assert.match(html,/ui_language\.js\?v=3\.44\.0-english/,
  'bidirectional language layer must use current version');
 console.log('PASS English London Map: '+paths.length+' active HTML/JS files; no visible Chinese source strings');

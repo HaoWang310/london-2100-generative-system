@@ -11,11 +11,11 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.43.7-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.44.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
-  <link rel="stylesheet" href="./styles/app.css?v=3.43.7-english-p2">
+  <link rel="stylesheet" href="./styles/app.css?v=3.44.0-english-p2">
 <script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("l2ui");</script>
 <link rel="stylesheet" href="../../shared/ui/tokens.css?v=1">
 <link rel="stylesheet" href="../../shared/ui/studio.css?v=1">
@@ -160,7 +160,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.43.7-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.44.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -209,6 +209,8 @@
       </button>
       <div class="layerList sectionCollapsed" id="analysisLayerList" role="group" aria-labelledby="layerListTitle">
 
+        <div class="layerGroup">Terrain and height</div>
+
         <div class="layerItem">
           <label class="layerRow">
             <span class="layerName">
@@ -223,9 +225,49 @@
             <span id="terrainOpacityValue">42%</span>
           </div>
           <div class="layerMeta">
-            Official terrain is cached locally as zoom-dependent tiles; no live WMS/WMTS requests · DTM 1 m source · Open Government Licence
+            Official terrain is cached locally as zoom-dependent tiles; no live WMS/WMTS requests · DTM 1 m source · Open Government Licence · cut to the 70 km study circle
           </div>
           <div id="terrainStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerItem" id="reliefItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>Height colors + hill shading</strong>
+              <small>Open height tiles · about 30 m · cut to the 70 km circle</small>
+            </span>
+            <input id="reliefToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="rangeRow">
+            <span>Opacity</span>
+            <input id="reliefOpacity" aria-label="Height color opacity" type="range" min="0" max="1" step="0.05" value="0.75">
+            <span id="reliefOpacityValue">75%</span>
+          </div>
+          <div class="rangeRow">
+            <span>Top height</span>
+            <input id="reliefTop" aria-label="Height of the top color" type="range" min="50" max="600" step="10" value="300">
+            <span id="reliefTopValue">300 m</span>
+          </div>
+          <div class="rangeRow">
+            <span>Colors</span>
+            <select id="reliefRamp" aria-label="Height color ramp" style="max-width:185px">
+              <option value="classic" selected>Classic (blue to red)</option>
+              <option value="muted">Muted</option>
+            </select>
+          </div>
+          <div class="rangeRow">
+            <span>Hill shading</span>
+            <input id="reliefShade" aria-label="Hill shading strength" type="range" min="0" max="1" step="0.05" value="0.35">
+            <span id="reliefShadeValue">35%</span>
+          </div>
+          <div class="reliefKey" aria-label="Height colors from low to high">
+            <i id="reliefBar"></i>
+            <div id="reliefTicks" data-no-translate></div>
+          </div>
+          <div class="layerMeta">
+            Heights from Terrain Tiles (Mapzen, AWS Open Data), about 30 m. Twenty color steps from −3 m to the chosen top height, closer together near sea level so the Thames valley still reads. Cut to the 70 km study circle like the flood and drainage layers. Click the map to read a height.
+          </div>
+          <div id="reliefStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
         </div>
 
         <div class="layerItem" id="contourItem">
@@ -258,6 +300,8 @@
           </div>
           <div id="contourStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
         </div>
+
+        <div class="layerGroup">Water</div>
 
         <div class="layerItem" id="floodItem">
           <label class="layerRow">
@@ -339,6 +383,140 @@
           </div>
           <div id="networkStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
         </div>
+
+        <div class="layerGroup">Planning boundaries</div>
+
+        <div class="layerItem" id="greenBeltItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>London Green Belt</strong>
+              <small>Planning boundary · MHCLG 2024/25 · merged into one area</small>
+            </span>
+            <input id="greenBeltToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="rangeRow">
+            <span>Fill opacity</span>
+            <input id="greenBeltFill" aria-label="Green Belt fill opacity" type="range" min="0" max="1" step="0.05" value="0.25">
+            <span id="greenBeltFillValue">25%</span>
+          </div>
+          <div class="rangeRow">
+            <span>Edge width</span>
+            <input id="greenBeltWidth" aria-label="Green Belt edge width" type="range" min="0" max="3" step="0.1" value="1">
+            <span id="greenBeltWidthValue">100%</span>
+          </div>
+          <div class="networkLegend" aria-label="Green Belt key">
+            <span><i style="--swatch:#849474"></i>Green Belt</span>
+          </div>
+          <div class="layerMeta">
+            England Green Belt 2024/25 (Ministry of Housing, Communities and Local Government), Open Government Licence. The London belt, merged into one area; all of it lies inside the 70 km study circle.
+          </div>
+          <div id="greenBeltStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerItem" id="aonbItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>AONB · National Landscapes</strong>
+              <small>Protected landscapes · Natural England · cut to the 70 km circle</small>
+            </span>
+            <input id="aonbToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="rangeRow">
+            <span>Fill opacity</span>
+            <input id="aonbFill" aria-label="AONB fill opacity" type="range" min="0" max="1" step="0.02" value="0.12">
+            <span id="aonbFillValue">12%</span>
+          </div>
+          <div class="rangeRow">
+            <span>Edge width</span>
+            <input id="aonbWidth" aria-label="AONB edge width" type="range" min="0" max="3" step="0.1" value="1">
+            <span id="aonbWidthValue">100%</span>
+          </div>
+          <div class="networkLegend" aria-label="AONB key">
+            <span><i class="dashKey" style="--swatch:#4f6b45"></i>Protected landscape (dashed edge)</span>
+          </div>
+          <div class="layerMeta">
+            Areas of Outstanding Natural Beauty (now National Landscapes): Chilterns, Surrey Hills, Kent Downs, High Weald and North Wessex Downs, cut to the 70 km study circle. Natural England, Open Government Licence.
+          </div>
+          <div id="aonbStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerGroup">Transport</div>
+
+        <div class="layerItem" id="railItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>Rail by service</strong>
+              <small>National Rail, Underground and others · OpenStreetMap, 21 Nov 2026 · cut to the 70 km circle</small>
+            </span>
+            <input id="railToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="layerChecks" role="group" aria-label="Rail services">
+            <label><input type="checkbox" data-rail="national" autocomplete="off" checked>National Rail</label>
+            <label><input type="checkbox" data-rail="underground" autocomplete="off" checked>Underground</label>
+            <label><input type="checkbox" data-rail="overground" autocomplete="off" checked>Overground</label>
+            <label><input type="checkbox" data-rail="elizabeth" autocomplete="off" checked>Elizabeth line</label>
+            <label><input type="checkbox" data-rail="dlr" autocomplete="off" checked>DLR</label>
+            <label><input type="checkbox" data-rail="tram" autocomplete="off" checked>Trams</label>
+          </div>
+          <div class="rangeRow">
+            <span>Line colors</span>
+            <select id="railMode" aria-label="Rail line colors" style="max-width:185px">
+              <option value="lines" selected>Each line's own color</option>
+              <option value="shades">One color, three shades</option>
+              <option value="speed">National Rail by line speed</option>
+            </select>
+          </div>
+          <div class="rangeRow">
+            <span>Line width</span>
+            <input id="railWidth" aria-label="Rail line width" type="range" min="0.3" max="3" step="0.1" value="1">
+            <span id="railWidthValue">100%</span>
+          </div>
+          <div class="networkLegend" id="railLegend" aria-label="Rail services key">
+            <span><i id="railNationalKey" style="--swatch:#1c1c1e"></i>National Rail</span>
+            <span><i style="--swatch:#E32017"></i>Underground</span>
+            <span><i style="--swatch:#EE7C0E"></i>Overground</span>
+            <span><i style="--swatch:#6950A1"></i>Elizabeth line</span>
+            <span><i style="--swatch:#00AFAD"></i>DLR</span>
+            <span><i style="--swatch:#5FB526"></i>Trams</span>
+          </div>
+          <div class="reliefKey" id="railSpeedKey" aria-label="National Rail line speed in miles per hour" hidden>
+            <i id="railSpeedBar"></i>
+            <div id="railSpeedTicks" data-no-translate></div>
+          </div>
+          <div class="layerMeta">
+            Rail lines from OpenStreetMap (ODbL), fetched 21 Nov 2026 and cut to the 70 km study circle: about 7,090 km of line. The basemap's own thin railways stay visible underneath and continue outside the circle. Line speed is the OpenStreetMap maximum speed in miles per hour where it is recorded; lines without it are grey.
+          </div>
+          <div id="railStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerItem" id="highSpeedItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>High-speed rail · HS1, HS2</strong>
+              <small>Whole lines, not cut to the circle · HS2 Ltd Phase One · OpenStreetMap</small>
+            </span>
+            <input id="highSpeedToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="layerChecks" role="group" aria-label="High-speed lines">
+            <label><input id="hs1Toggle" type="checkbox" autocomplete="off" checked><span data-no-translate>HS1</span></label>
+            <label><input id="hs2Toggle" type="checkbox" autocomplete="off" checked><span data-no-translate>HS2</span></label>
+          </div>
+          <div class="rangeRow">
+            <span>Line color</span>
+            <input id="highSpeedColour" aria-label="High-speed line color" type="color" value="#ff2d95">
+            <span></span>
+          </div>
+          <div class="networkLegend" aria-label="High-speed rail key">
+            <span><i id="highSpeedKey" style="--swatch:#ff2d95"></i>Surface / viaduct</span>
+            <span><i id="highSpeedTunnelKey" class="dashKey" style="--swatch:#ff2d95"></i>Tunnel</span>
+          </div>
+          <div class="layerMeta">
+            HS1 from London to the Channel Tunnel (OpenStreetMap, ODbL) and HS2 Phase One from London to Birmingham (HS2 Ltd HS2_Route_Detailed, Open Government Licence); tunnels are dashed. Kept whole on purpose, so the lines continue outside the 70 km circle.
+          </div>
+          <div id="highSpeedStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerGroup">Study area</div>
 
         <div class="layerItem">
           <label class="layerRow">
@@ -460,7 +638,7 @@
 
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
-<script type="module" src="./scripts/app.js?v=3.43.7-english"></script>
+<script type="module" src="./scripts/app.js?v=3.44.0-english"></script>
 </body>
 </html>
 
