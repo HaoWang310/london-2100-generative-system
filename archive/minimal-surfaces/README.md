@@ -34,7 +34,7 @@ archive/minimal-surfaces/
 └── 002-helicoidal-karcher-scherk/ B · 单周期 · 螺旋面端
     ├── README.md
     ├── preview.jpg
-    ├── reference/                你给的原图截图（原图-16端、原图-4端）
+    ├── reference/                你给的原图截图（原图-16端、原图-4端、原图-6端）
     └── source/
         ├── *.nb / *.cdf          原作者 Mathematica 文件
         └── povray/k{k}-a{a}/     原作 POV-Ray 场景、网格、渲染图（11 组）

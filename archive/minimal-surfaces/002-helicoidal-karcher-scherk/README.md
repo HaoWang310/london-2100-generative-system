@@ -5,7 +5,7 @@
 - **来源**：H. Karcher, *Embedded Minimal Surfaces Derived from Scherk's Examples*, manuscripta math. 62 (1988)；
   M. Weber，Minimal Surface Repository → Singly Periodic → Helicoidal Ends → Helicoidal Karcher-Scherk Surfaces
   （minimalsurfaces.blog/home/repository/singly-periodic/helicoidal-karcher-scherk-surfaces/）
-- **参考图**：`reference/原图-16端.png`、`reference/原图-4端.png`（你发来的截图）
+- **参考图**：`reference/原图-16端.png`、`reference/原图-4端.png`、`reference/原图-6端.png`（你发来的截图；分别对应预设 16 端 · 原图、4 端 · 原图、6 端 a.2）
 - **原始文件**：`source/Helicoidal Karcher-Scherk.nb`、`source/Helicoidal Karcher-Scherk.cdf`、`source/povray/`（原作 POV-Ray 场景、网格和渲染图，按参数分文件夹）
 
 ## 构造
