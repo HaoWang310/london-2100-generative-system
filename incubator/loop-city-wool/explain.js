@@ -20,12 +20,13 @@
     { n: 1, en: 'Reading the ground', zh: '读地', steps: [1, 2, 3, 4] },
     { n: 2, en: 'Cutting', zh: '切分', steps: [5, 6, 7] },
     { n: 3, en: 'Weaving', zh: '编织', steps: [8, 9, 10] },
-    { n: 4, en: 'Making roads', zh: '成路', steps: [21, 22, 23, 24, 25, 26] }
+    { n: 4, en: 'Making roads', zh: '成路', steps: [21, 22, 23, 24, 25, 26] },
+    { n: 5, en: 'Evaluation', zh: '评价', steps: [28] }
   ];
   var CHZ = function (n) { return '第 ' + n + ' 章'; };
   var shown = function (k) { return k > 20 ? k - 10 : k; };
   var chapterOf = function (k) { for (var i = 0; i < CH.length; i++) if (CH[i].steps.indexOf(k) >= 0) return CH[i]; return null; };
-  var ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 22, 23, 24, 25, 26, 27];
+  var ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 22, 23, 24, 25, 26, 28, 27];
   var stepName = function (k) { var b = document.querySelector('[data-step="' + k + '"]'); return b ? b.textContent.replace(/^\d+\s*/, '').trim() : ''; };
 
   // ---------------------------------------------------------------- the numbers each step reads
@@ -158,6 +159,7 @@
         res: o2 ? [[o2['new roads'], T('new primary roads', '条新一级道路')], [o3 ? o3['new roads'] : 0, T('new A roads', '条新 A 级道路')], [o2.raised.length + (o3 ? o3.raised.length : 0), T('existing roads raised whole', '条现有道路整条提升')], [o2['land within reach %'] + ' %', T('of the land near a primary road', '用地在一级路覆盖内')]]
           .concat(jx ? [[jx.roundabout + jx['big roundabout'], T('roundabouts', '个环岛')], [jx.interchange, T('interchanges', '个立交')], [jx.turned + jx.moved, T('side roads squared', '条支路转正')]] : []) : [], leg: 4,
         extra: jx ? '<p style="margin-top:10px;font-size:12.5px">' + T('Junctions as they would be built: interchanges and large roundabouts on the boundary highway, ' + jx.lilo + ' B roads left in and left out, ' + jx.closed + ' closed; roundabouts where main roads meet at a skew; side roads turned to meet square (over 75° with a main road, 60° between B roads).', '路口按能建造的方式处理：边界高速上做立交和大环岛，' + jx.lilo + ' 条 B 级路只许左进左出，' + jx.closed + ' 条关闭；主路斜交处做环岛；支路转正接入（有主路参与时 75° 以上，B 级路之间 60° 以上）。') + '</p>' : '' }; }
+      case 28: return window.Wool5 ? window.Wool5.info() : null;
       case 27: return { t: T('Take the parcels on to the tensor field', '选出地块，交给张量场'),
         did: T('Click an urban parcel to take it, shift-click for more; double-click to open them in the base for the tensor field.', '点击城市地块选中，按住 Shift 多选；双击把它们在张量场底图里打开。'),
         why: T('The street pattern inside each parcel is made in the next step, the tensor field.', '每块地里面的街道在下一步（张量场）生成。'),
@@ -210,16 +212,16 @@
     if (!card || !ok()) return;
     var k = S.step, x = info(k), ch = chapterOf(k), pos = ORDER.indexOf(k);
     if (!x) { card.innerHTML = ''; return; }
-    var kick = (ch ? T('Chapter ' + ch.n + ' · ' + ch.en, CHZ(ch.n) + ' · ' + ch.zh) : T('The way out', '出口')) + '<span>' + (k === 27 ? T('Step 17', '第 17 步') : T('Step ' + shown(k) + ' of 16', '第 ' + shown(k) + ' / 16 步')) + '</span>';
+    var kick = (ch ? T('Chapter ' + ch.n + ' · ' + ch.en, CHZ(ch.n) + ' · ' + ch.zh) : T('The way out', '出口')) + '<span>' + (k === 28 ? T('After step 16', '第 16 步之后') : k === 27 ? T('Step 17', '第 17 步') : T('Step ' + shown(k) + ' of 16', '第 ' + shown(k) + ' / 16 步')) + '</span>';
     var h = '<div class="k">' + kick + '</div><h3>' + esc(x.t) + '</h3>';
     h += '<div class="l">' + T('What it did', '做了什么') + '</div><p>' + esc(x.did) + '</p>';
     h += '<div class="l">' + T('Why', '为什么') + '</div><p>' + esc(x.why) + '</p>';
     if (x.prm.length) { h += '<div class="l">' + T('Settings', '参数') + '</div><div class="prm">';
       x.prm.forEach(function (p) { h += '<div' + (p[2] && $(p[2]) ? ' class="set" data-set="' + p[2] + '" title="' + T('Change it', '调整') + '"' : '') + '><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b>' + (p[2] && $(p[2]) ? '<i>' + T('change', '调整') + ' ›</i>' : '') + '</div>'; });
       h += '</div>'; }
-    h += '<div class="l">' + T('What came out', '结果') + '</div>';
+    if (x.res.length || !x.extra) h += '<div class="l">' + T('What came out', '结果') + '</div>';
     if (x.res.length) { h += '<div class="res">'; x.res.forEach(function (r) { h += '<div><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + '</span></div>'; }); h += '</div>'; }
-    else h += '<p class="wait">' + (k > 20 && !S.relaxed ? T('Relax the wool first (step 10).', '先松弛毛线（第 10 步）。') : T('Working it out…', '计算中…')) + '</p>';
+    else if (!x.extra) h += '<p class="wait">' + (k > 20 && !S.relaxed ? T('Relax the wool first (step 10).', '先松弛毛线（第 10 步）。') : T('Working it out…', '计算中…')) + '</p>';
     if (x.extra) h += x.extra;
     var lg = $('legend'), rows = lg ? [].slice.call(lg.children, 0, x.leg || 3) : [];
     if (rows.length) h += '<div class="lg">' + rows.map(function (r) { return '<div>' + r.innerHTML + '</div>'; }).join('') + '</div>';
@@ -239,8 +241,9 @@
     // previous and next, named
     var pv = nav.querySelector('.pv'), nx = nav.querySelector('.nx'), a = ORDER[pos - 1], b = ORDER[pos + 1];
     pv.disabled = !a; nx.disabled = !b;
-    pv.textContent = a ? '‹ ' + (a === 27 ? 17 : shown(a)) + ' ' + stepName(a) : '‹';
-    nx.textContent = b ? (b === 27 ? 17 : shown(b)) + ' ' + stepName(b) + ' ›' : '›';
+    var no = function (s) { return s === 27 ? '17 ' : s === 28 ? '' : shown(s) + ' '; };
+    pv.textContent = a ? '‹ ' + no(a) + stepName(a) : '‹';
+    nx.textContent = b ? no(b) + stepName(b) + ' ›' : '›';
     [].forEach.call(document.querySelectorAll('#left .lcChapH'), function (e) { var n = +e.dataset.ch, C = CH[n - 1];
       e.textContent = C ? (zh() ? CHZ(n) + ' · ' + C.zh : 'Chapter ' + n + ' · ' + C.en) : T('The way out', '出口'); });
     var sh2 = document.querySelector('#left h2[data-lc="steps"]'); if (sh2) sh2.textContent = T('All the steps', '全部步骤');
