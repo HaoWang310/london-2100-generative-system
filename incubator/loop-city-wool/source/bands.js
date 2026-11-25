@@ -6,6 +6,7 @@
 'use strict';
 
 const DEFAULTS = {
+  through: -0.6,   // (25 Nov 2026) a junction is read as a road running straight through when its straightest arms' dot is under this
   px: 0,                       // metres a grid square; 0 = (x1 - x0) / gridW, as the Python does
   gridW: 1540,
   threadPx: 3,                 // a thread is painted this many squares wide
@@ -825,7 +826,7 @@ function smooth(E, P) {
         const dot = arms[i].dx * arms[j].dx + arms[i].dy * arms[j].dy, c = dot - 0.002 * Math.min(arms[i].w, arms[j].w);
         if (best === null || c < best.c) best = {c: c, i: i, j: j, dot: dot};
       }
-      if (best.dot < -0.6) { nA[v] = arms[best.i].nb; nB[v] = arms[best.j].nb; S['junctions a road runs straight through']++; par[find(arms[best.i].k)] = find(arms[best.j].k); }
+      if (best.dot < (P.through === undefined ? -0.6 : P.through)) { nA[v] = arms[best.i].nb; nB[v] = arms[best.j].nb; S['junctions a road runs straight through']++; par[find(arms[best.i].k)] = find(arms[best.j].k); }
     }
   });
   const mv = []; for (let i = 0; i < total; i++) if (nA[i] >= 0) mv.push(i);

@@ -156,6 +156,32 @@ html.l2ui #lcCard .res { display:grid; grid-template-columns:repeat(auto-fit, mi
 html.l2ui #lcCard .res > div { padding:9px 11px; border-radius:12px; background:#141417; }
 html.l2ui #lcCard .res b { display:block; font-size:19px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; line-height:1.2; }
 html.l2ui #lcCard .res span { font-size:11.5px; color:var(--l2-ink3); line-height:1.35; display:block; margin-top:2px; }
+html.l2ui #lcCard .ring { display:flex; gap:12px; align-items:center; padding:10px 11px; border-radius:12px; background:#141417; flex-wrap:wrap; }
+html.l2ui #lcCard .ring canvas { width:66px; height:66px; flex:none; }
+html.l2ui #lcCard .ring p { flex:1; min-width:140px; font-size:12.5px; }
+html.l2ui #lcCard .ring button { padding:7px 12px; border-radius:10px; border:1px solid rgba(95,242,255,.45); background:transparent; color:#5FF2FF; font:inherit; font-size:12.5px; cursor:pointer; }
+html.l2ui #lcCard .ring button:disabled { opacity:.5; cursor:default; }
+html.l2ui #lcCard .ev { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+html.l2ui #lcCard .evr { padding:9px 11px; border-radius:12px; background:#141417; border:1px solid #232327; cursor:pointer; }
+html.l2ui #lcCard .evr:hover { border-color:rgba(95,242,255,.45); }
+html.l2ui #lcCard .evh { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--l2-ink3); }
+html.l2ui #lcCard .evh i { font-style:normal; font-weight:600; letter-spacing:.04em; }
+html.l2ui #lcCard .evr b { display:block; margin:3px 0 2px; font-size:16px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+html.l2ui #lcCard .evr p { font-size:11.5px; line-height:1.45; color:var(--l2-ink3); }
+html.l2ui #lcCard .good .evh i, html.l2ui #lcCard .evm.good b { color:#3FD6C6; }
+html.l2ui #lcCard .fair .evh i, html.l2ui #lcCard .evm.fair b { color:#E8C27A; }
+html.l2ui #lcCard .fix .evh i, html.l2ui #lcCard .evm.fix b { color:#FF5B2E; }
+html.l2ui #lcCard .evc { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+html.l2ui #lcCard .evk { padding:6px; border-radius:12px; background:#141417; border:1px solid #232327; min-width:0; }
+html.l2ui #lcCard .evk.on { border-color:rgba(95,242,255,.5); }
+html.l2ui #lcCard .evk img { width:100%; display:block; border-radius:8px; }
+html.l2ui #lcCard .evt { font-size:12.5px; font-weight:700; color:#fff; margin:6px 2px 4px; }
+html.l2ui #lcCard .evm { padding:3px 2px; border-top:1px solid #232327; }
+html.l2ui #lcCard .evm span { display:block; font-size:10.5px; color:var(--l2-ink4); line-height:1.3; }
+html.l2ui #lcCard .evm b { display:block; font-size:11.5px; font-weight:600; color:var(--l2-ink2); line-height:1.3; word-break:break-word; }
+html.l2ui #lcCard .evu { font-size:11px; color:#5FF2FF; text-align:center; padding:6px 0 2px; }
+html.l2ui #lcCard .evgo, html.l2ui #lcCard .evrun { margin-top:6px; width:100%; padding:7px 10px; border-radius:10px; border:1px solid rgba(95,242,255,.45); background:transparent; color:#5FF2FF; font:inherit; font-size:12px; cursor:pointer; }
+html.l2ui #lcCard p.m { font-size:11.5px; color:var(--l2-ink4); margin-top:4px; }
 html.l2ui #lcCard .lg { margin-top:12px; display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--l2-ink2); }
 html.l2ui #lcCard .lg > div { display:flex; align-items:center; gap:8px; }
 html.l2ui .steps .lcChapH { grid-column:1 / -1; margin:8px 0 0; font-size:11.5px; letter-spacing:.1em; color:var(--l2-ink3); font-weight:600; }
