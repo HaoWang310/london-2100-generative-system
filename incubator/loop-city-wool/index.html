@@ -2001,7 +2001,7 @@ const G = (function () {
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
   // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
   // by source/make-example.cjs: the bake it was made from, and its files
-  var EXV = /*EXV*/'d2daa1:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var EXV = /*EXV*/'wenmqc:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
   if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ pre('example/' + f + '?b=' + EXV.split(':')[0], 'fetch', true); }); }
@@ -3922,8 +3922,9 @@ window.__woolStage = s => {
 // a quiet note while a stage is worked out (the example's bar says it itself)
 function woolBusy(stage) {
   let el = $('woolBusy');
-  if (!stage) { if (el) el.hidden = true; return; }
+  if (!stage) { if (el) el.hidden = true; if (window.__lcBusy) window.__lcBusy(0); return; }
   if (window.__LC_AUTO__ && window.__LC_AUTO__.on) return;
+  if (window.__lcBusy) return window.__lcBusy(stage);
   if (!el) { el = document.createElement('div'); el.id = 'woolBusy'; el.setAttribute('role', 'status'); el.setAttribute('translate', 'no');
     el.style.cssText = "position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:56;display:flex;align-items:center;gap:9px;padding:7px 14px;border-radius:999px;background:rgba(22,22,24,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);color:#ECECEC;font:13px/1.3 'DM Sans',system-ui,sans-serif;pointer-events:none";
     document.body.appendChild(el); }
@@ -3941,6 +3942,7 @@ function setStepNow(n, keepRun) {
   cv.style.cursor = (n === 27 || S.edit) ? 'crosshair' : 'grab';
   if (n > 20 && S.relaxed) bdEnsure();
   legend(); nums(); buttons(); lkSync(); schedule();
+  if (window.__lcRender) window.__lcRender();
 }
 function syncLayers() {
   document.querySelectorAll('[data-layer]').forEach(c => { c.checked = !!S.layers[c.dataset.layer]; });
@@ -5016,6 +5018,7 @@ function baker(pkg, pre) {
   // every stage up to n, one after another; asked again while working, it waits for the work already under way
   const upTo = n => (chain = chain.then(async () => {
     for (const s of STAGES) if (s <= n && !done.has(s)) { const t = performance.now(); await run[s](); done.add(s); B.ms[s] = Math.round(performance.now() - t);
+      if (B.keep && done.size === STAGES.length) B.kept = structuredClone(data);      // for the browser's store, before the app adds its own to it
       if (window.__woolStage) window.__woolStage(s); }
     if (done.size === STAGES.length && data.bakeMs === undefined) data.bakeMs = Math.round(performance.now() - t0);
   }));
@@ -5078,6 +5081,7 @@ async function start(pkg) {
       if (got) { got.data.fromStore = true; B = { data: got.data, upTo: async () => {}, done: new Set(STAGES), ms: {} };
         say('Opening ' + got.data.cells.map(c => c.id).join(' + ') + ', baked before…'); await pause(); } }
     if (!B) B = baker(pkg, null);
+    B.keep = !!bk && !B.data.fromStore;
     window.__WOOL_BAKER__ = B; window.__woolUpTo = n => B.upTo(n); window.__WOOL_GUARD__ = { bake: BAKE_HASH, pkg: fnv(JSON.stringify(pkg)) };
     // the step it opens on: the example on step 1, still; cells from step 1 or a file on step 4, as before
     const asked = /[#&]step=(\d+)/.exec(h0), st = asked ? +asked[1] : example ? 1 : 4;
@@ -5094,8 +5098,8 @@ async function start(pkg) {
     if (example) { const demo = () => window.__lcDemo && window.__lcDemo();
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demo); else demo(); }
     // the rest is worked out behind, a moment later, for cells of your own: the example waits for its demo or a step
-    const rest = async () => { await B.upTo(8); liveNote(data); if (bk && !data.fromStore) await BAKED.put(bk, data); };
-    if (B.done.size === STAGES.length) liveNote(data); else if (!example) setTimeout(rest, 1200);
+    const rest = async () => { await B.upTo(8); liveNote(data); if (bk && B.kept) await BAKED.put(bk, B.kept); B.kept = null; };
+    if (B.done.size === STAGES.length) { liveNote(data); if (bk && B.kept) { BAKED.put(bk, B.kept); B.kept = null; } } else if (!example) setTimeout(rest, 1200);
   } catch (e) {
     busy = false;
     say('Could not open the cell: ' + e.message);
@@ -5149,7 +5153,8 @@ window.__lcDemo = function () {
   #lcAuto a{background:#F2F2F2;color:#000;border:0}
   @keyframes lcAutoP{50%{opacity:.35}}
   #lcGrow{position:absolute;inset:0;pointer-events:none;z-index:2}
-  @media (max-width:760px){#lcAuto{left:12px;transform:none;top:calc(66px + env(safe-area-inset-top));max-width:calc(100vw - 64px);font-size:12px;gap:8px}#lcAuto .bar{display:none!important}#lcAuto .w{display:none}}`;
+  @media (max-width:760px){#lcAuto{left:12px;transform:none;top:calc(66px + env(safe-area-inset-top));max-width:calc(100vw - 64px);font-size:12px;gap:8px}#lcAuto .bar{display:none!important}#lcAuto .w{display:none}#lcAuto.play a{display:none}}
+  #lcAuto b{white-space:nowrap}`;
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'lcAuto'; el.setAttribute('role', 'status'); el.setAttribute('translate', 'no');
   el.innerHTML = '<span class="dot"></span><span><b class="ex"></b><span class="w"> · <span class="where"></span></span></span>' +
@@ -5163,7 +5168,7 @@ window.__lcDemo = function () {
     el.querySelector('.where').textContent = t('Station P2 and its two neighbours', '车站 P2 与相邻两个单元');
     el.querySelector('a').textContent = t('Your own cells →', '用我的单元 →');
     const k = shown(A.step), of = t('Step ' + k + ' of 16', '第 ' + k + ' / 16 步');
-    $t.textContent = A.state === 'idle' ? t('Step 1 of 16 · press Demo to work out the rest', '第 1 / 16 步 · 点「演示」逐步生成')
+    $t.textContent = A.state === 'idle' ? (shown(A.step) > 1 ? of : t('Step 1 of 16', '第 1 / 16 步'))
       : A.state === 'done' ? t('Done · step 16 · ', '已完成 · 第 16 步 · ') + t('worked out in ', '计算共 ') + secs(A.calc)
       : A.state === 'stopped' ? t('Stopped · ', '已停止 · ') + of
       : of + (note ? ' · ' + note : '');
@@ -5172,6 +5177,12 @@ window.__lcDemo = function () {
     $bar.style.width = Math.round((shown(A.step) - 1) / 15 * 100) + '%';
   };
   new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  // a step clicked while the demo is not playing is worked out first: the bar says so
+  let was = null;
+  window.__lcRender = () => { if (A.on || A.state === 'calc') return; A.step = S.step; if (A.state === 'done' && S.step !== 26) A.state = 'stopped'; render(); };
+  window.__lcBusy = stage => { if (A.on) return;
+    if (stage) { if (was === null) was = A.state; A.state = 'calc'; A.step = stage; note = t('working it out…', '计算中…'); render(); $go.hidden = true; $stop.hidden = true; }
+    else if (was !== null) { A.state = was; was = null; note = ''; render(); } };
   const say = (k, what) => { A.step = k; note = what || ''; render(); };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));      // the bar painted before the work starts
@@ -5242,7 +5253,7 @@ window.__lcDemo = function () {
       if (A.on) { A.ms = A.calc; stop('done'); }
     } catch (err) { console.error(err); stop('error'); }
   };
-  $go.onclick = () => { const from = A.state === 'stopped' && S.step !== 1 ? Math.max(0, SEQ.indexOf(S.step) + 1) : 0;    // carry on after the step on show
+  $go.onclick = () => { const i = SEQ.indexOf(S.step), from = A.state === 'done' || S.step === 1 ? 0 : S.step === 10 && !S.relaxed ? i : Math.max(0, i + 1);    // carry on after the step on show (the wool, if it was stopped)
     if (from >= SEQ.length) return; A.state = 'play'; render(); play(from); };
   render();
   if (/[#&]demo\b/.test(location.hash)) $go.click();
