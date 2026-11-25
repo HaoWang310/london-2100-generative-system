@@ -7,6 +7,7 @@
 'use strict';
 
 const DEFAULTS = {
+  through: -0.6,   // (25 Nov 2026) a junction is read as a road running straight through when its straightest arms' dot is under this
   px: 0,                       // metres a grid square; 0 = (x1 - x0) / gridW, as the Python does
   gridW: 1540,
   threadPx: 3,                 // a thread is painted this many squares wide
@@ -826,7 +827,7 @@ function smooth(E, P) {
         const dot = arms[i].dx * arms[j].dx + arms[i].dy * arms[j].dy, c = dot - 0.002 * Math.min(arms[i].w, arms[j].w);
         if (best === null || c < best.c) best = {c: c, i: i, j: j, dot: dot};
       }
-      if (best.dot < -0.6) { nA[v] = arms[best.i].nb; nB[v] = arms[best.j].nb; S['junctions a road runs straight through']++; par[find(arms[best.i].k)] = find(arms[best.j].k); }
+      if (best.dot < (P.through === undefined ? -0.6 : P.through)) { nA[v] = arms[best.i].nb; nB[v] = arms[best.j].nb; S['junctions a road runs straight through']++; par[find(arms[best.i].k)] = find(arms[best.j].k); }
     }
   });
   const mv = []; for (let i = 0; i < total; i++) if (nA[i] >= 0) mv.push(i);
@@ -2992,7 +2993,10 @@ STEP_HINT[26] = 'The road hierarchy in four classes, at true widths. The cell ed
 function bdParams() {
   const p = BD.p;
   return { px: 28, outlineAlign: 'pixel', threadPx: p.thread, close1: p.close1, attract: { on: !!p.attract, reach: p.reach, angle: 30, minLen: 300 }, rim: p.rim, rmax: p.rmax, narrow: p.narrow,
-           closeEnds: !!p.ends, sigma: p.sigma, small: S.step >= 24 ? p.small : 0, smallMax: p.smallMax, parkHa: p.park, farmShare: p.farm / 100 };
+           closeEnds: !!p.ends, sigma: p.sigma, small: S.step >= 24 ? p.small : 0, smallMax: p.smallMax, parkHa: p.park, farmShare: p.farm / 100,
+           // (25 Nov 2026) a junction is read as a road running straight through only when its two straightest arms are within
+           // 18 degrees of a line (dot < -0.95); before, within 53 degrees (-0.6), which turned almost every Y of the wool into a T
+           through: V1 || /[#&]junc=old/.test(HASH) ? -0.6 : hv('through', -0.95) };
 }
 function bdInput() {
   let x0 = 1e18, y0 = 1e18, x1 = -1e18, y1 = -1e18;
@@ -3035,9 +3039,111 @@ function bdStrokes(E) {
   }
   return E.map((_, i) => find(i));
 }
+// ---------------------------------------------------------------- (25 Nov 2026) the junctions, worked out as real ones
+// The wool decides which roads meet and from where (often a Y); here each junction gets a form a road could be built to,
+// by the class of the roads that meet:
+//   on the boundary highway: a primary road crossing it, an interchange; an A road, a large signalled roundabout; two of
+//   these closer than 500 m, one junction (the second joins the first); radii (centre line) 110 and 85 m; a B road, left in and left out only, where it is
+//   600 m from any other access and 1 km from an interchange or roundabout, else closed if the roads still all connect,
+//   else kept (signals);
+//   elsewhere: main roads (primary, A) meeting at a skew (under 75 degrees), a main road bending over 35 degrees at the
+//   junction, or four ways with two main roads: a roundabout (60 m on a primary road, 50 m on an A road; 350 m apart, a
+//   nearer one keeps signals);
+//   a side road meeting under 75 degrees where a main road takes part, or under 60 degrees between B roads: under 60
+//   degrees, or short, it is taken square onto the through road and the junction moves along it; otherwise its last
+//   stretch turns to meet the through road at 80 degrees and curves back to its own line.
+// Only the drawn geometry changes (the classes, the parcels and the graph stay). #junc=old: none of this.
+const JUNC = !V1 && !/[#&]junc=old/.test(HASH);
+const JX = { RANK: { H: 4, 60: 3, 48: 2, 30: 1, 24: 0 }, ARM: 60, MAIN: 75, LOCAL: 60, MOVE: 60, BEND: 35, GAP: 350, HGAP: 500, ACC: 600, ACCMAJ: 1000 };
+function bhJunctions(R) {
+  const E = R.edges, len = q => { let l = 0; for (let i = 2; i < q.length; i += 2) l += Math.hypot(q[i] - q[i - 2], q[i + 1] - q[i - 1]); return l; };
+  const walk = (q, end, d) => { const n = q.length / 2; let s = 0, prev = end ? n - 1 : 0; for (let k = 1; k < n; k++) { const i = end ? n - 1 - k : k; s += Math.hypot(q[2 * i] - q[2 * prev], q[2 * i + 1] - q[2 * prev + 1]); prev = i; if (s >= d) return i; } return end ? 0 : n - 1; };
+  const dir = (q, end) => { const n = q.length / 2, i0 = end ? n - 1 : 0, k = walk(q, end, JX.ARM); return Math.atan2(q[2 * k + 1] - q[2 * i0 + 1], q[2 * k] - q[2 * i0]); };
+  const at = new Map(); E.forEach((e, i) => { if (e.pts.length < 4) return; for (const [nd, end] of [[e.a, 0], [e.b, 1]]) { if (!at.has(nd)) at.set(nd, []); at.get(nd).push([i, end]); } });
+  const P0 = (i, end) => { const q = E[i].pts, n = q.length / 2; return end ? [q[2 * n - 2], q[2 * n - 1]] : [q[0], q[1]]; };
+  const mine = i => E[i].draw && !E[i].on && E[i].cl !== 'H';           // a new road the page draws: its geometry may change
+  const main = c => c === '60' || c === '48';
+  const geom = arms => {
+    const A = arms.map(([i, end]) => ({ i, end, a: dir(E[i].pts, end), cl: E[i].cl }));
+    let best = null; for (let p = 0; p < A.length; p++) for (let q = p + 1; q < A.length; q++) { let g = Math.abs(A[p].a - A[q].a); g = Math.min(g, 2 * Math.PI - g);
+      const w = g + 0.001 * ((JX.RANK[A[p].cl] || 0) + (JX.RANK[A[q].cl] || 0)); if (!best || w > best.w) best = { w, p, q, g }; }
+    const u1 = [Math.cos(A[best.p].a), Math.sin(A[best.p].a)], u2 = [Math.cos(A[best.q].a), Math.sin(A[best.q].a)];
+    let t = [u1[0] - u2[0], u1[1] - u2[1]]; const tn = Math.hypot(t[0], t[1]) || 1; t = [t[0] / tn, t[1] / tn];
+    const minors = A.filter((_, k) => k !== best.p && k !== best.q).map(m => ({ m, ang: Math.acos(Math.min(1, Math.abs(t[0] * Math.cos(m.a) + t[1] * Math.sin(m.a)))) * 180 / Math.PI }));
+    return { A, thr: [A[best.p], A[best.q]], t, defl: 180 - best.g * 180 / Math.PI, minors: minors.sort((x, y) => x.ang - y.ang) };
+  };
+  // a side road's last stretch turned to meet the through road at 80 degrees, then curving back to its own line
+  const realign = (i, end, J, t) => {
+    const q = E[i].pts, n = q.length / 2, L = len(q); if (L < 60) return false;
+    const D = Math.min(260, Math.max(140, 0.45 * L), 0.48 * L), k = walk(q, end, D), px = q[2 * k], py = q[2 * k + 1];
+    const k0 = walk(q, end, 30); let m = [q[2 * k0] - J[0], q[2 * k0 + 1] - J[1]]; const mn = Math.hypot(m[0], m[1]) || 1; m = [m[0] / mn, m[1] / mn];
+    let nr = [-t[1], t[0]]; if (nr[0] * m[0] + nr[1] * m[1] < 0) nr = [-nr[0], -nr[1]];
+    const sg = m[0] * t[0] + m[1] * t[1] >= 0 ? 1 : -1, ca = Math.cos(80 * Math.PI / 180), sa = Math.sin(80 * Math.PI / 180), v = [t[0] * sg * ca + nr[0] * sa, t[1] * sg * ca + nr[1] * sa];
+    const k2 = Math.max(0, Math.min(n - 1, end ? k - 1 : k + 1)); let dp = [q[2 * k2] - px, q[2 * k2 + 1] - py]; const dn = Math.hypot(dp[0], dp[1]) || 1; dp = [dp[0] / dn, dp[1] / dn];
+    const S_ = Math.min(45, 0.3 * D), Q = [J[0] + v[0] * S_, J[1] + v[1] * S_], Rr = D - S_, c1 = [Q[0] + v[0] * Rr * 0.5, Q[1] + v[1] * Rr * 0.5], c2 = [px - dp[0] * Rr * 0.35, py - dp[1] * Rr * 0.35];
+    const cur = [J[0], J[1]]; for (let s = 0; s <= 16; s++) { const u = s / 16, a = (1 - u) ** 3, b = 3 * (1 - u) ** 2 * u, c = 3 * (1 - u) * u * u, d = u ** 3; cur.push(a * Q[0] + b * c1[0] + c * c2[0] + d * px, a * Q[1] + b * c1[1] + c * c2[1] + d * py); }
+    if (!end) E[i].pts = Float64Array.from(cur.concat(Array.from(q.slice(2 * k + 2))));
+    else { const rc = []; for (let s = cur.length / 2 - 1; s >= 0; s--) rc.push(cur[2 * s], cur[2 * s + 1]); E[i].pts = Float64Array.from(Array.from(q.slice(0, 2 * k)).concat(rc)); }
+    return true;
+  };
+  // a side road taken square onto the nearest point of the through road: the junction moves along it
+  const relocate = (i, end, J, thr) => {
+    const q = E[i].pts, n = q.length / 2, L = len(q); if (L < 120) return false;
+    const D = Math.min(220, 0.45 * L), k = walk(q, end, D), p = [q[2 * k], q[2 * k + 1]];
+    let best = null;
+    for (const T of thr) { const r = E[T.i].pts; let s = 0;
+      for (let j = 2; j < r.length; j += 2) { const ax = r[j - 2], ay = r[j - 1], vx = r[j] - ax, vy = r[j + 1] - ay, l2 = vx * vx + vy * vy || 1, l = Math.sqrt(l2);
+        const u = Math.max(0, Math.min(1, ((p[0] - ax) * vx + (p[1] - ay) * vy) / l2)), X = [ax + u * vx, ay + u * vy], d = Math.hypot(p[0] - X[0], p[1] - X[1]);
+        if (!best || d < best.d) best = { d, X, tan: [vx / l, vy / l], from: s + u * l, L: len(r) }; s += l; } }
+    if (!best || best.d < 40 || best.from < 60 || best.L - best.from < 60) return false;
+    const k2 = Math.max(0, Math.min(n - 1, end ? k - 1 : k + 1)); let dp = [p[0] - q[2 * k2], p[1] - q[2 * k2 + 1]]; const dn = Math.hypot(dp[0], dp[1]) || 1; dp = [dp[0] / dn, dp[1] / dn];
+    let nr = [-best.tan[1], best.tan[0]]; if (nr[0] * (p[0] - best.X[0]) + nr[1] * (p[1] - best.X[1]) < 0) nr = [-nr[0], -nr[1]];
+    const Rr = best.d, c1 = [p[0] + dp[0] * Rr * 0.35, p[1] + dp[1] * Rr * 0.35], c2 = [best.X[0] + nr[0] * Rr * 0.5, best.X[1] + nr[1] * Rr * 0.5], cur = [];
+    for (let s = 1; s <= 16; s++) { const u = s / 16, a = (1 - u) ** 3, b = 3 * (1 - u) ** 2 * u, c = 3 * (1 - u) * u * u, d = u ** 3; cur.push(a * p[0] + b * c1[0] + c * c2[0] + d * best.X[0], a * p[1] + b * c1[1] + c * c2[1] + d * best.X[1]); }
+    if (!end) { const rc = []; for (let s = cur.length / 2 - 1; s >= 0; s--) rc.push(cur[2 * s], cur[2 * s + 1]); E[i].pts = Float64Array.from(rc.concat(Array.from(q.slice(2 * k)))); }
+    else E[i].pts = Float64Array.from(Array.from(q.slice(0, 2 * k + 2)).concat(cur));
+    return true;
+  };
+  const out = { jx: [], stats: { interchange: 0, 'big roundabout': 0, merged: 0, lilo: 0, closed: 0, kept: 0, roundabout: 0, signals: 0, turned: 0, moved: 0 } }, st = out.stats;
+  const nodes = [...at.entries()].filter(([, arms]) => arms.length >= 3);
+  // 1  the boundary highway
+  const hj = nodes.filter(([, arms]) => arms.some(([i]) => E[i].cl === 'H')).map(([nd, arms]) => { const others = arms.filter(([i]) => E[i].cl !== 'H');
+    const top = others.reduce((b, [i]) => (JX.RANK[E[i].cl] || 0) > (JX.RANK[b] || -1) ? E[i].cl : b, null); return { nd, arms, others, top, J: P0(arms[0][0], arms[0][1]) }; }).filter(h => h.top);
+  const majH = hj.filter(h => main(h.top)).sort((a, b) => JX.RANK[b.top] - JX.RANK[a.top]);
+  for (const h of majH) { if (h.kind) continue; h.kind = h.top === '60' ? 'interchange' : 'big roundabout';
+    for (const g of majH) if (g !== h && !g.kind && Math.hypot(g.J[0] - h.J[0], g.J[1] - h.J[1]) < JX.HGAP) { g.kind = 'merged'; st.merged++; }
+    st[h.kind]++; out.jx.push({ x: h.J[0], y: h.J[1], r: h.kind === 'interchange' ? 110 : 85, cl: 'H', kind: h.kind }); }
+  const live = majH.filter(h => h.kind !== 'merged');
+  const adj = new Map(); E.forEach((e, i) => { for (const n of [e.a, e.b]) { if (!adj.has(n)) adj.set(n, []); adj.get(n).push(i); } });
+  const reaches = (from, to, cut) => { const seen = new Set([from]), stck = [from]; while (stck.length) { const u = stck.pop(); if (u === to) return true; for (const i of adj.get(u) || []) { if (cut.has(i + '@' + u)) continue; const v = E[i].a === u ? E[i].b : E[i].a; if (cut.has(i + '@' + v)) continue; if (!seen.has(v)) { seen.add(v); stck.push(v); } } } return false; };
+  for (const h of hj.filter(h => !main(h.top))) {
+    const dMaj = live.length ? Math.min(...live.map(g => Math.hypot(g.J[0] - h.J[0], g.J[1] - h.J[1]))) : 1e9, dAny = Math.min(...hj.filter(g => g !== h).map(g => Math.hypot(g.J[0] - h.J[0], g.J[1] - h.J[1])), 1e9);
+    if (dMaj >= JX.ACCMAJ && dAny >= JX.ACC) { h.kind = 'lilo'; st.lilo++; continue; }
+    const cut = new Set(h.others.map(([i]) => i + '@' + h.nd)), ok = h.others.every(([i]) => reaches(E[i].a === h.nd ? E[i].b : E[i].a, h.nd, cut));
+    if (ok && h.others.every(([i]) => mine(i))) { for (const [i, end] of h.others) { const q = E[i].pts, n = q.length / 2, k = walk(q, end, 40); E[i].pts = end ? q.slice(0, 2 * k + 2) : q.slice(2 * k); E[i].closedAt = h.nd; }
+      h.kind = 'closed'; st.closed++; out.jx.push({ x: h.J[0], y: h.J[1], r: 0, cl: 'H', kind: 'closed' }); }
+    else { h.kind = 'kept'; st.kept++; }
+  }
+  // 2  elsewhere: roundabouts where main roads meet badly
+  const done = new Set(hj.map(h => h.nd)), rb = [];
+  for (const [nd, arms] of nodes) { if (done.has(nd)) continue;
+    const G = geom(arms), J = P0(arms[0][0], arms[0][1]), nMain = arms.filter(([i]) => main(E[i].cl)).length, thrMain = G.thr.some(a => main(a.cl)), minMain = G.minors.some(o => main(o.m.cl)), skew = G.minors.length ? G.minors[0].ang : 90;
+    if ((minMain && skew < JX.MAIN) || (arms.length >= 4 && nMain >= 2) || (thrMain && G.defl > JX.BEND)) {
+      if (rb.every(o => Math.hypot(o[0] - J[0], o[1] - J[1]) > JX.GAP)) { const r = arms.some(([i]) => E[i].cl === '60') ? 60 : 50; rb.push(J); done.add(nd); st.roundabout++; out.jx.push({ x: J[0], y: J[1], r, cl: arms.some(([i]) => E[i].cl === '60') ? '60' : '48', kind: 'roundabout' }); continue; }
+      st.signals++; } }
+  // 3  side roads square onto the through road (two passes: a road turned may change what is through at its other end)
+  for (let pass = 0; pass < 2; pass++) for (const [nd, arms0] of nodes) { if (done.has(nd)) continue;
+    const arms = (at.get(nd) || arms0).filter(([i]) => E[i].pts.length >= 4); if (arms.length < 3) continue;
+    const G = geom(arms), J = P0(arms[0][0], arms[0][1]), anyMain = arms.some(([i]) => main(E[i].cl)), lim = anyMain ? JX.MAIN : JX.LOCAL;
+    for (const o of G.minors) { if (o.ang >= lim || !mine(o.m.i)) continue;
+      if ((o.ang < JX.MOVE || len(E[o.m.i].pts) < 300) && relocate(o.m.i, o.m.end, J, G.thr)) { st.moved++; continue; }
+      if (realign(o.m.i, o.m.end, J, G.t)) st.turned++; } }
+  for (const e of E) { const q = e.pts; let a = 1e18, b = 1e18, c = -1e18, d = -1e18; for (let i = 0; i < q.length; i += 2) { a = Math.min(a, q[i]); c = Math.max(c, q[i]); b = Math.min(b, q[i + 1]); d = Math.max(d, q[i + 1]); } e.bb = [a, b, c, d]; }
+  return out;
+}
 function bdHierarchy(R) {                        // worked out again only when its own settings change
-  const o = { r2: BD.p.r2 * 1000, r3: BD.p.r3 * 1000, exfirst: !!BD.p.exfirst, line: BD.p.line, wet: FLOOD ? hv('wetRun', 200) : 0 }, key = JSON.stringify(o);
-  if (R.hkey === key) return; bhHierarchy(R, o); R.hkey = key; BD.hk = (BD.hk || 0) + 1;
+  const o = { r2: BD.p.r2 * 1000, r3: BD.p.r3 * 1000, exfirst: !!BD.p.exfirst, line: BD.p.line, wet: FLOOD ? hv('wetRun', 200) : 0, pinA: !V1 && !/[#&]junc=old/.test(HASH) }, key = JSON.stringify(o);
+  if (R.hkey === key) return; bhHierarchy(R, o); R.jx = JUNC ? bhJunctions(R) : null; R.hkey = key; BD.hk = (BD.hk || 0) + 1;
 }
 let bdRh = 0;
 function bdRehier() {
@@ -3320,6 +3426,8 @@ function bdRaster(ox, oy, w, h, g, k) {         // on a grid of g metres a squar
     g2.clearRect(0, 0, w, h); g2.strokeStyle = '#fff'; g2.lineJoin = 'round'; g2.lineCap = 'round';
     for (const e of R.edges) if (e.draw && cl.includes(e.cl) && hit(e.bb)) line(e.pts, bdW(e.cl));
     for (const x of (R.X || [])) if (cl.includes(x.wk) && hit(x.bb)) line(x.P, bdW(x.wk));      // the existing roads, on their real lines
+    if (R.jx) for (const j of R.jx.jx) if (j.r && cl.includes(j.cl)) {     // (25 Nov 2026) the roundabouts and interchanges, as rings of road
+      g2.lineWidth = Math.max(1.3, Math.min(bdW(j.cl), j.kind === 'interchange' ? 40 : 26) * k / g); g2.beginPath(); g2.arc((j.x - ox) / g, (oy - j.y) / g, j.r * Math.max(1, k * 0.7) / g, 0, 2 * Math.PI); g2.stroke(); }
     const a = g2.getImageData(0, 0, w, h).data;
     for (let i = 0; i < n; i++) if (a[4 * i + 3] > 100) { road[i] = 1; kind[i] = di + 1; }
   });
@@ -4020,11 +4128,12 @@ function bhHierarchy(R, opt) {
   for (const e of E) if (e.cl === 'B') e.cl = BH.W[U.get(e.unit).k] >= 30 ? '30' : '24';
   // ---- the boundary and every chosen road smoothed end to end as one line; what meets them follows
   const inner = new Map(), onChain = new Set();
-  const smoothChain = (chain, sigma, cyc) => {                               // chain: [edge, forward?] in order
+  const smoothChain = (chain, sigma, cyc, pin) => {                          // chain: [edge, forward?] in order; pin: the junctions stay
     const Xs = [], Ys = [], base = []; chain.forEach(([i, fwd], k) => { const q = E[i].pts, m = q.length / 2; base.push(Xs.length - (k ? 1 : 0)); for (let j = k ? 1 : 0; j < m; j++) { const t = fwd ? j : m - 1 - j; Xs.push(q[2 * t]); Ys.push(q[2 * t + 1]); } });
     let N = Xs.length; if (N < 6) return; if (cyc) N--;
+    const PIN = new Set(); if (pin) for (const g of base.slice(1)) PIN.add(g % N);
     let x = Float64Array.from(Xs.slice(0, N)), y = Float64Array.from(Ys.slice(0, N)), xb = new Float64Array(N), yb = new Float64Array(N);
-    for (let r = Math.round(sigma * sigma / 98); r > 0; r--) { for (let j = 0; j < N; j++) { if (!cyc && (j === 0 || j === N - 1)) { xb[j] = x[j]; yb[j] = y[j]; continue; } const a = j ? j - 1 : N - 1, b = j < N - 1 ? j + 1 : 0; xb[j] = x[j] + 0.5 * ((x[a] + x[b]) / 2 - x[j]); yb[j] = y[j] + 0.5 * ((y[a] + y[b]) / 2 - y[j]); } let t = x; x = xb; xb = t; t = y; y = yb; yb = t; }
+    for (let r = Math.round(sigma * sigma / 98); r > 0; r--) { for (let j = 0; j < N; j++) { if ((!cyc && (j === 0 || j === N - 1)) || PIN.has(j)) { xb[j] = x[j]; yb[j] = y[j]; continue; } const a = j ? j - 1 : N - 1, b = j < N - 1 ? j + 1 : 0; xb[j] = x[j] + 0.5 * ((x[a] + x[b]) / 2 - x[j]); yb[j] = y[j] + 0.5 * ((y[a] + y[b]) / 2 - y[j]); } let t = x; x = xb; xb = t; t = y; y = yb; yb = t; }
     chain.forEach(([i, fwd], k) => { const q = E[i].pts, m = q.length / 2; onChain.add(i); for (let j = 0; j < m; j++) { const t = fwd ? j : m - 1 - j, g = (base[k] + j) % N; q[2 * t] = x[g]; q[2 * t + 1] = y[g]; }
       if (k || cyc) { const g = base[k] % N, n0 = fwd ? E[i].a : E[i].b; if (!inner.has(n0)) inner.set(n0, [0, 0, 0]); const v = inner.get(n0); v[0] += x[g]; v[1] += y[g]; v[2]++; } });
   };
@@ -4037,7 +4146,9 @@ function bhHierarchy(R, opt) {
   }
   const split = (routes, level) => { const res = []; for (const r of routes) { let cur = []; for (const [j, end] of r) { if (E[j].cl === level && !E[j].on) cur.push([j, end === 0]); else if (cur.length) { res.push(cur); cur = []; } } if (cur.length) res.push(cur); } return res; };
   for (const ch of split(r2, '60')) smoothChain(ch, opt.line * 0.8, false);
-  for (const ch of split(r3, '48')) smoothChain(ch, opt.line * 0.62, false);
+  // (25 Nov 2026) an A road is smoothed between its junctions, not through them (opt.pinA): it keeps the angle the wool
+  // gives it there; the primary roads are still smoothed end to end, so they run on through their junctions
+  for (const ch of split(r3, '48')) smoothChain(ch, opt.line * 0.62, false, !!opt.pinA);
   const Tm = new Map(); for (const [n, v] of inner) Tm.set(n, [v[0] / v[2], v[1] / v[2]]); follow(Tm, (e, i) => onChain.has(i) || !!e.on);
   for (const e of E) { const q = e.pts; let a = 1e18, b = 1e18, c = -1e18, d = -1e18; for (let i = 0; i < q.length; i += 2) { a = Math.min(a, q[i]); c = Math.max(c, q[i]); b = Math.min(b, q[i + 1]); d = Math.max(d, q[i + 1]); } e.bb = [a, b, c, d]; e.draw = !e.on || e.up; }
   for (const x of X) { const q = x.P; let a = 1e18, b = 1e18, c = -1e18, d = -1e18; for (let i = 0; i < q.length; i += 2) { a = Math.min(a, q[i]); c = Math.max(c, q[i]); b = Math.min(b, q[i + 1]); d = Math.max(d, q[i + 1]); } x.bb = [a, b, c, d]; x.L = bhLen(q); }
