@@ -988,6 +988,6 @@ export const CHINESE_UI = {
   "High-speed rail key": "高铁图例",
   "Surface / viaduct": "地面 / 高架",
   "Tunnel": "隧道段",
-  "HS1 from London to the Channel Tunnel (OpenStreetMap, ODbL) and HS2 Phase One from London to Birmingham (HS2 Ltd HS2_Route_Detailed, Open Government Licence); tunnels are dashed. Kept whole on purpose, so the lines continue outside the 70 km circle.": "HS1 从伦敦到英吉利海峡隧道（OpenStreetMap，ODbL），HS2 第一阶段从伦敦到伯明翰（HS2 Ltd HS2_Route_Detailed，Open Government Licence）；隧道段为虚线。特意保留全线，所以线路会延伸到 70 km 圈外。",
+  "HS1 from London to the Channel Tunnel (OpenStreetMap, ODbL) and HS2 Phase One from London to Birmingham (HS2 Ltd HS2_Route_Detailed, Open Government Licence); tunnels are dashed. Kept whole on purpose, so the lines continue outside the 70 km circle. Zoomed out the ends are named (Birmingham, and Manchester and Glasgow beyond on the West Coast Main Line; Paris and Brussels through the Channel Tunnel); from zoom 9 the stations.": "HS1 从伦敦到英吉利海峡隧道（OpenStreetMap，ODbL），HS2 第一阶段从伦敦到伯明翰（HS2 Ltd HS2_Route_Detailed，Open Government Licence）；隧道段为虚线。特意保留全线，所以线路会延伸到 70 km 圈外。缩小时标出终点与去向（伯明翰，以及经西海岸干线继续开往曼彻斯特、格拉斯哥；经英吉利海峡隧道通往巴黎、布鲁塞尔），缩放 9 级起标出车站。",
   "Visible · whole lines, also outside the 70 km circle": "已显示 · 全线，圈外也有",
 };

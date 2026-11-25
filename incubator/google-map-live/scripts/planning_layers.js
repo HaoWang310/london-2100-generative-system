@@ -5,7 +5,7 @@
 // This module owns its sources and layers (every id starts with "l2100-") and their look; the page owns the panel.
 // Nothing is loaded until a layer is first switched on.
 import {createReliefLoader,reliefTileUrl,reliefStops,RELIEF_RAMPS,RELIEF_MIN_ZOOM,RELIEF_MAX_ZOOM,RELIEF_TILE_SIZE}
-  from './relief_local.js?v=3.44.0-english';
+  from './relief_local.js?v=3.44.1-english';
 
 export {RELIEF_RAMPS,reliefStops};
 export const PLANNING_PREFIX='l2100-';
@@ -24,6 +24,25 @@ const GB_SOURCE='l2100-green-belt',GB_FILL='l2100-green-belt-fill',GB_LINE='l210
 const AONB_SOURCE='l2100-aonb',AONB_FILL='l2100-aonb-fill',AONB_LINE='l2100-aonb-line';
 const RAIL_SOURCE='l2100-rail',railLayer=kind=>'l2100-rail-'+kind;
 const HS_SOURCE='l2100-highspeed',HS1='l2100-hs1',HS2='l2100-hs2',HS2_TUNNEL='l2100-hs2-tunnel';
+// v3.44.1: where the high-speed lines go. Zoomed out (below zoom 9) the ends and where the trains run on; zoomed in,
+// the stations. English, as the basemap's own place names (its font has no Chinese and no arrows).
+const HS_PLACES='l2100-hs-places',HS_ENDS='l2100-hs-ends',HS_DOTS='l2100-hs-stations',HS_NAMES='l2100-hs-station-names';
+const HS_LABEL_ZOOM=9;
+const place=(name,kind,line,lngLat,anchor)=>({type:'Feature',properties:{name,kind,line,anchor},
+  geometry:{type:'Point',coordinates:lngLat}});
+const HS_PLACE_DATA={type:'FeatureCollection',features:[
+  place('HS2 to Birmingham','end','hs2',[-1.8848,52.4814],'right'),
+  place('to Manchester · Glasgow\n(West Coast Main Line)','beyond','hs2',[-1.86401,52.73764],'bottom'),
+  place('London','end','both',[-0.13,51.53],'top'),
+  place('HS1 to Paris · Brussels\n(Channel Tunnel)','beyond','hs1',[1.15584,51.09697],'top'),
+  place('London Euston','station','hs2',[-0.13391,51.52683],''),
+  place('Old Oak Common','station','hs2',[-0.24829,51.52461],''),
+  place('Birmingham Interchange','station','hs2',[-1.7155,52.448],''),
+  place('Birmingham Curzon Street','station','hs2',[-1.8848,52.4814],''),
+  place('London St Pancras','station','hs1',[-0.12812,51.53454],''),
+  place('Stratford International','station','hs1',[-0.0087,51.5448],''),
+  place('Ebbsfleet International','station','hs1',[0.32089,51.44322],''),
+  place('Ashford International','station','hs1',[0.87777,51.14261],'')]};
 const SOURCES={relief:RELIEF,greenBelt:GB_SOURCE,aonb:AONB_SOURCE,rail:RAIL_SOURCE,highSpeed:HS_SOURCE};
 
 const mix=(a,b,t)=>{
@@ -180,6 +199,44 @@ export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getT
     if(!has(HS1))return;
     show(HS1,s.on&&s.hs1);show(HS2,s.on&&s.hs2);show(HS2_TUNNEL,s.on&&s.hs2);
     for(const id of [HS1,HS2,HS2_TUNNEL])map.setPaintProperty(id,'line-color',s.colour);
+    applyHighSpeedPlaces();
+  }
+  // The names need the style's glyphs: the raster fallback style has none, and then only the lines are drawn.
+  function applyHighSpeedPlaces(){
+    const s=state.highSpeed;
+    if(s.on&&!map.getSource(HS_PLACES)&&map.getStyle()?.glyphs){
+      const font=(map.getStyle().layers.find(l=>l.type==='symbol'&&/label_city|place/i.test(l.id))?.layout?.['text-font'])
+        ||['Noto Sans Regular'];
+      const bold=font.map(f=>f.replace(/Regular|Italic/,'Bold'));
+      map.addSource(HS_PLACES,{type:'geojson',data:HS_PLACE_DATA});
+      map.addLayer({id:HS_DOTS,type:'circle',source:HS_PLACES,minzoom:HS_LABEL_ZOOM,filter:['==',['get','kind'],'station'],
+        paint:{'circle-radius':['interpolate',['linear'],['zoom'],9,3,13,5.5],'circle-stroke-width':2}});
+      map.addLayer({id:HS_NAMES,type:'symbol',source:HS_PLACES,minzoom:HS_LABEL_ZOOM,filter:['==',['get','kind'],'station'],
+        layout:{'text-field':['get','name'],'text-font':font,'text-size':12,'text-variable-anchor':['left','right','top','bottom'],
+          'text-radial-offset':0.75,'text-max-width':12},
+        paint:{'text-halo-width':1.8}});
+      map.addLayer({id:HS_ENDS,type:'symbol',source:HS_PLACES,maxzoom:HS_LABEL_ZOOM,filter:['!=',['get','kind'],'station'],
+        layout:{'text-field':['get','name'],'text-font':bold,'text-size':['match',['get','kind'],'end',14,12],
+          'text-anchor':['get','anchor'],
+          'text-offset':['match',['get','anchor'],'right',['literal',[-0.9,0]],'bottom',['literal',[0,-0.6]],
+            'top',['literal',[0,0.8]],['literal',[0,0]]],
+          'text-allow-overlap':true,'text-max-width':20},
+        paint:{'text-halo-width':2}});
+    }
+    if(!has(HS_ENDS))return;
+    const lines=['both',...(s.hs1?['hs1']:[]),...(s.hs2?['hs2']:[])];
+    const onLine=['in',['get','line'],['literal',(s.hs1||s.hs2)?lines:[]]];
+    map.setFilter(HS_DOTS,['all',['==',['get','kind'],'station'],onLine]);
+    map.setFilter(HS_NAMES,['all',['==',['get','kind'],'station'],onLine]);
+    map.setFilter(HS_ENDS,['all',['!=',['get','kind'],'station'],onLine]);
+    for(const id of [HS_DOTS,HS_NAMES,HS_ENDS])show(id,s.on);
+    const text=dark()?mix(s.colour,'#ffffff',0.35):mix(s.colour,'#000000',0.25),halo=dark()?'#161616':'#ffffff';
+    map.setPaintProperty(HS_DOTS,'circle-color',halo);
+    map.setPaintProperty(HS_DOTS,'circle-stroke-color',s.colour);
+    for(const id of [HS_NAMES,HS_ENDS]){
+      map.setPaintProperty(id,'text-color',text);
+      map.setPaintProperty(id,'text-halo-color',halo);
+    }
   }
 
   const APPLY={relief:applyRelief,greenBelt:applyGreenBelt,aonb:applyAonb,rail:applyRail,highSpeed:applyHighSpeed};
@@ -241,7 +298,7 @@ export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getT
       onStatus(group,status(group));
     },
     /* The colours that follow the map's colour theme. */
-    applyTheme(){applyGreenBelt();applyAonb();applyRail();},
+    applyTheme(){applyGreenBelt();applyAonb();applyRail();applyHighSpeedPlaces();},
     /* The page keeps one order for every analysis layer (keepDrainageAboveTerrain): the two faint fills go under the
        flood picture, the edges and lines over the drainage network and under the 3D buildings. */
     moveFills(before){for(const id of [AONB_FILL,GB_FILL])if(has(id))map.moveLayer(id,before);},
@@ -249,6 +306,6 @@ export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getT
       for(const id of [GB_LINE,AONB_LINE,...RAIL_KINDS.map(railLayer),HS1,HS2,HS2_TUNNEL])
         if(has(id))map.moveLayer(id,before);
     },
-    layerIds:()=>[RELIEF,AONB_FILL,GB_FILL,GB_LINE,AONB_LINE,...RAIL_KINDS.map(railLayer),HS1,HS2,HS2_TUNNEL]
+    layerIds:()=>[RELIEF,AONB_FILL,GB_FILL,GB_LINE,AONB_LINE,...RAIL_KINDS.map(railLayer),HS1,HS2,HS2_TUNNEL,HS_DOTS,HS_NAMES,HS_ENDS]
   };
 }

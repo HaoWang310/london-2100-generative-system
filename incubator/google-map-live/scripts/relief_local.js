@@ -21,7 +21,7 @@ export function createReliefLoader(config){
 
   function start(){
     if(worker)return;
-    worker=new Worker(new URL('./relief_worker.js?v=3.44.0-english',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./relief_worker.js?v=3.44.1-english',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',config});
     worker.onmessage=({data})=>{
       const request=pending.get(data.id);
