@@ -282,3 +282,38 @@ html.l2phone #lcCallout .co span { font-size:12px; padding:5px 10px; }
 #lcFlow .ft .pv { flex:none; border-radius:999px; padding:8px 13px; background:#1C1C1F; border:1px solid color-mix(in srgb, var(--c) 45%, transparent); color:var(--c); font-size:12.5px; font-weight:600; }
 #lcFlow .ft .pv:hover { background:color-mix(in srgb, var(--c) 18%, #000); }
 #lcFlow .fc { scroll-margin-top:calc(var(--hh,0px) + 230px); scroll-margin-bottom:12px; }
+/* (25 Nov 2026) each step's settings on its own card (params.js): the main ones, "More", a mark at the default, ↺ back to it */
+html.lcflow #left .l2-adv, html.lcflow #left .btns:has(#run), html.lcflow #left h2:has(+ .btns #run), html.lcflow #left #status { display:none !important; }
+#lcFlow .prm2 { margin-top:10px; border-top:1px solid #1C1C1F; }
+#lcFlow .pr { padding:9px 2px 8px; border-bottom:1px solid #1C1C1F; }
+#lcFlow .pr .a { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12.5px; color:#DADADA; }
+#lcFlow .pr .a > span:first-child { min-width:0; }
+#lcFlow .pr .a > span:last-child { flex:none; display:flex; align-items:center; gap:6px; }
+#lcFlow .pr .a b { color:#fff; font-weight:600; font-variant-numeric:tabular-nums; }
+#lcFlow .pr em { font-style:normal; color:var(--c); font-size:11px; margin-left:6px; white-space:nowrap; }
+#lcFlow .pr .rs { width:22px; height:22px; border-radius:50%; border:1px solid #3A3A3E; background:#000; color:#BDBDBD; font-size:12px; line-height:1; padding:0; }
+#lcFlow .pr .rs:hover { border-color:#fff; color:#fff; }
+#lcFlow .pr .tr { position:relative; margin-top:6px; height:22px; display:flex; align-items:center; }
+#lcFlow .pr .tr input { width:100%; margin:0; accent-color:var(--c); }
+#lcFlow .pr .tr .dt { position:absolute; top:50%; width:2px; height:12px; margin:-6px 0 0 -1px; background:#8A8A8A; border-radius:1px; pointer-events:none; }
+#lcFlow .pr.off { opacity:.45; } #lcFlow .pr.off input { pointer-events:none; }
+#lcFlow .pr .nt, #lcFlow .prm2 > .nt { font-size:11px; color:#8A8A8A; margin-top:3px; line-height:1.45; }
+#lcFlow .sg2 { display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
+#lcFlow .sg2 button { flex:1 1 0; min-width:0; height:30px; border-radius:999px; border:1px solid #2E2E32; background:#000; color:#BDBDBD; font-size:12px; position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px; }
+#lcFlow .sg2 button.on { border-color:var(--c); color:#000; background:var(--c); font-weight:600; }
+#lcFlow .sg2 button.df::after { content:""; position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:currentColor; opacity:.6; }
+#lcFlow .mo { width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 2px; border:0; border-bottom:1px solid #1C1C1F; background:transparent; color:#9A9A9A; font-size:12px; text-align:left; }
+#lcFlow .mo span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } #lcFlow .mo em { font-style:normal; color:var(--c); }
+#lcFlow .mo:hover { color:#fff; }
+#lcFlow .mb { padding-left:8px; border-left:1px solid #26262A; }
+#lcFlow .hand { display:flex; align-items:center; gap:6px; padding:9px 2px; border-bottom:1px solid #1C1C1F; font-size:12.5px; color:#DADADA; }
+#lcFlow .hand span { flex:1; }
+#lcFlow .hand button { height:28px; border-radius:999px; border:1px solid #2E2E32; background:#000; color:#fff; font-size:12px; padding:0 12px; }
+#lcFlow .hand button.on { background:var(--c); border-color:var(--c); color:#000; font-weight:600; }
+#lcFlow .res em { font-style:normal; font-weight:600; margin-left:2px; } #lcFlow .res em.up { color:var(--c); } #lcFlow .res em.dn { color:#FF8A8A; }
+#lcFlow .fc .fl.chg { color:var(--c); }
+#lcFlow .ftn .ra { border:0; background:transparent; color:#BDBDBD; text-decoration:underline; text-underline-offset:2px; padding:0; font-size:11px; }
+#lcFlow .ftn .ra:hover { color:#fff; }
+#lcFlow a.up { display:block; margin-top:10px; padding:9px 12px; border-radius:12px; border:1px solid #2A2A2E; color:#DADADA; font-size:12px; text-decoration:none; }
+#lcFlow a.up:hover { border-color:var(--c); color:#fff; }
+html.l2phone #lcFlow .run { position:static; box-shadow:none; }
