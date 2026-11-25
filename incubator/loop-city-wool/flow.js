@@ -64,7 +64,7 @@
     // after each drawing: the map's legend and the soil labels follow the view
     var d0 = window.draw; if (typeof d0 === 'function' && !d0.__lc) { window.draw = function () { var r = d0.apply(this, arguments); try { mapExtras(); } catch (e) {} return r; }; window.draw.__lc = true; }
     // on a phone the folded sheet's Previous / Next play the steps too
-    var qb = L.querySelectorAll('.l2ph-quick button'); if (qb.length === 2) { qb[0].onclick = function () { var i = idxOf(cur()); goTo(SEQ[Math.max(0, i - 1)], true); }; qb[1].onclick = next; }
+    var qb = L.querySelectorAll('.l2ph-quick button'); if (qb.length === 2) { qb[0].onclick = function () { back(); }; qb[1].onclick = next; }
     setTimeout(function () { AN.warm(); }, 2500);
   }
   var segs = function (cur) {             // the seventeen marks, each in its chapter's colour
@@ -85,7 +85,9 @@
         if (x.res && x.res.length) { h += '<div class="res">'; x.res.forEach(function (r) { h += '<div><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + '</span></div>'; }); h += '</div>'; }
         var lg = $('legend'); if (cur && lg && x.leg) { var rows = [].slice.call(lg.children, 0, x.leg); if (rows.length) h += '<div class="lg">' + rows.map(function (r) { return '<div>' + r.innerHTML + '</div>'; }).join('') + '</div>'; }
         var i = SEQ.indexOf(k), nx = SEQ[i + 1];
-        if (cur || done) h += '<div class="ft"><span>' + T('A change here works it out again from this step', '改参数会从这一步重算') + '</span>' +
+        var pv = SEQ[i - 1];
+        if (cur || done) h += '<div class="ftn">' + T('A change here works it out again from this step', '改参数会从这一步重算') + '</div><div class="ft">' +
+          (pv !== undefined ? '<button type="button" class="pv" data-back="' + k + '" style="--c:' + CHC[chOf(pv)] + '">‹ ' + T('Back', '上一步') + '</button>' : '') +
           (nx !== undefined ? '<button type="button" class="nx' + (P.wait && cur ? ' lit' : '') + '" data-go="' + nx + '" style="--c:' + CHC[chOf(nx)] + '">' + T('Next: ', '下一步：') + shown(nx) + ' ' + esc(nm(nx)) + ' ›</button>'
             : '<button type="button" class="nx" data-way="1" style="--c:#fff">' + T('On to the tensor field ›', '交给张量场 ›') + '</button>') + '</div>';
         h += '</div>'; } }
@@ -96,7 +98,7 @@
     var k = P.k !== null ? P.k : S.step, c = chOf(k === 27 ? 26 : k), x = '';
     var st = P.on ? (P.paused ? T('Paused', '已暂停') : P.wait ? T('Waiting for you', '等你点下一步') : T('Playing', '播放中')) : '';
     x += '<div class="fhd"><h2>' + T('The method, step by step', '生成流程') + '</h2><button type="button" class="all" data-all="1">' + (P.all ? T('Fold', '全部收起') : T('Open all', '全部展开')) + '</button></div>';
-    x += '<div class="run"><div class="b3"><button type="button" class="pri" data-play="1">' + (P.on && !P.paused && !P.wait ? '❚❚ ' + T('Playing', '播放中') : P.on ? '▶ ' + T('Carry on', '继续') : '▶ ' + T('Play the steps', '逐步生成')) + '</button>' +
+    x += '<div class="run"><div class="b3"><button type="button" class="bk" data-back="cur" title="' + T('Back one step', '上一步') + '"' + (idxOf(cur()) > 0 ? '' : ' disabled') + '>‹</button><button type="button" class="pri" data-play="1">' + (P.on && !P.paused && !P.wait ? '❚❚ ' + T('Playing', '播放中') : P.on ? '▶ ' + T('Carry on', '继续') : '▶ ' + T('Play the steps', '逐步生成')) + '</button>' +
       '<button type="button" data-pause="1"' + (P.on ? '' : ' disabled') + '>' + T('Pause', '暂停') + '</button><button type="button" data-now="1">' + T('Finish now', '立即完成') + '</button></div>' +
       '<div class="sp"><label for="lcSpeed">' + T('Speed', '演示速度') + '</label><input type="range" id="lcSpeed" min="0.5" max="2" step="0.25" value="' + P.speed + '"><output>' + P.speed + '×</output></div>' +
       '<div class="b2"><button type="button" data-full="1">' + T('Full-screen demo', '全屏演示') + '</button><button type="button" data-each="1" class="' + (P.stopEach ? 'on' : '') + '">' + T('Stop after each step', '每步停') + ' · ' + (P.stopEach ? T('on', '开') : T('off', '关')) + '</button></div>' +
@@ -108,7 +110,7 @@
     var hd = $('left').querySelector('.l2-head'); box.style.setProperty('--hh', (hd && getComputedStyle(hd).position === 'sticky' ? hd.offsetHeight : 0) + 'px');
     box.innerHTML = x;
     renderFS(); mapExtras();
-    var cur = box.querySelector('.fc.cur'); if (cur && P.on && P.follow !== P.k) { P.follow = P.k; cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    var cc = box.querySelector('.fc.cur'); if (cc && P.on && P.follow !== P.k) { P.follow = P.k; cc.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   }
   function renderFS() {
     if (!fs) return; fs.hidden = !P.full; if (!P.full) return;
@@ -270,6 +272,22 @@
     } catch (e) { P.prep = false; if (String(e.message) !== 'stopped') console.error(e); P.on = false; render(); return; }
     P.prep = false; P.on = false; play(i, only);
   }
+  async function back(from) {
+    if (P.backing) return; var c = from !== null && from !== undefined ? from : cur(), i = idxOf(c), t = SEQ[i - 1]; if (t === undefined) return;
+    P.backing = true;
+    if (P.running || P.on) { stop(); var t0 = performance.now(); while ((P.running || P.prep) && performance.now() - t0 < 8000) await wait(50); }
+    try {
+      SEQ.forEach(function (q, j) { if (j >= i) delete P.done[q]; }); P.done[t] = 1; P.open = {};
+      if (t === 0) { var op0 = Object.assign({}, V.op); setStep(1, true); await camera(viewFor(0)); V.op = Object.assign({}, op0, { mould: 0, rail: 0 }); crisp(); var b0 = sitePicture(snap()); V.op = op0; crisp(); AN.cover(b0); }
+      else { AN.hide();
+        if (t > 20 && !S.relaxed) { P.on = true; P.single = true; P.k = t; P.phase = T('working it out…', '计算中…'); render(); await window.__woolUpTo(8); setStep(10, true); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000); }
+        setStep(t, true); if (t > 20) { P.on = true; P.single = true; await until(bdDone, 600000); }
+        else if (window.__WOOL_BAKER__ && !window.__WOOL_BAKER__.done.has(stage(t))) { P.on = true; P.single = true; await until(function () { return S.step === t; }, 600000); }
+        await camera(viewFor(t)); crisp(); }
+    } catch (e) { if (String(e.message) !== 'stopped') console.error(e); }
+    P.on = false; P.single = false; P.phase = ''; P.k = t; P.prog = 1; P.follow = null; P.backing = false; render();
+    var cd = box && box.querySelector('.fc.cur'); if (cd) cd.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
   async function finishNow() {
     stop(); var t0 = performance.now(); while (P.running && performance.now() - t0 < 8000) await wait(50);
     P.on = true; P.single = true; P.phase = T('working it all out…', '全部计算中…'); P.k = 26; render();
@@ -280,7 +298,9 @@
   }
   function toggleFull() {
     P.full = !P.full; H.classList.toggle('lcfull', P.full);
-    setTimeout(function () { resize(); if (ok()) { var v = viewFor(P.k !== null ? P.k : S.step); S.view.cx = v.cx; S.view.cy = v.cy; S.view.mpp = v.mpp; } AN.hide(); crisp(); render(); }, 30);
+    setTimeout(function () { resize(); if (ok()) { var v = viewFor(P.k !== null ? P.k : S.step); S.view.cx = v.cx; S.view.cy = v.cy; S.view.mpp = v.mpp; } AN.hide(); crisp();
+      if (P.k === 0 && !P.running && ok()) { var op0 = Object.assign({}, V.op); V.op = Object.assign({}, op0, { mould: 0, rail: 0 }); crisp(); var b0 = sitePicture(snap()); V.op = op0; crisp(); AN.cover(b0); }      // the site stays shown
+      render(); var cd = box && box.querySelector('.fc.cur'); if (cd && !P.full) cd.scrollIntoView({ block: 'nearest' }); }, 30);
   }
   function mapTouched(ev) { if (P.ctl && !P.ctl.dead && AN.showing()) { P.ctl.skip = true; } if (ev === 'wheel' || (!P.on && AN.showing())) AN.hide(); }
   function onKey(e) {
@@ -289,7 +309,7 @@
     if (!P.full && !(e.target === document.body || (e.target.closest && e.target.closest('#lcFlow,#lcFS,#wrap')))) return;
     if (e.key === ' ') { e.preventDefault(); playPause(); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(P.k !== null ? P.k : S.step, true); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); back(); }
   }
   function cur() { return P.k !== null ? P.k : (S.step === 1 && !P.done[1] ? 0 : S.step); }
   function next() { var i = idxOf(cur()), n = SEQ[i + 1]; if (P.wait && P.release) { P.release(); return; } if (n !== undefined) goTo(n, P.stopEach || !P.on); }
@@ -309,7 +329,7 @@
     else if (d.each) { P.stopEach = !P.stopEach; save(); render(); }
     else if (d.spd) { var s = [0.5, 1, 1.5, 2], j = (s.indexOf(P.speed) + 1) % s.length; P.speed = s[j < 0 ? 1 : j]; if (P.ctl) P.ctl.speed = P.speed; save(); render(); }
     else if (d.all) { P.all = !P.all; render(); }
-    else if (d.prev) { var i = idxOf(cur()); goTo(SEQ[Math.max(0, i - 1)], true); }
+    else if (d.prev || d.back) back(d.back && d.back !== 'cur' ? +d.back : null);
     else if (d.next) next();
     else if (d.way) { stop(); setStep(27); P.k = null; render(); }
     else if (d.set) { if (window.__lcOpenSetting) window.__lcOpenSetting(d.set); }
@@ -320,7 +340,7 @@
     if (P.ctl) P.ctl.speed = P.speed;
   }
   // the page's own hooks: a step set elsewhere, a stage being worked out
-  window.__lcRender = function () { if (!P.running && !P.on) { P.k = null; } render(); };
+  window.__lcRender = function () { if (!P.running && !P.on && !P.backing && P.k !== (S.step === 1 && P.k === 0 ? 0 : S.step)) { P.k = null; } render(); };
   window.__lcBusy = function (st) { if (P.running) return; P.phase = st ? T('working it out…', '计算中…') : ''; render(); };
   window.__lcDemo = function () { if (!H.classList.contains('l2ui')) return; build(); render(); if (/[#&]demo\b/.test(location.hash)) setTimeout(function () { goTo(0); }, 400); };
   var boot = function () { if (!H.classList.contains('l2ui')) return; if (ok() && $('left')) { build(); render(); } else setTimeout(boot, 300); };
