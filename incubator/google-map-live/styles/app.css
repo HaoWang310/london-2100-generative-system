@@ -580,3 +580,19 @@ body.phoneUi .layerHintTooltip,body.phoneUi #layerHintTooltip{max-width:calc(100
 @media (max-width:760px){html.l2-shell-lang .maplibregl-ctrl-top-right{top:56px}
   /* a narrow window that is not a phone keeps the floating panel at the top: it starts below the switch */
   html.l2-shell-lang body:not(.phoneUi) #panel{top:64px}}
+
+/* v3.44.0 · planning layers in the analysis list: group headings, rows of small switches, the height and speed keys.
+   White at lower opacity only, so they read the same with and without the shared skin. */
+.layerGroup{padding:12px 4px 2px;font-size:10px;letter-spacing:.04em;color:rgba(255,255,255,.5)}
+.layerGroup:first-child{padding-top:2px}
+.layerChecks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px;padding:8px 10px 2px}
+.layerChecks label{display:flex;align-items:center;gap:6px;min-width:0;font-size:10px;color:rgba(255,255,255,.85);cursor:pointer}
+.layerChecks input{flex:none;width:14px;height:14px;margin:0}
+.layerItem .rangeRow select{min-height:28px;font-size:11px}
+.layerItem .rangeRow input[type=color]{width:44px;height:22px;padding:0;border:1px solid rgba(255,255,255,.25);border-radius:5px;background:none}
+.reliefKey{padding:0 10px 8px}
+.reliefKey i{display:block;height:8px;border-radius:4px}
+.reliefKey div{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:rgba(255,255,255,.55)}
+.networkLegend[hidden],.reliefKey[hidden]{display:none}
+.networkLegend i.dashKey{height:0;background:none;border-top:2px dashed var(--swatch);border-radius:0}
+#railNationalKey{box-shadow:0 0 0 1px rgba(255,255,255,.45)}   /* near black on the light map: an edge so it shows on the black panel */

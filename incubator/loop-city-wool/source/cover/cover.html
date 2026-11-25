@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:DM;src:url(../../../../shared/ui/DMSans.ttf)}
+html,body{margin:0;background:#0C0C0D;width:1200px;height:800px;overflow:hidden;font-family:DM,'DM Sans',sans-serif}
+#st{position:absolute;inset:0;perspective:2300px;perspective-origin:420px 340px}
+.pl{position:absolute;left:110px;width:610px;height:540px;transform:rotateX(70deg);outline:1.2px solid rgba(255,255,255,.78);outline-offset:0;background-size:100% 100%;}
+#ov{position:absolute;inset:0;pointer-events:none}
+.lb{position:absolute;left:822px;color:#F2F2F2}
+.lb .n{position:absolute;left:-26px;top:1px;font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.62)}
+.lb .t{font-size:21px;font-weight:600;letter-spacing:.13em;white-space:nowrap}
+.lb .s{font-size:13px;letter-spacing:.1em;color:rgba(255,255,255,.6);margin-top:7px;white-space:nowrap}
+.cap{position:absolute;left:880px;top:66px;width:200px;text-align:center}
+.cap .d{display:flex;gap:9px;justify-content:center;margin-bottom:12px} .cap .d i{width:8px;height:8px;border-radius:50%;display:block}
+.cap .c{font-size:13px;letter-spacing:.2em;color:rgba(255,255,255,.62);white-space:nowrap}
+</style></head><body><div id="st"></div><svg id="ov" width="1200" height="800"></svg><script>
+const Q = new URLSearchParams(location.search), V = Q.get('v') || 'a', IMG = 'file://' + (Q.get('dir') || '/tmp/wool-cover') + '/', DOTS = (Q.get('dots') || '').split(',').filter(Boolean).map(c => '#' + c);
+const CH = ['#C9875A', '#9A88C4', '#A9C25A', '#6FB8C2'];
+const L = [[IMG + 'a26.png', 'ROAD HIERARCHY · PARCELS', '567 KM OF ROAD · 207 PARCELS'],
+           [IMG + 'a10.png', 'THE WOOL · RELAXED', '180 THREADS PULLED INTO BUNDLES'],
+           [IMG + 'a7.png', 'SOIL · FARMLAND KEPT', 'ALC GRADE 1–2 · 114 KM²'],
+           [IMG + 'm4.png', 'THREE CELLS · LOOP · ROADS', 'C66 · C60 · C77 · 309 KM²']];
+const st = document.getElementById('st'), ov = document.getElementById('ov'), tops = [-128, 9, 146, 283];
+L.forEach((l, i) => { const d = document.createElement('div'); d.className = 'pl'; d.style.top = tops[i] + 'px'; d.style.zIndex = 10 - i; d.style.backgroundImage = `url(${l[0]})`; d.innerHTML = '<b style="position:absolute;right:0;top:50%;width:1px;height:1px"></b><u style="position:absolute;left:50%;top:50%;width:1px;height:1px"></u>'; st.appendChild(d); });
+requestAnimationFrame(() => {
+  const R = [...document.querySelectorAll('.pl')].map(e => e.getBoundingClientRect());
+  let s = '';
+  const dash = 'stroke="rgba(255,255,255,.5)" stroke-width="1" stroke-dasharray="4 4"';
+  s += `<line x1="${R[0].left}" y1="${R[0].bottom}" x2="${R[3].left}" y2="${R[3].bottom}" ${dash}/>`;
+  s += `<line x1="${R[0].right}" y1="${R[0].bottom}" x2="${R[3].right}" y2="${R[3].bottom}" ${dash}/>`;
+  const cx = (R[0].left + R[0].right) / 2;
+  s += `<line x1="${cx}" y1="${(R[0].top + R[0].bottom) / 2 - 70}" x2="${cx}" y2="${(R[3].top + R[3].bottom) / 2}" ${dash}/>`;
+  const PL = [...document.querySelectorAll('.pl')];
+  R.forEach((r, i) => { const m = PL[i].querySelector('b').getBoundingClientRect(), c = PL[i].querySelector('u').getBoundingClientRect(), y = m.top, xr = m.left;
+    s += `<circle cx="${c.left}" cy="${c.top}" r="3.2" fill="#fff"/>`;
+    s += `<circle cx="${xr}" cy="${y}" r="3.2" fill="#fff"/><line x1="${xr}" y1="${y}" x2="792" y2="${y}" stroke="rgba(255,255,255,.7)" stroke-width="1"/>`;
+    document.body.insertAdjacentHTML('beforeend', `<div class="lb" style="top:${y - 15}px"><span class="n"${V === 'b' ? ` style="color:${CH[i]}"` : ''}>0${i + 1}</span><div class="t">${L[i][1]}</div><div class="s">${L[i][2]}</div></div>`); });
+  ov.innerHTML = s;
+  document.body.insertAdjacentHTML('beforeend', `<div class="cap"><div class="d">${(V === 'b' ? ['#6FB8C2', '#A9C25A', '#9A88C4', '#C9875A'] : DOTS).map(c => `<i style="background:${c}"></i>`).join('')}</div><div class="c">${V === 'b' ? 'READ · CUT · WEAVE · ROAD' : 'STATION P2 · 16 STEPS'}</div></div>`);
+});
+</script></body></html>

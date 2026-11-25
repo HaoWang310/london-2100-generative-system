@@ -230,8 +230,9 @@
     if (x.after) x.after(card);
     // the chapters over the map
     var c = '';
+    var CC = { 1: '#5FF2FF', 2: '#C6F432', 3: '#B08CFF', 4: '#FF8A3D' };      // (25 Nov) each chapter its colour
     CH.forEach(function (C) { var on = C.steps.indexOf(k) >= 0;
-      c += '<div class="ch' + (on ? ' on' : '') + '"><div class="cl">' + (zh() ? C.n + ' ' + C.zh : C.n + ' ' + C.en) + '</div><div class="tk">';
+      c += '<div class="ch' + (on ? ' on' : '') + '" style="--c:' + CC[C.n] + '"><div class="cl">' + (zh() ? C.n + ' ' + C.zh : C.n + ' ' + C.en) + '</div><div class="tk">';
       C.steps.forEach(function (s) { var i = ORDER.indexOf(s); c += '<i data-s="' + s + '" class="' + (s === k ? 'c' : i < pos ? 'd' : '') + '" title="' + shown(s) + ' ' + esc(stepName(s)) + '"></i>'; });
       c += '</div></div>'; });
     chap.innerHTML = c;
@@ -256,6 +257,7 @@
     if (a.left < b.right + 8 && a.right > b.left - 8 && a.bottom > b.top - 8) nav.style.bottom = Math.round(r.bottom - b.top + 10) + 'px';
   }
   window.addEventListener('resize', function () { setTimeout(place, 60); });
+  window.__lcInfo = info; window.__lcOpenSetting = openSetting;      // (25 Nov) the flow (flow.js) shows them in its cards
   window.__lcCard = function () { if (!H.classList.contains('l2ui')) return; build(); render(); };
   window.__lcCardSoilReset = function () { soilShare = null; };
 })();

@@ -26,8 +26,41 @@ async function loadBitmap(){
   return bitmapPromise;
 }
 
+// v3.44.0: the picture is cut to the 70 km study circle (config.center, config.radius), with the same sphere and
+// distance as the flood and drainage layers, so every analysis layer ends on one line. Without them: the whole square.
+const R=6378137;
+function distanceTo(mx,my,clat,clon){
+  const lat=2*Math.atan(Math.exp(my/R))-Math.PI/2;
+  const dlat=Math.sin((lat-clat)/2)**2,cos=Math.cos(lat)*Math.cos(clat);
+  const hav=dlat+cos*Math.sin((mx/R-clon)/2)**2;
+  return 2*R*Math.asin(Math.sqrt(Math.min(1,hav)));
+}
+// 'in': the whole tile is inside (a circle is convex: its four corners are); 'out': no part can be; else 'edge'.
+function tileAgainstCircle(tile){
+  if(!config.center||!config.radius)return 'in';
+  const clat=config.center.lat*Math.PI/180,clon=config.center.lng*Math.PI/180,radius=config.radius;
+  const corners=[[tile.left,tile.top],[tile.right,tile.top],[tile.right,tile.bottom],[tile.left,tile.bottom]];
+  if(corners.every(([x,y])=>distanceTo(x,y,clat,clon)<=radius))return 'in';
+  const cx=clon*R,cy=R*Math.log(Math.tan(Math.PI/4+clat/2));
+  const nx=Math.min(Math.max(cx,tile.left),tile.right),ny=Math.min(Math.max(cy,tile.bottom),tile.top);
+  return distanceTo(nx,ny,clat,clon)>radius?'out':'edge';
+}
+function clipToCircle(ctx,size,tile){
+  const clat=config.center.lat*Math.PI/180,clon=config.center.lng*Math.PI/180,radius=config.radius;
+  const image=ctx.getImageData(0,0,size,size),data=image.data;
+  const dx=(tile.right-tile.left)/size,dy=(tile.top-tile.bottom)/size;
+  for(let row=0;row<size;row++){
+    const my=tile.top-(row+.5)*dy;
+    for(let col=0;col<size;col++){
+      if(distanceTo(tile.left+(col+.5)*dx,my,clat,clon)>radius)data[(row*size+col)*4+3]=0;
+    }
+  }
+  ctx.putImageData(image,0,0);
+}
+
 async function transparentTile(size){
   const canvas=new OffscreenCanvas(size,size);
+  canvas.getContext('2d');   // convertToBlob needs a context, also for an empty tile
   const blob=await canvas.convertToBlob({type:'image/png'});
   return blob.arrayBuffer();
 }
@@ -43,6 +76,8 @@ async function renderTile(z,x,y){
   const iyBottom=Math.max(tile.bottom,source.bottom);
 
   if(ix0>=ix1||iyBottom>=iyTop)return transparentTile(size);
+  const where=tileAgainstCircle(tile);
+  if(where==='out')return transparentTile(size);
 
   const bitmap=await loadBitmap();
   const canvas=new OffscreenCanvas(size,size);
@@ -69,6 +104,7 @@ async function renderTile(z,x,y){
   const dh=(iyTop-iyBottom)/tileH*size;
 
   ctx.drawImage(bitmap,sx,sy,sw,sh,dx,dy,dw,dh);
+  if(where==='edge')clipToCircle(ctx,size,tile);
   const blob=await canvas.convertToBlob({type:'image/png'});
   return blob.arrayBuffer();
 }

@@ -9,7 +9,7 @@
  * site's OSM streets, rail, water, buildings and the OS Terrain 50 elevation. Tensor Studio reads the EA
  * flood risk itself. Esc, or its "back to the London map" button, returns here with the red boundary kept.
  */
-import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.43.7-english';
+import {openTensorStudio, closeTensorStudio} from './tensor_studio_site.js?v=3.44.1-english';
 
 const SEL_SOURCE='site-selection-source';
 const SEL_FILL='site-selection-fill';
@@ -252,6 +252,7 @@ export function createTensorSiteUI({map,maplibregl,assetUrl,demBounds,demWidth,d
     clear:clearSelection,
     enter:enterSite,
     get polygon(){return polygon;},
+    get busy(){return drawing||editing;},   // a boundary is being drawn or edited: other map clicks stay quiet
     destroy(){
       clearSelection();
       canvasContainer.removeEventListener('dblclick',onNativeDoubleClick,true);
