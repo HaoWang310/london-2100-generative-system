@@ -2001,7 +2001,7 @@ const G = (function () {
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
   // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
   // by source/make-example.cjs: the bake it was made from, and its files
-  var EXV = /*EXV*/'wenmqc:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var EXV = /*EXV*/'epafyw:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
   if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ pre('example/' + f + '?b=' + EXV.split(':')[0], 'fetch', true); }); }
@@ -4361,8 +4361,8 @@ window.addEventListener('error', e => { document.body.dataset.err = (document.bo
    A cell package from the mould page (or from a file) becomes the DATA the wool app reads, made here in the
    browser the way build_app_v9.py makes it in Python: the cell cut by the existing roads and towns into primary
    cells (eased), the soil zones, the anchors on the roads, the pictures. The work is done on a 10 m grid.
-   SITE, inlined by the builder, holds the whole site's inputs: ground tiles, roads, towns and water, the soil
-   classes and the key plan. One cell at a time. */
+   SITE lists the site's inputs, which live beside the page in site/ (ground tiles, roads, towns and water, the soil
+   classes) and are read when a stage needs them; the key plan is in it. One cell at a time. */
 "use strict";
 (() => {
 const G = 10, RW = 3200;
