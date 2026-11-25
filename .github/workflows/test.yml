@@ -1,7 +1,7 @@
 name: Test
 
-# Runs on every pull request and every branch push, so each collaborator's
-# branch is checked before it can be merged into main.
+# Runs on every pull request and every branch push, so each branch is
+# checked before it can be merged into main.
 on:
   pull_request:
   push:
