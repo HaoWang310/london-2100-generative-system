@@ -15,6 +15,12 @@
   var AN = window.__lcAnim, CHC = AN.CH;
   var SEQ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 22, 23, 24, 25, 26];
   var shown = function (k) { return k > 20 ? k - 10 : k; };
+  // (25 Nov 2026) a cell that is already a town: steps 8 to 15 are not made (explain.js says which); Next, Back and
+  // the player pass over them, and their cards are grey
+  var isOff = function (k) { try { return !!(window.__lcOff && window.__lcOff(k)); } catch (e) { return false; } };
+  var nextK = function (k) { var i = SEQ.indexOf(k); if (i < 0) return undefined; for (i++; i < SEQ.length; i++) if (!isOff(SEQ[i])) return SEQ[i]; return undefined; };
+  var prevK = function (k) { var i = SEQ.indexOf(k); if (i < 0) return undefined; for (i--; i >= 0; i--) if (!isOff(SEQ[i])) return SEQ[i]; return undefined; };
+  var quietRelax = async function () { await window.__woolUpTo(8); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000); };
   var chOf = AN.chapter;
   var CHN = { 0: ['Prologue · the site', '序章 · 场地'], 1: ['Reading the ground', '读地'], 2: ['Cutting', '切分'], 3: ['Weaving', '编织'], 4: ['Making roads', '成路'] };
   var NAME = { 0: ['The site and the loop', '场地与环线'], 1: ['The slime mould', '黏菌'], 2: ['Veins, centrelines', '菌脉与中心线'], 3: ['The cells', '单元'], 4: ['Existing roads', '现有道路'],
@@ -31,7 +37,9 @@
         prm: [], res: [[DATA.cells.length, T('cells', '个单元')], [km ? km.toFixed(0) : '–', 'km²'], [DATA.stations.length, T('stations', '个车站')]], leg: 0 }; }
     return window.__lcInfo ? window.__lcInfo(k) : null;
   };
-  var keyResult = function (k) { var x = null; try { x = info(k); } catch (e) {} return x && x.res && x.res[0] ? x.res[0][0] + ' ' + x.res[0][1] : ''; };
+  var keyResult = function (k) { var x = null; try { x = info(k); } catch (e) {}
+    if (x && x.note && (!x.res || !x.res.length || k === 25)) return k === 5 ? T('kept as it is', '保留现状') : k === 25 ? T('no urban parcel', '没有城市地块') : '';
+    return x && x.res && x.res[0] ? x.res[0][0] + ' ' + x.res[0][1] : ''; };
 
   // ---------------------------------------------------------------- state
   var P = window.__lcFlow = { prev: {}, more: {}, busyParam: 0, on: false, paused: false, k: null, done: {}, ms: {}, total: 0, speed: 1, stopEach: false, wait: false, full: false, open: {}, phase: '', ctl: null };
@@ -74,10 +82,14 @@
   }
   var segs = function (cur) {             // the seventeen marks, each in its chapter's colour
     var h = '', last = -1; SEQ.forEach(function (k) { var c = chOf(k); if (last >= 0 && c !== last) h += '<s></s>'; last = c;
-      var st = P.done[k] ? 'background:' + CHC[c] : k === cur ? 'background:' + CHC[c] + ';box-shadow:0 0 8px ' + CHC[c] : '';
+      var st = isOff(k) ? 'opacity:.28' : P.done[k] ? 'background:' + CHC[c] : k === cur ? 'background:' + CHC[c] + ';box-shadow:0 0 8px ' + CHC[c] : '';
       h += '<i data-go="' + k + '" title="' + esc((k ? shown(k) + ' ' : '') + nm(k)) + '" style="' + st + '"></i>'; }); return h; };
   function card(k) {
     var c = chOf(k), col = CHC[c], cur = P.k === k || (P.k === null && S.step === (k === 0 ? -1 : k)), done = P.done[k], open = cur || P.open[k] || P.all;
+    var off = isOff(k);
+    if (off) { var xo = null; try { xo = info(k); } catch (e) {}
+      return '<div class="fc off" data-k="' + k + '" style="--c:' + col + '"><button type="button" class="fh" data-open="' + k + '"><span class="n">' + shown(k) + '</span><b>' + esc(nm(k)) + '</b><span class="fl">' + T('Built up · not woven', '已建成 · 不编织') + '</span></button>' +
+        (P.open[k] || P.all ? '<div class="fb"><p>' + esc(xo ? xo.did : '') + '</p></div>' : '') + '</div>'; }
     var cls = 'fc' + (cur ? ' cur' : '') + (done ? ' done' : '') + (!cur && !done ? ' todo' : '');
     var num = done && !cur ? '✓' : (k === 0 ? '0' : shown(k));
     var nchg = PR ? PR.of(k).filter(function (p) { return PR.changed(p); }).length : 0;
@@ -87,20 +99,21 @@
       if (x) { h += '<div class="fb">';
         if (cur) h += '<div class="pg"><i style="width:' + Math.round((P.prog || 0) * 100) + '%"></i></div>';
         h += '<h4>' + esc(x.t) + '</h4><p>' + esc(x.did) + '</p><div class="l">' + T('Why', '为什么') + '</div><p class="why">' + esc(x.why) + '</p>';
+        if (window.__lcNote) h += window.__lcNote(x);
         var ps = PR ? PR.of(k) : [];
         if (ps.length) h += paramsBlock(k, ps, cur || done);
         else if (x.prm && x.prm.length) { h += '<div class="prm">'; x.prm.forEach(function (p) { h += '<div><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b></div>'; }); h += '</div>'; }
         if (k >= 1 && k <= 3) h += '<a class="up" href="../loop-city-mould-growth/index.html" target="_blank" rel="noopener">' + T('These come from the slime mould app (step 1): change them there ›', '这些来自上一步「黏菌生长」app：到那里修改 ›') + '</a>';
         if (x.res && x.res.length) { var pr0 = P.prev[k]; h += '<div class="res">'; x.res.forEach(function (r, j) { var d = pr0 ? delta(pr0[j], r[0]) : ''; h += '<div><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + (d ? ' <em class="' + (d[0] === '−' ? 'dn' : 'up') + '">' + d + '</em>' : '') + '</span></div>'; }); h += '</div>'; }
         var lg = $('legend'); if (cur && lg && x.leg) { var rows = [].slice.call(lg.children, 0, x.leg); if (rows.length) h += '<div class="lg">' + rows.map(function (r) { return '<div>' + r.innerHTML + '</div>'; }).join('') + '</div>'; }
-        var i = SEQ.indexOf(k), nx = SEQ[i + 1];
-        var pv = SEQ[i - 1];
+        var nx = nextK(k);
+        var pv = prevK(k);
         var nch = ps.filter(function (p) { return PR.changed(p); }).length;
         if (cur || done) h += '<div class="ftn">' + (nch ? T(nch + ' changed · ', '已改 ' + nch + ' 项 · ') + '<button type="button" class="ra" data-resetall="' + k + '">' + T('All back to the defaults', '全部恢复默认') + '</button>'
             : ps.length ? T('Left alone, the defaults are used', '不调就用默认值') : '') + '</div><div class="ft">' +
           (pv !== undefined ? '<button type="button" class="pv" data-back="' + k + '" style="--c:' + CHC[chOf(pv)] + '">‹ ' + T('Back', '上一步') + '</button>' : '') +
           (nx !== undefined ? '<button type="button" class="nx' + (P.wait && cur ? ' lit' : '') + '" data-go="' + nx + '" style="--c:' + CHC[chOf(nx)] + '">' + T('Next: ', '下一步：') + shown(nx) + ' ' + esc(nm(nx)) + ' ›</button>'
-            : '<button type="button" class="nx" data-way="1" style="--c:#fff">' + T('On to the tensor field ›', '交给张量场 ›') + '</button>') + '</div>';
+            : k === 27 && typeof WS !== 'undefined' && WS.stop() ? '' : '<button type="button" class="nx" data-way="1" style="--c:#fff">' + T('On to the tensor field ›', '交给张量场 ›') + '</button>') + '</div>';
         h += '</div>'; } }
     return h + '</div>';
   }
@@ -324,7 +337,8 @@
     try {
       for (var i = from; i < SEQ.length; i++) {
         var k = SEQ[i]; if (!P.on) break;
-        if (k > 20 && !S.relaxed) { await playOne(10); P.done[10] = 1; }
+        if (isOff(k)) { if (only) break; continue; }
+        if (k > 20 && !S.relaxed) { if (isOff(10)) await quietRelax(); else { await playOne(10); P.done[10] = 1; } }
         var ok1 = await playOne(k); if (!ok1 && !P.on) break;
         P.done[k] = 1; P.phase = P.ms[k] ? T('worked out in ', '计算 ') + (P.ms[k] / 1000).toFixed(1) + T(' s', ' 秒') : ''; P.prog = 1; render();
         if (only || i === SEQ.length - 1) break;
@@ -338,9 +352,10 @@
   function idxOf(k) { var i = SEQ.indexOf(k); return i < 0 ? 0 : i; }
   async function goTo(k, only) {          // a card or Next: the step before set at once, then this one played
     await settled();
-    if (P.running) { if (P.wait && P.release && SEQ[idxOf(P.k) + 1] === k) { P.release(); return; } stop(); var t0 = performance.now(); while (P.running && performance.now() - t0 < 8000) await wait(50); }
+    if (isOff(k)) { var nk = nextK(k); if (nk === undefined) return; k = nk; }
+    if (P.running) { if (P.wait && P.release && nextK(P.k) === k) { P.release(); return; } stop(); var t0 = performance.now(); while (P.running && performance.now() - t0 < 8000) await wait(50); }
     if (P.prep) return; P.prep = true;              // one step being made ready at a time
-    var i = idxOf(k), prev = SEQ[i - 1];
+    var i = idxOf(k), prev = prevK(k);
     try { if (prev !== undefined && prev !== 0 && S.step !== prev) { P.on = true; P.single = true; P.phase = T('working it out…', '计算中…'); P.k = k; render();
         if (prev > 20 && !S.relaxed) { await window.__woolUpTo(8); setStep(10, true); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000); }
         if (prev <= 10) { var B = window.__WOOL_BAKER__; if (B && !B.done.has(stage(prev))) await window.__woolUpTo(stage(prev)); }
@@ -350,7 +365,7 @@
     P.prep = false; P.on = false; play(i, only);
   }
   async function back(from) {
-    if (P.backing) return; var c = from !== null && from !== undefined ? from : cur(), i = idxOf(c), t = SEQ[i - 1]; if (t === undefined) return;
+    if (P.backing) return; var c = from !== null && from !== undefined ? from : cur(), i = idxOf(c), t = prevK(c); if (t === undefined) return;
     P.backing = true;
     if (P.running || P.on) { stop(); var t0 = performance.now(); while ((P.running || P.prep) && performance.now() - t0 < 8000) await wait(50); }
     try {
@@ -370,7 +385,7 @@
     P.on = true; P.single = true; P.phase = T('working it all out…', '全部计算中…'); P.k = 26; render();
     try { var B = window.__WOOL_BAKER__; if (B && window.__woolUpTo) await window.__woolUpTo(8);
       if (!S.relaxed) { setStep(10, true); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000); }
-      setStep(26, true); await until(bdDone, 600000); SEQ.forEach(function (k) { P.done[k] = 1; }); crisp(); } catch (e) { console.error(e); }
+      setStep(26, true); await until(bdDone, 600000); SEQ.forEach(function (k) { if (!isOff(k)) P.done[k] = 1; }); crisp(); } catch (e) { console.error(e); }
     P.on = false; P.single = false; P.phase = ''; P.k = null; render();
   }
   function toggleFull() {
@@ -389,11 +404,11 @@
     else if (e.key === 'ArrowLeft') { e.preventDefault(); back(); }
   }
   function cur() { return P.k !== null ? P.k : (S.step === 1 && !P.done[1] ? 0 : S.step); }
-  function next() { var i = idxOf(cur()), n = SEQ[i + 1]; if (P.wait && P.release) { settled().then(function () { if (P.release) P.release(); }); return; } if (n !== undefined) goTo(n, P.stopEach || !P.on); }
+  function next() { var n = nextK(cur()); if (P.wait && P.release) { settled().then(function () { if (P.release) P.release(); }); return; } if (n !== undefined) goTo(n, P.stopEach || !P.on); }
   function playPause() {
     if (P.on && P.wait) { P.release(); return; }
     if (P.on) { P.paused = !P.paused; if (P.ctl) P.ctl.paused = P.paused; render(); return; }
-    var c = cur(), i = idxOf(c); if (P.done[26] || (c === 26 && P.done[c])) { P.done = {}; P.total = 0; P.ms = {}; i = 0; } else if (P.done[c]) i = Math.min(SEQ.length - 1, i + 1);
+    var c = cur(), i = idxOf(c); if (P.done[26] || (c === 26 && P.done[c])) { P.done = {}; P.total = 0; P.ms = {}; i = 0; } else if (P.done[c]) { var nc = nextK(c); i = nc === undefined ? SEQ.length - 1 : idxOf(nc); }
     if (i === 0) goTo(0); else goTo(SEQ[i]);
   }
   function onClick(e) {
@@ -415,9 +430,10 @@
     else if (d.pset) { var p1 = PR.byId(d.pset); if (p1) apply([[p1, p1.kind === 'seg' && typeof p1.def === 'number' ? +d.v : p1.kind === 'chk' ? +d.v : d.v]]); }
     else if (d.edit) { var eb = $(d.edit); if (eb) eb.click(); render(); }
     else if (d.open !== undefined) { var k = +d.open; if (k === 27) { stop(); setStep(27); P.k = null; render(); return; }
+      if (isOff(k)) { P.open[k] = !P.open[k]; render(); return; }               // a step passed over only says why
       if (P.done[k] && !P.on) { P.open[k] = !P.open[k]; render(); return; }     // a step done opens or folds; one not yet done is played
       goTo(k, true); }
-    else if (d.go !== undefined) { var g = +d.go; if (P.wait && P.release && SEQ[idxOf(P.k) + 1] === g) { P.release(); return; } goTo(g, P.stopEach || !P.on || true); }
+    else if (d.go !== undefined) { var g = +d.go; if (P.wait && P.release && nextK(P.k) === g) { P.release(); return; } goTo(g, P.stopEach || !P.on || true); }
     if (P.ctl) P.ctl.speed = P.speed;
   }
   // the page's own hooks: a step set elsewhere, a stage being worked out

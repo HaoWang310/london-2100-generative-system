@@ -91,6 +91,8 @@
   add(advBody, el('p', 'lc-advnote', 'The sliders and switches of the two models. Moving one that changes a run means running the century again.', '两个模型的滑块与开关。改动会影响运行的参数后，需要重新运行百年。'));
   leftRest.forEach(function (d) { d.open = false; advBody.appendChild(d); });
   rightRest.forEach(function (d) { if (d.tagName === 'DETAILS') d.open = false; advBody.appendChild(d); });
+  /* (25 Nov 2026) the seed of the century, first among the settings */
+  if ($('seedRow')) { var sh = el('div', 'panelHead', 'Seed', '种子'); var nt = advBody.querySelector('.lc-advnote'); advBody.insertBefore($('seedRow'), nt ? nt.nextSibling : advBody.firstChild); advBody.insertBefore(sh, $('seedRow')); }
   if ($('chips')) add(advBody, el('div', 'panelHead', 'Run figures', '运行数据'), $('chips'));
   add(adv, advBtn, advBody);
   top.appendChild(adv);

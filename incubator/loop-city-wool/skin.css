@@ -120,6 +120,11 @@ html.l2ui #lkStep { margin-top:10px; }
 html.l2ui .lk-big { font-size:44px; font-weight:700; letter-spacing:-.02em; line-height:1.05; color:#fff; font-variant-numeric:tabular-nums; margin-top:2px; }
 html.l2ui .lk-bigsub { font-size:13px; color:var(--l2-ink3); margin:4px 0 8px; }
 html.l2ui #lkBody table.nums tr.lk-hide { display:none; }
+/* (25 Nov 2026) the cell's key: which century it comes from */
+html.l2ui .lk-key { margin-top:10px; padding:10px 12px; border:1px solid var(--l2-bd); border-radius:var(--l2-r); display:flex; flex-direction:column; gap:3px; }
+html.l2ui .lk-key span { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--l2-ink3); }
+html.l2ui .lk-key b { font-size:13px; font-weight:600; color:#fff; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+html.l2ui .lk-key em { font-style:normal; font-size:12px; color:var(--l2-ink2); }
 html.l2ui .lk-mini { display:block; width:100%; margin-top:10px; border:1px solid var(--l2-bd); border-radius:var(--l2-r); cursor:pointer; background:#0A0A0A; }
 html.l2ui .lk-fold { border-top:1px solid var(--l2-line); margin-top:14px; }
 html.l2ui .lk-fold + .lk-fold { margin-top:0; }
@@ -311,3 +316,15 @@ html.lcflow #left .l2-adv, html.lcflow #left .btns:has(#run), html.lcflow #left 
 #lcFlow a.up:hover { border-color:var(--c); color:#fff; }
 html.l2phone #lcFlow .run { position:static; box-shadow:none; }
 html.l2ui #lkPals { margin-top:4px; }      /* (25 Nov 2026) the palettes as three dots: shared/ui/swatches.css */
+
+/* (25 Nov 2026) the whole loop: a note in a step's card (a cell that is already a town, a cell with no urban parcel),
+   and the cards of the steps a built-up cell passes over */
+#lcFlow .nb, html.l2ui #lcCard .nb { margin:10px 0 4px; padding:11px 12px; border:1px solid rgba(255,255,255,.28); border-radius:12px; background:#131315; display:flex; flex-direction:column; gap:5px; }
+#lcFlow .nb b, html.l2ui #lcCard .nb b { color:#fff; font-size:13px; font-weight:700; line-height:1.4; }
+#lcFlow .nb span, html.l2ui #lcCard .nb span { color:var(--l2-ink2); font-size:12.5px; line-height:1.5; }
+#lcFlow .nb .go, html.l2ui #lcCard .nb .go { align-self:stretch; text-align:center; margin-top:5px; padding:9px 14px; border-radius:999px; background:#fff; color:#000; font-size:12.5px; font-weight:700; text-decoration:none; }
+#lcFlow .nb .go:hover, html.l2ui #lcCard .nb .go:hover { background:var(--c, #fff); }
+#lcFlow .fc.off { opacity:.5; background:transparent; border-style:dashed; }
+#lcFlow .fc.off .fh b { color:#8A8A8A; }
+#lcFlow .fc.off .n { border-style:dashed; color:#6E6E73; }
+#lcFlow .fc.off .fb { padding:0 12px 11px 46px; color:var(--l2-ink3); font-size:12.5px; }
