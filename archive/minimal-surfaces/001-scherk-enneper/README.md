@@ -1,9 +1,10 @@
 # 001 · Scherk–Enneper
 
-- **分类**：B · 单周期 → Enneper 端
+- **分类**：B · 单周期 → 周期 Enneper 端
 - **用途标签**：立面 · 结构 · 可打印（暂定）
 - **来源**：Matthias Weber，Minimal Surface Repository → Singly Periodic → Scherk-Enneper
   （minimalsurfaces.blog/home/repository/singly-periodic/scherk-enneper/）
+- **参考图**：`reference/原图-1.png`、`reference/原图-2.png`、`reference/名称.png`、`reference/原图-3.png`（你发来的截图；原图-3 对应预设「6 端 · 长翼」：k = 3, a = 0.99, rmax = 4.5，侧视）
 - **原始文件**：`source/Enneper-Scherk.nb`（Mathematica 10.3）、`source/Enneper-Scherk.cdf`（Mathematica 11.2）
 
 ## 构造
