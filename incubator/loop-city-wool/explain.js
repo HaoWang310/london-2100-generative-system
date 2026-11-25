@@ -50,6 +50,7 @@
   var bp = function (k) { return typeof BD !== 'undefined' ? BD.p[k] : undefined; };
   var m28 = function (v) { return f(v * 28) + ' m'; };
   var notYet = T('not worked out yet', '尚未计算');
+  var FLW = function () { return typeof FLOOD !== 'undefined' ? FLOOD : null; };    // (25 Nov 2026) the flood corridors, when the page has them
 
   // ---------------------------------------------------------------- the sixteen steps (and the way out, 17)
   // each: title, what it did (with the numbers), why, settings [label, value, slider id], results [value, label], legend rows to show
@@ -78,9 +79,12 @@
         res: n.roads && Object.keys(n.roads).length ? [[f(sum(n.roads, 'M'), 1), T('km motorway', 'km 高速')], [f(sum(n.roads, 'A'), 1), T('km A roads', 'km A 级')], [f(sum(n.roads, 'B'), 1), T('km B roads', 'km B 级')]] : [], leg: 4 };
       case 5: return { t: T('Roads and towns are lines the wool cannot cross', '路和城镇是穿不过的线'),
         did: T('Each cell cut along the roads and round the towns, the corners eased; pieces under the minimum are not woven.', '沿道路和城镇把每个单元切开，转角做圆；小于下限的碎块不编织。'),
-        why: T('The wool is woven inside each piece only; it never runs across a road that is there.', '毛线只在每一块里面编，不能跨过现有的路。'),
-        prm: [[T('Road cut, width', '道路刀宽'), (2 * (k5.HALF_ROAD || 20)) + ' m'], [T('Corners eased by', '转角圆角'), (k5.EASE || 85) + ' m'], [T('Smallest piece woven', '最小可编织块'), ((k5.MIN_PRIM || 3e6) / 1e6) + ' km²']],
-        res: DATA.primary.length ? [[DATA.primary.length, T('primary cells', '个一级单元')], [f(DATA.primary.reduce(function (s, p) { return s + p.km2; }, 0), 1), 'km²'], [DATA.small.length, T('small pieces left', '块小碎块')]] : [], leg: 4 };
+        why: T('The wool is woven inside each piece only; it never runs across a road that is there.', '毛线只在每一块里面编，不能跨过现有的路。')
+          + (FLW() ? T(' The flood corridors (blue) are kept for water: the wool may cross them but does not gather in them, and no main road runs along them.', ' 洪泛走廊（蓝色）留给水：毛线可以穿过，但不在里面聚集，主路也不沿着它走。') : ''),
+        prm: [[T('Road cut, width', '道路刀宽'), (2 * (k5.HALF_ROAD || 20)) + ' m'], [T('Corners eased by', '转角圆角'), (k5.EASE || 85) + ' m'], [T('Smallest piece woven', '最小可编织块'), ((k5.MIN_PRIM || 3e6) / 1e6) + ' km²']]
+          .concat(FLW() ? [[T('Flood corridor: medium and high risk in one piece of at least', '洪泛走廊：中、高风险连成一片，至少'), (window.CORR_HA_ || 5) + ' ha']] : []),
+        res: DATA.primary.length ? [[DATA.primary.length, T('primary cells', '个一级单元')], [f(DATA.primary.reduce(function (s, p) { return s + p.km2; }, 0), 1), 'km²'], [DATA.small.length, T('small pieces left', '块小碎块')]]
+          .concat(FLW() ? [[FLW().pieces, T('flood corridors', '片洪泛走廊')], [f(FLW().km2, 1) + ' km²', T('in flood corridors', '在洪泛走廊里')]] : []) : [], leg: 5 };
       case 6: { var sh = soil(); return { t: T('Soil is not all the same', '土壤有好坏'),
         did: T('The agricultural land classification under the primary cells, on a 50 m grid.', '把农业用地分级（ALC，50 m 网格）叠到一级单元下。'),
         why: T('The best farmland is found first, so the next step can keep it.', '先认出最好的耕地，下一步才能把它留下。'),
@@ -92,7 +96,7 @@
         prm: [[T('Kept for farming', '保留为耕地'), T('Grade 1–2', '一、二级')], [T('Edges smoothed by', '边界平滑半径'), (k5.SMOOTH || 160) + ' m'], [T('Smallest soil cell', '最小土壤单元'), ((k5.MIN_ZONE || 4e5) / 1e4) + ' ha'], [T('Bits under this join a neighbour', '小于此的碎块并入相邻'), ((k5.MIN_PIECE || 6e5) / 1e4) + ' ha']],
         res: n.zones && Object.keys(n.zones).length ? [[f(sum(n.zones, 'farm'), 0), T('km² farmland', 'km² 耕地')], [f(sum(n.zones, 'build'), 0), T('km² to build on', 'km² 建设用地')], [sum(n.zones, 'n'), T('soil cells', '个土壤单元')]] : [], leg: 2 };
       case 8: { var a = anchorsN(); return { t: T('New roads start from the junctions there are', '新路从现有路口接出去'),
-        did: T('An anchor where each existing road crosses a primary cell’s edge, and more between them at the spacing.', '在现有道路与一级单元边界相交处放锚点，锚点之间再按间距补上。'),
+        did: T('An anchor where each existing road crosses a primary cell’s edge, and more between them at the spacing', '在现有道路与一级单元边界相交处放锚点，锚点之间再按间距补上') + (FLW() ? T(', none in a flood corridor.', '，洪泛走廊里不放。') : T('.', '。')),
         why: T('The anchors fix where roads come in and out, and how dense the net will be.', '锚点决定路从哪里进出，也决定网有多密。'),
         prm: [[T('Spacing', '锚点间距'), f(P.spacing) + ' m', 'spacing'], [T('Within 3 km of the station', '车站 3 km 内'), '× ' + f(P.nearF, 2), 'nearF'], [T('On Grade 1–2 soil', '一、二级农地上'), '× ' + f(P.soilF, 2), 'soilF'], [T('Road anchors at least', '路口锚点间至少'), (k5.APART || 600) + ' m']],
         res: [[a.all, T('anchors', '个锚点')], [a.road, T('on the roads', '个在路口')], [a.between, T('between', '个按间距')]], leg: 3 }; }
@@ -140,13 +144,14 @@
         prm: [[T('Merge blocks under', '合并小于此的街区'), bp('small') ? bp('small') + ' ha' : T('off', '关'), 'bd_small'], [T('A merged parcel never over', '合并后不超过'), bp('smallMax') + ' ha', 'bd_smallMax']],
         res: R() ? [[N()['small blocks merged (pairs)'] || 0, T('pairs merged', '对合并')], [N().blocks, T('parcels', '个地块')]] : [], leg: 3 };
       case 25: { var r = R(), u = r && r.useN, km = r && r.useKm; return { t: T('What each parcel is for', '每块地的用途'),
-        did: (r && r.useFrom === 'growth') ? T('From the growth simulation: urban where over half is built, farming where over half is farmed, a park where the parcel is small.', '依据增长模拟：过半建成的是城市，过半耕种的是农业，小地块做公园。') : T('From the soil: farming where enough of the parcel is good farm soil, urban otherwise, a park where it is small.', '依据土壤：良田占比够的是农业，其余是城市，小地块做公园。'),
+        did: ((r && r.useFrom === 'growth') ? T('From the growth simulation: urban where over half is built, farming where over half is farmed, a park where the parcel is small.', '依据增长模拟：过半建成的是城市，过半耕种的是农业，小地块做公园。') : T('From the soil: farming where enough of the parcel is good farm soil, urban otherwise, a park where it is small.', '依据土壤：良田占比够的是农业，其余是城市，小地块做公园。')) + (FLW() ? T(' A parcel more than half in a flood corridor is blue-green: wetland, flood storage, wet farming.', ' 一半以上在洪泛走廊里的地块是蓝绿：湿地、蓄洪、湿地农业。') : ''),
         why: T('The wool gives the roads; the growth simulation gives what the land between them becomes.', '毛线给出路，增长模拟给出路之间的土地做什么。'),
         prm: [[T('A park is a parcel under', '小于此的地块是公园'), bp('park') + ' ha', 'bd_park'], [T('Farming when good soil is over', '良田超过此比例为农业'), bp('farm') + ' %', 'bd_farm']],
-        res: u ? [[u[1] || 0, T('urban', '块城市') + ' · ' + f(km[1] || 0, 0) + ' km²'], [u[2] || 0, T('farming', '块农业') + ' · ' + f(km[2] || 0, 0) + ' km²'], [(u[3] || 0), T('parks', '块公园')]] : [], leg: 4 }; }
+        res: u ? [[u[1] || 0, T('urban', '块城市') + ' · ' + f(km[1] || 0, 0) + ' km²'], [u[2] || 0, T('farming', '块农业') + ' · ' + f(km[2] || 0, 0) + ' km²'], [(u[3] || 0), T('parks', '块公园')]]
+          .concat(u[6] ? [[u[6], T('blue-green', '块蓝绿') + ' · ' + f(km[6] || 0, 1) + ' km²']] : []) : [], leg: 5 }; }
       case 26: { var h = R() && R().hier, o2 = h && h.out['60'], o3 = h && h.out['48']; return { t: T('The roads given their class', '道路分级'),
         did: T('Four classes at true widths. The cell edge is the boundary highway; a whole existing road is raised before a new road is made.', '分成四级，按真实宽度。单元边界是边界高速；先把整条现有道路提升，再新建道路。'),
-        why: T('Every place should be within reach of a main road, without two main roads running side by side.', '每块地都要离主路够近，又不能两条主路并排走。'),
+        why: T('Every place should be within reach of a main road, without two main roads running side by side.', '每块地都要离主路够近，又不能两条主路并排走。') + (FLW() ? T(' A main road may cross a flood corridor, never run along it for more than 200 m.', ' 主路可以跨过洪泛走廊，但不沿着它走超过 200 m。') : ''),
         prm: [[T('No place further from a primary road than', '离一级道路不超过'), f(bp('r2'), 2) + ' km', 'bd_r2'], [T('No place further from an A road than', '离 A 级道路不超过'), f(bp('r3'), 2) + ' km', 'bd_r3'], [T('Existing roads first', '现有道路优先'), bp('exfirst') ? T('yes', '是') : T('no', '否'), 'bd_exfirst']],
         res: o2 ? [[o2['new roads'], T('new primary roads', '条新一级道路')], [o3 ? o3['new roads'] : 0, T('new A roads', '条新 A 级道路')], [o2.raised.length + (o3 ? o3.raised.length : 0), T('existing roads raised whole', '条现有道路整条提升')], [o2['land within reach %'] + ' %', T('of the land near a primary road', '用地在一级路覆盖内')]] : [], leg: 4 }; }
       case 27: return { t: T('Take the parcels on to the tensor field', '选出地块，交给张量场'),

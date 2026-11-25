@@ -19,12 +19,12 @@ test('the wool page no longer carries the site data in it', () => {
 });
 
 test('SITE.v is the fingerprint of the files in site/', () => {
-  const files = ['site/alc.png', 'site/vectors.js', ...readdirSync(join(DIR, 'site/ground')).map(f => 'site/ground/' + f)].sort();
+  const files = ['site/alc.png', 'site/flood.png', 'site/vectors.js', ...readdirSync(join(DIR, 'site/ground')).map(f => 'site/ground/' + f)].sort();
   const h = createHash('sha256');
   for (const f of files) h.update(Buffer.concat([Buffer.from(f), Buffer.from([0]), createHash('sha256').update(readFileSync(join(DIR, f))).digest()]));
   assert.equal(SITE.v, h.digest('hex').slice(0, 12), 'site/ changed: set SITE.v in index.html to the new fingerprint');
   for (const name of SITE.ground) assert.ok(existsSync(join(DIR, 'site/ground', name + '.png')), `ground tile ${name} is missing`);
-  assert.equal(SITE.ground.length, files.length - 2, 'site/ground has tiles SITE.ground does not list');
+  assert.equal(SITE.ground.length, files.length - 3, 'site/ground has tiles SITE.ground does not list');
 });
 
 // the same hash the page takes (fnv-1a over the text's UTF-16 code units, base 36)
