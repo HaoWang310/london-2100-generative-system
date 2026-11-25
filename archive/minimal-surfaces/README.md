@@ -29,7 +29,7 @@ archive/minimal-surfaces/
 ├── 001-scherk-enneper/           B · 单周期 · 周期 Enneper 端
 │   ├── README.md                 公式、参数、验证记录
 │   ├── preview.jpg               app 渲染的预览图
-│   ├── reference/                你给的原图截图（原图-1、原图-2、名称）
+│   ├── reference/                你给的原图截图（原图-1、原图-2、原图-3、名称）
 │   └── source/                   原作者 Mathematica 文件（.nb / .cdf）
 └── 002-helicoidal-karcher-scherk/ B · 单周期 · 螺旋面端
     ├── README.md
