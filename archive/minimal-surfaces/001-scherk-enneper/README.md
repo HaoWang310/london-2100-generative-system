@@ -1,6 +1,6 @@
 # 001 · Scherk–Enneper
 
-- **分类**：B · 单周期 → Enneper 端
+- **分类**：B · 单周期 → 周期 Enneper 端
 - **用途标签**：立面 · 结构 · 可打印（暂定）
 - **来源**：Matthias Weber，Minimal Surface Repository → Singly Periodic → Scherk-Enneper
   （minimalsurfaces.blog/home/repository/singly-periodic/scherk-enneper/）
