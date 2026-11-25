@@ -43,6 +43,7 @@
   var anchorsN = function () { var ids = new Map(); (S.per || []).forEach(function (l) { l.forEach(function (q) { ids.set(q.id, q.kind); }); });
     var all = Array.from(ids.values()); return { all: ids.size, road: all.filter(function (k) { return k === 'road' || k === 'turn'; }).length,
       between: all.filter(function (k) { return k === 'between'; }).length, mine: all.filter(function (k) { return k === 'manual'; }).length }; };
+  var gatesN = function () { return (S.gates || []).reduce(function (s, G) { return s + (G ? G.length : 0); }, 0); };
   var threadsN = function () { return (S.jobs || []).reduce(function (s, j) { return s + (j ? j.T : 0); }, 0); };
   var R = function () { return typeof BD !== 'undefined' ? BD.res : null; };
   var N = function () { var r = R(); return (r && r.numbers) || {}; };
@@ -101,10 +102,11 @@
         prm: [[T('Spacing', '锚点间距'), f(P.spacing) + ' m', 'spacing'], [T('Within 3 km of the station', '车站 3 km 内'), '× ' + f(P.nearF, 2), 'nearF'], [T('On Grade 1–2 soil', '一、二级农地上'), '× ' + f(P.soilF, 2), 'soilF'], [T('Road anchors at least', '路口锚点间至少'), (k5.APART || 600) + ' m']],
         res: [[a.all, T('anchors', '个锚点')], [a.road, T('on the roads', '个在路口')], [a.between, T('between', '个按间距')]], leg: 3 }; }
       case 9: return { t: T('Anchors tied to one another', '锚点两两相连'),
-        did: T('Inside each primary cell every anchor is tied to anchors ', '每个一级单元里，每个锚点连向') + (OPP ? T('across the cell', '边界对面的锚点') : T('round the edge, every second one', '沿边界隔一个的锚点')) + T('; each thread has 80 segments.', '；每根线分 80 段。'),
+        did: T('Inside each primary cell every anchor is tied to anchors ', '每个一级单元里，每个锚点连向') + (OPP ? T('across the cell', '边界对面的锚点') : T('round the edge, every second one', '沿边界隔一个的锚点')) + T('; each thread has 80 segments.', '；每根线分 80 段。')
+          + (gatesN() ? T(' Where a cell has a station, each anchor is also tied to the gateway it faces: the station, or a point just outside the station’s town (white).', ' 有车站的单元里，每个锚点还连向它朝向的门户：车站，或车站所在城镇边缘外的一个点（白色）。') : ''),
         why: T('Frei Otto’s wet wool: first every possible straight link, then let the forces pick the routes.', 'Frei Otto 的湿毛线：先给出所有可能的直线连接，再让力学挑出路线。'),
         prm: [[T('Rule', '连线规则'), OPP ? T('across the cell', '连向对面') : T('every second', '隔一个连')], [T('Ties per anchor', '每个锚点的连线'), (bp('oppw') || 2), 'bd_oppw'], [T('Segments per thread', '每根线'), T('80', '80 段')]],
-        res: [[threadsN(), T('threads', '根毛线')], [(S.jobs || []).filter(Boolean).length, T('primary cells woven', '个一级单元')]], leg: 2 };
+        res: [[threadsN(), T('threads', '根毛线')], [(S.jobs || []).filter(Boolean).length, T('primary cells woven', '个一级单元')]].concat(gatesN() ? [[gatesN(), T('gateways', '个门户')]] : []), leg: 4 };
       case 10: { var dt = S.detour, rg = S.ring && S.ring.over === P.over && S.ring.angle === P.angle ? S.ring : null, v1 = /[#&]v1(?![\w])/.test(location.hash);
         return { t: T('The wet wool draws together', '湿毛线聚成束'),
         did: v1 ? T('The threads pull towards each other (magnet) and resist bending (angle), live, until they settle in bundles.', '毛线之间互相吸引（磁力），又抵抗弯曲（角度），实时松弛，直到并成一束束。')
