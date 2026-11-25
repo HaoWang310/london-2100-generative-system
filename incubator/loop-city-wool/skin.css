@@ -173,11 +173,11 @@ html.l2ui #lcChap { position:absolute; left:50%; top:16px; transform:translateX(
   border-radius:16px; background:rgba(14,14,16,.82); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.1); }
 html.l2ui #lcChap .ch { display:flex; flex-direction:column; gap:6px; }
 html.l2ui #lcChap .cl { font-size:11.5px; letter-spacing:.06em; color:var(--l2-ink3); white-space:nowrap; }
-html.l2ui #lcChap .ch.on .cl { color:#5FF2FF; font-weight:600; }
+html.l2ui #lcChap .ch.on .cl { color:var(--c,#5FF2FF); font-weight:600; }
 html.l2ui #lcChap .tk { display:flex; gap:4px; }
 html.l2ui #lcChap .tk i { display:block; width:18px; height:5px; border-radius:3px; background:#2B2B30; cursor:pointer; transition:width .25s, background .25s; }
-html.l2ui #lcChap .tk i.d { background:#3D7F88; }
-html.l2ui #lcChap .tk i.c { width:32px; background:#5FF2FF; box-shadow:0 0 10px rgba(95,242,255,.8); }
+html.l2ui #lcChap .tk i.d { background:var(--c,#3D7F88); opacity:.55; }
+html.l2ui #lcChap .tk i.c { width:32px; background:var(--c,#5FF2FF); box-shadow:0 0 10px var(--c,#5FF2FF); }
 html.l2ui #lcChap .tk i:hover { background:#8AEFFA; }
 html.l2ui #lcNav { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:6; display:flex; gap:8px; align-items:center; max-width:calc(100% - 24px);
   padding:6px; border-radius:999px; background:rgba(14,14,16,.88); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.12); }
@@ -188,3 +188,89 @@ html.l2ui #lcNav .slot:empty { display:none; }
 html.l2ui #lcNav #lcAuto { position:static; transform:none; box-shadow:none; border:0; background:transparent; padding:0 4px; max-width:none; -webkit-backdrop-filter:none; backdrop-filter:none; }
 html.l2ui #lcNav #lcAuto .w, html.l2ui #lcNav #lcAuto a { display:none; }
 html.l2phone #lcChap, html.l2phone #lcNav { display:none !important; }
+
+/* (25 Nov 2026) the flow: the left panel is the method, step by step (flow.js). Black and white; colour marks the chapter only */
+html.lcflow.l2ui #lcCard, html.lcflow.l2ui #lcNav, html.lcflow.l2ui #left .steps, html.lcflow.l2ui #left h2[data-lc="steps"], html.lcflow.l2ui #left #hint { display:none !important; }
+html.l2ui #lcFlow { margin:0 0 8px; }
+#lcFlow .fhd { display:flex; justify-content:space-between; align-items:center; margin:2px 0 10px; }
+#lcFlow .fhd h2 { margin:0; padding:0; border:0; font-size:15px; color:#fff; font-weight:700; letter-spacing:0; }
+#lcFlow button { font:inherit; cursor:pointer; }
+#lcFlow .fhd .all { border:1px solid var(--l2-bd); background:#000; color:#fff; border-radius:999px; padding:6px 13px; font-size:12.5px; }
+#lcFlow .run { border:1px solid var(--l2-bd); border-radius:18px; padding:12px; background:#0B0B0C; }
+#lcFlow .b3 { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:8px; }
+#lcFlow .b2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+#lcFlow .run button { height:40px; border-radius:999px; border:1px solid var(--l2-bd); background:#000; color:#fff; font-size:13px; font-weight:600; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#lcFlow .run button.pri { background:#fff; border-color:#fff; color:#000; }
+#lcFlow .run button.on { border-color:#fff; }
+#lcFlow .run button:disabled { opacity:.35; cursor:default; }
+#lcFlow .sp { display:flex; align-items:center; gap:10px; margin:10px 2px 8px; font-size:13px; color:#fff; }
+#lcFlow .sp label { flex:none; } #lcFlow .sp input { flex:1; margin:0; } #lcFlow .sp output { width:34px; text-align:right; color:var(--l2-ink2); font-size:12.5px; }
+#lcFlow .stt { font-size:12.5px; color:var(--l2-ink2); margin:12px 2px 8px; line-height:1.4; }
+#lcFlow .sg, #lcFS .sg { display:flex; gap:3px; align-items:center; }
+#lcFlow .sg i, #lcFS .sg i { flex:1; height:4px; border-radius:2px; background:#26262A; cursor:pointer; transition:background .3s, box-shadow .3s; }
+#lcFlow .sg s, #lcFS .sg s { width:6px; flex:none; }
+#lcFlow .chh { font-size:12px; letter-spacing:.06em; font-weight:600; margin:16px 4px 8px; }
+#lcFlow .fc { border:1px solid #1F1F22; border-radius:14px; background:#0B0B0C; margin:6px 0; transition:border-color .3s; }
+#lcFlow .fc .fh { width:100%; display:flex; align-items:center; gap:10px; padding:11px 12px; border:0; background:transparent; color:#EDEDED; text-align:left; font-size:13.5px; }
+#lcFlow .fc .fh b { flex:1; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#lcFlow .fc .fl { font-size:12px; color:var(--l2-ink3); white-space:nowrap; max-width:46%; overflow:hidden; text-overflow:ellipsis; }
+#lcFlow .fc .n { width:24px; height:24px; flex:none; border-radius:50%; border:1px solid #3A3A3E; display:flex; align-items:center; justify-content:center; font-size:11px; color:#9A9A9A; }
+#lcFlow .fc.done .n { border-color:var(--c); color:var(--c); background:color-mix(in srgb, var(--c) 12%, transparent); }
+#lcFlow .fc.done .fh b { color:#C8C8C8; }
+#lcFlow .fc.todo .fh b { color:#8A8A8A; }
+#lcFlow .fc.cur { border-color:color-mix(in srgb, var(--c) 70%, transparent); box-shadow:inset 3px 0 0 var(--c); background:#101012; }
+#lcFlow .fc.cur .n { background:var(--c); border:0; color:#000; font-weight:700; }
+#lcFlow .fb { padding:0 14px 14px; font-size:13px; color:#C8C8C8; line-height:1.6; }
+#lcFlow .fb h4 { margin:2px 0 4px; font-size:14px; color:#fff; font-weight:700; line-height:1.4; }
+#lcFlow .fb p { margin:4px 0; } #lcFlow .fb .l { font-size:11.5px; color:var(--l2-ink3); margin-top:8px; font-weight:600; }
+#lcFlow .pg { height:3px; border-radius:2px; background:#26262A; overflow:hidden; margin:0 0 10px; } #lcFlow .pg i { display:block; height:100%; background:var(--c); transition:width .15s linear; }
+#lcFlow .prm { margin-top:10px; border-top:1px solid #1C1C1F; }
+#lcFlow .prm > div { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid #1C1C1F; font-size:12.5px; }
+#lcFlow .prm span { flex:1; color:#DADADA; } #lcFlow .prm b { color:#fff; font-weight:600; } #lcFlow .prm i { font-style:normal; color:var(--l2-ink3); font-size:11.5px; }
+#lcFlow .prm .set { cursor:pointer; } #lcFlow .prm .set:hover i { color:#fff; }
+#lcFlow .res { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px; }
+#lcFlow .res div { background:#161618; border-radius:10px; padding:8px 9px; } #lcFlow .res b { display:block; font-size:18px; color:#fff; line-height:1.15; } #lcFlow .res span { font-size:11px; color:var(--l2-ink3); }
+#lcFlow .lg { margin-top:10px; font-size:12px; color:#C8C8C8; } #lcFlow .lg > div { display:flex; align-items:center; gap:8px; margin:4px 0; }
+#lcFlow .lg .sw { flex:none; width:22px; display:inline-block; border-radius:3px; }
+#lcFlow .ft { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; font-size:11px; color:#6E6E73; }
+#lcFlow .ft .nx { flex:none; max-width:66%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:0; border-radius:999px; padding:8px 14px; background:#1C1C1F; color:#fff; font-size:12.5px; font-weight:600; }
+#lcFlow .ft .nx:hover, #lcFlow .ft .nx.lit { background:var(--c); color:#000; }
+#lcFlow .ft .nx.lit { box-shadow:0 0 18px color-mix(in srgb, var(--c) 60%, transparent); animation:lcNx 1.6s ease-in-out infinite; }
+@keyframes lcNx { 50% { box-shadow:0 0 4px color-mix(in srgb, var(--c) 30%, transparent); } }
+/* the map's legend (steps 4 and 6), the soil labels */
+#lcMapLeg { position:absolute; right:16px; top:84px; z-index:6; width:300px; padding:14px 16px 12px; border-radius:16px; background:rgba(12,12,14,.9); border:1px solid rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); color:#fff; font:12.5px/1.4 'DM Sans','Noto Sans CJK SC',system-ui,sans-serif; pointer-events:none; }
+#lcMapLeg[hidden] { display:none; }
+#lcMapLeg .mh { font-weight:700; font-size:14px; margin-bottom:8px; } #lcMapLeg .mh span { display:block; font-weight:400; font-size:11px; color:#8A8A8A; margin-top:2px; }
+#lcMapLeg .mr { display:flex; align-items:center; gap:10px; margin:5px 0; color:#E5E5E5; } #lcMapLeg .mr .sw { flex:none; width:24px; display:inline-block; border-radius:3px; }
+#lcMapLeg .mn { margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.1); color:#C8C8C8; font-size:12px; }
+#lcCallout { position:absolute; inset:0; pointer-events:none; z-index:6; font:12.5px/1.4 'DM Sans','Noto Sans CJK SC',system-ui,sans-serif; color:#fff; }
+#lcCallout .co { position:absolute; width:0; height:0; }
+#lcCallout .co i { position:absolute; left:-6px; top:-6px; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-sizing:border-box; }
+#lcCallout .co span { position:absolute; left:28px; top:-44px; white-space:nowrap; padding:6px 12px; border-radius:999px; background:rgba(8,8,10,.92); border:1px solid rgba(255,255,255,.6); font-weight:700; font-size:13px; }
+#lcCallout .co span::before { content:""; position:absolute; left:-24px; top:30px; width:30px; height:1.5px; background:#fff; transform:rotate(-45deg); transform-origin:left; }
+/* full screen: the map alone, the step bottom left, a bar */
+html.lcfull #left, html.lcfull #right, html.lcfull #lkZoom, html.lcfull #lcSampleNote { display:none !important; }
+#lcFS { position:absolute; inset:0; pointer-events:none; z-index:7; font-family:'DM Sans','Noto Sans CJK SC',system-ui,sans-serif; }
+#lcFS[hidden] { display:none; }
+#lcFS::before { content:""; position:absolute; left:0; right:0; bottom:0; height:300px; background:linear-gradient(transparent, rgba(0,0,0,.85) 60%); }
+#lcFS .bd { position:absolute; left:44px; bottom:96px; display:flex; gap:22px; align-items:flex-end; max-width:min(900px, calc(100% - 88px)); }
+#lcFS .nb { font-size:84px; font-weight:700; line-height:.9; font-variant-numeric:tabular-nums; }
+#lcFS .cl { font-size:13px; color:rgba(255,255,255,.6); margin-bottom:4px; } #lcFS .tt { font-size:34px; font-weight:700; color:#fff; line-height:1.15; }
+#lcFS .ds { font-size:18px; color:rgba(235,235,235,.9); margin-top:6px; line-height:1.4; }
+#lcFS .rp { display:inline-block; margin-top:10px; padding:6px 14px; border-radius:999px; border:1.5px solid; font-size:14px; font-weight:600; }
+#lcFS .br { position:absolute; left:44px; right:44px; bottom:24px; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:rgba(22,22,24,.92);
+  border:1px solid rgba(255,255,255,.14); pointer-events:auto; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+#lcFS .br button { flex:none; height:36px; min-width:36px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#EEE; font:600 13px 'DM Sans','Noto Sans CJK SC',system-ui,sans-serif; cursor:pointer; }
+#lcFS .br button.pp { background:#F2F2F2; color:#000; border:0; } #lcFS .br button.on { border-color:#fff; background:rgba(255,255,255,.1); }
+#lcFS .br .sg { flex:1; margin:0 10px; }
+html.lcfull #lcChap { top:20px; }
+html.l2phone #lcFS .bd { left:16px; bottom:84px; gap:12px; } html.l2phone #lcFS .nb { font-size:48px; } html.l2phone #lcFS .tt { font-size:22px; } html.l2phone #lcFS .ds { font-size:14px; }
+html.l2phone #lcFS .br { left:10px; right:10px; bottom:12px; gap:4px; } html.l2phone #lcFS .br .sg { display:none; }
+html.l2phone #lcMapLeg { right:10px; top:auto; bottom:10px; width:230px; font-size:11.5px; padding:10px 12px; }
+/* the right panel's playback is gone: the flow plays; the flow's controls stay in view as the cards scroll */
+html.lcflow #lkBody h2.l2-first:has(+ .lk-play), html.lcflow #lkBody .lk-play, html.lcflow #lkStep { display:none !important; }
+html.lcflow #lkStep + h2 { margin-top:0; padding-top:0; border-top:0; }
+html.l2ui #lcFlow .run { position:sticky; top:var(--hh,0px); z-index:3; box-shadow:0 10px 18px -6px #000; }
+html.l2phone #lcMapLeg { top:calc(var(--l2ph-top, 0px) + 70px); bottom:auto; width:210px; }
+html.l2phone #lcCallout .co span { font-size:12px; padding:5px 10px; }
