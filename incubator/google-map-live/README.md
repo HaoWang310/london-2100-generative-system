@@ -2,6 +2,14 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.44.0: five planning layers join the analysis layers, and every analysis layer now ends on the same 70 km circle.
+- New, all off until switched on (from `incubator/loop-city-real-map` v13): **Height colors + hill shading** (open height tiles, about 30 m; top height, two ramps, shading, a key, click for a height), **London Green Belt**, **AONB · National Landscapes**, **Rail by service** (National Rail, Underground, Overground, Elizabeth line, DLR, trams; each line's own colour, one colour in three shades, or National Rail by line speed) and **High-speed rail · HS1, HS2**. The list has five headings: terrain and height, water, planning boundaries, transport, study area. Stations are left out.
+- Range: the rail lines and AONB are cut to the study circle (`scripts/build_planning_layers.py`: lines cut where they cross it, polygons clipped; no cut point more than 0.7 m from the true circle); the Green Belt lies wholly inside it; HS1 and HS2 are kept whole on purpose (HS2 to Birmingham). The height colours are painted in a Worker (`scripts/relief_worker.js`) and are transparent outside the circle.
+- The EA LiDAR picture is cut to the circle too (it was the whole 143 km square), in its Worker. The red outline of the circle has 720 sides instead of 180 (it was up to 11 m inside the true circle).
+- Order on the map: height colours under water and roads; Green Belt and AONB fills under the flood picture; their edges, rail and HS1/HS2 over the drainage network and under the 3D buildings. The basemap's own thin railways stay visible underneath.
+- Position checked against the basemap on the live real-map page: rail and HS1 lie on the OpenStreetMap railways (median 0.5–0.9 m, at most 5 m); AONB edges match OpenStreetMap's (median 2–11 m, locally 50–150 m where the two sources draw the edge differently); HS2 has nothing in the basemap to compare with.
+- Checked here with a stand-in for the map library (the page starts, the switches work, the layer order) and with the two Workers on test tiles; **not yet seen on the live map**.
+
 Version 3.43.7: one interface with the other apps. The panels use black, white and white at lower opacity only, and DM Sans, read from `shared/ui/tokens.css` of the main site (`styles/skin.css`, made from `styles/app.css` by `tools/ui/mono_skin.py`, and `shared/ui/studio.css` for the display panel). The pressed tile, the chosen language and the main buttons are solid white. The map, its colour themes, the layer keys and the legends keep their colours; errors show in red. No script changed apart from the version number. `#noskin` in the address shows the interface as it was.
 
 Version 3.43.6: the first time on a device (no language chosen yet) the page follows the device's system language — any Chinese → 中文, every other → English; a choice made with the switch (or passed by the main app) still wins.

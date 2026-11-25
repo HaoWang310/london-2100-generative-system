@@ -24,6 +24,10 @@ for(const [source,dependency] of [
   ['scripts/app.js','terrain_local.js'],
   ['scripts/app.js','osm_basemap_themes.js'],
   ['scripts/app.js','tensor_site_ui.js'],
+  ['scripts/app.js','planning_layers.js'],
+  ['scripts/planning_layers.js','relief_local.js'],
+  ['scripts/relief_local.js','relief_worker.js'],
+  ['scripts/terrain_local.js','terrain_worker.js'],
   ['scripts/ui_language.js','ui_chinese_dictionary.js'],
   ['scripts/ui_language.js','ui_english_dictionary.js'],
   ['scripts/tensor_site_ui.js','tensor_studio_site.js']]){

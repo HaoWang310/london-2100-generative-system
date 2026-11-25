@@ -1,11 +1,12 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.43.7-english';
-import {createPlaceSearch} from './place_search.js?v=3.43.7-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.43.7-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.43.7-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.43.7-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.43.7-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.44.0-english';
+import {createPlaceSearch} from './place_search.js?v=3.44.0-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.44.0-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.44.0-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.44.0-english';
+import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.44.0-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.44.0-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -26,7 +27,7 @@ try {
   }
 }
 
-const APP_VERSION='3.43.7-english';
+const APP_VERSION='3.44.0-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -108,6 +109,7 @@ let osmMarker=null;
 let googleLoading=false;
 let currentProvider='osm';
 let terrainEnabled=false;
+let planning=null;   // v3.44.0: scripts/planning_layers.js, made when the map has loaded
 let terrainOpacity=0.42;
 
 let googleTerrainGround=null;
@@ -326,6 +328,8 @@ function setBasemapTheme(mode){
       osmMap.setPaintProperty(CITY_BUILDINGS_LAYER,'fill-extrusion-color',building);
     if(osmMap.getLayer(CITY_BUILDINGS_BACKGROUND_FILL))
       osmMap.setPaintProperty(CITY_BUILDINGS_BACKGROUND_FILL,'fill-color',building);
+    planning?.applyTheme();
+    syncRailKey();
   }
 }
 let searchMarker=null;
@@ -971,6 +975,9 @@ function keepDrainageAboveTerrain(){
 
   // Categories sit above terrain/contributing area; the blue network and labels
   // remain readable above the flood overview, regardless of load order.
+  // v3.44.0: the Green Belt and AONB fills go under the flood picture; their edges, rail and HS1/HS2 go over the
+  // drainage network and under the 3D buildings.
+  planning?.moveFills(firstSymbol);
   for(let row=0;row<FLOOD_GRID_SIZE;row++){
     for(let col=0;col<FLOOD_GRID_SIZE;col++){
       const ids=floodTileIds(row,col);
@@ -979,6 +986,7 @@ function keepDrainageAboveTerrain(){
   }
   if(osmMap.getLayer(FLOOD_DETAIL_LAYER))osmMap.moveLayer(FLOOD_DETAIL_LAYER,firstSymbol);
   if(osmMap.getLayer(NETWORK_LAYER))osmMap.moveLayer(NETWORK_LAYER,firstSymbol);
+  planning?.moveLines(firstSymbol);
   for(const id of [
     CITY_BUILDINGS_LAYER,CITY_BUILDINGS_BACKGROUND_FILL
   ]){
@@ -1313,7 +1321,7 @@ function ensureOsmFocus70(){
   if(!osmMap.getSource(sourceId)){
     osmMap.addSource(sourceId,{
       type:'geojson',
-      data:makeCircleGeoJson(FOCUS70_CENTER,FOCUS70_RADIUS_M)
+      data:makeCircleGeoJson(FOCUS70_CENTER,FOCUS70_RADIUS_M,720)   // 720 sides (was 180): within 0.7 m of the true circle, the polygon the planning layers were cut with
     });
   }
 
@@ -2061,7 +2069,8 @@ function initOSM(){
   const terrainLoader=createTerrainLocalLoader({
     imageUrl:new URL(assetUrl('assets/terrain/overview.webp'),location.href).href,
     bounds:DRAINAGE_3857,
-    tileSize:TERRAIN_TILE_SIZE
+    tileSize:TERRAIN_TILE_SIZE,
+    center:FOCUS70_CENTER,radius:FOCUS70_RADIUS_M   // v3.44.0: cut to the study circle, as flood and drainage are
   });
   maplibregl.addProtocol('ea-terrain-local',terrainLoader);
 
@@ -2230,9 +2239,10 @@ function initOSM(){
     initAtmosphere();
     initUrbanTrees();
     ensureOverviewLayers();
+    initPlanningLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.43.7-english')
+    import('./tensor_site_ui.js?v=3.44.0-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2247,7 +2257,8 @@ function initOSM(){
     $('view2D').disabled=false;$('view3D').disabled=false;
     $('streetVehicleToggle').disabled=false;
     $('placeSearchButton').disabled=false;
-    for(const id of ['terrainToggle','contourToggle','floodToggle','networkToggle','focus70Toggle','osmStructureToggle']){
+    for(const id of ['terrainToggle','contourToggle','floodToggle','networkToggle','focus70Toggle','osmStructureToggle',
+      'reliefToggle','greenBeltToggle','aonbToggle','railToggle','highSpeedToggle']){
       $(id).disabled=false;
     }
     syncOsmStructureVisibility();
@@ -2471,6 +2482,116 @@ $('resetApiStats').addEventListener('click',()=>{
 });
 
 renderApiStats();
+
+/* ---------- planning layers (v3.44.0): height colors, Green Belt, AONB, rail, HS1/HS2 ---------- */
+const PLANNING_STATUS={
+  relief:{el:'reliefStatus',loading:'Loading height tiles…',
+    loaded:'Visible · colored by height · cut to the 70 km circle',
+    error:'Height tiles failed to load; check the connection and retry'},
+  greenBelt:{el:'greenBeltStatus',loading:'Loading boundary data…',
+    loaded:'Visible · 5,065 km² · all inside the 70 km circle',
+    error:'Boundary data failed to load; refresh and retry'},
+  aonb:{el:'aonbStatus',loading:'Loading boundary data…',
+    loaded:'Visible · five landscapes · cut to the 70 km circle',
+    error:'Boundary data failed to load; refresh and retry'},
+  rail:{el:'railStatus',loading:'Loading rail lines…',
+    loaded:'Visible · cut to the 70 km circle · basemap railways stay underneath',
+    error:'Rail lines failed to load; refresh and retry'},
+  highSpeed:{el:'highSpeedStatus',loading:'Loading rail lines…',
+    loaded:'Visible · whole lines, also outside the 70 km circle',
+    error:'Rail lines failed to load; refresh and retry'}
+};
+function showPlanningStatus(group,status){
+  const entry=PLANNING_STATUS[group],el=entry&&$(entry.el);
+  if(!el)return;
+  const text=status==='off'?'Off':entry[status]||'';
+  if(el.textContent!==text)el.textContent=text;
+  el.className='layerStatus'+(status==='error'?' error':'');
+}
+function drawReliefKey(){
+  const ramp=RELIEF_RAMPS[$('reliefRamp').value]||RELIEF_RAMPS.classic,at=reliefStops(Number($('reliefTop').value));
+  $('reliefBar').style.background='linear-gradient(to right,'+ramp.map((c,i)=>c+' '+(i*5)+'% '+((i+1)*5)+'%').join(',')+')';
+  $('reliefTicks').replaceChildren(...[0,5,10,15,19].map(i=>{
+    const tick=document.createElement('span');tick.textContent=Math.round(at[i])+' m';return tick;
+  }));
+}
+function syncRailKey(){
+  const key=$('railNationalKey');
+  if(key)key.style.setProperty('--swatch',basemapTheme==='dark'?'#c9c9c9':'#1c1c1e');
+}
+let heightPopup=null;
+function initPlanningLayers(){
+  if(planning||!osmMap)return;
+  planning=createPlanningLayers({map:osmMap,maplibregl,assetUrl,center:FOCUS70_CENTER,radius:FOCUS70_RADIUS_M,
+    getTheme:()=>basemapTheme,onStatus:showPlanningStatus,reorder:keepDrainageAboveTerrain});
+  syncRailKey();
+  // The height under a click, while the height colors are on (not while a site boundary is being drawn).
+  osmMap.on('click',async event=>{
+    if(!planning.state.relief.on||currentProvider!=='osm'||siteUI?.busy||!planning.insideCircle(event.lngLat))return;
+    try{
+      const height=await planning.heightAt(event.lngLat);
+      if(!planning.state.relief.on)return;
+      heightPopup?.remove();
+      heightPopup=new maplibregl.Popup({closeButton:false,offset:8,className:'contour-elevation-popup'})
+        .setLngLat(event.lngLat).setText('Height '+(Math.round(height*10)/10)+' m').addTo(osmMap);
+    }catch(error){console.warn('Height not read',error);}
+  });
+}
+const percent=value=>Math.round(Number(value)*100)+'%';
+$('reliefToggle').addEventListener('change',e=>{
+  planning?.set('relief',{on:e.target.checked});
+  if(!e.target.checked){heightPopup?.remove();heightPopup=null;}
+});
+$('reliefOpacity').addEventListener('input',e=>{
+  $('reliefOpacityValue').textContent=percent(e.target.value);
+  planning?.set('relief',{opacity:Number(e.target.value)});
+});
+// The top height, the ramp and the shade are part of the tile address: new tiles are made when the slider is let go.
+$('reliefTop').addEventListener('input',e=>{$('reliefTopValue').textContent=e.target.value+' m';drawReliefKey();});
+$('reliefTop').addEventListener('change',e=>planning?.set('relief',{top:Number(e.target.value)}));
+$('reliefRamp').addEventListener('change',e=>{drawReliefKey();planning?.set('relief',{ramp:e.target.value});});
+$('reliefShade').addEventListener('input',e=>{$('reliefShadeValue').textContent=percent(e.target.value);});
+$('reliefShade').addEventListener('change',e=>planning?.set('relief',{shade:Number(e.target.value)}));
+drawReliefKey();
+
+for(const [group,id] of [['greenBelt','greenBelt'],['aonb','aonb']]){
+  $(id+'Toggle').addEventListener('change',e=>planning?.set(group,{on:e.target.checked}));
+  $(id+'Fill').addEventListener('input',e=>{
+    $(id+'FillValue').textContent=percent(e.target.value);
+    planning?.set(group,{fill:Number(e.target.value)});
+  });
+  $(id+'Width').addEventListener('input',e=>{
+    $(id+'WidthValue').textContent=percent(e.target.value);
+    planning?.set(group,{width:Number(e.target.value)});
+  });
+}
+
+$('railToggle').addEventListener('change',e=>planning?.set('rail',{on:e.target.checked}));
+for(const box of document.querySelectorAll('#railItem [data-rail]')){
+  box.addEventListener('change',()=>planning?.set('rail',{kinds:{[box.dataset.rail]:box.checked}}));
+}
+$('railMode').addEventListener('change',e=>{
+  $('railSpeedKey').hidden=e.target.value!=='speed';
+  $('railLegend').hidden=e.target.value==='shades';
+  planning?.set('rail',{mode:e.target.value});
+});
+$('railWidth').addEventListener('input',e=>{
+  $('railWidthValue').textContent=percent(e.target.value);
+  planning?.set('rail',{width:Number(e.target.value)});
+});
+$('railSpeedBar').style.background='linear-gradient(to right,'+SPEED_STOPS.map(([,c],i)=>c+' '+(i*20)+'%').join(',')+')';
+$('railSpeedTicks').replaceChildren(...SPEED_STOPS.map(([mph])=>{
+  const tick=document.createElement('span');tick.textContent=mph;return tick;
+}));
+
+$('highSpeedToggle').addEventListener('change',e=>planning?.set('highSpeed',{on:e.target.checked}));
+$('hs1Toggle').addEventListener('change',e=>planning?.set('highSpeed',{hs1:e.target.checked}));
+$('hs2Toggle').addEventListener('change',e=>planning?.set('highSpeed',{hs2:e.target.checked}));
+$('highSpeedColour').addEventListener('input',e=>{
+  for(const id of ['highSpeedKey','highSpeedTunnelKey'])$(id).style.setProperty('--swatch',e.target.value);
+  planning?.set('highSpeed',{colour:e.target.value});
+});
+
 
 $('terrainToggle').addEventListener('change',e=>{
   terrainEnabled=e.target.checked;
