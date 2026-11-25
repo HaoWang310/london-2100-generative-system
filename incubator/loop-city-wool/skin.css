@@ -140,3 +140,51 @@ html.l2ui .lk-zoom { position:absolute; left:16px; bottom:56px; z-index:4; displ
 html.l2ui .lk-zoom button { min-width:44px; height:44px; padding:0 12px; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font:inherit; font-size:15px; cursor:pointer; }
 html.l2ui .lk-zoom button:hover { border-color:var(--l2-bd2); }
 html.l2phone .lk-zoom { display:none; }
+
+/* ---- the explanation card, the chapters over the map, previous / next under it (25 Nov 2026, explain.js) */
+html.l2ui p.about, html.l2ui p.hint#hint { display:none; }
+html.l2ui:not(.l2phone) .l2-nav { display:none; }
+html.l2ui #lcCard { margin:2px 0 14px; padding:18px 18px 16px; border-radius:18px; background:#0B0B0D; border:1px solid var(--l2-bd); }
+html.l2ui #lcCard:empty { display:none; }
+html.l2ui #lcCard .k { display:flex; justify-content:space-between; gap:10px; font-size:12px; letter-spacing:.08em; color:#5FF2FF; font-weight:600; }
+html.l2ui #lcCard .k span { color:var(--l2-ink3); letter-spacing:.02em; font-weight:500; }
+html.l2ui #lcCard h3 { margin:8px 0 4px; font-size:20px; line-height:1.32; font-weight:700; color:#fff; letter-spacing:-.005em; }
+html.l2ui #lcCard .l { margin:14px 0 5px; font-size:11.5px; letter-spacing:.12em; color:var(--l2-ink4); font-weight:600; }
+html.l2ui #lcCard p { margin:0; font-size:13.5px; line-height:1.6; color:var(--l2-ink2); }
+html.l2ui #lcCard p.wait { color:var(--l2-ink3); }
+html.l2ui #lcCard .prm { display:flex; flex-direction:column; gap:6px; }
+html.l2ui #lcCard .prm > div { display:flex; align-items:baseline; gap:8px; padding:8px 11px; border-radius:11px; background:#141417; border:1px solid #232327; font-size:13px; color:var(--l2-ink2); }
+html.l2ui #lcCard .prm span { flex:1; min-width:0; }
+html.l2ui #lcCard .prm b { color:#fff; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+html.l2ui #lcCard .prm i { font-style:normal; font-size:11.5px; color:#5FF2FF; white-space:nowrap; }
+html.l2ui #lcCard .prm .set { cursor:pointer; }
+html.l2ui #lcCard .prm .set:hover { border-color:rgba(95,242,255,.45); }
+html.l2ui #lcCard .res { display:grid; grid-template-columns:repeat(auto-fit, minmax(84px, 1fr)); gap:6px; }
+html.l2ui #lcCard .res > div { padding:9px 11px; border-radius:12px; background:#141417; }
+html.l2ui #lcCard .res b { display:block; font-size:19px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; line-height:1.2; }
+html.l2ui #lcCard .res span { font-size:11.5px; color:var(--l2-ink3); line-height:1.35; display:block; margin-top:2px; }
+html.l2ui #lcCard .lg { margin-top:12px; display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--l2-ink2); }
+html.l2ui #lcCard .lg > div { display:flex; align-items:center; gap:8px; }
+html.l2ui .steps .lcChapH { grid-column:1 / -1; margin:8px 0 0; font-size:11.5px; letter-spacing:.1em; color:var(--l2-ink3); font-weight:600; }
+html.l2ui .steps .lcChapH:first-child { margin-top:0; }
+@keyframes lcFlash { 0%, 60% { box-shadow:0 0 0 1px #5FF2FF, 0 0 18px rgba(95,242,255,.45); border-radius:12px; } 100% { box-shadow:none; } }
+html.l2ui .lcFlash { animation:lcFlash 1.8s ease-out; }
+html.l2ui #lcChap { position:absolute; left:50%; top:16px; transform:translateX(-50%); z-index:6; display:flex; gap:12px; align-items:flex-end; padding:9px 14px 10px;
+  border-radius:16px; background:rgba(14,14,16,.82); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.1); }
+html.l2ui #lcChap .ch { display:flex; flex-direction:column; gap:6px; }
+html.l2ui #lcChap .cl { font-size:11.5px; letter-spacing:.06em; color:var(--l2-ink3); white-space:nowrap; }
+html.l2ui #lcChap .ch.on .cl { color:#5FF2FF; font-weight:600; }
+html.l2ui #lcChap .tk { display:flex; gap:4px; }
+html.l2ui #lcChap .tk i { display:block; width:18px; height:5px; border-radius:3px; background:#2B2B30; cursor:pointer; transition:width .25s, background .25s; }
+html.l2ui #lcChap .tk i.d { background:#3D7F88; }
+html.l2ui #lcChap .tk i.c { width:32px; background:#5FF2FF; box-shadow:0 0 10px rgba(95,242,255,.8); }
+html.l2ui #lcChap .tk i:hover { background:#8AEFFA; }
+html.l2ui #lcNav { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:6; display:flex; gap:8px; align-items:center; max-width:calc(100% - 24px);
+  padding:6px; border-radius:999px; background:rgba(14,14,16,.88); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.12); }
+html.l2ui #lcNav > button { font:inherit; font-size:12.5px; padding:8px 13px; border-radius:999px; border:1px solid rgba(255,255,255,.16); background:transparent; color:#E8E8E8; cursor:pointer; white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; }
+html.l2ui #lcNav > button:hover { border-color:rgba(255,255,255,.4); }
+html.l2ui #lcNav > button:disabled { opacity:.3; cursor:default; }
+html.l2ui #lcNav .slot:empty { display:none; }
+html.l2ui #lcNav #lcAuto { position:static; transform:none; box-shadow:none; border:0; background:transparent; padding:0 4px; max-width:none; -webkit-backdrop-filter:none; backdrop-filter:none; }
+html.l2ui #lcNav #lcAuto .w, html.l2ui #lcNav #lcAuto a { display:none; }
+html.l2phone #lcChap, html.l2phone #lcNav { display:none !important; }
