@@ -33,7 +33,7 @@ const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg' };
       fs.unlinkSync(path.join(OUT, f)); } else img[k] = f; }
   // the picture the page shows while it opens: the map of step 1 as it will be, from a 1440 x 900 window
   await page.waitForFunction(() => document.getElementById('liveStart').style.display === 'none', null, { timeout: 60000 });
-  await page.evaluate(() => { for (const id of ['lcAuto', 'lcSampleNote']) { const e = document.getElementById(id); if (e) e.remove(); } });
+  await page.evaluate(() => { for (const id of ['lcAuto', 'lcSampleNote', 'lcChap', 'lcNav']) { const e = document.getElementById(id); if (e) e.remove(); } });
   await page.waitForTimeout(800);
   await page.locator('#map').screenshot({ path: path.join(OUT, 'preview.jpg'), type: 'jpeg', quality: 72 });
   fs.writeFileSync(path.join(OUT, 'step1.json'), JSON.stringify({ about: 'The wool page\'s example, step 1, made by source/make-example.cjs. Used only while guard matches the page.', guard: got.guard, img, data: got.data }));
