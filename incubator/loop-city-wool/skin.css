@@ -163,6 +163,11 @@ html.l2ui #lcCard .res { display:grid; grid-template-columns:repeat(auto-fit, mi
 html.l2ui #lcCard .res > div { padding:9px 11px; border-radius:12px; background:#141417; }
 html.l2ui #lcCard .res b { display:block; font-size:19px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; line-height:1.2; }
 html.l2ui #lcCard .res span { font-size:11.5px; color:var(--l2-ink3); line-height:1.35; display:block; margin-top:2px; }
+html.l2ui #lcCard .ring { display:flex; gap:12px; align-items:center; padding:10px 11px; border-radius:12px; background:#141417; flex-wrap:wrap; }
+html.l2ui #lcCard .ring canvas { width:66px; height:66px; flex:none; }
+html.l2ui #lcCard .ring p { flex:1; min-width:140px; font-size:12.5px; }
+html.l2ui #lcCard .ring button { padding:7px 12px; border-radius:10px; border:1px solid rgba(95,242,255,.45); background:transparent; color:#5FF2FF; font:inherit; font-size:12.5px; cursor:pointer; }
+html.l2ui #lcCard .ring button:disabled { opacity:.5; cursor:default; }
 html.l2ui #lcCard .lg { margin-top:12px; display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--l2-ink2); }
 html.l2ui #lcCard .lg > div { display:flex; align-items:center; gap:8px; }
 html.l2ui .steps .lcChapH { grid-column:1 / -1; margin:8px 0 0; font-size:11.5px; letter-spacing:.1em; color:var(--l2-ink3); font-weight:600; }

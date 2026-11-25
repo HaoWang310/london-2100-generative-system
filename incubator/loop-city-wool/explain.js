@@ -101,11 +101,24 @@
         why: T('Frei Otto’s wet wool: first every possible straight link, then let the forces pick the routes.', 'Frei Otto 的湿毛线：先给出所有可能的直线连接，再让力学挑出路线。'),
         prm: [[T('Rule', '连线规则'), OPP ? T('across the cell', '连向对面') : T('every second', '隔一个连')], [T('Ties per anchor', '每个锚点的连线'), (bp('oppw') || 2), 'bd_oppw'], [T('Segments per thread', '每根线'), T('80', '80 段')]],
         res: [[threadsN(), T('threads', '根毛线')], [(S.jobs || []).filter(Boolean).length, T('primary cells woven', '个一级单元')]], leg: 2 };
-      case 10: return { t: T('The wet wool draws together', '湿毛线聚成束'),
-        did: T('The threads pull towards each other (magnet) and resist bending (angle), live, until they settle in bundles.', '毛线之间互相吸引（磁力），又抵抗弯曲（角度），实时松弛，直到并成一束束。'),
-        why: T('Where threads run together is where traffic would gather: those are the roads.', '线并在一起的地方，就是交通会自然汇集的地方：那就是路。'),
-        prm: [[T('Magnet', '磁力'), f(P.magnet), 'magnet'], [T('Angle (stiffness)', '抗弯（角度）'), f(P.angle), 'angle'], [T('Steps', '步数'), f(P.steps), 'steps']],
-        res: [[threadsN(), T('threads', '根毛线')], [S.relaxMs !== null && S.relaxMs !== undefined ? f(S.relaxMs / 1000, 1) + ' s' : (S.busy ? T('running', '运行中') : notYet), T('to relax', '松弛用时')]], leg: 2 };
+      case 10: { var dt = S.detour, rg = S.ring && S.ring.over === P.over && S.ring.angle === P.angle ? S.ring : null, v1 = /[#&]v1(?![\w])/.test(location.hash);
+        return { t: T('The wet wool draws together', '湿毛线聚成束'),
+        did: v1 ? T('The threads pull towards each other (magnet) and resist bending (angle), live, until they settle in bundles.', '毛线之间互相吸引（磁力），又抵抗弯曲（角度），实时松弛，直到并成一束束。')
+          : T('Each thread is ' + f(P.over) + ' % longer than the shortest way between its anchors (round the towns) and cannot stretch. Wet, the threads pull towards each other and draw together into bundles until they come to rest; then each is smoothed lightly, its ends held.',
+              '每根线比两个锚点之间（绕开城镇）的最短路长 ' + f(P.over) + '%，而且拉不长。浸湿后线互相吸引，并成一束束，直到静止；最后每根线轻度平滑一次，两端不动。'),
+        why: v1 ? T('Where threads run together is where traffic would gather: those are the roads.', '线并在一起的地方，就是交通会自然汇集的地方：那就是路。')
+          : T('Frei Otto’s wet-wool experiment: the surplus is its one control. A thread can only join a bundle by spending its surplus, so no route is longer than the surplus allows, and the bundles are where routes are worth sharing: the roads. Wet wool hardly resists bending, so the angle is 0; the smoothing only takes out the kinks the computation leaves.',
+              'Frei Otto 的湿毛线实验：余长是唯一的控制量。线要并进束里只能花掉自己的余长，所以没有一条路线会比余长允许的更绕；束出现在值得合用路线的地方，就是路。湿毛线几乎不抗弯，所以抗弯为 0；平滑只去掉计算留下的折线，不改变走向。'),
+        prm: (v1 ? [] : [[T('Surplus', '余长'), f(P.over) + ' %', 'over']]).concat([[T('Magnet', '磁力'), f(P.magnet), 'magnet'], [T('Angle (stiffness)', '抗弯（角度）'), f(P.angle), 'angle'], [T('Steps, at most', '最多步数'), f(P.steps), 'steps']],
+          v1 ? [] : [[T('Smoothing', '平滑'), T(P.smooth + ' passes', P.smooth + ' 次')]]),
+        res: [[threadsN(), T('threads', '根毛线')], [S.relaxMs !== null && S.relaxMs !== undefined ? f(S.relaxMs / 1000, 1) + ' s' : (S.busy ? T('running', '运行中') : notYet), T('to relax', '松弛用时')]]
+          .concat(dt && dt.med ? [[f(dt.med, 3), T('detour, median', '绕路中位')], [Math.round(100 * dt.within / Math.max(1, dt.n)) + ' %', T('within the surplus', '在余长之内')]] : []),
+        extra: v1 ? '' : '<div class="l">' + T('Calibration', '校准') + '</div><div class="ring">' + (rg ? '<canvas width="132" height="132"></canvas><p>' + T('Frei Otto’s ring, with these settings: 24 anchors, each tied across. Detour median ', 'Frei Otto 的圆环实验，用这里的设置：24 个锚点，每个连向对面。绕路中位 ') + f(rg.med, 3) + T(', longest ', '，最长 ') + f(rg.max, 3) + T(' (the surplus allows ', '（余长允许 ') + f(1 + P.over / 100, 2) + T(').', '）。') + '</p>'
+          : '<p>' + T('Run the same solver on Frei Otto’s ring, to see the surplus do what it does in the experiment.', '用同一个求解器在 Frei Otto 的圆环上跑一遍，看余长是否和实验里一样起作用。') + '</p><button type="button" class="ringGo"' + (S.ringBusy ? ' disabled' : '') + '>' + (S.ringBusy ? T('Running…', '计算中…') : T('▶ Ring calibration', '▶ 圆环校准')) + '</button>') + '</div>',
+        after: function (el) { var b = el.querySelector('.ringGo'); if (b) b.onclick = function () { if (window.ringCalib) window.ringCalib(); };
+          var c = el.querySelector('.ring canvas'); if (c && rg) { var g = c.getContext('2d'), s = 132 / 230; g.clearRect(0, 0, 132, 132); g.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--fg') || '#fff'; g.globalAlpha = 0.35; g.lineWidth = 0.8;
+            rg.lines.forEach(function (L) { g.beginPath(); for (var i = 0; i < L.length; i += 2) { var x = 66 + L[i] * s, y = 66 - L[i + 1] * s; if (i) g.lineTo(x, y); else g.moveTo(x, y); } g.stroke(); }); } },
+        leg: 2 }; }
       case 21: return { t: T('More threads, a wider road', '线越多，路越宽'),
         did: T('The relaxed wool read as one mass: every thread a band, wider where more run together, the corners rounded where bands meet.', '把松弛后的毛线读成一个整体：每根线是一条带，线越多带越宽，带交汇处倒圆。'),
         why: T('The band is the road; its two edges are the road’s double line.', '带就是路，带的两条边就是道路的双线。'),
@@ -198,10 +211,12 @@
     h += '<div class="l">' + T('What came out', '结果') + '</div>';
     if (x.res.length) { h += '<div class="res">'; x.res.forEach(function (r) { h += '<div><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + '</span></div>'; }); h += '</div>'; }
     else h += '<p class="wait">' + (k > 20 && !S.relaxed ? T('Relax the wool first (step 10).', '先松弛毛线（第 10 步）。') : T('Working it out…', '计算中…')) + '</p>';
+    if (x.extra) h += x.extra;
     var lg = $('legend'), rows = lg ? [].slice.call(lg.children, 0, x.leg || 3) : [];
     if (rows.length) h += '<div class="lg">' + rows.map(function (r) { return '<div>' + r.innerHTML + '</div>'; }).join('') + '</div>';
     card.innerHTML = h;
     [].forEach.call(card.querySelectorAll('[data-set]'), function (d) { d.onclick = function () { openSetting(d.dataset.set); }; });
+    if (x.after) x.after(card);
     // the chapters over the map
     var c = '';
     CH.forEach(function (C) { var on = C.steps.indexOf(k) >= 0;
