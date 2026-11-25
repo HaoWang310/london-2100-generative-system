@@ -45,7 +45,7 @@
   // 8 · anchors
   add({ step: 8, id: 'spacing', lab: ['Anchor spacing', '锚点间距'], kind: 'range', min: 1000, max: 5000, st: 100, def: 3000, f: function (v) { return fmt(v) + ' m'; } }, pageR('spacing'));
   add({ step: 8, id: 'nearF', lab: ['Within 3 km of the station', '车站附近'], kind: 'range', min: 0.4, max: 1, st: 0.05, def: 1, f: function (v) { return '× ' + fmt(v, 2); } }, pageR('nearF'));
-  add({ step: 8, id: 'soilF', lab: ['On Grade 1–2 soil', '一、二级农地上'], kind: 'range', min: 1, max: 2.5, st: 0.05, def: 1, f: function (v) { return '× ' + fmt(v, 2); } }, pageR('soilF'));
+  add({ step: 8, id: 'soilF', lab: ['On Grade 1–2 soil', '一、二级农地上'], kind: 'range', min: 1, max: 2.5, st: 0.05, def: 1.5, f: function (v) { return '× ' + fmt(v, 2); } }, pageR('soilF'));
   add({ step: 8, id: 'APART', more: 1, lab: ['Road anchors at least', '路口锚点间至少'], kind: 'range', min: 200, max: 1500, st: 50, def: 600, f: function (v) { return fmt(v) + ' m'; } }, bake('APART', 8));
   add({ step: 8, id: 'NEAR_R', more: 1, lab: ['"Near the station" reaches', '「车站附近」半径'], kind: 'range', min: 1, max: 6, st: 0.5, def: 3, f: function (v) { return fmt(v, 1) + ' km'; } },
     { get: function () { return typeof NEAR_R === 'undefined' ? 3 : NEAR_R / 1000; }, set: function (v) { NEAR_R = v * 1000; rebuildNet(); buttons(); }, how: 'net' });
@@ -60,7 +60,10 @@
     { get: function () { return typeof DEF === 'undefined' ? 80 : DEF.segs; }, set: function (v) { DEF.segs = v; rebuildNet(); buttons(); }, how: 'net' });
   // 10 · relaxing
   add({ step: 10, id: 'magnet', lab: ['Magnet', '磁力'], kind: 'range', min: 100, max: 2500, st: 50, def: 1000, f: function (v) { return fmt(v); } }, pageR('magnet'), { relax: 1 });
-  add({ step: 10, id: 'angle', lab: ['Angle (stiffness)', '抗弯（角度）'], kind: 'range', min: 1000, max: 40000, st: 500, def: 14000, f: function (v) { return fmt(v); } }, pageR('angle'), { relax: 1 });
+  // (25 Nov, the method's second version) the surplus: how much longer than the shortest way each thread may be
+  add({ step: 10, id: 'over', lab: ['Surplus', '余量'], kind: 'range', min: 0, max: 15, st: 1, def: 8, f: function (v) { return fmt(v) + ' %'; },
+    note: ['How much longer each thread is than the shortest way between its anchors: all the room it has to bend.', '每根线比两锚点间最短路径长出多少：它能弯曲的全部余地。'] }, pageR('over'), { relax: 1 });
+  add({ step: 10, id: 'angle', more: 1, lab: ['Angle (stiffness)', '抗弯（角度）'], kind: 'range', min: 0, max: 40000, st: 500, def: 0, f: function (v) { return fmt(v); } }, pageR('angle'), { relax: 1 });
   add({ step: 10, id: 'steps', lab: ['Steps', '步数'], kind: 'range', min: 200, max: 3000, st: 100, def: 1500, f: function (v) { return fmt(v); } }, pageR('steps'), { relax: 1 });
   // 11 · road bands
   add({ step: 21, id: 'bd_thread', lab: ['Band of one thread', '单根线的带宽'], kind: 'range', min: 2, max: 5, st: 1, def: 3, f: m28 }, pageR('bd_thread'));

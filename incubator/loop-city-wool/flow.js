@@ -25,7 +25,7 @@
   var CHN = { 0: ['Prologue · the site', '序章 · 场地'], 1: ['Reading the ground', '读地'], 2: ['Cutting', '切分'], 3: ['Weaving', '编织'], 4: ['Making roads', '成路'] };
   var NAME = { 0: ['The site and the loop', '场地与环线'], 1: ['The slime mould', '黏菌'], 2: ['Veins, centrelines', '菌脉与中心线'], 3: ['The cells', '单元'], 4: ['Existing roads', '现有道路'],
     5: ['Primary cells', '主单元'], 6: ['Soil grades', '土壤等级'], 7: ['Good land kept for farming', '好地留给耕种'], 8: ['Anchors', '锚点'], 9: ['Base net', '基础网'], 10: ['The wool relaxing', '毛线松弛'],
-    21: ['Road bands', '道路带'], 22: ['With the existing roads', '并入现状道路'], 23: ['Fine tuning', '微调'], 24: ['Bigger parcels', '并成大地块'], 25: ['Parcels by use', '地块用途'], 26: ['Road hierarchy', '道路等级'], 27: ['On to the tensor field', '交给张量场'] };
+    21: ['Road bands', '道路带'], 22: ['With the existing roads', '并入现状道路'], 23: ['Fine tuning', '微调'], 24: ['Bigger parcels', '并成大地块'], 25: ['Parcels by use', '地块用途'], 26: ['Road hierarchy', '道路等级'], 27: ['On to the tensor field', '交给张量场'], 28: ['Evaluation', '评价'] };      // 28 (chapter 5) has no card yet: named so the panel still draws when the page is on it
   var nm = function (k) { return T(NAME[k][0], NAME[k][1]); };
   var ok = function () { return typeof DATA !== 'undefined' && DATA && typeof S !== 'undefined' && S && S.view; };
   var info = function (k) {
@@ -127,7 +127,7 @@
       '<button type="button" data-pause="1"' + (P.on ? '' : ' disabled') + '>' + T('Pause', '暂停') + '</button><button type="button" data-now="1">' + T('Finish now', '立即完成') + '</button></div>' +
       '<div class="sp"><label for="lcSpeed">' + T('Speed', '演示速度') + '</label><input type="range" id="lcSpeed" min="0.5" max="2" step="0.25" value="' + P.speed + '"><output>' + P.speed + '×</output></div>' +
       '<div class="b2"><button type="button" data-full="1">' + T('Full-screen demo', '全屏演示') + '</button><button type="button" data-each="1" class="' + (P.stopEach ? 'on' : '') + '">' + T('Stop after each step', '每步停') + ' · ' + (P.stopEach ? T('on', '开') : T('off', '关')) + '</button></div>' +
-      '<div class="stt">' + (k === 0 ? T('Prologue', '序章') : T('Step ' + shown(k) + ' / 16', '第 ' + String(shown(k)).padStart(2, '0') + ' / 16 步')) + ' · <b style="color:' + CHC[c] + '">' + esc(nm(k === 27 ? 27 : k)) + '</b>' +
+      '<div class="stt">' + (k === 0 ? T('Prologue', '序章') : k === 28 ? T('After step 16', '第 16 步之后') : T('Step ' + shown(k) + ' / 16', '第 ' + String(shown(k)).padStart(2, '0') + ' / 16 步')) + ' · <b style="color:' + CHC[c] + '">' + esc(nm(k === 27 ? 27 : k)) + '</b>' +
       (st ? ' · ' + st : '') + (P.total ? ' · ' + T('worked out in ', '计算共 ') + (P.total / 1000).toFixed(1) + T(' s', ' 秒') : '') + '</div><div class="sg">' + segs(k) + '</div></div>';
     var last = -1;
     SEQ.forEach(function (q) { var cc = chOf(q); if (cc !== last) { x += '<div class="chh" style="color:' + CHC[cc] + '">' + (cc ? T('Chapter ' + cc + ' · ', '第 ' + cc + ' 章 · ') : '') + T(CHN[cc][0], CHN[cc][1]) + '</div>'; last = cc; } x += card(q); });

@@ -223,11 +223,12 @@ function bhHierarchy(R, opt) {
   for (const e of E) if (e.cl === 'B') e.cl = BH.W[U.get(e.unit).k] >= 30 ? '30' : '24';
   // ---- the boundary and every chosen road smoothed end to end as one line; what meets them follows
   const inner = new Map(), onChain = new Set();
-  const smoothChain = (chain, sigma, cyc) => {                               // chain: [edge, forward?] in order
+  const smoothChain = (chain, sigma, cyc, pin) => {                          // chain: [edge, forward?] in order; pin: the junctions stay
     const Xs = [], Ys = [], base = []; chain.forEach(([i, fwd], k) => { const q = E[i].pts, m = q.length / 2; base.push(Xs.length - (k ? 1 : 0)); for (let j = k ? 1 : 0; j < m; j++) { const t = fwd ? j : m - 1 - j; Xs.push(q[2 * t]); Ys.push(q[2 * t + 1]); } });
     let N = Xs.length; if (N < 6) return; if (cyc) N--;
+    const PIN = new Set(); if (pin) for (const g of base.slice(1)) PIN.add(g % N);
     let x = Float64Array.from(Xs.slice(0, N)), y = Float64Array.from(Ys.slice(0, N)), xb = new Float64Array(N), yb = new Float64Array(N);
-    for (let r = Math.round(sigma * sigma / 98); r > 0; r--) { for (let j = 0; j < N; j++) { if (!cyc && (j === 0 || j === N - 1)) { xb[j] = x[j]; yb[j] = y[j]; continue; } const a = j ? j - 1 : N - 1, b = j < N - 1 ? j + 1 : 0; xb[j] = x[j] + 0.5 * ((x[a] + x[b]) / 2 - x[j]); yb[j] = y[j] + 0.5 * ((y[a] + y[b]) / 2 - y[j]); } let t = x; x = xb; xb = t; t = y; y = yb; yb = t; }
+    for (let r = Math.round(sigma * sigma / 98); r > 0; r--) { for (let j = 0; j < N; j++) { if ((!cyc && (j === 0 || j === N - 1)) || PIN.has(j)) { xb[j] = x[j]; yb[j] = y[j]; continue; } const a = j ? j - 1 : N - 1, b = j < N - 1 ? j + 1 : 0; xb[j] = x[j] + 0.5 * ((x[a] + x[b]) / 2 - x[j]); yb[j] = y[j] + 0.5 * ((y[a] + y[b]) / 2 - y[j]); } let t = x; x = xb; xb = t; t = y; y = yb; yb = t; }
     chain.forEach(([i, fwd], k) => { const q = E[i].pts, m = q.length / 2; onChain.add(i); for (let j = 0; j < m; j++) { const t = fwd ? j : m - 1 - j, g = (base[k] + j) % N; q[2 * t] = x[g]; q[2 * t + 1] = y[g]; }
       if (k || cyc) { const g = base[k] % N, n0 = fwd ? E[i].a : E[i].b; if (!inner.has(n0)) inner.set(n0, [0, 0, 0]); const v = inner.get(n0); v[0] += x[g]; v[1] += y[g]; v[2]++; } });
   };
@@ -240,7 +241,9 @@ function bhHierarchy(R, opt) {
   }
   const split = (routes, level) => { const res = []; for (const r of routes) { let cur = []; for (const [j, end] of r) { if (E[j].cl === level && !E[j].on) cur.push([j, end === 0]); else if (cur.length) { res.push(cur); cur = []; } } if (cur.length) res.push(cur); } return res; };
   for (const ch of split(r2, '60')) smoothChain(ch, opt.line * 0.8, false);
-  for (const ch of split(r3, '48')) smoothChain(ch, opt.line * 0.62, false);
+  // (25 Nov 2026) an A road is smoothed between its junctions, not through them (opt.pinA): it keeps the angle the wool
+  // gives it there; the primary roads are still smoothed end to end, so they run on through their junctions
+  for (const ch of split(r3, '48')) smoothChain(ch, opt.line * 0.62, false, !!opt.pinA);
   const Tm = new Map(); for (const [n, v] of inner) Tm.set(n, [v[0] / v[2], v[1] / v[2]]); follow(Tm, (e, i) => onChain.has(i) || !!e.on);
   for (const e of E) { const q = e.pts; let a = 1e18, b = 1e18, c = -1e18, d = -1e18; for (let i = 0; i < q.length; i += 2) { a = Math.min(a, q[i]); c = Math.max(c, q[i]); b = Math.min(b, q[i + 1]); d = Math.max(d, q[i + 1]); } e.bb = [a, b, c, d]; e.draw = !e.on || e.up; }
   for (const x of X) { const q = x.P; let a = 1e18, b = 1e18, c = -1e18, d = -1e18; for (let i = 0; i < q.length; i += 2) { a = Math.min(a, q[i]); c = Math.max(c, q[i]); b = Math.min(b, q[i + 1]); d = Math.max(d, q[i + 1]); } x.bb = [a, b, c, d]; x.L = bhLen(q); }

@@ -44,8 +44,8 @@
         "en": "London map"
       },
       "desc": {
-        "zh": "伦敦 70 km 范围的真实地理数据：OSM 底图与 3D 建筑，EA LiDAR 地形、EA 洪水风险、由 OS Terrain 50 推导的排水网络；可切换颜色主题、光照、天气，搜索地点。",
-        "en": "Real geographic data for London within 70 km: the OSM basemap and 3D buildings, EA LiDAR terrain, EA flood risk and a drainage network derived from OS Terrain 50; colour themes, lighting, weather and place search."
+        "zh": "伦敦 70 km 范围的真实地理数据：OSM 底图与 3D 建筑，EA LiDAR 地形与地形着色、EA 洪水风险、由 OS Terrain 50 推导的排水网络，以及绿带、AONB、按服务分类的铁路和 HS1/HS2；可切换颜色主题、光照、天气，搜索地点。",
+        "en": "Real geographic data for London within 70 km: the OSM basemap and 3D buildings, EA LiDAR terrain and colour by height, EA flood risk, a drainage network derived from OS Terrain 50, the Green Belt, AONB, rail by service and HS1/HS2; colour themes, lighting, weather and place search."
       },
       "detail": {
         "subtitle": "London Map · A Territorial Datum",
