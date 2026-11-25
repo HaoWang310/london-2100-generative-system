@@ -714,7 +714,7 @@ const SCHEME_KEY = 'structureStudio.scheme2d';
 let SCHEME = 'N';
 const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`, hex3 = c => (c[0] << 16) | (c[1] << 8) | c[2];
 const gradCss = sc => { const o = Object.assign({}, SCHEME_BASE, sc.o); return o.grad ? `linear-gradient(90deg,${o.grad.map(([t, c]) => `${rgb(c)} ${Math.round(t * 100)}%`).join(',')})` : `repeating-linear-gradient(-30deg,${o.farm} 0 3px,${o.hatch.col} 3px 4px),${o.farm}`; };
-function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.add('l2sw-grid'); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
+function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textContent = ''; g.classList.add('l2sw-grid'); g.classList.toggle('three', three); $('swTitle').textContent = three ? L('配色 · 三维', 'Colour · 3D') : L('配色', 'Colour');
   if (three) { for (const sc of SCHEMES3) { const b = document.createElement('button'); b.type = 'button'; b.className = 'swChip l2sw' + (sc.id === SCHEME3 ? ' on' : ''); b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', sc.id === SCHEME3); b.dataset.s3 = sc.id; b.title = L(sc.zh, sc.en);
       const i = document.createElement('span'); i.className = 'l2sw-d'; i.innerHTML = [sc.grad[0][1], sc.grad[sc.grad.length - 1][1], sc.road].map(c => `<i style="background:${rgb(c)}"></i>`).join('');   // the parcels' core, their edge, the roads
       const t = document.createElement('span'); t.className = 'l2sw-n'; t.textContent = L(sc.zh, sc.en); b.append(i, t); b.onclick = () => applyScheme3(sc.id); g.appendChild(b); } return; }
