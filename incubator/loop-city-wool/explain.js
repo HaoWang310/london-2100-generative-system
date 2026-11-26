@@ -248,7 +248,7 @@
     if (!card || !ok()) return;
     var k = S.step, x = info(k), ch = chapterOf(k), pos = ORDER.indexOf(k);
     if (!x) { card.innerHTML = ''; return; }
-    var kick = (ch ? T('Chapter ' + ch.n + ' · ' + ch.en, CHZ(ch.n) + ' · ' + ch.zh) : T('The way out', '出口')) + '<span>' + (k === 28 ? T('After step 16', '第 16 步之后') : k === 27 ? T('Step 17', '第 17 步') : T('Step ' + shown(k) + ' of 16', '第 ' + shown(k) + ' / 16 步')) + '</span>';
+    var kick = (ch ? T('Chapter ' + ch.n + ' · ' + ch.en, CHZ(ch.n) + ' · ' + ch.zh) : T('The way out', '出口')) + '<span>' + (k === 28 ? T('After step 16', '第 16 步之后') : k === 27 ? T('Step 17', '第 17 步') : T('Step ' + shown(k) + ' of 17', '第 ' + shown(k) + ' / 17 步')) + '</span>';
     var h = '<div class="k">' + kick + '</div><h3>' + esc(x.t) + '</h3>';
     h += '<div class="l">' + T('What it did', '做了什么') + '</div><p>' + esc(x.did) + '</p>';
     if (x.why) h += '<div class="l">' + T('Why', '为什么') + '</div><p>' + esc(x.why) + '</p>';

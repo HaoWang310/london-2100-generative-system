@@ -16,9 +16,9 @@ const mod = {
   level: 'tensor',
   version: '0.1.0',
   placeholder: true,
-  title: { zh: 'Tensor 张量场道路', en: 'Tensor roads' },
+  title: { zh: '张量场道路', en: 'Tensor roads' },
   description: {
-    zh: '占位算法：网格 / 放射场流线，并吸附到上一级 Wool 主路。P4 将接入原有张量场算法。',
+    zh: '占位算法：网格 / 放射场流线，并吸附到上一级毛线主路。P4 将接入原有张量场算法。',
     en: 'Placeholder: grid / radial streamlines snapped to the parent Wool roads. P4 plugs in the existing tensor field.'
   },
   params: [

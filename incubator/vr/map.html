@@ -34,6 +34,10 @@
 <iframe id="map" title="London map" allow="geolocation; fullscreen; xr-spatial-tracking"></iframe>
 <button id="vr" type="button" title="VR / MR · Meta Quest">VR</button>
 <div id="cover"><div><b>London 2100 · VR</b><span id="coverText">正在后台加载伦敦地图…</span></div></div>
+<script>/* (26 Nov 2026) the tab's name and this first line in the language in use: they stayed Chinese in English. The page reloads when the language changes. */
+(function(){ var l = null; try { l = localStorage.getItem('londonMap.uiLanguage') || localStorage.getItem('l2100.lang'); } catch (e) {}
+  if (l !== 'en' && l !== 'zh') l = /^zh\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || '') ? 'zh' : 'en';
+  if (l === 'en') { document.title = 'London map · VR'; document.getElementById('coverText').textContent = 'Loading the London map in the background…'; } })();</script>
 <div id="err"></div>
 <script type="module">
 import { findMap } from './src/map_bridge.js?v=0.20';

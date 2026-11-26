@@ -54,6 +54,7 @@ export const pick = obj => (obj && typeof obj === 'object' ? obj[lang] ?? obj.en
 
 export function applyI18n(root) {
   root.documentElement && (root.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en');
+  if (root.documentElement && DICTS[lang]['intro.title']) root.title = DICTS[lang]['intro.title'];      // (26 Nov 2026) the tab's name follows the language: it stayed Chinese in English
   root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
   root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
