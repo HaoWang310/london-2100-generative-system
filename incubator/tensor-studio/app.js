@@ -2729,7 +2729,7 @@ window.addEventListener('resize', resize);
   placeAttractors(); buildTarget(); settleField(); FIELDMODE = 'off'; $('lFlow').checked = false;
   // (v8.7) in the process mode the app opens on step 1, nothing grown yet; the free mode opens on the result as before
   if (window.__TS_PROCESS_ON){ MODE = 'B'; resetNet(); } else { MODE = 'A'; start(false); MODE = 'B'; start(true); } syncTools(); drawKey(); requestAnimationFrame(frame);
-  window.__ts6 = { source: (window.__TS.meta && window.__TS.meta.source) || null, roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
+  window.__ts6 = { finished: () => !!FINISHED, source: (window.__TS.meta && window.__TS.meta.source) || null, roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
     get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
     get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
     // (v8.7) for the process mode
@@ -2817,6 +2817,18 @@ document.getElementById('applyPreset').onclick=()=>{
   window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); syncTints(); } catch (e) {} };
   syncBase(); syncEnv();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
+  // (v8.50) the chain row, the same in every catalogue app: the step before (step 3, the base), the step after
+  // (Structure Studio) and what goes with it: the network as it stands, once the streets are grown. Structure Studio is
+  // opened in a new tab and reads the network from this window. Framed by the London map or by Structure Studio the row
+  // is not shown (shared/ui/chain.js): they have their own way back.
+  if (window.L2Chain && $id('tsChain')){ let nN = 0, wasDone = false;
+    window.L2Chain.mount({ id: 'tensor-studio', into: $id('tsChain'), lang: () => TS_LANG,      // light or dark is read from the panel's own ground: the panel stays dark over a light map
+      state(){ const done = !!FINISHED; if (done && !wasDone){ try { const RN = roadNet(); nN = RN ? RN.sw.length : 0; } catch (e){ nN = 0; } } wasDone = done;
+        if (!done || !nN) return { ready: false, need: ['Grow the streets first (step 6): then there is a network to take on.', '先生成道路（第 6 步），才有路网可以带过去。'] };
+        const k = KEYS.map(x => x.split(' · ').slice(1).join(' · ')).join(', ');
+        return { ready: true, carry: ['this network (' + nN + ' streets)' + (k ? ' · ' + k : ''), '这张路网（' + nN + ' 条路）' + (k ? ' · ' + k : '')] }; },
+      go(){ const w = window.open('../structure-studio/index.html#from=tensor&t=' + Date.now(), 'l2100-structure-studio'); if (!w) throw new Error(zh() ? '浏览器拦截了新标签页' : 'the browser blocked the new tab'); } });
+  }
   // (v8.49) a site file: open one, go back to the last one, back to the example; from the London map none of this shows
   if (IO && (!H || FILE) && $id('fileNav')){
     const nav = $id('fileNav'), msg = $id('fileMsg'), say = (a, b) => { msg.hidden = false; msg.dataset.zh = a; msg.dataset.en = b; msg.textContent = zh() ? a : b; };
@@ -2825,6 +2837,7 @@ document.getElementById('applyPreset').onclick=()=>{
     const last = !FILE && IO.last(), lb = $id('fileLast');
     if (last){ lb.hidden = false; lb.innerHTML = '<span data-i18n></span>'; const sp = lb.firstChild; sp.dataset.zh = '上次的地块 · ' + short(last); sp.dataset.en = 'The last parcels · ' + short(last); sp.textContent = zh() ? sp.dataset.zh : sp.dataset.en; lb.onclick = () => IO.again(); }
     $id('fileBack').onclick = () => H.close(); $id('fileP2').onclick = () => IO.example();
+    if (window.L2Chain) $id('fileBack').hidden = true;      // (v8.50) the way back to step 3 is in the chain row
     const sb = $id('fileSample'); if (sb){ sb.hidden = FILE; sb.onclick = () => { $id('hud').textContent = zh() ? '正在打开 Loop City 范例地块…' : 'Opening the Loop City example parcels…'; IO.sample().catch(e => say('范例地块读不出来：' + (e.message || e), 'The example parcels could not be read: ' + (e.message || e))); }; }
     $id('fileOpen').onclick = () => $id('fileIn').click();
     $id('fileIn').onchange = async ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;

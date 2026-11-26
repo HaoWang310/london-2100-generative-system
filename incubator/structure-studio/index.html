@@ -257,7 +257,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
-<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
+<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=1"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
 <link rel="stylesheet" href="intro/intro.css?v=0.9.39">
 </head>
 <body>
@@ -305,6 +305,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
     <div><div class="ts-title">结构工作室</div><div class="ts-sub">Linear Farm 种植工厂走廊 · 架在张量场街道之上</div></div>
     <div class="ts-actions"><div class="language-switch" id="langSw" role="group" aria-label="Language"><button type="button" data-language="zh">中文</button><button type="button" data-language="en">EN</button></div><button type="button" id="tsCollapse" aria-label="收起">–</button></div>
   </div>
+  <div id="ssChain"></div>
   <div class="ts-divider"></div>
   <div class="grp"><h2>场地</h2><div class="card">
     <div class="row"><label for="srcSel">输入</label><select id="srcSel" class="sel" aria-label="输入"></select></div>
@@ -1148,11 +1149,24 @@ $('expBtn').onclick = () => { if (!SNAP) return; const m = curMeta(), d = new Da
   const out = Object.assign({}, SNAP, { name: CUR === 'builtin' ? L('车站 P2', 'Station P2') : (m ? m.name : undefined), structureParams: JSON.parse(JSON.stringify(P)) }), text = JSON.stringify(out), fn = base + '.snapshot.json';
   try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
   catch (e) { dl(fn, text); } };
+// (26 Nov 2026) Tensor Studio's chain row ("Next · Structure Studio") opens this page with #from=tensor: the network
+// standing in that window is read as "Take the result from Tensor Studio" reads it from the frame, and becomes the input.
+// Nothing to read (the page opened by hand, the other tab closed, streets not grown): the page opens as it always does.
+async function takeFromOpener() { if (!/[#&]from=tensor\b/.test(location.hash)) return false;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  let w = null; try { w = window.opener; if (!(w && w.__ts6 && w.__ts6.roadNet())) w = null; } catch (e) { w = null; }
+  if (!w) { $('saveHint').textContent = L('没有从张量场工作室取到路网（那个标签页可能已关闭，或还没生成道路）。可以点「从张量场工作室取结果」。', 'No network could be taken from Tensor Studio (its tab may be closed, or the streets not grown yet). Use "Take the result from Tensor Studio".'); return false; }
+  $('busy').style.display = 'block'; $('busy').textContent = L('正在读取张量场工作室的路网…', 'Reading the network from Tensor Studio…');
+  try { await addInput(snapshotFrom(w), 'ts'); return true; } catch (e) { $('busy').textContent = L('读取张量场结果失败：', 'Could not read the Tensor Studio result: ') + e.message; return false; } }
+addEventListener('hashchange', () => { takeFromOpener(); });
 async function boot() { $('busy').style.display = 'block';
   try { if (!('indexedDB' in window)) throw 0; LIST = (await STORE.metas()) || []; } catch (e) { IDB_OK = false; LIST = []; }
   saveHint(); const s = sess();
+  if (await takeFromOpener()) return;
   try { await switchTo(s.cur && LIST.some(m => m.id === s.cur) ? s.cur : 'builtin'); }
   catch (err) { $('busy').textContent = L('载入快照失败：', 'Could not load the snapshot: ') + err.message; } }
+// (26 Nov 2026) the chain row, the same in every catalogue app: before, Tensor Studio; after, VR (nothing is carried: VR shows scenes exported beforehand)
+if (window.L2Chain && $('ssChain')) window.L2Chain.mount({ id: 'structure-studio', into: $('ssChain'), lang: () => LANG });
 // ---- 只看张量场结果：不画结构、农田、建筑，只画场地、水系、张量场道路（按等级）、路口、吸引点，可叠方向线
 let TSV = false, tsBase = null;
 function makeTsBase() { const S = SITE, SC = 2, cv = document.createElement('canvas'); cv.width = S.W * SC; cv.height = S.H * SC; const ctx = cv.getContext('2d');

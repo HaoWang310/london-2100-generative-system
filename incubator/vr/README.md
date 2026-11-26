@@ -1,5 +1,8 @@
 # London 2100 · VR / MR
 
+> **统一的「下一步」· The chain row (26 Nov 2026).** VR 是研究主线的最后一站：VR 视图左侧面板顶部有和其他 app 相同的一行，上一步是结构工作室，下一步回到目录。头显里这个面板不显示。 VR is the last stop of the research line: the same row as in every app sits at the top of the VR view's side panel (before: Structure Studio; after: the catalogue).
+
+
 在线：https://haowang310.github.io/london-2100-generative-system/incubator/vr/
 
 London 2100 生成式城市系统的 VR / MR 设计文件夹，目标设备是 **Meta Quest 3S**。用 Quest 自带浏览器打开即可（WebXR），不需要安装 app。

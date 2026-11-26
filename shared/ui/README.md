@@ -22,3 +22,21 @@
 The tokens every app's interface layer reads. Black, white and white at lower opacity only; colour is kept for map keys and warnings. DM Sans. Floating panels: the process on the left, the display on the right. Each app's own `skin.css` / `skin.js` maps its controls onto these tokens and this layout and leaves its engine alone.
 
 **Phones (23 Nov 2026).** `phone.css` and `phone.js` are the one phone layout (a touch screen under 600 px on its short side; iPads and computers are unchanged): the map or model fills the screen, a Display button at the top left opens the display panel under it (full width, upper half), and the process panel is a sheet along the bottom that folds to its name, its state and one or two main buttons. Only one of the two is open at a time. An app sets `l2phone` on `<html>` in its head and calls `L2Phone.init(...)` from its own `skin.js`; the controls are moved as they are and the engine is left alone.
+
+## The chain row · 统一的「上一步 / 下一步」 (`chain.css`, `chain.js`, 26 Nov 2026)
+
+One line under an app's title, the same in every catalogue app: seven marks for the research line (London map → 1 mould →
+2 wool → 3 tensor base → Tensor Studio → Structure Studio → VR), the step before on the left, **Next** on the right in
+white, and under them what goes with it or what is still missing (then Next is grey, with a link to the next app's example).
+The whole system and the real map stand beside the line: no marks.
+
+```html
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=1"></script>
+<script>L2Chain.mount({ id: 'my-app', into: panel, before: firstThingUnderTheTitle,
+  state: () => ({ ready, carry: ['en', '中文'], need: ['en', '中文'] }),   // only for a step that hands its result on
+  go: () => myOwnHandOver() });</script>
+```
+
+Rules: Next opens the next app in a new tab (inside the catalogue: the catalogue showing that app), so the page stays and can
+hand over again. The step before opens in this page, nothing carried. Framed by another app the row is hidden; framed by the
+catalogue it goes through it. The order and the names live in `chain.js`; `tools/tests/chain.test.mjs` checks them.

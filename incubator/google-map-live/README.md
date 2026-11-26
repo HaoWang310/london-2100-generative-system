@@ -1,5 +1,8 @@
 # London Map Live
 
+> **统一的「下一步」· The chain row (26 Nov 2026).** 面板标题下有和其他 app 相同的一行（`shared/ui/chain.js`）。伦敦地图是研究主线的第一站：上一步是目录，下一步是 Loop City 第 1 步，不带数据。框选场地进入张量场工作室的功能不变。嵌在 VR 页面里时这一行不显示。 The same row as in every app. The London map is the first stop of the research line: Next opens Loop City step 1, nothing is carried. Selecting a site for Tensor Studio is unchanged.
+
+
 Live map: https://haowang310.github.io/google-map-live/
 
 Version 3.44.1: the high-speed lines say where they go. Zoomed out (below zoom 9): "HS2 to Birmingham", "to Manchester · Glasgow (West Coast Main Line)" at the north end, "London", "HS1 to Paris · Brussels (Channel Tunnel)". From zoom 9: the eight stations (London Euston, Old Oak Common, Birmingham Interchange, Birmingham Curzon Street; London St Pancras, Stratford International, Ebbsfleet International, Ashford International), white dots on the line. In English like the basemap's place names; they follow the HS1 and HS2 switches and the colour theme, and are left out in the raster fallback style (no glyphs).

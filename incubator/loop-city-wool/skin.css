@@ -354,3 +354,7 @@ html.l2ui #lkPals { margin-top:4px; }      /* (25 Nov 2026) the palettes as thre
 #lcFlow .fc.off .fh b { color:#8A8A8A; }
 #lcFlow .fc.off .n { border-style:dashed; color:#6E6E73; }
 #lcFlow .fc.off .fb { padding:0 12px 11px 46px; color:var(--l2-ink3); font-size:12.5px; }
+
+/* (26 Nov 2026) the hand-over at step 17 looks as every app's Next does (shared/ui/chain.css): white */
+#lcFlow .ft .nx[data-way] { background:#fff; color:#000; font-weight:700; }
+#lcFlow .ft .nx[data-way]:hover { background:#E9E9EC; color:#000; }

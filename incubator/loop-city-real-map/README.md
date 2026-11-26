@@ -1,5 +1,8 @@
 # Loop City on the real map: the base map
 
+> **统一的「下一步」· The chain row (26 Nov 2026).** 面板顶部有和其他 app 相同的一行。真实地图在研究主线之外：上一步是目录，下一步是 Loop City 第 1 步，不带数据。 The same row as in every app. The real map stands beside the research line: Next opens Loop City step 1, nothing is carried.
+
+
 **What it is:** the real OpenStreetMap city round London with the project's data layers, dark and light, in plan and in 3D. It is the base on which Loop City (the mould, the growth, the wool) is to be laid. A standalone incubator app, built to be combined with the London map: the same MapLibre version and basemap, and no imports from outside its own folder.
 
 Version v13, 21 November 2026. Nothing runs or grows in this version: it is the map and its data only.
