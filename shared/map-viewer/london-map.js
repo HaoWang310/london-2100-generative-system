@@ -248,7 +248,9 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   const terrainLoader = terrain.createTerrainLocalLoader({ imageUrl: url(ASSETS.terrain), bounds: D, tileSize: terrain.TERRAIN_TILE_SIZE, center, radius: FOCUS70.radius });
   protocol('ea-terrain-local', terrainLoader);
 
-  const under = () => analysisBefore() || firstSymbol();
+  // Under the workspace's overlays when a module has any; otherwise under the 3D city (its shadows, buildings and
+  // footprints), as in google-map-live — never painted over the buildings.
+  const under = () => analysisBefore() || (map.getLayer(ID.cityDriver) ? ID.cityDriver : firstSymbol());
   function syncTerrain() {
     const t = st.terrain;
     if (!t.on) { setVis(ID.terrain, 'none'); t.status = 'off'; return; }

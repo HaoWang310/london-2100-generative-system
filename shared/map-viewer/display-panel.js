@@ -41,6 +41,8 @@ const CSS = `
 .dp-layer { padding: 8px 0; border-bottom: 1px solid var(--hairline); } .dp-layer:last-child { border-bottom: 0; }
 .dp-layer .name { font-size: 12.5px; } .dp-layer small { display: block; color: var(--text-3); font-size: 11px; margin-top: 1px; }
 .dp-range { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
+.dp-range > span:first-child { white-space: nowrap; }
+.dp-legend[hidden], .dp-key[hidden] { display: none; }
 .dp-range input[type=range] { flex: 1; accent-color: var(--text); } .dp-range .v { width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
 .dp-range select { flex: 1; min-width: 0; height: 26px; border-radius: 7px; background: var(--surface-2); color: var(--text); border: 1px solid var(--hairline-strong); font: inherit; font-size: 11.5px; }
 .dp-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 10.5px; color: var(--text-2); margin-top: 6px; }
@@ -139,8 +141,10 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   // ---------------------------------------------------------- content
   let searchCtl = null, results = [];
   const st = () => lm.state;
+  let statusLines = [];
   function build() {
     const S = st();
+    statusLines = [];
     const tile = (label, pressed, onclick, cls = '') => h('button', { type: 'button', class: `dp-tile ${cls}`, 'aria-pressed': String(pressed), onclick }, label);
     const sw = (on, onchange) => { const i = h('input', { type: 'checkbox', role: 'switch', checked: on }); i.addEventListener('change', () => onchange(i.checked)); return h('label', { class: 'switch' }, i, h('span')); };
     // oninput: while the slider moves; onchange (optional): once, when it is let go
@@ -157,8 +161,17 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
     };
     const pct = v => `${Math.round(v * 100)}%`;
     // note: a few words after "Visible" (what the layer is cut to), as the incubator London map's own status lines
-    const lstatus = (s, note = '') => h('div', { class: `dp-lstatus ${s.status === 'error' ? 'err' : ''}` },
-      t(`dp.status.${s.status || 'off'}`) + (s.error ? ` ${s.error}` : '') + (note && s.status === 'visible' ? ` · ${note}` : ''));
+    // (a text or a function). Each line can be redrawn alone, so it stays true while a slider or a list has the focus.
+    const lstatus = (s, note = '') => {
+      const el = h('div');
+      const draw = () => {
+        const n = typeof note === 'function' ? note() : note;
+        el.className = `dp-lstatus ${s.status === 'error' ? 'err' : ''}`;
+        el.textContent = t(`dp.status.${s.status || 'off'}`) + (s.error ? ` ${s.error}` : '') + (n && s.status === 'visible' ? ` · ${n}` : '');
+      };
+      draw(); statusLines.push(draw);
+      return el;
+    };
     const group = (key, first = false) => h('div', { class: `dp-group ${first ? 'first' : ''}` }, t(`dp.group.${key}`));
     const title = (name, sub) => h('span', {}, h('span', { class: 'name' }, name), h('small', {}, sub));
     const check = (label, on, onchange) => { const i = h('input', { type: 'checkbox', checked: on }); i.addEventListener('change', () => onchange(i.checked)); return h('label', {}, i, label); };
@@ -178,7 +191,9 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
     const railOrder = ['national', 'underground', ...P.railKinds.filter(k => k !== 'national' && k !== 'underground')];
     const railName = k => named(`dp.railKind.${k}`, k);
     const railColour = k => (k === 'national' ? (S.theme === 'dark' ? '#c9c9c9' : '#1c1c1e') : P.railColours[k]);
-    const speedKey = h('div', { class: 'dp-key' },
+    const railLegend = h('div', { class: 'dp-legend', hidden: S.rail.mode === 'shades' },
+      railOrder.map(k => swatch(railColour(k), railName(k), k === 'national' && S.theme !== 'dark' ? 'edge' : '')));
+    const speedKey = h('div', { class: 'dp-key', hidden: S.rail.mode !== 'speed' },
       h('i', { style: `background:linear-gradient(to right,${P.speedStops.map(([, c], i) => `${c} ${i * 100 / (P.speedStops.length - 1)}%`).join(',')})` }),
       h('div', {}, P.speedStops.map(([mph], i) => h('span', {}, i === P.speedStops.length - 1 ? `${mph} mph` : String(mph)))));
     const hsKeys = [h('i', {}), h('i', { class: 'dash' })];
@@ -247,7 +262,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
           h('div', { class: 'dp-row' }, title(t('dp.contour'), t('dp.contourSub')), sw(S.contour.on, v => lm.setLayer('contour', { on: v }))),
           range(t('dp.opacity'), S.contour.opacity, 0, 1, 0.05, pct, v => lm.setLayer('contour', { opacity: v })),
           select(t('dp.contourInterval'), String(S.contour.interval), CONTOUR_INTERVALS.map(n => [String(n), `${n} m`]), v => lm.setLayer('contour', { interval: +v })),
-          lstatus(S.contour, t('dp.note.contour', { n: S.contour.interval, count: S.contour.levels }))),
+          lstatus(S.contour, () => t('dp.note.contour', { n: S.contour.interval, count: S.contour.levels }))),
         group('water'),
         h('div', { class: 'dp-layer' },
           h('div', { class: 'dp-row' }, title(t('dp.flood'), t('dp.floodSub')), sw(S.flood.on, v => lm.setLayer('flood', { on: v }))),
@@ -277,10 +292,10 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
         h('div', { class: 'dp-layer' },
           h('div', { class: 'dp-row' }, title(t('dp.rail'), t('dp.railSub')), sw(S.rail.on, v => lm.setLayer('rail', { on: v }))),
           h('div', { class: 'dp-checks', role: 'group' }, railOrder.map(k => check(railName(k), S.rail.kinds[k], v => lm.setLayer('rail', { kinds: { [k]: v } })))),
-          select(t('dp.railMode'), S.rail.mode, ['lines', 'shades', 'speed'].map(k => [k, t(`dp.railMode.${k}`)]), v => lm.setLayer('rail', { mode: v })),
+          select(t('dp.railMode'), S.rail.mode, ['lines', 'shades', 'speed'].map(k => [k, t(`dp.railMode.${k}`)]),
+            v => { railLegend.hidden = v === 'shades'; speedKey.hidden = v !== 'speed'; lm.setLayer('rail', { mode: v }); }),
           range(t('dp.lineWidth'), S.rail.width, 0.3, 3, 0.1, pct, v => lm.setLayer('rail', { width: v })),
-          S.rail.mode === 'shades' ? null : h('div', { class: 'dp-legend' }, railOrder.map(k => swatch(railColour(k), railName(k), k === 'national' && S.theme !== 'dark' ? 'edge' : ''))),
-          S.rail.mode === 'speed' ? speedKey : null, lstatus(S.rail, t('dp.note.rail'))),
+          railLegend, speedKey, lstatus(S.rail, t('dp.note.rail'))),
         h('div', { class: 'dp-layer' },
           h('div', { class: 'dp-row' }, title(t('dp.highSpeed'), t('dp.highSpeedSub')), sw(S.highSpeed.on, v => lm.setLayer('highSpeed', { on: v }))),
           h('div', { class: 'dp-checks', role: 'group' }, check('HS1', S.highSpeed.hs1, v => lm.setLayer('highSpeed', { hs1: v })), check('HS2', S.highSpeed.hs2, v => lm.setLayer('highSpeed', { hs2: v }))),
@@ -305,7 +320,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   onLangChange(refresh);
   // keep the switches and statuses in step with the map, but never rebuild while a slider or field is in use
   return {
-    update(what) { if (what === 'layers' || what === 'atmosphere' || what === 'theme' || what === 'display') { if (!panel.contains(document.activeElement) || document.activeElement.type === 'checkbox' || document.activeElement.tagName === 'BUTTON') refresh(); } },
+    update(what) { if (what === 'layers' || what === 'atmosphere' || what === 'theme' || what === 'display') { if (!panel.contains(document.activeElement) || document.activeElement.type === 'checkbox' || document.activeElement.tagName === 'BUTTON') refresh(); else for (const draw of statusLines) draw(); } },
     /** Attach the panel to the map's right edge (a slim tab when collapsed), or float it again. */
     setDocked(on) { on = Boolean(on); if (on === docked) return; docked = on; panel.classList.toggle('docked', on); refresh(); },
     element: panel
