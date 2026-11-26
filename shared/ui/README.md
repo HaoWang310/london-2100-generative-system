@@ -25,13 +25,14 @@ The tokens every app's interface layer reads. Black, white and white at lower op
 
 ## The chain row · 统一的「上一步 / 下一步」 (`chain.css`, `chain.js`, 26 Nov 2026)
 
-One line under an app's title, the same in every catalogue app: seven marks for the research line (London map → 1 mould →
-2 wool → 3 tensor base → Tensor Studio → Structure Studio → VR), the step before on the left, **Next** on the right in
+One line under an app's title, the same in every catalogue app: six marks for the research line (London map → 1 mould →
+2 wool → Tensor Studio → Structure Studio → VR; until 26 Nov 2026 a step 3, the tensor base, stood between the wool and
+Tensor Studio), the step before on the left, **Next** on the right in
 white, and under them what goes with it or what is still missing (then Next is grey, with a link to the next app's example).
 The whole system stands beside the line: no marks. (The real map stood beside it too until it was removed on 26 Nov 2026.)
 
 ```html
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=1"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=2"></script>
 <script>L2Chain.mount({ id: 'my-app', into: panel, before: firstThingUnderTheTitle,
   state: () => ({ ready, carry: ['en', '中文'], need: ['en', '中文'] }),   // only for a step that hands its result on
   go: () => myOwnHandOver() });</script>

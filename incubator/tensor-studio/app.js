@@ -2805,10 +2805,10 @@ document.getElementById('applyPreset').onclick=()=>{
     if (!s){ el.textContent = ORIG_SUB; return; }
     const e = s.elevation ? (zh() ? '高程 ' + s.elevation[0] + '–' + s.elevation[1] + ' 米，平均坡度 ' + s.meanSlopePct + '%' : 'elevation ' + s.elevation[0] + '–' + s.elevation[1] + ' m, mean slope ' + s.meanSlopePct + ' %') : (zh() ? '无高程数据' : 'no elevation');
     const warn = (m.warnings || []).map(w => '<br>· ' + w).join('');
-    if (FILE){ const np = (D.ctx.parks || []).length; const pout = Math.max(0, (SRC.parksGiven || 0) - (SRC.parksShown || 0));      // (v8.49) a site file from Loop City step 3
+    if (FILE){ const np = (D.ctx.parks || []).length; const pout = Math.max(0, (SRC.parksGiven || 0) - (SRC.parksShown || 0));      // (v8.49) a site from Loop City: parcels of the wool bands
       el.innerHTML = (zh()
-        ? '第 3 步交来的城市地块：' + s.areaHa + ' 公顷，跨度约 ' + s.sideM + ' 米；' + e + '。单元身份：' + (KEYS.join('；') || '旧用地文件，没有记录') + '。锚点 ' + m.anchors + ' 个，是毛线路口。道路是毛线带的道路等级（含现有道路）；' + (np ? '公园 ' + np + ' 个，保持为公园，不长路；' : '') + (pout ? '带来的公园有 ' + pout + ' 个在画面外，不显示；' : '') + (SRC.terrain && s.elevation ? '地形来自 OS Terrain 50（50 米）' : '这里没有地形数据，按平地计算') + '；风为 London Luton 典型气象年。'
-        : 'Urban parcels handed on by step 3: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. Cell key: ' + (KEYS.join('; ') || 'an older site file, none recorded') + '. ' + m.anchors + ' anchors, the wool junctions. The roads are the wool bands\u2019 hierarchy (existing roads among them); ' + (np ? np + ' park' + (np > 1 ? 's' : '') + ', kept as parks, no street enters; ' : '') + (pout ? pout + ' of the parks handed on ' + (pout > 1 ? 'are' : 'is') + ' outside this view, not shown; ' : '') + (SRC.terrain && s.elevation ? 'terrain: OS Terrain 50 (50 m)' : 'no terrain data here, worked out as flat ground') + '; wind: London Luton typical year.') + warn; return; }
+        ? '毛线带交来的城市地块：' + s.areaHa + ' 公顷，跨度约 ' + s.sideM + ' 米；' + e + '。单元身份：' + (KEYS.join('；') || '旧用地文件，没有记录') + '。锚点 ' + m.anchors + ' 个，是毛线路口。道路是毛线带的道路等级（含现有道路）；' + (np ? '公园 ' + np + ' 个，保持为公园，不长路；' : '') + (pout ? '带来的公园有 ' + pout + ' 个在画面外，不显示；' : '') + (SRC.terrain && s.elevation ? '地形来自 OS Terrain 50（50 米）' : '这里没有地形数据，按平地计算') + '；风为 London Luton 典型气象年。'
+        : 'Urban parcels handed on by the wool bands: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. Cell key: ' + (KEYS.join('; ') || 'an older site file, none recorded') + '. ' + m.anchors + ' anchors, the wool junctions. The roads are the wool bands\u2019 hierarchy (existing roads among them); ' + (np ? np + ' park' + (np > 1 ? 's' : '') + ', kept as parks, no street enters; ' : '') + (pout ? pout + ' of the parks handed on ' + (pout > 1 ? 'are' : 'is') + ' outside this view, not shown; ' : '') + (SRC.terrain && s.elevation ? 'terrain: OS Terrain 50 (50 m)' : 'no terrain data here, worked out as flat ground') + '; wind: London Luton typical year.') + warn; return; }
     el.innerHTML = zh()
       ? '你在伦敦地图上选定的场地：' + s.areaHa + ' 公顷，跨度约 ' + s.sideM + ' 米；' + e + '。土地 = 选区减去水体' + (T.keepBuildings ? '和现有建筑' : '') + '；锚点 ' + m.anchors + ' 个，取自现有道路与边界的交点。地形来自 OS Terrain 50（50 米），道路、水体、铁路、建筑来自 OpenStreetMap / OpenFreeMap，风为 London Luton 典型气象年。' + warn
       : 'The site you drew on the London map: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. The land is the site less the water' + (T.keepBuildings ? ' and the existing buildings' : '') + '; ' + m.anchors + ' anchors where existing streets meet the edge. Terrain: OS Terrain 50 (50 m). Streets, water, rail and buildings: OpenStreetMap via OpenFreeMap. Wind: London Luton typical year.' + warn; };
@@ -2817,7 +2817,7 @@ document.getElementById('applyPreset').onclick=()=>{
   window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); syncTints(); } catch (e) {} };
   syncBase(); syncEnv();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
-  // (v8.50) the chain row, the same in every catalogue app: the step before (step 3, the base), the step after
+  // (v8.50) the chain row, the same in every catalogue app: the step before (the wool bands, since v8.51), the step after
   // (Structure Studio) and what goes with it: the network as it stands, once the streets are grown. Structure Studio is
   // opened in a new tab and reads the network from this window. Framed by the London map or by Structure Studio the row
   // is not shown (shared/ui/chain.js): they have their own way back.
@@ -2837,13 +2837,13 @@ document.getElementById('applyPreset').onclick=()=>{
     const last = !FILE && IO.last(), lb = $id('fileLast');
     if (last){ lb.hidden = false; lb.innerHTML = '<span data-i18n></span>'; const sp = lb.firstChild; sp.dataset.zh = '上次的地块 · ' + short(last); sp.dataset.en = 'The last parcels · ' + short(last); sp.textContent = zh() ? sp.dataset.zh : sp.dataset.en; lb.onclick = () => IO.again(); }
     $id('fileBack').onclick = () => H.close(); $id('fileP2').onclick = () => IO.example();
-    if (window.L2Chain) $id('fileBack').hidden = true;      // (v8.50) the way back to step 3 is in the chain row
+    if (window.L2Chain) $id('fileBack').hidden = true;      // (v8.50) the way back to the wool bands is in the chain row
     const sb = $id('fileSample'); if (sb){ sb.hidden = FILE; sb.onclick = () => { $id('hud').textContent = zh() ? '正在打开 Loop City 范例地块…' : 'Opening the Loop City example parcels…'; IO.sample().catch(e => say('范例地块读不出来：' + (e.message || e), 'The example parcels could not be read: ' + (e.message || e))); }; }
     $id('fileOpen').onclick = () => $id('fileIn').click();
     $id('fileIn').onchange = async ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
       try { const j = JSON.parse(await f.text());
-        if (j && j.type === 'loop-city-parcel-package') return say('这是第 2 步的地块包。请先在第 3 步「张量场底图」里打开它，再保存用地文件或点「在张量场工作室打开」。', 'This is a parcel package from step 2. Open it in step 3, the base, then save the site file or press "Open in Tensor Studio".');
-        if (!(j && j.type === 'tensor-site-input' && Array.isArray(j.ring) && j.features)) return say('这不是第 3 步保存的用地文件（tensor-site-input）。', 'This is not a site file saved by step 3 (tensor-site-input).');
+        const pack = !!(j && j.type === 'loop-city-parcel-package' && Array.isArray(j.parcels) && j.parcels.length);      // (v8.51) the package the wool bands save is read here too
+        if (!pack && !(j && j.type === 'tensor-site-input' && Array.isArray(j.ring) && j.features)) return say('这不是毛线带保存的地块包，也不是用地文件。', 'This is neither a parcel package saved by the wool bands nor a site file.');
         $id('hud').textContent = zh() ? '正在打开用地文件…' : 'Opening the site file…'; IO.use(j);
       } catch (e){ say('这个文件读不出来：' + (e.message || e), 'The file could not be read: ' + (e.message || e)); } };
   }

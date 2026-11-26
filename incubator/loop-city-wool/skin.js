@@ -40,8 +40,9 @@
   var meta = el('div');
   meta.appendChild(el('div', 'l2-badge', 'Loop City · step 2 · the wool bands', 'Loop City · 第 2 步 · 毛线带'));
   var navrow = el('div'); if ($('liveAgain')) navrow.appendChild($('liveAgain')); meta.appendChild(navrow);       // the way back to step 1 is in the chain row now
-  /* ---- (26 Nov 2026) the chain row, the same in every catalogue app. Next is the base for the tensor field, and what
-     goes is the parcels taken at step 17: the page's own hand-over (bdSend). */
+  /* ---- (26 Nov 2026) the chain row, the same in every catalogue app. Next is Tensor Studio, and what goes is the
+     parcels taken at step 17: the page's own hand-over (bdSend). Next is grey, with the reason, while Tensor Studio
+     cannot take the site: too wide, too small, or parcels that do not touch (bpCheck). */
   if (window.L2Chain) L2Chain.mount({ id: 'loop-city-wool', into: L, before: hl.nextSibling, lang: function () { return window.LANG || 'en'; },
     state: function () {
       var zhOfMsg = function (m) { return (window.__ZH && window.__ZH[m]) || m; }, st = ''; try { st = WS.stop(); } catch (e) {}
@@ -50,6 +51,8 @@
       if (!traced) return { ready: false, need: ['Go through to step 16 first, then take urban parcels at step 17.', '先走到第 16 步，再在第 17 步选城市地块。'] };
       var Lp = []; try { Lp = bpList(); } catch (e) {} var nu = Lp.filter(function (d) { return d.use === 'urban'; }).length, np = Lp.length - nu;
       if (!nu) return { ready: false, need: ['At step 17, click an urban parcel on the map (shift-click for more).', '在第 17 步的地图上点选城市地块（按住 Shift 可多选）。'] };
+      var no = null; try { no = bpWhy(bpCheck(Lp)); } catch (e) {}
+      if (no) return { ready: false, need: no };
       var ks = []; try { var K = WS.keys(), seen = {}; Lp.forEach(function (d) { if (!seen[d.cell]) { seen[d.cell] = 1; ks.push(K[d.cell] ? K[d.cell].split(' · ').slice(1).join(' · ') : d.cell); } }); } catch (e) {}
       return { ready: true, carry: [nu + ' urban parcel' + (nu > 1 ? 's' : '') + (np ? ', ' + np + ' park' + (np > 1 ? 's' : '') : '') + ' · ' + ks.join(', '), nu + ' 块城市地块' + (np ? '、' + np + ' 个公园' : '') + ' · ' + ks.join('、')] };
     },

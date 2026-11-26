@@ -264,7 +264,7 @@
   (function whenReady() { if (ready() && document.querySelector('#panel .ts-sub')) button(); else setTimeout(whenReady, 400); })();
   window.TSIntro = { replay: function () { film(); }, get open() { return !!(cur && !cur.closed); } };
   if (/[#&]nointro\b/.test(H)) return;
-  // (v8.49) on a site file from Loop City step 3 (handed on with #site, or the tab already on one): straight to the site, as from the map
+  // (v8.49) on a site from Loop City (handed on by the wool bands with #site, or the tab already on one): straight to the site, as from the map
   try { if (/[#&]site\b/.test(H) || sessionStorage.getItem('tensorStudio.siteOn') === '1' || String(window.name || '').indexOf('ts-site:') === 0) return; } catch (e) {}
   if (document.body) film(); else document.addEventListener('DOMContentLoaded', film);
 })();
