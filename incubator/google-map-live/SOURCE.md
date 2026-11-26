@@ -11,8 +11,8 @@
 
 ## v3.44.0 · 规划图层 · Planning layers (25 Nov 2026)
 
-`assets/planning/` 来自本仓库 `incubator/loop-city-real-map/assets`（v13，2026-11-21），用 `scripts/build_planning_layers.py` 裁到 70 km 研究范围；`scripts/planning_layers.js`、`relief_local.js`、`relief_worker.js` 为新写，画法（铁路着色、线宽、高度色带）沿用该应用的 `scripts/app.js`。
-`assets/planning/` comes from `incubator/loop-city-real-map/assets` in this repository (v13, 21 Nov 2026), cut to the 70 km study circle with `scripts/build_planning_layers.py`; `scripts/planning_layers.js`, `relief_local.js` and `relief_worker.js` are new, and follow that app's `scripts/app.js` for the look (rail colours, line widths, the height ramps).
+`assets/planning/` 来自原「Loop City 真实地图」模块的数据（v13，2026-11-21）。未裁剪的铁路和 AONB 原始文件存在本应用自己的 `source/planning/`，用 `scripts/build_planning_layers.py` 裁到 70 km 研究范围；绿带和高铁文件本身就是原始文件（绿带全在圈内，高铁保留全线）。`scripts/planning_layers.js`、`relief_local.js`、`relief_worker.js` 为新写，画法（铁路着色、线宽、高度色带）沿用该应用的 `scripts/app.js`。
+`assets/planning/` comes from the data of the former "Loop City on the real map" app (v13, 21 Nov 2026). The uncut rail and AONB files are kept in this app's own `source/planning/` and cut to the 70 km study circle with `scripts/build_planning_layers.py`; the Green Belt and high-speed files are the uncut files themselves (the belt lies inside the circle, HS1 and HS2 are kept whole). `scripts/planning_layers.js`, `relief_local.js` and `relief_worker.js` are new, and follow that app's `scripts/app.js` for the look (rail colours, line widths, the height ramps).
 
 | 文件 File | 数据 Data | 许可 Licence |
 |---|---|---|

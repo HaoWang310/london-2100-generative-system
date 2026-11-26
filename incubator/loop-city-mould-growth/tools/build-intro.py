@@ -16,7 +16,7 @@ Writes, from what the page itself holds, so that the story shows the same map an
                             - for each of the 17 stations, the nearest National Rail station in OpenStreetMap, which
                               way the Loop City station lies from it and how far (as the labels say it,
                               "Braintree SW 8.2 km": 8.2 km south-west of Braintree).
-                          The stations come from ../loop-city-real-map/assets/stations.geojson (OpenStreetMap
+                          The stations come from reference/osm/stations.geojson (OpenStreetMap
                           contributors, ODbL, fetched 21 Nov 2026), less a few heritage and works stations that the
                           data files as national (below).
 
@@ -35,7 +35,7 @@ Image.MAX_IMAGE_PIXELS = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OSM = os.path.join(ROOT, '..', 'loop-city-real-map', 'assets')
+OSM = os.path.join(ROOT, 'reference', 'osm')   # this app's own copy of the OpenStreetMap extract (21 Nov 2026)
 W, H = 1000.0, 820.0
 LAYERS = ['aonb', 'greenbelt', 'greenbelt_edge', 'greenspace', 'nationalparks', 'rail', 'roads_local', 'roads_national',
           'roads_regional', 'urban', 'water', 'woodland']

@@ -1,10 +1,15 @@
 """Planning layers of the London map, clipped to the 70 km study circle.
 
+  python3 scripts/build_planning_layers.py                      (source/planning -> assets/planning)
   python3 scripts/build_planning_layers.py <source folder> <output folder>
 
-Reads rail.geojson, aonb.geojson and green_belt.geojson (the files of incubator/loop-city-real-map/assets, 21 Nov 2026)
-and writes them cut to the study circle: lines are cut where they cross it, polygons are clipped edge by edge, points
-outside are dropped. highspeed.geojson (HS1, HS2) is copied whole on purpose: HS2 is kept to Birmingham.
+Reads rail.geojson and aonb.geojson (the uncut files in this app's own source/planning, OpenStreetMap and Natural
+England, 21 Nov 2026) and writes them cut to the study circle: lines are cut where they cross it, polygons are
+clipped edge by edge, points outside are dropped.
+
+green_belt.geojson and highspeed.geojson in assets/planning are the uncut files themselves: the London Green Belt
+lies wholly inside the circle, and HS1 and HS2 are kept whole on purpose (HS2 to Birmingham). They are cut or copied
+only when the source folder holds them.
 
 The circle is the one of scripts/map_core.js makeCircleGeoJson (Charing Cross, 70 km, R = 6378137), as a polygon of
 720 sides, so no cut point is more than 0.7 m inside the true circle. Standard library only."""
@@ -116,12 +121,19 @@ def clip_fc(fc):
     return {**fc,'features':out}
 if __name__=='__main__':
     import os,shutil
-    src,out=sys.argv[1],sys.argv[2]
+    here=os.path.dirname(os.path.abspath(__file__))
+    src=sys.argv[1] if len(sys.argv)>2 else os.path.join(here,'..','source','planning')
+    out=sys.argv[2] if len(sys.argv)>2 else os.path.join(here,'..','assets','planning')
     os.makedirs(out,exist_ok=True)
     for name in ('rail','aonb','green_belt'):
-        fc=json.load(open(os.path.join(src,name+'.geojson')))
+        path=os.path.join(src,name+'.geojson')
+        if not os.path.exists(path):
+            print(name,'not in the source folder: left as it is');continue
+        fc=json.load(open(path))
         o=clip_fc(fc)
         json.dump(o,open(os.path.join(out,name+'.geojson'),'w'),separators=(',',':'))
         print(name,len(fc['features']),'->',len(o['features']))
-    shutil.copyfile(os.path.join(src,'highspeed.geojson'),os.path.join(out,'highspeed.geojson'))
-    print('highspeed copied whole')
+    path=os.path.join(src,'highspeed.geojson')
+    if os.path.exists(path):
+        shutil.copyfile(path,os.path.join(out,'highspeed.geojson'));print('highspeed copied whole')
+    else: print('highspeed not in the source folder: left as it is')

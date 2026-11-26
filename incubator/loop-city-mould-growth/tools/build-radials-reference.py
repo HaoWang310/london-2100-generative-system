@@ -3,7 +3,7 @@
 
 reference/radials.json holds, for each radial, the official name of the line it follows and the stations on it, as
 checked against the operators' own sites. This tool places those stations along the radials the page draws (HW_RAIL
-in index.html), by the OpenStreetMap stations of ../loop-city-real-map/assets, and draws one line diagram per radial:
+in index.html), by the OpenStreetMap stations of reference/osm, and draws one line diagram per radial:
 
   reference/radials-official.svg   the figure (black, white, the warm tone for the two new lines)
   reference/radials-official.png   the same, if a headless Chrome with Playwright is at hand
@@ -18,7 +18,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OSM = os.path.join(ROOT, '..', 'loop-city-real-map', 'assets')
+OSM = os.path.join(ROOT, 'reference', 'osm')   # this app's own copy of the OpenStreetMap extract (21 Nov 2026)
 REF = os.path.join(ROOT, 'reference')
 src = open(os.path.join(HERE, 'build-intro.py'), encoding='utf-8').read()
 ns = {'__file__': os.path.join(HERE, 'build-intro.py')}

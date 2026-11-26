@@ -4,7 +4,7 @@
 The radials at P4 (High Speed 1) and P6 (South West Main Line) in HW_RAIL had been drawn by hand: P6 ran 150-300 m
 beside its track the whole way from Waterloo, and P4 left High Speed 1 between Rainham and Purfleet and crossed Rainham
 Marshes, up to 1.3 km from the line. This tool traces both along the OpenStreetMap track the repository already holds
-(incubator/loop-city-real-map/assets, fetched 21 Nov 2026) and
+(reference/osm, fetched 21 Nov 2026) and
 
   1. writes the two new lines into HW_RAIL in index.html (British National Grid metres, the outer end first, as before),
      each ending with a short straight piece from the track to its station (P6 stands about 300 m off the line, P4
@@ -32,7 +32,7 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OSM = os.path.join(ROOT, '..', 'loop-city-real-map', 'assets')
+OSM = os.path.join(ROOT, 'reference', 'osm')   # this app's own copy of the OpenStreetMap extract (21 Nov 2026)
 PAGE = os.path.join(ROOT, 'index.html')
 LAYERS = ['aonb', 'greenbelt', 'greenbelt_edge', 'greenspace', 'nationalparks', 'rail', 'roads_local', 'roads_national',
           'roads_regional', 'urban', 'water', 'woodland']          # img/<name>.webp, the map's layers at full size
