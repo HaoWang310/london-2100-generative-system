@@ -1,5 +1,7 @@
 # Tensor Studio · 张量场工作室
 
+> **语言跟随 · Following the language (v8.52.2, 26 Nov 2026).** 页面加载到约半秒时在别的标签页或目录里切换语言，过几秒所有标签页会被切回原来的语言：启动时用的是页面刚开始读到的语言，并写回自己的记录（`tensorStudio.uiLanguage`），共用的 `shared/ui/lang.js` 把这当成你自己的选择改了全站。现在启动时读当时的语言（`window.__TS_NOWLANG`）。开场短片在播放中换了语言，会用新语言从头放。 Switching the language while the page loaded could switch every tab back: the start applied the language read when the page began and wrote it back. It now applies the language as it is at that moment. The opening film starts again in a language changed while it plays.
+
 > **文字核对 · The wording checked (26 Nov 2026).** 中文界面下，开场短片的六个小标题和左上角的「TENSOR STUDIO · METHOD」现在是中文；悬停提示和读屏标签（收起 / 展开、拖动调整宽度等 7 条）跟着语言走（`TS_ATTR`，原来只翻译文字，不翻译提示）。角标「车站 P2 示例」改为「范例」；场地说明里的「羊毛路网」改为「毛线路网」。 In Chinese, the opening film's six small headings and its head line are Chinese now; tooltips and spoken labels follow the language (`TS_ATTR`: only text was translated before). 示例 is written 范例 and 羊毛 is written 毛线, as in the other apps.
 
 > **语言开关和其他应用一样 · The language switch, as in the other apps (v8.52.1, 26 Nov 2026).** 手机上语言开关原来在底部面板里，每个按钮只有 36 × 26 像素；其他应用都在右上角。现在手机上它移到右上角，和「显示」齐平，用共用的样子（`shared/ui/phone.css` 的 `.l2ph-lang`）：高 44 像素，和黏菌、毛线带、结构工作室一样。写法由「English」改为「EN」（电脑和手机都是）。开关离开了面板，所以目录条目和 `shared/ui/lang.js` 用的选择器改为 `.language-switch …`（页面里只有这一个）。电脑上位置不变。 On a phone the switch stood in the sheet along the bottom, 36 × 26 px a button; it now stands at the top right with the shared look, 44 px high, as in the other apps, and reads EN instead of English. On a computer its place is unchanged.
@@ -279,7 +281,7 @@ Shift / Alt + 双击的快捷键仍然可用。自由模式保留原来的全部
 - **冬季冷风**：12–2 月北、东北、东向风能；以北风为主。
 - **气候舒适**：0.6 ×（1 − 冷风）+ 0.4 × 通风。
 
-日照暂不纳入。计算在 `scripts/env_fields.js`（纯函数，`node scripts/test_env_fields.mjs`）。
+日照暂不纳入。计算在 `scripts/env_fields.js`（纯函数，`node --test scripts/env_fields.test.mjs`）。
 
 ## 文件
 
@@ -294,7 +296,7 @@ Shift / Alt + 双击的快捷键仍然可用。自由模式保留原来的全部
 | `scripts/process.js` | 流程模式（v8.7）：8 个步骤、逐帧记录生长、时间轴回放与拖动 |
 | `scripts/flood_risk.js` | 读取 EA 风险栅格到场地 10 m 网格（两源取高），并把避让区转成闭合边界 |
 | `assets/flood_risk/` | EA 地表水与河流海洋风险栅格（各 4 块）及元数据 |
-| `scripts/test_site_builder.mjs` | `node scripts/test_site_builder.mjs` |
+| `scripts/site_builder.test.mjs` | `node --test scripts/site_builder.test.mjs` |
 | `integration/google-map-live-hook.js` | 从伦敦地图选区打开本 app 的入口代码；已接线的副本在 `google-map-live/scripts/tensor_studio_site.js` |
 
 ## 接到伦敦地图（google-map-live，v8.32 已接线）

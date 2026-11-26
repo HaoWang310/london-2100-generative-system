@@ -9,7 +9,7 @@
 // a fine mesh whose every vertex is projected exactly (shared/geo-core: OS
 // Transverse Mercator + Helmert, about 2-5 m); inside one mesh cell the error
 // of linear interpolation is 0.3 m at most (tests/module.test.mjs measures it).
-// The same method as modules/01-growth-simulator/georef.js, written for a frame.
+// The same method as the former growth simulator's georef.js (modules/01-growth-simulator, removed 26 Nov 2026), written for a frame.
 
 import { toWGS84, toBNG } from '../../shared/geo-core/index.js';
 

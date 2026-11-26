@@ -10,7 +10,7 @@
  *   C      climate comfort, C = 0.6·(1 − Cw) + 0.4·V
  * Wind energy per direction = share × speed² for the season (D.year), spread over the site with that
  * direction's strength grid (D.dirs[k].S, strong where the wind comes in, fading over the land).
- * Pure: no DOM, so it runs in the page or in Node (test_env_fields.mjs).
+ * Pure: no DOM, so it runs in the page or in Node (env_fields.test.mjs).
  */
 
 const clamp = (a, b, c) => Math.max(b, Math.min(c, a));

@@ -10976,7 +10976,9 @@ async function startGrowthSoft(params){
      set up, then the 76 years. The shares are the time each took when measured: fields about a third, the
      setting up a quarter, the years the rest. While this goes on the map is drawn only when it has to be
      (S.prepBusy, read in frame()), which leaves that time to the model. */
-  const say = v => { note.textContent = (zh ? "正在准备生长模型 " : "Preparing the growth model ") + Math.max(0, Math.min(99, Math.round(v))) + " %"; };
+  // (26 Nov 2026) the language as the page shows it now, at each figure: a switch made while the model is prepared reaches this line too
+  const zhNow = () => { const l = document.documentElement.lang || ""; return l ? /^zh/i.test(l) : zh; };
+  const say = v => { note.textContent = (zhNow() ? "正在准备生长模型 " : "Preparing the growth model ") + Math.max(0, Math.min(99, Math.round(v))) + " %"; };
   // the figure is on the screen before the next piece of work; the timer is for a page that is not being shown
   // (a background tab, or the frame the workspace keeps out of sight), where no frame comes
   const shown = () => new Promise(ok => { let d = false; const go = () => { if(!d){ d = true; ok(); } };

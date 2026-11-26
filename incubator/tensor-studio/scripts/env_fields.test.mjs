@@ -1,5 +1,5 @@
 // Environmental fields (layer 1): elevation from contours, runoff, seasonal winds, comfort.
-// Run: node scripts/test_env_fields.mjs
+// Run: node --test incubator/tensor-studio/scripts/env_fields.test.mjs (also run by node --test at the repo root)
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { environmentFields, elevationFromContours, flowAccumulation, landMaskOf } from './env_fields.js';

@@ -9,7 +9,6 @@
 import { cpSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, rmSync, existsSync } from 'node:fs';
 import { join, resolve, dirname, relative, sep } from 'node:path';
 import { execSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 
 const root = resolve(dirname(new URL(import.meta.url).pathname), '..');
 const out = resolve(process.argv[2] || '_site');
@@ -55,32 +54,4 @@ function walk(dir) {
 }
 walk(out);
 
-// The growth simulator (modules/01) reads the incubator's files as data. Each fetch carries a
-// short hash of that file's content, so a browser fetches it again only when it has changed.
-{
-  const srcDir = join(out, 'incubator/growth-simulator-dark'), target = join(out, 'modules/01-growth-simulator/growth.js');
-  if (existsSync(srcDir) && existsSync(target)) {
-    const hashes = {};
-    const each = d => { for (const name of readdirSync(d)) { const p = join(d, name); if (statSync(p).isDirectory()) each(p); else hashes[relative(srcDir, p).split(sep).join('/')] = createHash('sha256').update(readFileSync(p)).digest('hex').slice(0, 10); } };
-    each(srcDir);
-    const src = readFileSync(target, 'utf8');
-    if (!src.includes('/*SRC_HASH*/{}')) throw new Error('growth.js: no /*SRC_HASH*/ placeholder');
-    writeFileSync(target, src.replace('/*SRC_HASH*/{}', JSON.stringify(hashes)));
-
-    // The incubator page itself: its <script src> files carry their hash, and the catalogue opens
-    // the page by the hash of its index.html, so after a deploy the browser never shows a cached
-    // page, or a new page with yesterday's controls.js.
-    const page = join(srcDir, 'index.html');
-    if (existsSync(page)) {
-      const html = readFileSync(page, 'utf8').replace(/(<script\s+src=")([^"?#:]+\.js)(")/g, (m, a, f, c) => hashes[f] ? `${a}${f}?h=${hashes[f]}${c}` : m);
-      writeFileSync(page, html);
-      const catPath = join(out, 'incubator/catalogue.json');
-      if (existsSync(catPath)) {
-        const cat = JSON.parse(readFileSync(catPath, 'utf8')), h = createHash('sha256').update(html).digest('hex').slice(0, 10);
-        for (const it of cat.items || []) if (it.href === 'incubator/growth-simulator-dark/') it.href += `?h=${h}`;
-        writeFileSync(catPath, JSON.stringify(cat, null, 2));
-      }
-    }
-  }
-}
 console.log(`Built site v${version} (${tag}) -> ${relative(root, out) || out}`);

@@ -6,7 +6,7 @@
 在线访问：https://haowang310.github.io/london-2100-generative-system/incubator/google-map-live/
 
 说明：
-- 这里的 `.github/workflows/` 只作参考，GitHub 只运行仓库根目录的工作流。
+- 原仓库带来的 `.github/workflows/`（9 个）、`google-style-3d.html` 和 `assets/terrain_b64/` 已于 2026-11-26 删除：GitHub 只运行仓库根目录的工作流，后两样没有任何页面用。原来不会被 `node --test` 找到的测试改了名（`*.test.mjs`），现在每次都跑；3 个过时的删掉了。界面上的版本号去掉了分支名留下的「-english」。
 - 后续融合时，相关功能会通过 `modules/00-london-map`、`02-wool-network`、`03-tensor-roads` 的适配层接入统一系统。
 
 ## v3.44.0 · 规划图层 · Planning layers (25 Nov 2026)

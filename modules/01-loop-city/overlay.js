@@ -10,7 +10,7 @@
 // Canvas fallback (no MapLibre): the same pictures and lines drawn in EPSG:27700
 // straight onto the fallback view.
 //
-// The picture layer is the one modules/01-growth-simulator/overlay.js uses for its
+// The picture layer is the one the former modules/01-growth-simulator/overlay.js (removed 26 Nov 2026) used for its
 // step images (createImageLayer), copied here because modules do not import each other.
 
 import { frameMesh, toLonLat } from './georef.js';

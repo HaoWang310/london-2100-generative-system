@@ -241,6 +241,9 @@
     document.addEventListener('keydown', onKey, true);
     new MutationObserver(onReady).observe(de, { attributes: true, attributeFilter: ['class'] }); onReady();
     if (moving) moving_(); else still_();
+    // (26 Nov 2026) the language changed while the film plays (another tab, or the catalogue): it starts again in that language
+    timers.push(setInterval(function () { var l = window.TS_LANG; if (me.closed || (l !== 'zh' && l !== 'en') || (l === 'zh') === zh) return;
+      zh = l === 'zh'; close(); if (root.parentNode) root.parentNode.removeChild(root); film(); }, 400));
     timers.push(setTimeout(function () { if (!started) close(); }, 12000));   // nothing came in time (a very slow line): the app's own loading mark stays
     me.close = close;
   }

@@ -30,10 +30,8 @@ export const TOOLS = [
 
 // Simulations that stand beside the scale chain: open at any level, drawn on the map,
 // kept as a background while working at other levels. Listed after London in the nav.
-// 23 Nov 2026: Loop City step 1 took the place of the growth simulator as 01. The growth simulator's module is
-// still in the repository (modules/01-growth-simulator) and is not loaded; to bring it back, import it here and add
-//   { key: 'growth', module: growth, create: createGrowthTool }
-// to the list. One simulation is on the map at a time; the others keep off it while it is.
+// 23 Nov 2026: Loop City step 1 took the place of the growth simulator as 01; on 26 Nov 2026 the simulator (modules/
+// 01-growth-simulator and incubator/growth-simulator-dark) was removed from the repository (git history keeps it). One simulation is on the map at a time; the others keep off it while it is.
 export const SIMULATIONS = [
   { key: 'loop', module: loopCity, create: createLoopCityTool }
 ];

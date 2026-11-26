@@ -8,7 +8,7 @@
 // engine is loaded when Run is pressed. See README.md.
 //
 // For the app: createLoopCityTool(viewer, {onState}) builds the engine, the map
-// overlay and the inspector panel, with the same shape as the growth simulator's tool (modules/01-growth-simulator). run() returns
+// overlay and the inspector panel, with the same shape as the former growth simulator's tool (modules/01-growth-simulator, removed 26 Nov 2026). run() returns
 // a ScaleBundle describing the loop's frame, for export and for later modules.
 
 import { createBundle } from '../../shared/schemas/index.js';

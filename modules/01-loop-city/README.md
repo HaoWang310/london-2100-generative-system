@@ -3,7 +3,7 @@
 整条 412 km 环线上黏菌与城市共同生长（2025–2100 年），百年结束后从黏菌的干道读出单元；按真实位置画在 OSM 地图上。
 The slime mould and the city grown together round the whole 412 km loop, 2025–2100; when the century ends the cells are read from the mould's highways. Drawn on the OSM map at its true position.
 
-- **在导航中 · In the nav**：`01`，任何层级都能打开，离开后默认留作背景。23 Nov 2026 起它取代了原来的 `01 城市生长模拟`（`modules/01-growth-simulator`，代码保留在仓库里，不再出现在导航中；找回办法见该模块的 README）。此前一天它以 `07` 的编号与旧版并排放过。
+- **在导航中 · In the nav**：`01`，任何层级都能打开，离开后默认留作背景。23 Nov 2026 起它取代了原来的 `01 城市生长模拟`（`modules/01-growth-simulator`；2026-11-26 连同 `incubator/growth-simulator-dark` 一起从仓库删除，git 历史里还在）。此前一天它以 `07` 的编号与旧版并排放过。
 - **输出 · Output**：`ScaleBundle` level `london`，边界是模型的范围，车站为 `nodes`。
 - 预览 · Preview：`preview.html`；测试 · Tests：`node --test modules/01-loop-city/tests/module.test.mjs`；位置检查 · Position check：`tests/overlay-check.html`（在浏览器里打开）。
 

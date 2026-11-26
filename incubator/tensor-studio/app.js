@@ -2862,5 +2862,5 @@ document.getElementById('applyPreset').onclick=()=>{
     for (const b of document.querySelectorAll('[data-keep]')){ const on = (b.dataset.keep === '1') === T.keepBuildings; b.classList.toggle('active', on);
       b.onclick = () => { if (on) return; $id('hud').textContent = zh() ? '正在重新生成场地…' : 'Rebuilding the site…'; location.search = b.dataset.keep === '1' ? '?keep=1' : '?keep=0'; }; }
   }
-  window.setInterfaceLanguage(T.lang);
+  window.setInterfaceLanguage((window.__TS_NOWLANG && window.__TS_NOWLANG()) || T.lang);      // (26 Nov 2026) as it is now, see index.html
 })();

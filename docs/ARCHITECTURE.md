@@ -1,12 +1,18 @@
 # 系统架构与开发计划 · Architecture & roadmap
 
+> **现在的样子 · As it stands (26 Nov 2026).** 下面写的是主界面最初的逐级计划。主界面现在只显示 00 伦敦地图和 01 Loop City（第 1 步整环），
+> 02–06 五个模块还在 `modules/` 里、测试照跑，但 02–04 仍是占位算法，所以暂时关着（`app/registry.js` 里的 `ROAD_CHAIN = false`）。
+> 同样的事现在由研究主线上的独立 app 用真实算法完成：伦敦地图 → 第 1 步 整环：黏菌与生长 → 第 2 步 毛线带 → 张量场工作室 → 结构工作室 → VR
+> （`incubator/`，用 `shared/ui/chain.js` 的「下一步」连起来）。
+> What follows is the main program's first plan, level by level. It now shows only 00 and 01; modules 02–06 are kept and tested
+> but switched off, 02–04 being placeholders. The same work is done by the research line's own apps, with real algorithms.
+
 ## 1. 多尺度流程
 
 | 层级 level | 模块 | 输入 | 输出 `children`（可进入下一级） | 主要道路层级 |
 |---|---|---|---|---|
 | `london` | 00-london-map | 无 | — | — |
 | 模拟（任意层级可开） | 01-loop-city | 无（在后台打开孵化区的 Loop City 第 1 步页面） | — | — |
-| 已停用（代码保留，不在导航中） | 01-growth-simulator | 无（读取孵化区的模拟器） | — | — |
 | `region` | 02-region-planning | 伦敦研究范围 | 规划区域 | `region-link` |
 | `wool` | 03-wool-network | 选中的区域 | 局部区域 | `primary`、`branch` |
 | `tensor` | 04-tensor-roads | 选中的局部区域 + Wool 主路约束 | — | `secondary`、`local` |
@@ -60,7 +66,7 @@
 | P6 | 06 方案目录、多方案对比、单 HTML 打包 | |
 | 并行 | `incubator/` 独立 app 迁入与逐个融合 | |
 
-**孵化区直连（01 城市生长模拟）**：模块不复制模拟器，运行时读取 `incubator/growth-simulator-dark/` 的引擎、控制定义与数据（按数据 `fetch`，不 `import`），
+**孵化区直连（01 Loop City）**：模块不复制模型，运行时在后台打开孵化区的 `incubator/loop-city-mould-growth/`，读它的引擎和结果（不 `import`），
 孵化区改好主程序即跟随；模块测试同时校验这条链接。地图图层通过 `viewer.addOverlay()` 接入，网格按 EPSG:27700 精确换算到地图。
 
 已有算法迁入方式：原文件**原样**放入对应模块的 `legacy/`，在 `module.js` 中写适配层，不删减原有功能。

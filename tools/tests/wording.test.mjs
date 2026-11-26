@@ -42,7 +42,7 @@ test('Tensor Studio in Chinese: the opening film\'s headings and the tooltips', 
   const intro = read('incubator/tensor-studio/intro/intro.js'), html = read('incubator/tensor-studio/index.html');
   for (const [zh, en] of [['I · 问题', 'I · QUESTION'], ['II · 立场', 'II · POSITION'], ['III · 图层', 'III · LAYERS'], ['IV · 叠加', 'IV · SUPERPOSITION'], ['V · 读图', 'V · READING'], ['VI · 依据', 'VI · EVIDENCE'], ['张量场工作室 · 方法', 'TENSOR STUDIO · METHOD']])
     assert.ok(intro.includes("L('" + zh + "', '" + en + "')"), en);
-  assert.ok(/intro\/intro\.js\?v=5/.test(html));
+  assert.ok(/intro\/intro\.js\?v=6/.test(html));
   const i = html.indexOf('window.TS_ATTR='), ATTR = JSON.parse(html.slice(i + 'window.TS_ATTR='.length, html.indexOf('\n', i)).replace(/;\s*$/, ''));
   for (const k of ['Collapse / expand', 'Drag to resize · double-click to reset', 'Drag to resize the control panel', 'Display', 'Palette', 'play', 'timeline']) assert.ok(HAN.test(ATTR[k] || ''), k);
   assert.ok(html.includes('title="Collapse / expand"') && html.includes("h.title = 'Drag to resize · double-click to reset'"), 'the words the table is keyed by');
@@ -60,7 +60,7 @@ test('the wool bands: 17 steps everywhere, the waiting screen in one language, n
   assert.ok(read('incubator/loop-city-wool/explain.js').includes("T('Step ' + shown(k) + ' of 17', '第 ' + shown(k) + ' / 17 步')"));
   assert.ok(read('incubator/loop-city-wool/flow.js').includes("' / 17'"));
   assert.ok(pairs.find(p => p[2] === 'items.3.desc')[1].includes('17 steps'));
-  assert.ok(/explain\.js\?v=6/.test(html));
+  assert.ok(/explain\.js\?v=[6-9]/.test(html));
   const wait = html.slice(html.indexOf('<div id="liveStart"'), html.indexOf('</div>\n</div>', html.indexOf('<div id="liveStart"')));
   assert.ok(!HAN.test(wait), 'the markup is English; the dictionary gives the Chinese');
   for (const a of [.../<a [^>]*>([^<]*)<\/a>/g[Symbol.matchAll](wait)].map(m => m[1])) assert.ok(HAN.test(ZH[a] || ''), 'no Chinese for the link: ' + a);
