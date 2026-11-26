@@ -5,6 +5,8 @@
 
 Live map: https://haowang310.github.io/google-map-live/
 
+Version 3.45.0: **3D relief** joins the terrain layers. The ground itself rises by its height (the open height tiles, about 30 m) inside the 70 km study circle; outside it stays flat, and the edge is a short slope, not a wall. Every draped layer follows it (height colors, flood risk, boundaries, rail) and the 3D buildings stand on it. Exaggeration ×1 to ×8, ×3 at first: London is low. It shows in the tilted view, so a flat map tilts once when it is switched on. Trees, street vehicles and building shadows are switched off while it is on, and come back after: they are drawn on flat ground and would be buried. It comes from `incubator/loop-city-real-map`, the last of that app's layers not yet here.
+
 Version 3.44.1: the high-speed lines say where they go. Zoomed out (below zoom 9): "HS2 to Birmingham", "to Manchester · Glasgow (West Coast Main Line)" at the north end, "London", "HS1 to Paris · Brussels (Channel Tunnel)". From zoom 9: the eight stations (London Euston, Old Oak Common, Birmingham Interchange, Birmingham Curzon Street; London St Pancras, Stratford International, Ebbsfleet International, Ashford International), white dots on the line. In English like the basemap's place names; they follow the HS1 and HS2 switches and the colour theme, and are left out in the raster fallback style (no glyphs).
 
 Version 3.44.0: five planning layers join the analysis layers, and every analysis layer now ends on the same 70 km circle.

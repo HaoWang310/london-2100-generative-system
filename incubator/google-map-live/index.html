@@ -11,11 +11,11 @@
        breaks that layer and produces mixed-language text, so opt out of it. -->
   <meta name="google" content="notranslate">
   <title>London map</title>
-  <script type="module" src="./scripts/ui_language.js?v=3.44.1-english"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.45.0-english"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
-  <link rel="stylesheet" href="./styles/app.css?v=3.44.1-english-p2">
+  <link rel="stylesheet" href="./styles/app.css?v=3.45.0-english-p2">
 <script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("l2ui");</script>
 <link rel="stylesheet" href="../../shared/ui/tokens.css?v=1">
 <link rel="stylesheet" href="../../shared/ui/studio.css?v=1">
@@ -161,7 +161,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.44.1-english</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.45.0-english</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -269,6 +269,25 @@
             Heights from Terrain Tiles (Mapzen, AWS Open Data), about 30 m. Twenty color steps from −3 m to the chosen top height, closer together near sea level so the Thames valley still reads. Cut to the 70 km study circle like the flood and drainage layers. Click the map to read a height.
           </div>
           <div id="reliefStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
+        </div>
+
+        <div class="layerItem" id="relief3dItem">
+          <label class="layerRow">
+            <span class="layerName">
+              <strong>3D relief</strong>
+              <small>The ground rises by its height · inside the 70 km circle · seen in the tilted view</small>
+            </span>
+            <input id="relief3dToggle" type="checkbox" autocomplete="off" disabled>
+          </label>
+          <div class="rangeRow">
+            <span>Exaggeration</span>
+            <input id="relief3dExaggeration" aria-label="3D relief exaggeration" type="range" min="1" max="8" step="0.5" value="3">
+            <span id="relief3dExaggerationValue" data-no-translate>×3</span>
+          </div>
+          <div class="layerMeta">
+            The ground itself is raised from the open height tiles (about 30 m), and the other layers lie on it: height colors, flood risk, boundaries, rail, the 3D buildings. London is low, so the heights are multiplied (×3 to ×5 reads well). Outside the 70 km circle the ground stays flat. Trees, street vehicles and building shadows are switched off while it is on: they are drawn on flat ground and would be buried.
+          </div>
+          <div id="relief3dStatus" class="layerStatus" role="status" aria-live="polite">Off</div>
         </div>
 
         <div class="layerItem" id="contourItem">
@@ -639,7 +658,7 @@
 
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
-<script type="module" src="./scripts/app.js?v=3.44.1-english"></script>
+<script type="module" src="./scripts/app.js?v=3.45.0-english"></script>
 <script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js): after the London map comes Loop City step 1.
    Nothing is carried on this step. Selecting a site and opening Tensor Studio over it is as it was. Framed by the VR page the row is not shown. */
 (function () { var p = document.getElementById('panel'), h = p && p.querySelector('.head'); if (!window.L2Chain || !h) return;

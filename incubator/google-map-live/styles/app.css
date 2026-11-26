@@ -520,6 +520,7 @@ button.secondary{background:#3a4659}
   display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:#e5e5ea
 }
 .displayPanel .dpSwitchRow span{flex:1}
+.displayPanel .dpSwitchRow.heldOff{opacity:.45}   /* off while 3D relief is on (v3.45.0) */
 .displayPanel .dpSwitch{
   appearance:none;-webkit-appearance:none;flex:0 0 30px;width:30px;height:18px;margin:0;
   border-radius:999px;background:#48484e;position:relative;cursor:pointer;transition:background .15s

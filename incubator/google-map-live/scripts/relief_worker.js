@@ -73,6 +73,48 @@ function stops(top){
   return list;
 }
 
+// ---------- 3D relief (v3.45.0): the same heights as a "terrarium" tile for MapLibre's terrain ----------
+// Inside the study circle the heights are the real ones. Outside it the ground is flat (0 m), so only the study area
+// rises; over the first 2.5 km outside the circle the heights fall away smoothly, so the edge is a slope, not a wall.
+const DEM_FADE=2500;
+function encodeDem(heightAt){
+  const canvas=new OffscreenCanvas(SIZE,SIZE),ctx=canvas.getContext('2d');
+  const image=ctx.createImageData(SIZE,SIZE),data=image.data;
+  for(let i=0;i<SIZE*SIZE;i++){
+    const v=Math.min(65535.99,Math.max(0,heightAt(i)+32768)),whole=Math.floor(v),o=i*4;
+    data[o]=whole>>8;data[o+1]=whole&255;data[o+2]=Math.min(255,Math.floor((v-whole)*256));data[o+3]=255;
+  }
+  ctx.putImageData(image,0,0);
+  return canvas.convertToBlob({type:'image/png'}).then(blob=>blob.arrayBuffer());
+}
+let flatDem=null;
+async function renderDem({z,x,y}){
+  const tile=tileBounds3857(z,x,y);
+  const clat=config.center.lat*Math.PI/180,clon=config.center.lng*Math.PI/180,radius=config.radius;
+  const corners=[[tile.left,tile.top],[tile.right,tile.top],[tile.right,tile.bottom],[tile.left,tile.bottom]];
+  if(corners.every(([cx,cy])=>distanceTo(cx,cy,clat,clon)<=radius)){
+    // wholly inside: the height tile itself, untouched
+    const response=await fetch(config.tiles.replace('{z}',z).replace('{x}',x).replace('{y}',y));
+    if(!response.ok)throw new Error('Height tile failed to load: HTTP '+response.status);
+    return response.arrayBuffer();
+  }
+  const cx=clon*R,cy=R*Math.log(Math.tan(Math.PI/4+clat/2));
+  const nx=Math.min(Math.max(cx,tile.left),tile.right),ny=Math.min(Math.max(cy,tile.bottom),tile.top);
+  if(distanceTo(nx,ny,clat,clon)>radius+DEM_FADE){
+    flatDem=flatDem||encodeDem(()=>0);
+    return (await flatDem).slice(0);
+  }
+  const h=await loadHeights(z,x,y),step=(tile.right-tile.left)/SIZE;
+  return encodeDem(i=>{
+    const row=Math.floor(i/SIZE),col=i-row*SIZE;
+    const d=distanceTo(tile.left+(col+.5)*step,tile.top-(row+.5)*step,clat,clon);
+    if(d<=radius)return h[i];
+    if(d>=radius+DEM_FADE)return 0;
+    const t=1-(d-radius)/DEM_FADE;
+    return h[i]*t*t*(3-2*t);
+  });
+}
+
 async function transparentTile(){
   const canvas=new OffscreenCanvas(SIZE,SIZE);
   canvas.getContext('2d');   // convertToBlob needs a context, also for an empty tile
@@ -129,7 +171,7 @@ self.onmessage=async({data})=>{
   if(data.type!=='tile'||!config)return;
   const {id}=data;
   try{
-    const buffer=await renderTile(data);
+    const buffer=await (data.dem?renderDem(data):renderTile(data));
     if(cancelled.delete(id))return;
     self.postMessage({id,data:buffer},[buffer]);
   }catch(error){

@@ -2,8 +2,8 @@
 // resizable by dragging its left and bottom edges. Docked (setDocked) it sits flush
 // on the map's right edge and collapses to a slim vertical tab there. It drives the London map
 // features (london-map.js): search, jumps, lighting, weather, colour theme,
-// labels / vehicles / shadows / trees, and the analysis layers — the same ten, in the same five groups, as the
-// incubator London map (terrain: EA LiDAR, colour by height, contours; water: flood, drainage; planning boundaries:
+// labels / vehicles / shadows / trees, and the analysis layers — the same eleven, in the same five groups, as the
+// incubator London map (terrain: EA LiDAR, colour by height, 3D relief, contours; water: flood, drainage; planning boundaries:
 // Green Belt, AONB; transport: rail, HS1 / HS2; study area).
 
 import { h } from '../ui/index.js';
@@ -43,6 +43,7 @@ const CSS = `
 .dp-range { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
 .dp-range > span:first-child { white-space: nowrap; }
 .dp-legend[hidden], .dp-key[hidden] { display: none; }
+.dp-row.held { opacity: .45; }
 .dp-range input[type=range] { flex: 1; accent-color: var(--text); } .dp-range .v { width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
 .dp-range select { flex: 1; min-width: 0; height: 26px; border-radius: 7px; background: var(--surface-2); color: var(--text); border: 1px solid var(--hairline-strong); font: inherit; font-size: 11.5px; }
 .dp-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 10.5px; color: var(--text-2); margin-top: 6px; }
@@ -242,9 +243,10 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
           S.theme === k, () => lm.setTheme(k), 'dp-theme')))),
       h('div', { class: 'dp-sec' }, h('div', { class: 'dp-t' }, t('dp.display')),
         h('div', { class: 'dp-row' }, t('dp.labels'), sw(S.labels, v => lm.setLabels(v))),
-        h('div', { class: 'dp-row' }, t('dp.vehicles'), sw(S.vehicles, v => lm.setVehicles(v))),
-        h('div', { class: 'dp-row' }, t('dp.shadows'), sw(S.shadows, v => lm.setShadows(v))),
-        h('div', { class: 'dp-row' }, t('dp.trees'), sw(S.trees, v => lm.setTrees(v)))),
+        h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.vehicles'), sw(S.vehicles, v => lm.setVehicles(v))),
+        h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.shadows'), sw(S.shadows, v => lm.setShadows(v))),
+        h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.trees'), sw(S.trees, v => lm.setTrees(v))),
+        S.held ? h('div', { class: 'dp-lstatus' }, t('dp.heldNote')) : null),
       h('div', { class: 'dp-sec' }, h('div', { class: 'dp-t' }, t('dp.layers')),
         group('terrain', true),
         h('div', { class: 'dp-layer' },
@@ -258,6 +260,10 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
           select(t('dp.reliefRamp'), R.ramp, Object.keys(P.ramps).map(k => [k, named(`dp.ramp.${k}`, k)]), v => { drawReliefKey(v, lm.state.relief.top); lm.setLayer('relief', { ramp: v }); }),
           range(t('dp.reliefShade'), R.shade, 0, 1, 0.05, pct, () => {}, v => lm.setLayer('relief', { shade: v })),
           h('div', { class: 'dp-key' }, reliefBar, reliefTicks), lstatus(R, t('dp.note.relief'))),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.relief3d'), t('dp.relief3dSub')), sw(S.relief3d.on, v => lm.setLayer('relief3d', { on: v }))),
+          range(t('dp.exaggeration'), S.relief3d.exaggeration, P.relief3dRange[0], P.relief3dRange[1], P.relief3dRange[2], v => `×${v}`, v => lm.setLayer('relief3d', { exaggeration: v })),
+          lstatus(S.relief3d, t('dp.note.relief3d'))),
         h('div', { class: 'dp-layer' },
           h('div', { class: 'dp-row' }, title(t('dp.contour'), t('dp.contourSub')), sw(S.contour.on, v => lm.setLayer('contour', { on: v }))),
           range(t('dp.opacity'), S.contour.opacity, 0, 1, 0.05, pct, v => lm.setLayer('contour', { opacity: v })),

@@ -4,8 +4,9 @@
 //
 // This module owns its sources and layers (every id starts with "l2100-") and their look; the page owns the panel.
 // Nothing is loaded until a layer is first switched on.
-import {createReliefLoader,reliefTileUrl,reliefStops,RELIEF_RAMPS,RELIEF_MIN_ZOOM,RELIEF_MAX_ZOOM,RELIEF_TILE_SIZE}
-  from './relief_local.js?v=3.44.1-english';
+import {createReliefLoader,reliefTileUrl,reliefStops,RELIEF_RAMPS,RELIEF_MIN_ZOOM,RELIEF_MAX_ZOOM,RELIEF_TILE_SIZE,
+  DEM_TILE_URL,DEM_MAX_ZOOM}
+  from './relief_local.js?v=3.45.0-english';
 
 export {RELIEF_RAMPS,reliefStops};
 export const PLANNING_PREFIX='l2100-';
@@ -20,6 +21,9 @@ const GREEN_BELT='#849474',AONB='#4f6b45';
 const GB_EDGE=[1.3,2.2,3],AONB_EDGE=[1.2,1.8,2.4];
 
 const RELIEF='l2100-relief';
+// v3.45.0: 3D relief. The ground itself rises (MapLibre terrain) inside the study circle; every draped layer follows.
+const DEM='l2100-dem';
+export const RELIEF3D_RANGE=[1,8,0.5];   // exaggeration: least, most, step (London is low: 1 is hard to see)
 const GB_SOURCE='l2100-green-belt',GB_FILL='l2100-green-belt-fill',GB_LINE='l2100-green-belt-line';
 const AONB_SOURCE='l2100-aonb',AONB_FILL='l2100-aonb-fill',AONB_LINE='l2100-aonb-line';
 const RAIL_SOURCE='l2100-rail',railLayer=kind=>'l2100-rail-'+kind;
@@ -43,7 +47,7 @@ const HS_PLACE_DATA={type:'FeatureCollection',features:[
   place('Stratford International','station','hs1',[-0.0087,51.5448],''),
   place('Ebbsfleet International','station','hs1',[0.32089,51.44322],''),
   place('Ashford International','station','hs1',[0.87777,51.14261],'')]};
-const SOURCES={relief:RELIEF,greenBelt:GB_SOURCE,aonb:AONB_SOURCE,rail:RAIL_SOURCE,highSpeed:HS_SOURCE};
+const SOURCES={relief:RELIEF,relief3d:DEM,greenBelt:GB_SOURCE,aonb:AONB_SOURCE,rail:RAIL_SOURCE,highSpeed:HS_SOURCE};
 
 const mix=(a,b,t)=>{
   const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);
@@ -60,6 +64,7 @@ function circleBounds(center,radius){
 export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getTheme,onStatus=()=>{},reorder=()=>{}}){
   const state={
     relief:{on:false,opacity:0.75,top:300,ramp:'classic',shade:0.35},
+    relief3d:{on:false,exaggeration:3},
     greenBelt:{on:false,fill:0.25,width:1},
     aonb:{on:false,fill:0.12,width:1},
     rail:{on:false,mode:'lines',width:1,
@@ -99,6 +104,21 @@ export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getT
     map.setPaintProperty(RELIEF,'raster-opacity',s.opacity);
     const url=reliefTileUrl(s),source=map.getSource(RELIEF);
     if(source.tiles?.[0]!==url)source.setTiles([url]);
+  }
+
+  /* ---------- 3D relief: the ground rises inside the study circle ---------- */
+  function applyRelief3d(){
+    const s=state.relief3d;
+    if(s.on&&!map.getSource(DEM)){
+      const [west,south,east,north]=circleBounds(center,radius+3000);
+      map.addSource(DEM,{type:'raster-dem',tiles:[DEM_TILE_URL],tileSize:RELIEF_TILE_SIZE,encoding:'terrarium',
+        maxzoom:DEM_MAX_ZOOM,bounds:[west,south,east,north],attribution:'Heights: Terrain Tiles (Mapzen, AWS Open Data)'});
+    }
+    const now=map.getTerrain?.();
+    if(s.on){
+      const exaggeration=Math.min(RELIEF3D_RANGE[1],Math.max(RELIEF3D_RANGE[0],Number(s.exaggeration)||1));
+      if(!now||now.source!==DEM||now.exaggeration!==exaggeration)map.setTerrain({source:DEM,exaggeration});
+    }else if(now&&now.source===DEM)map.setTerrain(null);
   }
 
   /* ---------- Green Belt, AONB ---------- */
@@ -239,7 +259,7 @@ export function createPlanningLayers({map,maplibregl,assetUrl,center,radius,getT
     }
   }
 
-  const APPLY={relief:applyRelief,greenBelt:applyGreenBelt,aonb:applyAonb,rail:applyRail,highSpeed:applyHighSpeed};
+  const APPLY={relief:applyRelief,relief3d:applyRelief3d,greenBelt:applyGreenBelt,aonb:applyAonb,rail:applyRail,highSpeed:applyHighSpeed};
 
   /* ---------- status: 'off' | 'loading' | 'loaded' | 'error' ---------- */
   function status(group){
