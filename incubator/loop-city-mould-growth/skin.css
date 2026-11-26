@@ -29,8 +29,9 @@ html.lcskin .lc-sec { border-top:1px solid var(--line); padding:16px 0 8px; }
 html.lcskin .lc-sec:first-child { border-top:0; padding-top:4px; }
 
 /* ---- language switch, as the Growth Simulator's */
-html.lcskin #langbar, html.lcskin #hud #langbar { position:static; margin:0; display:flex; background:var(--surface); border:1px solid var(--bd); border-radius:14px; padding:3px; gap:0; pointer-events:auto; }
-html.lcskin #langbar button { border-radius:11px; padding:7px 10px; font-size:12.5px; font-weight:600; color:#a1a1a6; letter-spacing:0; }
+/* (26 Nov 2026) one size in every app on a computer: 78 × 32 px, buttons 26 px high, 11 px letters (it was 89 × 41 here) */
+html.lcskin #langbar, html.lcskin #hud #langbar { position:static; margin:0; display:flex; background:var(--surface); border:1px solid var(--bd); border-radius:11px; padding:2px; gap:2px; pointer-events:auto; }
+html.lcskin #langbar button { box-sizing:border-box; min-width:34px; height:26px; border-radius:9px; padding:0 7px; font-size:11px; line-height:1; font-weight:600; color:#a1a1a6; letter-spacing:0; }
 html.lcskin #langbar button.on { background:var(--elev); color:#fff; }
 html.lcskin #langbar button[data-lang="zh"] { order:-1; }      /* (26 Nov 2026) 中文 first, then EN, as in every other app */
 

@@ -21,10 +21,13 @@ html.l2ui .l2-head .rh { font-size:17px; font-weight:700; }
 html.l2ui .l2-hb { display:flex; gap:8px; align-items:center; flex:none; }
 html.l2ui .l2-icon { width:40px; height:40px; padding:0; border-radius:var(--l2-r); border:1px solid var(--l2-bd); background:#000; color:#fff; font:inherit; font-size:19px; line-height:1; cursor:pointer; }
 html.l2ui .l2-icon:hover { border-color:var(--l2-bd2); }
-html.l2ui #langbar, html.l2ui body.light #langbar { position:static; display:flex; background:#000; border:1px solid var(--l2-bd); border-radius:var(--l2-r); padding:3px; gap:0; }
-html.l2ui #langbar button { border:0; background:transparent; border-radius:11px; padding:7px 10px; font:inherit; font-size:12.5px; font-weight:600; color:var(--l2-ink3); cursor:pointer; }
+/* (26 Nov 2026) one size in every app on a computer: 78 × 32 px, buttons 26 px high, 11 px letters (as the London map,
+   Tensor Studio and Structure Studio; it was 91 × 41 here). On a phone the shared .l2ph-lang sets the size. */
+html.l2ui #langbar, html.l2ui body.light #langbar { position:static; display:flex; background:#000; border:1px solid var(--l2-bd); border-radius:11px; padding:2px; gap:2px; }
+html.l2ui #langbar button { box-sizing:border-box; min-width:34px; height:26px; border:0; background:transparent; border-radius:9px; padding:0 7px; font:inherit; font-size:11px; line-height:1; font-weight:600; color:var(--l2-ink3); cursor:pointer; }
 html.l2ui #langbar button.on, html.l2ui body.light #langbar button.on { background:#fff; color:#000; }
-html.l2ui #langbar button[data-lang="zh"] { order:-1; }      /* (26 Nov 2026) 中文 first, then EN, as in every other app */
+html.l2ui #langbar button[data-lang="zh"] { order:-1; }
+html.l2ui:not(.l2phone) #langbar button[data-lang="zh"] { width:36px; padding:0; }   /* 36 px as elsewhere: this page's font would make it 36.7 */      /* (26 Nov 2026) 中文 first, then EN, as in every other app */
 
 html.l2ui .panel .side { display:none; }
 html.l2ui .panel .sub { font-size:12.5px; color:var(--l2-ink3); margin:0 0 10px; }
