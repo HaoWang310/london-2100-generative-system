@@ -18,7 +18,7 @@ import { writeCars } from './features.js?v=0.20';
 import { createHall } from './hall.js?v=0.54';
 
 const T = {
-  zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '汇水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
+  zh: { title: '三维 · VR / MR', enterAR: '进入 MR', enterVR: '进入 VR', noXR: '这台设备的浏览器不支持 WebXR。请在 Meta Quest 浏览器中打开本页。', close: '关闭', flood: '洪水风险', drain: '排水网络', outline: '边界', buildings: '建筑', existing: '现有街道', exag: '高程放大', walk: '1:1 漫游',
     sub: '多尺度城市生成系统', crumb: '伦敦地图', here: 'VR / MR', back: '返回地图', eyebrow: '进入头显', h1: '把伦敦放进房间', lead: '选一种方式，点一下就进入。', lead1: '戴上 Quest，点一下就进入展厅。',
     vrT: 'VR · 展厅', vrD: '地图放在流线展厅的展桌上，圆盘 2.6 m，四周是项目展板。', vrDplain: '在暗色空间里看三维模型。', rec: '推荐', arT: 'MR · 透视', arD: '用 MR 模式进入同一个展厅：展桌、长凳和屏幕都在，圆盘 2.6 m。',
     quest: '在 Quest 上打开', questD: '这台设备不能进入 VR。戴上 Meta Quest，用它的浏览器打开这个链接：', questIOS: 'iPhone 和 iPad 不支持 VR（Safari 没有 WebXR）。这一页的三维预览可以用手指看：单指旋转，双指缩放和平移。要进入 VR，戴上 Meta Quest，用它的浏览器打开这个链接：', copy: '复制链接', copied: '已复制',

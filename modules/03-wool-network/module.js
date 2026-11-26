@@ -17,9 +17,9 @@ const mod = {
   level: 'wool',
   version: '0.1.0',
   placeholder: true,
-  title: { zh: 'Wool 羊毛路网', en: 'Wool network' },
+  title: { zh: '毛线路网', en: 'Wool network' },
   description: {
-    zh: '占位算法：放射主路 + 内环。P3 将接入原有 Wool 羊毛算法。',
+    zh: '占位算法：放射主路 + 内环。P3 将接入原有的毛线算法。',
     en: 'Placeholder: radial primaries + inner ring. P3 plugs in the existing Wool solver.'
   },
   params: [

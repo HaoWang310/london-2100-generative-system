@@ -11,7 +11,7 @@
         "en": "Multi-scale generative system"
       },
       "desc": {
-        "zh": "伦敦全域 → 区域划分 → Wool 区域路网 → Tensor 局部道路 → 路网整合与导出。",
+        "zh": "伦敦全域 → 区域划分 → 毛线区域路网 → 张量场局部道路 → 路网整合与导出。",
         "en": "Greater London → regions → Wool regional network → Tensor local streets → integration & export."
       },
       "tags": [
@@ -20,7 +20,7 @@
           "en": "Regions"
         },
         {
-          "zh": "Wool",
+          "zh": "毛线",
           "en": "Wool"
         },
         {
@@ -325,7 +325,7 @@
       },
       "desc": {
         "zh": "由等高线、全年风场与吸引点叠加成张量场，从锚点生长主路与次路；按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图，可在伦敦地图上任选场地，并导出正式路网。",
-        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
+        "en": "Contour, a year of wind and attractors add up to a tensor field; main and second streets grow from anchors and are drawn as a real city's: three grades (main, through and local) at real carriageway widths, kerbs fitted junction by junction, on any London site, with the network exported as built."
       },
       "detail": {
         "subtitle": "Tensor Studio · Streets from an Environmental Field",
@@ -415,7 +415,7 @@
               {
                 "p": {
                   "zh": "按主干路 / 次干路 / 支路三级、真实车行道宽度和逐个路口的路缘倒角成图；跨过蓝绿走廊的道路近乎垂直，作为堤道。可在伦敦地图上任选场地运行，导出 GeoJSON（英国国家网格）。结果交给结构工作室，在街道之上生成 Linear Farm 走廊。打开时的原理短片，就是把这一页动起来讲。",
-                  "en": "Drawn as a city’s streets: three grades at real carriageway widths, kerbs fitted junction by junction; streets cross the blue-green corridors nearly square, as causeways. Runs on any site chosen on the London map and exports GeoJSON (British National Grid). The result goes to Structure Studio, which raises the Linear Farm corridors over the streets. The film at the opening tells this page in motion."
+                  "en": "Drawn as a city’s streets: three grades (main, through and local) at real carriageway widths, kerbs fitted junction by junction; streets cross the blue-green corridors nearly square, as causeways. Runs on any site chosen on the London map and exports GeoJSON (British National Grid). The result goes to Structure Studio, which raises the Linear Farm corridors over the streets. The film at the opening tells this page in motion."
                 }
               }
             ]
@@ -497,7 +497,7 @@
               {
                 "list": [
                   {
-                    "zh": "**张量场与街道**：张量场工作室第 8 步的结果——三级道路、路口、吸引点和场本身",
+                    "zh": "**张量场与街道**：张量场工作室的最终结果——三级道路、路口、吸引点和场本身",
                     "en": "**Field and streets**: Tensor Studio’s finished result — the three grades of street, the junctions, the attractors and the field itself"
                   },
                   {
@@ -590,7 +590,7 @@
         "en": "VR · Quest 3S"
       },
       "desc": {
-        "zh": "把伦敦地图、地形、洪水风险和汇水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 展厅，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、汇水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
+        "zh": "把伦敦地图、地形、洪水风险和排水网络变成可以走进去的三维沙盘：在电脑上预览，戴上 Meta Quest 3S 进入 VR 展厅，在空间里走动，拖动、旋转、缩放桌上的伦敦，开关洪水风险、排水网络和建筑，点屏幕查看项目内容，也可以按 1:1 走进城市。",
         "en": "The London map, terrain, flood risk and drainage as a 3D model you can walk into: preview it on the desktop; on a Meta Quest 3S enter the VR gallery, walk around, slide, turn and zoom London on the table, switch flood risk, drainage and buildings, open the screens for the project, or walk the city at 1:1."
       },
       "tags": [

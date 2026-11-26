@@ -1,5 +1,7 @@
 # London 2100 · VR / MR
 
+> **文字核对 · The wording checked (26 Nov 2026).** 开关「汇水网络」改为「排水网络」，和伦敦地图对 Drainage network 的写法一致。`map.html` 的标签名和第一行提示在英文下显示英文。 The drainage switch is written 排水网络 in Chinese, as on the London map. In English, `map.html` names its tab and writes its first line in English.
+
 > **统一的「下一步」· The chain row (26 Nov 2026).** VR 是研究主线的最后一站：VR 视图左侧面板顶部有和其他 app 相同的一行，上一步是结构工作室，下一步回到目录。头显里这个面板不显示。 VR is the last stop of the research line: the same row as in every app sits at the top of the VR view's side panel (before: Structure Studio; after: the catalogue).
 
 

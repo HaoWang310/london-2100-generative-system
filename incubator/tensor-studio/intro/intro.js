@@ -113,7 +113,7 @@
     var html = '';
     // I · the question
     html += ch(0, (moving ? '' : '<div class="tsi-art"><img class="tsi-plate tsi-drift" style="--d:0s" src="' + IMG + 'site.webp" alt=""></div>') +
-      txt(0, 'I · QUESTION', L('能否把地形、气候和水，写进街道的方向？', 'Can terrain, climate and water be written into the direction of the streets?'),
+      txt(0, L('I · 问题', 'I · QUESTION'), L('能否把地形、气候和水，写进街道的方向？', 'Can terrain, climate and water be written into the direction of the streets?'),
         L('车站 P2 场地，' + G.ha + ' 公顷，切成 ' + G.cell_m + ' m 的网格，共 ' + fmt(G.land) + ' 个点。每个点都要回答同一个问题：<b>这里的路该朝哪个方向？</b>',
           'The site by station P2: ' + G.ha + ' ha on a ' + G.cell_m + ' m grid, ' + fmt(G.land) + ' points. Each answers one question: <b>which way should a street run here?</b>')));
     // II · where the method stands
@@ -124,18 +124,18 @@
         return '<div class="tsi-r' + (k === 2 ? ' me' : '') + '" ' + v(T[1] + 0.5 + k * 0.9) + '>' + (moving ? '<div class="tsi-ps"></div>' : precSVG(k)) +
                '<div class="y tsi-mono">' + p[0] + '</div><div class="n">' + p[1] + '</div><div class="c">' + p[2] + '</div></div>';
       }).join('') + '</div></div>' +
-      txt(1, 'II · POSITION', L('叠加的不是数值，而是方向', 'Not values laid over each other, but directions'),
+      txt(1, L('II · 立场', 'II · POSITION'), L('叠加的不是数值，而是方向', 'Not values laid over each other, but directions'),
         L('叠图分析把地形、水文等图层叠在一起，读出土地的好坏；常见的街道生成用网格、放射这样的几何场。这里叠在一起的，是由环境数据得出的<b>方向</b>。',
           'Overlay analysis lays maps over each other to read how good the land is; streets are usually grown from geometric fields, grids and radials. Here the layers are <b>directions</b> taken from the environment.')));
     // III · the layers: what each kind of data does, then the direction it gives a street
-    html += ch(2, txt(2, 'III · LAYERS', L('五层数据，各自给出道路方向', 'Five layers, each with a direction for the street'),
+    html += ch(2, txt(2, L('III · 图层', 'III · LAYERS'), L('五层数据，各自给出道路方向', 'Five layers, each with a direction for the street'),
       moving ? L('每层先看数据本身——等高线、风、水——再看它推出的道路方向。', 'Each layer shows its data first — contours, wind, water — then the street direction it gives.') : '',
       '<div class="tsi-rules">' + RULES.map(function (r, k) {
         return '<div class="tsi-r" style="--c:' + COL[r[0]] + ';--o:' + lay(k).toFixed(2) + 's;--x:' + (lay(k + 1) - 0.45).toFixed(2) + 's"><b>' + r[1] + '</b>　' + r[2] + '</div>';
       }).join('') + '<div class="tsi-r end" style="--c:#E8463A;--o:' + (lay(5) - 0.2).toFixed(2) + 's"><b>' + L('红色', 'Red') + '</b>　' + L('五层之和：张量场', 'the five added up: the tensor field') + '</div></div>'));
     // IV · adding them up
     html += ch(3, (moving ? '' : '<div class="tsi-art"><div class="tsi-probe">' + probeSVG(T[3] + 1.5) + '</div></div>') +
-      txt(3, 'IV · SUPERPOSITION', L('张量相加：方向没有正反', 'Adding tensors: a street has no arrow'),
+      txt(3, L('IV · 叠加', 'IV · SUPERPOSITION'), L('张量相加：方向没有正反', 'Adding tensors: a street has no arrow'),
         L('10° 和 170° 的两条路几乎同向，直接平均却得到 90°。所以每层在每个点写成一个张量：角度乘 2、首尾相加、再除以 2。主方向给主路，与它垂直的方向给次路。',
           'Streets at 10° and 170° run almost the same way, yet their average is 90°. So each layer becomes a tensor at every point: double the angle, add tip to tail, halve it again. The major direction gives the main streets, the one square to it the second streets.'),
         '<div class="tsi-eq tsi-mono tsi-r" ' + v(T[3] + 0.9) + '>T = Σ w<sub>i</sub>·[cos2θ<sub>i</sub>  sin2θ<sub>i</sub> ; sin2θ<sub>i</sub>  −cos2θ<sub>i</sub>]</div>'));
@@ -144,7 +144,7 @@
       ? '<span><i style="background:#F5F5F7"></i>' + L('清晰：快、直', 'clear: fast, straight') + '</span><span><i style="background:#B9A4FF"></i>' + L('中', 'middling') + '</span><span><i style="background:#E8A33D"></i>' + L('冲突：慢、打转', 'conflict: slow, turning') + '</span>'
       : '<span><i style="background:#9D7CFF"></i>' + L('流线：道路的方向', 'streamlines: where streets run') + '</span><span><i style="background:#C98A3A"></i>' + L('橙色：冲突', 'orange: conflict') + '</span>') + '</div>';
     html += ch(4, '<div class="tsi-art"><div class="tsi-two">' + (moving ? '' : '<img src="' + IMG + 'field.webp" alt=""><img class="tsi-f" ' + v(T[4] + 1.4) + ' src="' + IMG + 'conflict.webp" alt="">') + chip + '</div></div>' +
-      txt(4, 'V · READING', L('意见一致处平直，相左处转折', 'Where the layers agree, streets run straight; where they disagree, they turn'),
+      txt(4, L('V · 读图', 'V · READING'), L('意见一致处平直，相左处转折', 'Where the layers agree, streets run straight; where they disagree, they turn'),
         L('清晰度 c = |ΣT| / Σw：1 表示各层同向，0 表示互相抵消。各层一致处道路平直，相左处道路转弯。',
           'Clarity c = |ΣT| / Σw: 1 when the layers agree, 0 when they cancel out. Where they agree the streets run straight; where they disagree, they turn.')));
     // VI · the evidence
@@ -154,7 +154,7 @@
                '<div class="l"><em class="tsi-mono">' + x[0] + '</em>' + x[1] + '</div>' +
                '<div class="m tsi-f" ' + v(T[5] + (moving ? 5.6 : 0.4)) + '>c <span>' + f2(e.clarity) + '</span> · ' + e.streets + L(' 条道路', ' streets') + '</div></div>';
       }).join('') + '</div></div>' +
-      txt(5, 'VI · EVIDENCE', L('输入不同，路网不同', 'Different inputs, different networks'),
+      txt(5, L('VI · 依据', 'VI · EVIDENCE'), L('输入不同，路网不同', 'Different inputs, different networks'),
         L('同一块地，其余参数不变，跑四次' + (moving ? '，按 app 的生成顺序回放' : '') + '。每加一层，平均清晰度下降（' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + '），冲突上升（' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '）：<b>街道的走向可以追溯到环境数据。</b>',
           'The same site, everything else unchanged, grown four times' + (moving ? ', replayed in the order the app grew it' : '') + '. Each layer added lowers the mean clarity (' + f2(ev('A').clarity) + ' → ' + f2(ev('C').clarity) + ' → ' + f2(ev('D').clarity) + ') and raises the conflict (' + f2(ev('A').conflict) + ' → ' + f2(ev('C').conflict) + ' → ' + f2(ev('D').conflict) + '): <b>each street’s direction can be traced to the environment.</b>'),
         '<div class="tsi-n tsi-r" ' + v(T[5] + 3.2) + '>' + L('一块场地，每组运行一次；各层权重是设计判断，可以在 app 里调整。', 'One site, one run each; the weights are design judgements, set in the app.') + '</div>'));
@@ -172,7 +172,7 @@
     }
     var pips = T.map(function (t, k) { var e = k < T.length - 1 ? T[k + 1] : END; return '<i><b style="--d:' + t + 's;--len:' + (e - t) + 's"></b></i>'; }).join('');
     return (moving ? '<canvas class="tsi-cv"></canvas>' : '') + '<div class="tsi-art tsi-measure" aria-hidden="true"></div>' +
-      '<div class="tsi-head tsi-mono">TENSOR STUDIO · METHOD</div><div class="tsi-pips">' + pips + '</div>' +
+      '<div class="tsi-head tsi-mono">' + L('张量场工作室 · 方法', 'TENSOR STUDIO · METHOD') + '</div><div class="tsi-pips">' + pips + '</div>' +
       '<button type="button" class="tsi-skip">' + L('跳过', 'Skip') + '</button><div class="tsi-film">' + html + '</div>' +
       '<button type="button" class="tsi-enter">' + L('进入 ›', 'Enter ›') + '</button><div class="tsi-load"><i></i>' + L('正在载入场地…', 'Loading the site…') + '</div>';
   }
