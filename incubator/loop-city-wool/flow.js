@@ -78,7 +78,13 @@
     // after each drawing: the map's legend and the soil labels follow the view
     var d0 = window.draw; if (typeof d0 === 'function' && !d0.__lc) { window.draw = function () { var r = d0.apply(this, arguments); try { mapExtras(); } catch (e) {} return r; }; window.draw.__lc = true; }
     // on a phone the folded sheet's Previous / Next play the steps too
-    var qb = L.querySelectorAll('.l2ph-quick button'); if (qb.length === 2) { qb[0].onclick = function () { back(); }; qb[1].onclick = next; }
+    var qb = L.querySelectorAll('.l2ph-quick button'); if (qb.length === 2) { // (26 Nov 2026) and they reach step 17, the way out, which stands after the sixteen steps they play: Next at step 16
+    // goes on to it (as the card's own "On to the tensor field" does), Previous at step 17 comes back to step 16, and
+    // Next at step 17 is the hand-over to Tensor Studio (skin.js). Before, both buttons did nothing there.
+    qb[0].onclick = function () { if (S.step === 27) { stop(); setStep(26); P.k = null; render(); return; } back(); };
+    qb[1].onclick = function () { if (window.__lcHandOver && window.__lcHandOver()) return;
+      if (S.step === 26 && nextK(cur()) === undefined && !(P.wait && P.release) && !(typeof WS !== 'undefined' && WS.stop())) { stop(); setStep(27); P.k = null; render(); return; }
+      next(); }; }
     setTimeout(function () { AN.warm(); }, 2500);
   }
   var segs = function (cur) {             // the seventeen marks, each in its chapter's colour

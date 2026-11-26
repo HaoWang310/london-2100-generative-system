@@ -43,19 +43,23 @@
   /* ---- (26 Nov 2026) the chain row, the same in every catalogue app. Next is Tensor Studio, and what goes is the
      parcels taken at step 17: the page's own hand-over (bdSend). Next is grey, with the reason, while Tensor Studio
      cannot take the site: too wide, too small, or parcels that do not touch (bpCheck). */
+  /* what the hand-over to Tensor Studio waits for, or carries: read by the chain row and, on a phone, by the folded
+     sheet's own Next at step 17 (below). Under a thumb the words speak of taps, not of Shift. */
+  var TOUCH = !!window.TOUCH;
+  function handOver() {
+    var zhOfMsg = function (m) { return (window.__ZH && window.__ZH[m]) || m; }, st = ''; try { st = WS.stop(); } catch (e) {}
+    if (st) return { ready: false, need: [WS.MSG[st], zhOfMsg(WS.MSG[st])] };
+    var traced = false; try { traced = !!(BD.res && S.relaxed); } catch (e) {}
+    if (!traced) return { ready: false, need: ['Go through to step 16 first, then take urban parcels at step 17.', '先走到第 16 步，再在第 17 步选城市地块。'] };
+    var Lp = []; try { Lp = bpList(); } catch (e) {} var nu = Lp.filter(function (d) { return d.use === 'urban'; }).length, np = Lp.length - nu;
+    if (!nu) return { ready: false, pick: true, need: TOUCH ? ['At step 17, tap an urban parcel on the map (tap more to add them).', '在第 17 步的地图上点城市地块（再点别的可以加选）。'] : ['At step 17, click an urban parcel on the map (shift-click for more).', '在第 17 步的地图上点选城市地块（按住 Shift 可多选）。'] };
+    var no = null; try { no = bpWhy(bpCheck(Lp)); } catch (e) {}
+    if (no) return { ready: false, need: no };
+    var ks = []; try { var K = WS.keys(), seen = {}; Lp.forEach(function (d) { if (!seen[d.cell]) { seen[d.cell] = 1; ks.push(K[d.cell] ? K[d.cell].split(' · ').slice(1).join(' · ') : d.cell); } }); } catch (e) {}
+    return { ready: true, carry: [nu + ' urban parcel' + (nu > 1 ? 's' : '') + (np ? ', ' + np + ' park' + (np > 1 ? 's' : '') : '') + ' · ' + ks.join(', '), nu + ' 块城市地块' + (np ? '、' + np + ' 个公园' : '') + ' · ' + ks.join('、')] };
+  }
   if (window.L2Chain) L2Chain.mount({ id: 'loop-city-wool', into: L, before: hl.nextSibling, lang: function () { return window.LANG || 'en'; },
-    state: function () {
-      var zhOfMsg = function (m) { return (window.__ZH && window.__ZH[m]) || m; }, st = ''; try { st = WS.stop(); } catch (e) {}
-      if (st) return { ready: false, need: [WS.MSG[st], zhOfMsg(WS.MSG[st])] };
-      var traced = false; try { traced = !!(BD.res && S.relaxed); } catch (e) {}
-      if (!traced) return { ready: false, need: ['Go through to step 16 first, then take urban parcels at step 17.', '先走到第 16 步，再在第 17 步选城市地块。'] };
-      var Lp = []; try { Lp = bpList(); } catch (e) {} var nu = Lp.filter(function (d) { return d.use === 'urban'; }).length, np = Lp.length - nu;
-      if (!nu) return { ready: false, need: ['At step 17, click an urban parcel on the map (shift-click for more).', '在第 17 步的地图上点选城市地块（按住 Shift 可多选）。'] };
-      var no = null; try { no = bpWhy(bpCheck(Lp)); } catch (e) {}
-      if (no) return { ready: false, need: no };
-      var ks = []; try { var K = WS.keys(), seen = {}; Lp.forEach(function (d) { if (!seen[d.cell]) { seen[d.cell] = 1; ks.push(K[d.cell] ? K[d.cell].split(' · ').slice(1).join(' · ') : d.cell); } }); } catch (e) {}
-      return { ready: true, carry: [nu + ' urban parcel' + (nu > 1 ? 's' : '') + (np ? ', ' + np + ' park' + (np > 1 ? 's' : '') : '') + ' · ' + ks.join(', '), nu + ' 块城市地块' + (np ? '、' + np + ' 个公园' : '') + ' · ' + ks.join('、')] };
-    },
+    state: handOver,
     go: function () { bdSend(); } });
   if (about) about.parentNode.insertBefore(meta, about.nextSibling);
 
@@ -65,10 +69,19 @@
   bp.type = bn.type = 'button';
   function cur() { for (var i = 0; i < list.length; i++) if (list[i].classList.contains('on')) return i; return -1; }
   bp.onclick = function () { var i = cur(); if (i > 0) list[i - 1].click(); };
-  bn.onclick = function () { var i = cur(); if (i < list.length - 1) list[i + 1].click(); };
+  bn.onclick = function () { var i = cur(); if (i < list.length - 1) list[i + 1].click(); else window.__lcHandOver(); };
+  /* at step 17 on a phone, Next hands the parcels on (flow.js, which takes these two buttons over, asks here first) */
+  window.__lcHandOver = function () { if (!PHONE || cur() !== list.length - 1) return false; try { bdSend(); } catch (e) {} return true; };
   nav.appendChild(bp); nav.appendChild(bn);
   steps.parentNode.insertBefore(nav, steps.nextSibling);
-  function navState() { var i = cur(); bp.disabled = i <= 0; bn.disabled = i < 0 || i >= list.length - 1; }
+  /* (26 Nov 2026) on a phone the folded sheet shows only these two buttons. At step 17 there is no next step, and Next
+     stood grey while the hand-over waited in the opened sheet, out of sight. There Next is now the hand-over itself:
+     Next · Tensor Studio, white once Tensor Studio can take the parcels; until then the status line says what is missing. */
+  var PHONE = !!(window.L2Phone && L2Phone.is()), bnT = T.filter(function (t) { return t[0] === bn; })[0], atEnd = null;
+  function navState() { var i = cur(), end = PHONE && i === list.length - 1, h = end ? handOver() : null;
+    bp.disabled = i <= 0; bn.disabled = end ? !h.ready : (i < 0 || i >= list.length - 1);
+    if (end !== atEnd) { atEnd = end; bnT[1] = end ? 'Next · Tensor Studio ›' : 'Next ›'; bnT[2] = end ? '下一步 · 张量场工作室 ›' : '下一步 ›'; relabel(); } }
+  function needNow() { var i = cur(); if (!PHONE || i !== list.length - 1) return ''; var h = handOver(); return h.ready ? (isZh() ? '可以交给张量场工作室' : 'Ready for Tensor Studio') : h.pick ? (isZh() ? '点地图上的城市地块' : 'Tap an urban parcel on the map') : (h.need ? h.need[isZh() ? 1 : 0] : ''); }
 
   /* ---- every slider in one fold. The page builds one of its groups (#bdPanel) later and puts it before the
      numbers, so the fold takes whatever stands between the anchors heading and the sources line, whenever it arrives. */
@@ -120,10 +133,11 @@
      Display button at the top left. */
   if (window.L2Phone && L2Phone.is()) {
     L.classList.remove('l2-col'); R.classList.remove('l2-col');
+    setInterval(navState, 500);      // the parcels taken change what Next says at step 17
     L2Phone.init({
       sheet: L, display: R, quick: [bp, bn], hide: [h1, colL, colR, hr, nav], zh: isZh, lang: $('langbar'),
       title: function () { return h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : 'Loop City'; },
-      status: function () { var i = cur(); return i >= 0 ? list[i].textContent.replace(/\s+/g, ' ').trim() : ''; }
+      status: function () { var i = cur(), t = i >= 0 ? list[i].textContent.replace(/\s+/g, ' ').trim() : '', n = needNow(); return n ? t + ' · ' + n : t; }
     });
   }
   try { window.dispatchEvent(new Event('resize')); } catch (e) { /* the map re-fits itself */ }

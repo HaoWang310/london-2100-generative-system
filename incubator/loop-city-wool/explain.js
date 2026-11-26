@@ -161,7 +161,7 @@
         extra: jx ? '<p style="margin-top:10px;font-size:12.5px">' + T('Junctions as they would be built: interchanges and large roundabouts on the boundary highway, ' + jx.lilo + ' B roads left in and left out, ' + jx.closed + ' closed; roundabouts where main roads meet at a skew; side roads turned to meet square (over 75° with a main road, 60° between B roads).', '路口按能建造的方式处理：边界高速上做立交和大环岛，' + jx.lilo + ' 条 B 级路只许左进左出，' + jx.closed + ' 条关闭；主路斜交处做环岛；支路转正接入（有主路参与时 75° 以上，B 级路之间 60° 以上）。') + '</p>' : '' }; }
       case 28: return window.Wool5 ? window.Wool5.info() : null;
       case 27: return { t: T('Take the parcels on to the tensor field', '选出地块，交给张量场'),
-        did: T('Click an urban parcel to take it, shift-click for more; double-click to open them in Tensor Studio.', '点击城市地块选中，按住 Shift 多选；双击把它们在张量场工作室里打开。'),
+        did: window.TOUCH ? T('Tap an urban parcel to take it, tap more to add them; then Next · Tensor Studio.', '点一下城市地块选中，再点别的加选；然后点「下一步 · 张量场工作室」。') : T('Click an urban parcel to take it, shift-click for more; double-click to open them in Tensor Studio.', '点击城市地块选中，按住 Shift 多选；双击把它们在张量场工作室里打开。'),
         why: T('The street pattern inside each parcel is made in the next step, the tensor field.', '每块地里面的街道在下一步（张量场）生成。'),
         prm: [], res: [], leg: 3 };
     }
