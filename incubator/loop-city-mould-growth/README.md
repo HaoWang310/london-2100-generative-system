@@ -1,6 +1,6 @@
 # Loop City · 第 1 步 整环：黏菌与生长 · Step 1, the whole loop: mould and growth
 
-> **统一的「下一步」· The chain row (26 Nov 2026).** 每个 app 左侧面板标题下有同一行（`shared/ui/chain.js`、`chain.css`）：七个小格是研究主线上的位置（伦敦地图 → 1 黏菌 → 2 毛线带 → 3 张量场底图 → 张量场工作室 → 结构工作室 → VR），左边「‹ 上一步」在本页打开上一个 app，右边白色的「下一步」在新标签页打开下一个；下面一行小字写带什么过去，或者还差哪一步（这时按钮变灰，并给一个去看下一步范例的链接）。被别的 app 嵌在里面时这一行不显示。这里的下一步是第 2 步毛线带：百年运行完、单元已提取、选了至少一个单元时可以点，带上所选单元（就是原来的「在毛线带中打开」）。 The same row under the title in every app: where it stands on the research line, the step before, the step after and what goes with it. Here Next is step 2, ready once cells are extracted and picked; it carries the picked cells.
+> **统一的「下一步」· The chain row (26 Nov 2026).** 每个 app 左侧面板标题下有同一行（`shared/ui/chain.js`、`chain.css`）：六个小格是研究主线上的位置（伦敦地图 → 1 黏菌 → 2 毛线带 → 张量场工作室 → 结构工作室 → VR；26 Nov 2026 起毛线带直接交给张量场工作室，原来中间的第 3 步张量场底图已去掉），左边「‹ 上一步」在本页打开上一个 app，右边白色的「下一步」在新标签页打开下一个；下面一行小字写带什么过去，或者还差哪一步（这时按钮变灰，并给一个去看下一步范例的链接）。被别的 app 嵌在里面时这一行不显示。这里的下一步是第 2 步毛线带：百年运行完、单元已提取、选了至少一个单元时可以点，带上所选单元（就是原来的「在毛线带中打开」）。 The same row under the title in every app: where it stands on the research line, the step before, the step after and what goes with it. Here Next is step 2, ready once cells are extracted and picked; it carries the picked cells.
 
 > **种子与运行名 · The seed and the run's name (25 Nov 2026).** 百年运行里所有随机的地方（代理的起点、朝向、转向，农业图层的种子）现在都从一个种子取数，默认 2100。种子和设置相同，跑出的百年逐个单元完全相同；「全部参数」最上面可以改种子，或点「随机」。提取单元后，这次运行有一个名字，例如 `s2100·n1bz`（种子 + 全部单元边界的指纹，显示在种子下面）；每个单元有一个身份，例如 `s2100·n1bz · C67 · P2`（运行名 · 单元 · 车站）。单元包（单个和多个）里写入 `run.id`、`run.seed` 和每个单元的 `key`；`LoopCityEngine.seed`、`LoopCityEngine.runId` 可以读到。**只有运行名相同的单元才能拼在一起**：不同运行的单元边界不同，不能合并。手动合并单元会改变单元，运行名也随之改变。地址里加 `#seed=777` 可以指定种子。只在 Chromium 上验证过相同种子得到相同单元。 Every random draw of the century (where agents start, their heading and turns, the farm layer's seeds) now comes from one seed, 2100 by default. The same seed and settings grow the same century, cell for cell; the seed is at the top of All settings, with a Random button. Once the cells are extracted the run has a name such as `s2100·n1bz` (the seed and a fingerprint of every cell's boundary, shown under the seed), and each cell a key such as `s2100·n1bz · C67 · P2`. Cell packages carry `run.id`, `run.seed` and each cell's `key`. **Only cells with the same run name fit together.** `#seed=777` in the address sets the seed. Checked on Chromium only.
 
@@ -67,8 +67,9 @@ The slime mould and the city growth run together over the whole loop (2025-2100)
 |---|---|---|
 | 1 整环：黏菌与生长 | `incubator/loop-city-mould-growth/` | 单元包 `loop-city-cell-package` |
 | 2 毛线带 | `incubator/loop-city-wool/` | 地块包 `loop-city-parcel-package` |
-| 3 张量场底图 | `incubator/loop-city-tensor-base/` | 场地文件 `tensor-site-input` |
-| 4 张量场工作室 | `incubator/tensor-studio/` | 街道 |
-| 5 结构工作室 | `incubator/structure-studio/` | |
+| 张量场工作室 | `incubator/tensor-studio/` | 街道（路网） |
+| 结构工作室 | `incubator/structure-studio/` | |
+
+（26 Nov 2026：原来的第 3 步「张量场底图」`incubator/loop-city-tensor-base/` 已去掉。毛线带把地块包直接交给张量场工作室，由它读成场地。）
 
 每一步可以自动打开下一步（浏览器询问时请允许弹出窗口），也可以把结果存成文件，到下一步里打开。规则和数据来源见 `incubator/loop-city-wool/README.md`、`SOURCE.md` 和 `docs/`。

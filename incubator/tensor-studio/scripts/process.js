@@ -408,7 +408,7 @@ function siteText(){ const s = D.site, st = T6.envStats, list = [];
   list.push(L('地形：', 'Terrain: ') + (s ? 'OS Terrain 50' : (st && st.elevationFrom === 'contours' ? L('OS 1 米等高线', 'OS 1 m contours') : 'OS')));
   list.push(L('洪水：', 'Flood: ') + (FR ? L('EA 地表水与河流海洋风险', 'EA surface water, rivers and sea') : L('不在 EA 数据范围内', 'outside the EA data')));
   list.push(L('风：London Luton 典型气象年（逐时）', 'Wind: London Luton typical year, hourly'));
-  const fsrc = window.__TS && window.__TS.meta && window.__TS.meta.source;      // (v8.49) a site file from Loop City step 3
+  const fsrc = window.__TS && window.__TS.meta && window.__TS.meta.source;      // (v8.49) a site from Loop City: parcels of the wool bands
   if (fsrc){ list[0] = L('地形：', 'Terrain: ') + (s.elevation ? 'OS Terrain 50' : L('没有数据，按平地', 'no data, flat ground'));
     list.push(L('道路：毛线带的道路等级（含现有道路）', 'Roads: the wool bands\u2019 hierarchy, existing roads among them'));
     const out = Math.max(0, (fsrc.parksGiven || 0) - (fsrc.parksShown || 0));      // (v8.49.2) parks taken with the parcels but beyond this view
