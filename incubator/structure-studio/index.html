@@ -258,7 +258,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
-<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=2"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
+<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=3"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
 <link rel="stylesheet" href="intro/intro.css?v=0.9.39">
 </head>
 <body>
@@ -1102,12 +1102,18 @@ const STORE = (() => {
 const SESS_KEY = 'structureStudio.session', P0 = JSON.parse(JSON.stringify(P));
 const sess = () => { try { return JSON.parse(localStorage.getItem(SESS_KEY) || '{}') || {}; } catch (e) { return {}; } };
 const setSess = o => { try { localStorage.setItem(SESS_KEY, JSON.stringify(Object.assign(sess(), o))); } catch (e) {} };
-let CUR = 'builtin', LIST = [], IDB_OK = true, BUILTIN = null, saveT = null;
+// (26 Nov 2026) two built-in examples. Station P2 is this app's own show-piece (the October network). C67 · P2 is the
+// example of the research line: the three urban parcels of the wool bands' example (seed 2100), grown in Tensor Studio
+// on its "Loop City example parcels", so the examples of steps 1, 2, Tensor Studio and this app are one place.
+const BUILT = { 'builtin': { file: 'assets/station-p2.snapshot.json', base: 'station-p2', pKey: 'builtinP', name: () => L('车站 P2', 'Station P2'), label: () => L('内置示例 · 车站 P2', 'Built-in example · Station P2') },
+                'builtin-lc': { file: 'assets/loop-city-c67-p2.snapshot.json', base: 'loop-city-c67-p2', pKey: 'builtinLcP', name: () => 'C67 · P2', label: () => L('内置示例 · C67 · P2（种子 2100）', 'Built-in example · C67 · P2 (seed 2100)') } };
+const LINE_EXAMPLE = 'builtin-lc', isBuilt = id => Object.prototype.hasOwnProperty.call(BUILT, id);
+let CUR = 'builtin', LIST = [], IDB_OK = true, BUILTIN = {}, saveT = null;
 const curMeta = () => LIST.find(m => m.id === CUR);
 function applyP(p) { Object.assign(P, P0); if (p) for (const k in P0) if (p[k] != null && typeof p[k] === typeof P0[k]) P[k] = p[k];
   for (const k in FMT) { const el = $(k); el.value = P[k]; P[k] = +el.value; $('v_' + k).textContent = FMT[k](P[k]); } $('avoidWater').checked = !!P.avoidWater; if (p && !p.mode && +p.v1) P.mode = 'v1'; $('mode').value = P.mode; syncPrimAng(); syncWCore(); syncWidths('wS'); }
 function savePSoon() { clearTimeout(saveT); saveT = setTimeout(() => { const p = JSON.parse(JSON.stringify(P));
-  if (CUR === 'builtin') setSess({ builtinP: p }); else { const m = curMeta(); if (m) { m.P = p; STORE.putMeta(m).catch(() => {}); } } }, 500); }
+  if (isBuilt(CUR)) setSess({ [BUILT[CUR].pKey]: p }); else { const m = curMeta(); if (m) { m.P = p; STORE.putMeta(m).catch(() => {}); } } }, 500); }
 function hashSnap(snap) { const t = JSON.stringify([snap.origin, snap.pieces.length, snap.roads.map(r => r.pts)]); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + t.length.toString(36); }
 const stamp = t => { const d = new Date(t), z = v => String(v).padStart(2, '0'); return `${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
 // (25 Nov 2026) a result grown on Loop City parcels says which century of step 1 it comes from: the run's name and the cells' keys
@@ -1116,17 +1122,18 @@ function runLine() { const el = $('srcRun'); if (!el) return; const r = SNAP && 
   el.hidden = !r && !k.length; if (el.hidden) return; el.textContent = L('运行名 ', 'Run ') + (r || '—') + (k.length ? L(' · 单元 ', ' · cells ') + k.map(x => String(x).split(' · ').slice(1).join(' · ')).join(', ') : ''); }
 function refreshSel() { const sel = $('srcSel'); sel.textContent = ''; runLine();
   const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
-  add('builtin', L('内置示例 · 车站 P2', 'Built-in example · Station P2'));
+  for (const id in BUILT) add(id, BUILT[id].label());
   if (LIST.length) { const g = document.createElement('optgroup'); g.label = L('已保存（这台电脑）', 'Saved (this computer)'); sel.appendChild(g);
     for (const m of [...LIST].sort((a, b) => b.created - a.created)) { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; g.appendChild(o); } }
-  sel.value = CUR; const b = CUR === 'builtin'; $('renBtn').disabled = $('delBtn').disabled = b; resetDel(); }
+  sel.value = CUR; const b = isBuilt(CUR); $('renBtn').disabled = $('delBtn').disabled = b; resetDel(); }
 function saveHint() { // 正常情况下不显示说明；只在浏览器不能保存时提示
   $('saveHint').textContent = IDB_OK ? '' : L('这个浏览器不能保存结果（可能是无痕 / 隐私模式），关掉页面就没了；要保留请"导出快照"。', 'This browser cannot save results (perhaps a private window), so they are lost when the page closes; use "Export snapshot" to keep one.'); }
 async function switchTo(id) { $('busy').style.display = 'block'; $('renRow').hidden = true; if (IDB_OK || CUR !== '__tmp') saveHint();
-  if (id !== 'builtin') { const m = LIST.find(x => x.id === id); let snap = null; try { snap = m && await STORE.snap(id); } catch (e) {}
+  if (!isBuilt(id)) { const m = LIST.find(x => x.id === id); let snap = null; try { snap = m && await STORE.snap(id); } catch (e) {}
     if (m && snap) { CUR = id; setSess({ cur: id }); applyP(m.P); refreshSel(); loadSnap(snap, m.name); return; } id = 'builtin'; }
-  if (!BUILTIN) BUILTIN = await fetch('assets/station-p2.snapshot.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-  CUR = 'builtin'; setSess({ cur: 'builtin' }); applyP(sess().builtinP); refreshSel(); loadSnap(BUILTIN, L('车站 P2', 'Station P2')); }
+  const B = BUILT[id];
+  if (!BUILTIN[id]) BUILTIN[id] = await fetch(B.file).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  CUR = id; setSess({ cur: id }); applyP(sess()[B.pKey]); refreshSel(); loadSnap(BUILTIN[id], B.name()); }
 async function addInput(snap, kind, fname) { const h = hashSnap(snap), same = LIST.find(m => m.hash === h);
   if (same) { await switchTo(same.id); $('saveHint').textContent = L(`这份结果已经保存过："${same.name}"，已切换过去。`, `This result was already saved as "${same.name}"; switched to it.`); return; }
   const n = snap.roads.length, now = Date.now(), ck = keyShort(snap), name = kind !== 'file' && ck ? `${ck} · ${n} ${L('条路', 'roads')}` : kind === 'file' && snap.name ? String(snap.name).slice(0, 60) : kind === 'file' ? `${fname} · ${n} ${L('条路', 'roads')}` : L(`张量场 · ${stamp(now)} · ${n} 条路`, `Tensor Studio · ${stamp(now)} · ${n} roads`);
@@ -1146,8 +1153,8 @@ $('delBtn').onclick = async () => { const m = curMeta(); if (!m) return;
   if (!delArm) { const b = $('delBtn'); b.classList.add('warn'); b.textContent = L('再点一次删除', 'Click again to delete'); delArm = setTimeout(resetDel, 3000); return; }
   resetDel(); try { await STORE.del(m.id); } catch (e) {} LIST = LIST.filter(x => x.id !== m.id); saveHint(); await switchTo('builtin'); };
 $('expBtn').onclick = () => { if (!SNAP) return; const m = curMeta(), d = new Date(m ? m.created : Date.now()), z = v => String(v).padStart(2, '0');
-  const base = CUR === 'builtin' ? 'station-p2' : `structure-input-${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}-${SNAP.roads.length}roads`;
-  const out = Object.assign({}, SNAP, { name: CUR === 'builtin' ? L('车站 P2', 'Station P2') : (m ? m.name : undefined), structureParams: JSON.parse(JSON.stringify(P)) }), text = JSON.stringify(out), fn = base + '.snapshot.json';
+  const base = isBuilt(CUR) ? BUILT[CUR].base : `structure-input-${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}-${SNAP.roads.length}roads`;
+  const out = Object.assign({}, SNAP, { name: isBuilt(CUR) ? BUILT[CUR].name() : (m ? m.name : undefined), structureParams: JSON.parse(JSON.stringify(P)) }), text = JSON.stringify(out), fn = base + '.snapshot.json';
   try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
   catch (e) { dl(fn, text); } };
 // (26 Nov 2026) Tensor Studio's chain row ("Next · Structure Studio") opens this page with #from=tensor: the network
@@ -1164,10 +1171,13 @@ async function boot() { $('busy').style.display = 'block';
   try { if (!('indexedDB' in window)) throw 0; LIST = (await STORE.metas()) || []; } catch (e) { IDB_OK = false; LIST = []; }
   saveHint(); const s = sess();
   if (await takeFromOpener()) return;
-  try { await switchTo(s.cur && LIST.some(m => m.id === s.cur) ? s.cur : 'builtin'); }
+  // "See the example in Structure Studio" from Tensor Studio's chain row: the example of the line, C67 · P2
+  const want = !!(window.L2Chain && window.L2Chain.wantsExample && window.L2Chain.wantsExample('structure-studio'));
+  try { await switchTo(want ? LINE_EXAMPLE : s.cur && (isBuilt(s.cur) || LIST.some(m => m.id === s.cur)) ? s.cur : 'builtin'); }
   catch (err) { $('busy').textContent = L('载入快照失败：', 'Could not load the snapshot: ') + err.message; } }
 // (26 Nov 2026) the chain row, the same in every catalogue app: before, Tensor Studio; after, VR (nothing is carried: VR shows scenes exported beforehand)
 if (window.L2Chain && $('ssChain')) window.L2Chain.mount({ id: 'structure-studio', into: $('ssChain'), lang: () => LANG });
+if (window.L2Chain && window.L2Chain.onExample) window.L2Chain.onExample('structure-studio', () => { switchTo(LINE_EXAMPLE).catch(() => {}); });      // the tab is open already: it changes to the example
 // ---- 只看张量场结果：不画结构、农田、建筑，只画场地、水系、张量场道路（按等级）、路口、吸引点，可叠方向线
 let TSV = false, tsBase = null;
 function makeTsBase() { const S = SITE, SC = 2, cv = document.createElement('canvas'); cv.width = S.W * SC; cv.height = S.H * SC; const ctx = cv.getContext('2d');

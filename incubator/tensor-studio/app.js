@@ -2829,6 +2829,8 @@ document.getElementById('applyPreset').onclick=()=>{
         return { ready: true, carry: ['this network (' + nN + ' streets)' + (k ? ' · ' + k : ''), '这张路网（' + nN + ' 条路）' + (k ? ' · ' + k : '')] }; },
       go(){ const w = window.open('../structure-studio/index.html#from=tensor&t=' + Date.now(), 'l2100-structure-studio'); if (!w) throw new Error(zh() ? '浏览器拦截了新标签页' : 'the browser blocked the new tab'); } });
   }
+  // (v8.52) the tab is open already when the wool's chain row asks for the example of the line: it changes to it
+  if (IO && (!H || FILE) && window.L2Chain && window.L2Chain.onExample) window.L2Chain.onExample('tensor-studio', () => { IO.sample().catch(() => {}); });
   // (v8.49) a site file: open one, go back to the last one, back to the example; from the London map none of this shows
   if (IO && (!H || FILE) && $id('fileNav')){
     const nav = $id('fileNav'), msg = $id('fileMsg'), say = (a, b) => { msg.hidden = false; msg.dataset.zh = a; msg.dataset.en = b; msg.textContent = zh() ? a : b; };

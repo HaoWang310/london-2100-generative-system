@@ -59,6 +59,27 @@ test('the row hides when another app frames the page, and goes through the catal
   assert.ok(js.includes("'index.html#app/' + id"));
 });
 
+test('"See the example": the next app is asked for the example of the line, once for a tab, and a tab open already hears of it', () => {
+  const js = read('shared/ui/chain.js'), store = new Map(), sess = new Map(), on = {};
+  const st = m => ({ getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, removeItem: k => { m.delete(k); } });
+  const w = { parent: null, document: { documentElement: { lang: 'en' } }, setInterval() {}, location: {}, localStorage: st(store), sessionStorage: st(sess), addEventListener(t, f) { on[t] = f; } }; w.parent = w; w.window = w;
+  vm.runInNewContext(js, w); const X = w.L2Chain;
+  assert.equal(X.wantsExample('tensor-studio'), false, 'nothing asked');
+  store.set('l2100.example', 'tensor-studio|' + Date.now());
+  assert.equal(X.wantsExample('structure-studio'), false, 'asked of another app');
+  assert.equal(X.wantsExample('tensor-studio'), true); assert.equal(X.wantsExample('tensor-studio'), false, 'a reload of the same tab opens as usual');
+  assert.ok(store.has('l2100.example'), 'the note stays for the page the link may load again');
+  store.set('l2100.example', 'tensor-studio|' + (Date.now() - 120000)); sess.clear(); assert.equal(X.wantsExample('tensor-studio'), false, 'an old note is not followed');
+  let heard = 0; X.onExample('structure-studio', () => { heard++; });
+  store.set('l2100.example', 'structure-studio|' + Date.now()); on.storage({ key: 'l2100.example', newValue: store.get('l2100.example') }); assert.equal(heard, 1);
+  on.storage({ key: 'something.else', newValue: 'x' }); store.set('l2100.example', 'tensor-studio|' + Date.now()); on.storage({ key: 'l2100.example', newValue: store.get('l2100.example') }); assert.equal(heard, 1);
+  assert.ok(js.includes("if (what === 'example') { askExample(nx);"), 'the link leaves the note before it opens the app');
+  // the two apps that have such an example read it
+  const ts = read('incubator/tensor-studio/index.html'), ta = read('incubator/tensor-studio/app.js'), ss = read('incubator/structure-studio/index.html');
+  assert.ok(ts.includes("window.L2Chain.wantsExample('tensor-studio')") && ta.includes("window.L2Chain.onExample('tensor-studio'"));
+  assert.ok(ss.includes("window.L2Chain.wantsExample('structure-studio')") && ss.includes("window.L2Chain.onExample('structure-studio'"));
+});
+
 test('the terrain Tensor Studio reads for a Loop City site file is where it looks for it', () => {
   // Tensor Studio (on parcels from the wool bands) and the whole system's contours both read the London map's 50 m terrain raster.
   // Moved or renamed there, both lose their terrain: this says so first.
