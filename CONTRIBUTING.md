@@ -34,9 +34,9 @@ git push -u origin module/04-tensor-roads/streamline-step
 `https://haowang310.github.io/london-2100-generative-system/incubator/<app 名>/` 单独访问。
 它不需要遵守模块接口；准备融合时，再为它写一个 `modules/NN-xxx/` 适配模块。
 
-融合有两种方式：把算法原样放进模块的 `legacy/`（与孵化区各自独立）；或者像 `01-growth-simulator` 那样**直连**——
+融合有两种方式：把算法原样放进模块的 `legacy/`（与孵化区各自独立）；或者像 `01-loop-city` 那样**直连**——
 模块运行时读取孵化区 app 自己的文件（`fetch`，不 `import`），孵化区改好主程序就跟着变。直连的孵化区 app 改动接口或数据布局前，
-先跑 `node --test modules/01-growth-simulator/tests/`。
+先跑 `node --test modules/01-loop-city/tests/`。
 
 **让它出现在开场后的目录里**：在 `incubator/catalogue.json` 的 `items` 中加一条：
 

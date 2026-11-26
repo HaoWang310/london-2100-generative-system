@@ -25,7 +25,7 @@
   var CHN = { 0: ['Prologue · the site', '序章 · 场地'], 1: ['Reading the ground', '读地'], 2: ['Cutting', '切分'], 3: ['Weaving', '编织'], 4: ['Making roads', '成路'] };
   var NAME = { 0: ['The site and the loop', '场地与环线'], 1: ['The slime mould', '黏菌'], 2: ['Veins, centrelines', '菌脉与中心线'], 3: ['The cells', '单元'], 4: ['Existing roads', '现有道路'],
     5: ['Primary cells', '主单元'], 6: ['Soil grades', '土壤等级'], 7: ['Good land kept for farming', '好地留给耕种'], 8: ['Anchors', '锚点'], 9: ['Base net', '基础网'], 10: ['The wool relaxing', '毛线松弛'],
-    21: ['Road bands', '道路带'], 22: ['With the existing roads', '并入现状道路'], 23: ['Fine tuning', '微调'], 24: ['Bigger parcels', '并成大地块'], 25: ['Parcels by use', '地块用途'], 26: ['Road hierarchy', '道路等级'], 27: ['On to the tensor field', '交给张量场'], 28: ['Evaluation', '评价'] };      // 28 (chapter 5) has no card yet: named so the panel still draws when the page is on it
+    21: ['Road bands', '道路带'], 22: ['With the existing roads', '并入现状道路'], 23: ['Fine tuning', '微调'], 24: ['Bigger parcels', '并成大地块'], 25: ['Parcels by use', '地块用途'], 26: ['Road hierarchy', '道路等级'], 27: ['On to the tensor field', '交给张量场'], 28: ['Evaluation', '评价'] };      // 28: chapter 5, the evaluation
   var nm = function (k) { return T(NAME[k][0], NAME[k][1]); };
   var ok = function () { return typeof DATA !== 'undefined' && DATA && typeof S !== 'undefined' && S && S.view; };
   var info = function (k) {
@@ -92,20 +92,21 @@
       var st = isOff(k) ? 'opacity:.28' : P.done[k] ? 'background:' + CHC[c] : k === cur ? 'background:' + CHC[c] + ';box-shadow:0 0 8px ' + CHC[c] : '';
       h += '<i data-go="' + k + '" title="' + esc((k ? shown(k) + ' ' : '') + nm(k)) + '" style="' + st + '"></i>'; }); return h; };
   function card(k) {
-    var c = chOf(k), col = CHC[c], cur = P.k === k || (P.k === null && S.step === (k === 0 ? -1 : k)), done = P.done[k], open = cur || P.open[k] || P.all;
+    // (26 Nov 2026) 28, the evaluation: chapter 5, after step 16, in white
+    var c = k === 28 ? 5 : chOf(k), col = k === 28 ? '#F5F5F7' : CHC[c], cur = P.k === k || (P.k === null && S.step === (k === 0 ? -1 : k)), done = P.done[k], open = cur || P.open[k] || P.all;
     var off = isOff(k);
     if (off) { var xo = null; try { xo = info(k); } catch (e) {}
       return '<div class="fc off" data-k="' + k + '" style="--c:' + col + '"><button type="button" class="fh" data-open="' + k + '"><span class="n">' + shown(k) + '</span><b>' + esc(nm(k)) + '</b><span class="fl">' + T('Built up · not woven', '已建成 · 不编织') + '</span></button>' +
         (P.open[k] || P.all ? '<div class="fb"><p>' + esc(xo ? xo.did : '') + '</p></div>' : '') + '</div>'; }
     var cls = 'fc' + (cur ? ' cur' : '') + (done ? ' done' : '') + (!cur && !done ? ' todo' : '');
-    var num = done && !cur ? '✓' : (k === 0 ? '0' : shown(k));
+    var num = done && !cur ? '✓' : (k === 0 ? '0' : k === 28 ? '–' : shown(k));
     var nchg = PR ? PR.of(k).filter(function (p) { return PR.changed(p); }).length : 0;
     var flag = cur && P.phase ? P.phase : nchg && (cur || done) ? T(nchg + ' changed', '已改 ' + nchg + ' 项') : done ? keyResult(k) : '';
     var h = '<div class="' + cls + '" data-k="' + k + '" style="--c:' + col + '"><button type="button" class="fh" data-open="' + k + '"><span class="n">' + num + '</span><b>' + esc(nm(k)) + '</b><span class="fl' + (nchg && !(cur && P.phase) && (cur || done) ? ' chg' : '') + '">' + esc(flag) + '</span></button>';
     if (open) { var x = null; try { x = info(k); } catch (e) {}
       if (x) { h += '<div class="fb">';
         if (cur) h += '<div class="pg"><i style="width:' + Math.round((P.prog || 0) * 100) + '%"></i></div>';
-        h += '<h4>' + esc(x.t) + '</h4><p>' + esc(x.did) + '</p><div class="l">' + T('Why', '为什么') + '</div><p class="why">' + esc(x.why) + '</p>';
+        h += '<h4>' + esc(x.t) + '</h4><p>' + esc(x.did) + '</p>' + (x.why ? '<div class="l">' + T('Why', '为什么') + '</div><p class="why">' + esc(x.why) + '</p>' : '');
         if (window.__lcNote) h += window.__lcNote(x);
         var ps = PR ? PR.of(k) : [];
         if (ps.length) h += paramsBlock(k, ps, cur || done);
@@ -138,6 +139,9 @@
       (st ? ' · ' + st : '') + (P.total ? ' · ' + T('worked out in ', '计算共 ') + (P.total / 1000).toFixed(1) + T(' s', ' 秒') : '') + '</div><div class="sg">' + segs(k) + '</div></div>';
     var last = -1;
     SEQ.forEach(function (q) { var cc = chOf(q); if (cc !== last) { x += '<div class="chh" style="color:' + CHC[cc] + '">' + (cc ? T('Chapter ' + cc + ' · ', '第 ' + cc + ' 章 · ') : '') + T(CHN[cc][0], CHN[cc][1]) + '</div>'; last = cc; } x += card(q); });
+    // (26 Nov 2026) chapter 5, the evaluation (evaluate.js): it had no card, only a mark in the chapter bar. After step 16, before the way out;
+    // the player passes it (it works out three whole networks), a click opens it
+    x += '<div class="chh" style="color:#F5F5F7">' + T('Chapter 5 · Evaluation', '第 5 章 · 评价') + '</div>' + card(28);
     x += '<div class="chh" style="color:#8A8A8A">' + T('The way out', '出口') + '</div>' + card(27);
     var hd = $('left').querySelector('.l2-head'); box.style.setProperty('--hh', (hd && getComputedStyle(hd).position === 'sticky' ? hd.offsetHeight : 0) + 'px');
     box.innerHTML = x;
@@ -437,6 +441,7 @@
     else if (d.pset) { var p1 = PR.byId(d.pset); if (p1) apply([[p1, p1.kind === 'seg' && typeof p1.def === 'number' ? +d.v : p1.kind === 'chk' ? +d.v : d.v]]); }
     else if (d.edit) { var eb = $(d.edit); if (eb) eb.click(); render(); }
     else if (d.open !== undefined) { var k = +d.open; if (k === 27) { stop(); setStep(27); P.k = null; render(); return; }
+      if (k === 28) { stop(); if (typeof BD !== 'undefined' && BD.res && BD.res.hier && !BD.busy) { setStep(28); P.k = null; } else P.open[28] = !P.open[28]; render(); return; }      // with no roads yet (steps 11–16) it only says so (evaluate.js)
       if (isOff(k)) { P.open[k] = !P.open[k]; render(); return; }               // a step passed over only says why
       if (P.done[k] && !P.on) { P.open[k] = !P.open[k]; render(); return; }     // a step done opens or folds; one not yet done is played
       goTo(k, true); }

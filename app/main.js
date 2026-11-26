@@ -459,13 +459,11 @@ function renderSimInspector() {
   const host = $('inspParams');
   if (tool && host.firstChild !== tool.container) host.replaceChildren(tool.container);
   $('inspStats').replaceChildren();
-  $('inspAlgo').textContent = mod.source ? pick(mod.source) : t('growth.source');
+  $('inspAlgo').textContent = mod.source ? pick(mod.source) : '';
   const el = $('legend');
-  // a module's own legend ([colour, {zh, en}] rows), else 01's five classes
-  if (mod.legend) el.replaceChildren(...mod.legend.map(([colour, label]) => h('div', { class: 'legend-row' },
+  // a module's own legend ([colour, {zh, en}] rows); the growth simulator's five classes went with it (26 Nov 2026)
+  el.replaceChildren(...(mod.legend || []).map(([colour, label]) => h('div', { class: 'legend-row' },
     h('i', { style: `border-top-width:8px;border-top-color:${colour}` }), pick(label))));
-  else el.replaceChildren(...[3, 2, 1, 4, 5].map(k => h('div', { class: 'legend-row' },
-    h('i', { style: `border-top-width:8px;border-top-color:${mod.palette[k]}` }), t(`growth.legend.${k}`))));
 }
 
 function renderToolInspector() {
@@ -604,7 +602,8 @@ document.addEventListener('click', e => {
 
 // ------------------------------------------------------------------ wiring
 
-onLangChange(() => { render(); for (const tool of Object.values(simTools)) tool.relang(); });
+onLangChange(() => { render(); for (const tool of Object.values(simTools)) tool.relang();
+  const mb = $('mapBadge'); if (mb && !mb.hidden && mb.dataset.i18nKey) mb.textContent = t(mb.dataset.i18nKey); });      // (26 Nov 2026) the basemap note follows too
 $('playButton').addEventListener('click', () => (playing ? stop() : play()));
 $('scrub').addEventListener('input', e => { stop(); setProgress(e.target.value / 1000); });
 for (const [id, on] of [['view2d', false], ['view3d', true]]) {
@@ -700,7 +699,7 @@ async function boot() {
         render();
       },
       onEnter: id => { if (!activeTool) enterNext(id); },
-      onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').textContent = t('map.offline'); },
+      onFallback: () => { $('mapBadge').hidden = false; $('mapBadge').dataset.i18nKey = 'map.offline'; $('mapBadge').textContent = t('map.offline'); },
       onView3D: on => { view3D = on; $('view2d').setAttribute('aria-pressed', String(!on)); $('view3d').setAttribute('aria-pressed', String(on)); }
     });
     $('mapLoading').classList.add('done');

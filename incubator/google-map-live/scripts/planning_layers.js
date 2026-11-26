@@ -6,7 +6,7 @@
 // Nothing is loaded until a layer is first switched on.
 import {createReliefLoader,reliefTileUrl,reliefStops,RELIEF_RAMPS,RELIEF_MIN_ZOOM,RELIEF_MAX_ZOOM,RELIEF_TILE_SIZE,
   DEM_TILE_URL,DEM_MAX_ZOOM}
-  from './relief_local.js?v=3.45.0-english';
+  from './relief_local.js?v=3.45.0';
 
 export {RELIEF_RAMPS,reliefStops};
 export const PLANNING_PREFIX='l2100-';

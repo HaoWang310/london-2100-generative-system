@@ -1,12 +1,12 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.45.0-english';
-import {createPlaceSearch} from './place_search.js?v=3.45.0-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.45.0-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.45.0-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.45.0-english';
-import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.45.0-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.45.0-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.45.0';
+import {createPlaceSearch} from './place_search.js?v=3.45.0';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.45.0';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.45.0';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.45.0';
+import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.45.0';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.45.0';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -27,7 +27,7 @@ try {
   }
 }
 
-const APP_VERSION='3.45.0-english';
+const APP_VERSION='3.45.0';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -2242,7 +2242,7 @@ function initOSM(){
     initPlanningLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.45.0-english')
+    import('./tensor_site_ui.js?v=3.45.0')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});

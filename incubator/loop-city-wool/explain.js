@@ -270,7 +270,7 @@
     var CC = { 1: '#5FF2FF', 2: '#C6F432', 3: '#B08CFF', 4: '#FF8A3D' };      // (25 Nov) each chapter its colour
     CH.forEach(function (C) { var on = C.steps.indexOf(k) >= 0;
       c += '<div class="ch' + (on ? ' on' : '') + '" style="--c:' + CC[C.n] + '"><div class="cl">' + (zh() ? C.n + ' ' + C.zh : C.n + ' ' + C.en) + '</div><div class="tk">';
-      C.steps.forEach(function (s) { var i = ORDER.indexOf(s); c += '<i data-s="' + s + '" class="' + (s === k ? 'c' : i < pos ? 'd' : '') + '" title="' + shown(s) + ' ' + esc(stepName(s)) + '"></i>'; });
+      C.steps.forEach(function (s) { var i = ORDER.indexOf(s); c += '<i data-s="' + s + '" class="' + (s === k ? 'c' : i < pos ? 'd' : '') + '" title="' + (s === 28 ? T('After step 16 · Evaluation', '第 16 步之后 · 评价') : shown(s) + ' ' + esc(stepName(s))) + '"></i>'; });      // (26 Nov 2026) 28 is no step 18
       c += '</div></div>'; });
     chap.innerHTML = c;
     [].forEach.call(chap.querySelectorAll('[data-s]'), function (t) { t.onclick = function () {      // a step picked here stops the demo, as a button does

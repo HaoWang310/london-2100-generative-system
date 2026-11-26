@@ -39,6 +39,13 @@
     var W = innerWidth, Hh = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), low = Math.min(W, Hh) < 600 || (navigator.maxTouchPoints || 0) > 0;
     var worker = null, pendSnap = null, film = null, top = null, s5 = null, t0 = 0, hold = 0, holdAt = null, started = false, raf = 0, data = null, deck = null, name = opts.name || '';
     me.root = root;
+    // (26 Nov 2026) the card and the two buttons follow a language changed while the film loads (another tab, the catalogue);
+    // the film's own words take the language the page has when the site arrives (me.snap)
+    function relabel() { var l = lang() !== 'en'; if (l === zh && root.getAttribute('lang') === (zh ? 'zh-CN' : 'en')) return; zh = l; root.setAttribute('lang', zh ? 'zh-CN' : 'en');
+      var q = function (sel, a, b) { var e = root.querySelector(sel); if (e) e.textContent = L(a, b); };
+      q('.ssi-card b', '结构工作室', 'Structure Studio'); q('.ssi-card span', 'Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets');
+      q('.ssi-card em', '正在载入场地…', 'Loading the site…'); q('.ssi-skip', '跳过', 'Skip'); q('.ssi-enter', '进入 ›', 'Enter ›'); }
+    var relT = setInterval(function () { if (me.closed) { clearInterval(relT); return; } relabel(); }, 400);
     function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
       if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(W, Hh, dpr); }
     var rsT = 0; function onResize() { clearTimeout(rsT); rsT = setTimeout(size, 120); }
@@ -55,7 +62,7 @@
         worker.postMessage({ type: 'init', canvas: off, w: W, h: Hh, dpr: dpr, lang: zh ? 'zh' : 'en' }, [off]); } catch (e) { worker = null; }
     }
     // ---------------------------------------------------------------- the ground (snapshot) → the worker, or drawn here
-    me.snap = function (snap, nm) { if (me.closed || me.hasSnap) return; me.hasSnap = true; name = nm || name; zh = lang() !== 'en';
+    me.snap = function (snap, nm) { if (me.closed || me.hasSnap) return; me.hasSnap = true; name = nm || name; relabel();
       Dr = window.SSIntroDraw; if (!Dr || !window.SSIntroData) { me.close(); return; } T = Dr.T; END = Dr.END; XF = Dr.XF;
       if (worker) worker.postMessage({ type: 'snap', snap: snap, name: name, lang: zh ? 'zh' : 'en' });
       top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: name }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }

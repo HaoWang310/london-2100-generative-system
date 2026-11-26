@@ -1,5 +1,5 @@
 // London Map build-version contract: prevents stale labels or worker module caches.
-// Run with: node scripts/test_release_version.mjs
+// Run with: node --test incubator/google-map-live/scripts/release_version.test.mjs (also run by node --test at the repo root)
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 

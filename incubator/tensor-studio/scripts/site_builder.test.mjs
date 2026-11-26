@@ -1,5 +1,5 @@
 // Tensor Studio site builder: projection accuracy, the baked data contract, anchors and zones.
-// Run: node scripts/test_site_builder.mjs
+// Run: node --test incubator/tensor-studio/scripts/site_builder.test.mjs (also run by node --test at the repo root)
 import assert from 'node:assert/strict';
 import {wgs84ToBNG, buildTensorSite, MAX_SIDE_M} from './site_builder.js';
 
