@@ -6,9 +6,8 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import vm from 'node:vm';
 
 const root = new URL('../../', import.meta.url), read = p => readFileSync(new URL(p, root), 'utf8'), there = p => existsSync(new URL(p, root));
-// (26 Nov 2026) the real map stands beside the line and may leave the catalogue (its data is being moved to the apps that
-// read it). While it is a catalogue item it is checked like the others; once it is gone these tests say nothing of it.
-const CATALOGUE = JSON.parse(read('incubator/catalogue.json')).items.map(i => i.id), REAL_MAP = CATALOGUE.includes('loop-city-real-map');
+// (26 Nov 2026) the real map (incubator/loop-city-real-map) is removed: the London map has its layers.
+const CATALOGUE = JSON.parse(read('incubator/catalogue.json')).items.map(i => i.id);
 const win = { parent: null, document: { documentElement: { lang: 'en' } }, setInterval() {}, location: {} }; win.parent = win; win.window = win;
 vm.runInNewContext(read('shared/ui/chain.js'), win);
 const C = win.L2Chain;
@@ -19,21 +18,20 @@ test('the research line, and the two apps beside it', () => {
   assert.deepEqual(walk, [...C.line], 'Next walks the whole line and ends at the catalogue');
   assert.equal(C.next('vr'), 'catalogue'); assert.equal(C.prev('google-map-live'), 'catalogue');
   assert.equal(C.prev('structure-studio'), 'tensor-studio'); assert.equal(C.prev('loop-city-wool'), 'loop-city-mould-growth');
-  assert.equal(C.next('workspace'), 'google-map-live'); assert.equal(C.next('loop-city-real-map'), 'loop-city-mould-growth');
-  assert.equal(C.prev('workspace'), 'catalogue'); assert.equal(C.prev('loop-city-real-map'), 'catalogue');
+  assert.equal(C.next('workspace'), 'google-map-live');
+  assert.equal(C.prev('workspace'), 'catalogue');
 });
 
 test('every app on the line is in the catalogue, and has a name', () => {
   const ids = CATALOGUE;
-  for (const id of [...C.line, 'workspace', ...(REAL_MAP ? ['loop-city-real-map'] : [])]) { assert.ok(ids.includes(id), id + ' is a catalogue item'); assert.ok(C.name(id), id + ' has a name'); }
+  for (const id of [...C.line, 'workspace']) { assert.ok(ids.includes(id), id + ' is a catalogue item'); assert.ok(C.name(id), id + ' has a name'); }
 });
 
 test('each catalogue app loads the row and mounts it under its own id', () => {
   const pages = { 'workspace': ['index.html'], 'google-map-live': ['incubator/google-map-live/index.html'], 'loop-city-mould-growth': ['incubator/loop-city-mould-growth/index.html', 'incubator/loop-city-mould-growth/skin.js'],
     'loop-city-wool': ['incubator/loop-city-wool/index.html', 'incubator/loop-city-wool/skin.js'], 'loop-city-tensor-base': ['incubator/loop-city-tensor-base/index.html', 'incubator/loop-city-tensor-base/skin.js'],
-    'tensor-studio': ['incubator/tensor-studio/index.html', 'incubator/tensor-studio/app.js'], 'structure-studio': ['incubator/structure-studio/index.html'], 'vr': ['incubator/vr/map.html'], 'loop-city-real-map': ['incubator/loop-city-real-map/index.html'] };
-  if (!REAL_MAP) delete pages['loop-city-real-map'];
-  assert.ok(Object.keys(pages).length >= 8, 'the seven apps of the line and the whole system');
+    'tensor-studio': ['incubator/tensor-studio/index.html', 'incubator/tensor-studio/app.js'], 'structure-studio': ['incubator/structure-studio/index.html'], 'vr': ['incubator/vr/map.html'] };
+  assert.deepEqual(Object.keys(pages).sort(), CATALOGUE.slice().sort(), 'every catalogue app, and no other: the seven of the line and the whole system');
   for (const [id, files] of Object.entries(pages)) { const html = read(files[0]), all = files.map(read).join('\n');
     assert.ok(/shared\/ui\/chain\.js/.test(html), id + ': chain.js'); assert.ok(/shared\/ui\/chain\.css/.test(html), id + ': chain.css');
     assert.ok(all.includes("id: '" + id + "'"), id + ': mounted under its id'); }

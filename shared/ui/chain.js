@@ -2,7 +2,7 @@
      [ ‹ the step before ]  [ Next · the step after › ]
      what goes with it, or what is still missing
    above them seven marks for the research line: London map → 1 mould → 2 wool → 3 base → Tensor Studio →
-   Structure Studio → VR. The whole system and the real map stand beside the line; they have no marks.
+   Structure Studio → VR. The whole system stands beside the line; it has no marks.
 
    An app mounts it once:
      L2Chain.mount({ id, into, before?, base?, lang?, light?, state?, go? })
@@ -31,11 +31,10 @@
     'loop-city-tensor-base': ['3 Tensor base', '3 张量场底图'],
     'tensor-studio': ['Tensor Studio', '张量场工作室'],
     'structure-studio': ['Structure Studio', '结构工作室'],
-    'vr': ['VR', 'VR'],
-    'loop-city-real-map': ['Real map', '真实地图']
+    'vr': ['VR', 'VR']
   };
   var LINE = ['google-map-live', 'loop-city-mould-growth', 'loop-city-wool', 'loop-city-tensor-base', 'tensor-studio', 'structure-studio', 'vr'];
-  var BESIDE = { 'workspace': 'google-map-live', 'loop-city-real-map': 'loop-city-mould-growth' };     // beside the line: where each goes next
+  var BESIDE = { 'workspace': 'google-map-live' };     // beside the line: where each goes next
   function prevOf(id) { var i = LINE.indexOf(id); return i > 0 ? LINE[i - 1] : 'catalogue'; }
   function nextOf(id) { var i = LINE.indexOf(id); return i >= 0 ? (LINE[i + 1] || 'catalogue') : (BESIDE[id] || 'catalogue'); }
 
