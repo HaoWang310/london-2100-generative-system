@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="./app/appview.css">
   <link rel="stylesheet" href="./app/touch.css">
   <link rel="stylesheet" href="./shared/ui/phone.css">
+  <link rel="stylesheet" href="./shared/ui/chain.css?v=1">
   <link rel="preload" as="image" href="./assets/intro/london.webp" fetchpriority="high">
 </head>
 <body>
@@ -38,6 +39,7 @@
     </header>
 
     <aside class="sidenav" aria-label="Modules">
+      <div class="pad" id="wsChain"></div>
       <div class="eyebrow pad" data-i18n="nav.scales"></div>
       <ol class="modlist" id="scaleList"></ol>
       <div class="eyebrow pad" id="toolTitle" data-i18n="nav.tools"></div>
@@ -146,6 +148,10 @@
   </section>
 
   <script src="./shared/ui/phone.js?v=3"></script>
+  <script src="./shared/ui/chain.js?v=1"></script>
+  <script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js). The whole system stands beside the research
+     line: its next step is the London map, opened in the catalogue in a new tab; nothing is carried. */
+  if (window.L2Chain) L2Chain.mount({ id: 'workspace', into: '#wsChain', base: 'incubator/', shellSelf: true });</script>
   <script type="module" src="./app/main.js"></script>
   <script>
     // Safety net: if the app has not started after a few seconds (e.g. a stale

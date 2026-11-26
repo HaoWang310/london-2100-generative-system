@@ -1,5 +1,7 @@
 # Tensor Studio · 张量场工作室
 
+> **统一的「下一步」· The chain row (v8.50.0, 26 Nov 2026).** 每个 app 左侧面板标题下有同一行（`shared/ui/chain.js`、`chain.css`）：七个小格是研究主线上的位置（伦敦地图 → 1 黏菌 → 2 毛线带 → 3 张量场底图 → 张量场工作室 → 结构工作室 → VR），左边「‹ 上一步」在本页打开上一个 app，右边白色的「下一步」在新标签页打开下一个；下面一行小字写带什么过去，或者还差哪一步（这时按钮变灰，并给一个去看下一步范例的链接）。被别的 app 嵌在里面时这一行不显示。这里的下一步是结构工作室：道路生成之后可以点，结构工作室在新标签页打开并直接读这个窗口里的路网和单元身份，不用再跑一遍。从用地文件进入时，原来的「返回第 3 步」并入这一行。嵌在伦敦地图或结构工作室里时不显示。 Here Next is Structure Studio, ready once the streets are grown: it opens in a new tab and reads the network standing in this window.
+
 > **画面外的公园 · Parks outside the view (v8.49.2, 26 Nov 2026).** 读入 Loop City 的用地文件时，如果带来的公园有的在画面范围之外（地块外轮廓四周约 340 m 以外），「数据来源」和场地说明里写明：「公园：带来 1 个，1 个在画面外」。画面范围和路网不变。 When a site file brings parks that lie beyond the view, the sources and the site note say how many.
 
 > **Loop City 范例地块 · The Loop City example parcels (v8.49.1, 26 Nov 2026).** 车站 P2 示例旁多一个按钮「Loop City 范例地块 · C67 · P2」：读 `assets/loop-city-sample-site.json`，也就是第 3 步从它自己的范例保存的用地文件（种子 2100，三块城市地块 186.5 ha）。这样不用自己准备文件，也能从第 1 步一路走到这里。内置的车站 P2 示例（`assets/station-p2.json`，22 Oct 的 218 ha 车站窗口）不变，预设、短片和测试仍按它来。 One more button beside the station P2 example: the Loop City example parcels, the site file step 3 saves from its own example. The built-in P2 example is unchanged.

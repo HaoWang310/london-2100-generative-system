@@ -31,8 +31,19 @@
 
   var meta = el('div');
   meta.appendChild(el('div', 'l2-badge', 'Loop City · step 3 · base for the tensor field', 'Loop City · 第 3 步 · 张量场底图'));
-  var row = el('div'), back = el('a', 'l2-back', '← Step 2, the wool bands', '← 第 2 步：毛线带');
-  back.href = '../loop-city-wool/'; row.appendChild(back);
+  var row = el('div');                                                                                  // the way back to step 2 is in the chain row now
+  /* ---- (26 Nov 2026) the chain row, the same in every catalogue app. Next is Tensor Studio, and what goes is the site
+     file: the page's own button (Open in Tensor Studio). */
+  if (window.L2Chain) L2Chain.mount({ id: 'loop-city-tensor-base', into: L, before: hl.nextSibling, lang: function () { return window.LANG || 'en'; },
+    state: function () {
+      var ok = false, C = null; try { C = PK && PK.T && PK.T.check; ok = !!C && !$('openTS').disabled; } catch (e) {}
+      if (!C) return { ready: false, need: ['Open a parcel package first.', '先打开一个地块包。'] };
+      if (!ok) { var v = ($('verdict') && $('verdict').textContent) || ''; return { ready: false, need: [v, v] }; }
+      var ks = []; try { ks = Object.keys(PK.cell_keys || {}).map(function (k) { return PK.cell_keys[k].split(' · ').slice(1).join(' · '); }); } catch (e) {}
+      var ha = (C.area / 1e4).toFixed(1);
+      return { ready: true, carry: ['the site file · ' + ha + ' ha' + (ks.length ? ' · ' + ks.join(', ') : ''), '用地文件 · ' + ha + ' 公顷' + (ks.length ? ' · ' + ks.join('、') : '')] };
+    },
+    go: function () { $('openTS').click(); } });
   if ($('openAgain')) { $('openAgain').classList.add('l2-back'); $('openAgain').classList.remove('btn'); row.appendChild($('openAgain')); }
   meta.appendChild(row);
   var after = $('cellsLine') || hl;

@@ -18,6 +18,14 @@
   #cover b{display:block;color:#f5f5f7;font-size:15px;font-weight:600;margin-bottom:4px}
   #cover[hidden]{display:none}
 </style>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=1"></script>
+<script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js). VR is the last stop of the research line:
+   before it Structure Studio, after it the catalogue. It sits at the top of the VR view's side panel (desktop); in the headset that panel is not shown. */
+(function () { if (!window.L2Chain) return; var done = false, n = 0;
+  var t = setInterval(function () { var s = document.querySelector('#tsXR aside.side'); if (++n > 1200) clearInterval(t); if (!s || done) return; done = true; clearInterval(t);
+    var q = new URLSearchParams(location.search); L2Chain.mount({ id: 'vr', into: s, before: s.firstElementChild, light: false,
+      lang: function () { var l = null; try { l = localStorage.getItem('l2100.lang'); } catch (e) {} return q.get('lang') || l || document.documentElement.lang; } }); }, 500); })();
+</script>
 </head>
 <body>
 <!-- The London map, untouched. VR lives only in this folder.

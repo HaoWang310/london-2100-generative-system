@@ -98,6 +98,21 @@
   top.appendChild(adv);
   L.insertBefore(top, L.firstChild);
 
+  /* ---- (26 Nov 2026) the chain row, the same in every catalogue app: the step before, the step after, what goes with it.
+     Here the next step is the wool, and what goes is the cells picked: the page's own opening of the wool (MULTI.open). */
+  if (window.L2Chain) {
+    var picked = function () { try { return MULTI.sel.length ? MULTI.sel.slice() : (HW.sel >= 0 ? [HW.sel] : []); } catch (e) { return []; } };
+    L2Chain.mount({ id: 'loop-city-mould-growth', into: top, before: top.firstChild, lang: function () { return window.LANG || 'en'; },
+      state: function () {
+        var grown = false, cells = false; try { grown = LoopCityEngine.year >= 2100 && !LoopCityEngine.busy; cells = !!(HW.res && HW.cells.length); } catch (e) {}
+        if (!cells) return { ready: false, need: grown ? ['Extract the cells first (step 2 below).', '先提取单元（下面第 2 步）。'] : ['Run the century first, then extract the cells.', '先运行百年，再提取单元。'] };
+        var s = picked(); if (!s.length) return { ready: false, need: ['Click a cell on the map; shift-click its neighbours for more.', '在地图上点选一个单元；按住 Shift 可加选相邻单元。'] };
+        var ids = s.map(function (i) { return HW.cells[i].id + (HW.cells[i].station ? ' ' + HW.cells[i].station : ''); }), run = ''; try { run = HW.runId(); } catch (e) {}
+        return { ready: true, carry: [s.length + (s.length > 1 ? ' cells (' : ' cell (') + ids.join(', ') + ') · run ' + run, s.length + ' 个单元（' + ids.join('、') + '）· 运行名 ' + run] };
+      },
+      go: function () { MULTI.open(picked()); } });
+  }
+
   /* ------------------------------------------------------------------ right: display */
   var hr = el('div', 'lc-head');
   add(hr, el('span', 'rh', 'Display', '显示'), colBtn(PR));

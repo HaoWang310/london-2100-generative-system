@@ -56,6 +56,7 @@
     if (card && card.parentNode && (!pb || pb.contains(card))) card.parentNode.insertBefore(box, card);
     else if (pb) pb.insertBefore(box, pb.firstChild);
     else if (head && head.parentNode === L) L.insertBefore(box, head.nextSibling); else L.insertBefore(box, L.firstChild);
+    var chn = L.querySelector('.l2chain'); if (chn && box.parentNode) box.parentNode.insertBefore(chn, box);      // (26 Nov 2026) the chain row stays right under the title, above the steps
     box.addEventListener('click', onClick);
     box.addEventListener('input', function (e) { if (e.target.id === 'lcSpeed') { P.speed = +e.target.value; save(); render(); return; }
       var id = e.target.dataset && e.target.dataset.p; if (id) { var p = PR.byId(id), o = box.querySelector('[data-out="' + id + '"]'); if (p && o) o.textContent = PR.show(p, +e.target.value); } });

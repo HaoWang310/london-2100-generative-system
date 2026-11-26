@@ -1,5 +1,7 @@
 # Loop City · 第 3 步 张量场底图 · Step 3, the base for the tensor field
 
+> **统一的「下一步」· The chain row (26 Nov 2026).** 每个 app 左侧面板标题下有同一行（`shared/ui/chain.js`、`chain.css`）：七个小格是研究主线上的位置（伦敦地图 → 1 黏菌 → 2 毛线带 → 3 张量场底图 → 张量场工作室 → 结构工作室 → VR），左边「‹ 上一步」在本页打开上一个 app，右边白色的「下一步」在新标签页打开下一个；下面一行小字写带什么过去，或者还差哪一步（这时按钮变灰，并给一个去看下一步范例的链接）。被别的 app 嵌在里面时这一行不显示。这里的下一步是张量场工作室：检查「就绪」时可以点，带上用地文件（就是「在张量场工作室打开」）。原来的「← 第 2 步」并入这一行。 Here Next is Tensor Studio, ready when the site passes the check; it carries the site file.
+
 > **远处的公园 · A park far from the parcels (26 Nov 2026).** 地块表里，离城市地块太远、张量场工作室画面装不下的公园用橙色标出：「离地块 1.9 km，在张量场画面外」。其余不变。 In the parcel table a park beyond Tensor Studio's view is marked in orange with its distance.
 
 > **范例来自种子 2100 · The example is the run of seed 2100 (26 Nov 2026).** 内置范例地块换成第 2 步新范例里车站 P2 旁的三块相连的城市地块（C67.64、C67.65、C67.41，合计 180 ha）和公园 C67.122（`sample-parcels.js`）：跨度 2.02 km，用地 186.5 ha，3 个毛线路口锚点，带运行名 `s2100·n1bz` 和单元身份。锚点比旧范例（12 个）少，因为毛线带第二版的地块更大、地块之间的路口更少。 The built-in parcels are now three touching urban parcels by station P2 from step 2's new example, with a park: 2.02 km across, 186.5 ha, three anchors, carrying the run's name and the cell key.
