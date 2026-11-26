@@ -408,7 +408,12 @@ function siteText(){ const s = D.site, st = T6.envStats, list = [];
   list.push(L('地形：', 'Terrain: ') + (s ? 'OS Terrain 50' : (st && st.elevationFrom === 'contours' ? L('OS 1 米等高线', 'OS 1 m contours') : 'OS')));
   list.push(L('洪水：', 'Flood: ') + (FR ? L('EA 地表水与河流海洋风险', 'EA surface water, rivers and sea') : L('不在 EA 数据范围内', 'outside the EA data')));
   list.push(L('风：London Luton 典型气象年（逐时）', 'Wind: London Luton typical year, hourly'));
-  if (s) list.push(L('道路、水体、铁路、建筑：OpenStreetMap', 'Streets, water, rail, buildings: OpenStreetMap'));
+  const fsrc = window.__TS && window.__TS.meta && window.__TS.meta.source;      // (v8.49) a site file from Loop City step 3
+  if (fsrc){ list[0] = L('地形：', 'Terrain: ') + (s.elevation ? 'OS Terrain 50' : L('没有数据，按平地', 'no data, flat ground'));
+    list.push(L('道路：毛线带的道路等级（含现有道路）', 'Roads: the wool bands\u2019 hierarchy, existing roads among them'));
+    const pk = (D.ctx.parks || []).length; if (pk) list.push(L('公园 ' + pk + ' 个：保持为公园，不长路', (pk > 1 ? pk + ' parks: kept as parks' : '1 park: kept as a park') + ', no street enters'));
+    const ks = Object.values(fsrc.cell_keys || {}); list.push(L('单元身份：', 'Cell key: ') + (ks.join(L('；', '; ')) || L('旧用地文件，没有记录', 'an older site file, none recorded'))); }
+  else if (s) list.push(L('道路、水体、铁路、建筑：OpenStreetMap', 'Streets, water, rail, buildings: OpenStreetMap'));
   return '<b>' + summary(1) + '</b><ul>' + list.map(x => '<li>' + x + '</li>').join('') + '</ul>'; }
 function metHTML(){ const m = METR || PM.lastM, p = PM.prevM; if (!m) return '';
   const rows = [['km1', '主路', 'Main streets', ' km', 1], ['km2', '次路', 'Second streets', ' km', 1], ['dens', '路网密度', 'Density', ' km/km²', 1], ['road', '道路用地', 'Land in streets', ' %', 0],

@@ -1839,6 +1839,7 @@ function pathRings(g, rings){ for (const r of rings){ r.forEach((p, k) => k ? g.
 function drawBase(){ const g = g2d(L_base); g.clearRect(0, 0, VW, VH); if (!(BASEMAPS[BASEMAP] && BASEMAPS[BASEMAP].live)){ g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH); }
   const bm = BASEMAP !== 'none' && drawBasemap(g), ctxOn = $('lCtx').checked && !bm;   // (v8.5) a basemap replaces the drawn context
   if (ctxOn){ g.fillStyle = P.urban; for (const r of D.ctx.urban){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); } }
+  if (D.ctx.parks && !bm){ g.fillStyle = THEME === 'light' ? '#8fc79a' : '#1f6b3c'; for (const r of D.ctx.parks){ g.beginPath(); pathRings(g, r); g.fill('evenodd'); } }   // (v8.49) parks handed on with a site file: solid green, they stay parks
   if ($('lCont').checked){ g.lineJoin = 'round';
     // (v8.38) on a map site the contours (and their labels) stay inside the red line: the map round it is the context
     const clipC = !!D.site; if (clipC){ g.save(); g.beginPath(); pathRings(g, D.pieces.map(p => p.outer)); g.clip(); }
@@ -2728,7 +2729,7 @@ window.addEventListener('resize', resize);
   placeAttractors(); buildTarget(); settleField(); FIELDMODE = 'off'; $('lFlow').checked = false;
   // (v8.7) in the process mode the app opens on step 1, nothing grown yet; the free mode opens on the result as before
   if (window.__TS_PROCESS_ON){ MODE = 'B'; resetNet(); } else { MODE = 'A'; start(false); MODE = 'B'; start(true); } syncTools(); drawKey(); requestAnimationFrame(frame);
-  window.__ts6 = { roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
+  window.__ts6 = { source: (window.__TS.meta && window.__TS.meta.source) || null, roadNet: () => { const RN = roadNet(); return RN ? { streets: RN.sw.map((st, i) => ({ id: i + 1, pts: (RN.geo.sub(i, true) || st.pts).map(q => q.slice()), grade: st.grade || null, level: st.level, width: st.w[0], joined: !!st.joined })), junctions: RN.junctions.map(j => ({ x: j.x, y: j.y, type: j.type, streets: j.streets.map(i => i + 1) })), stats: netStats(RN), geojson: f => netFeatures(f || (q => q)) } : null; },   // (v8.45) the network as built, for other parts of the system (local metres; geojson(f) with f to map the coordinates)
     get attr(){ return ATTR; }, placeAttractors, addAttr, get amode(){ return AMODE; }, setAMode: m => { AMODE = m; $('aMode').value = m; placeAttractors(); buildTarget(); syncTools(); }, get mode(){ return MODE; }, setMode, compareBoth, setUnder, get snap(){ return SNAP; }, get events(){ return EVENTS; }, get metr(){ return METR; }, metrics, get tips(){ return TIPS; },
     get conf(){ return CONF; }, get clar(){ return CLAR; }, get D(){ return D; }, get lines(){ return LINES; }, get growing(){ return GROWING; }, get finished(){ return FINISHED; }, runAll, start, measures, setTheme, setMonth, simStart, simStop, setStep, setField, showResult, streetWidths, drawWidth, get culverts(){ return CULVERTS; },
     // (v8.7) for the process mode
@@ -2797,12 +2798,17 @@ document.getElementById('applyPreset').onclick=()=>{
 /* ---------------- (site) the header and the site panel */
 (() => {
   const T = window.__TS, H = T.host, s = D.site, m = T.meta || {}, KEY = 'tensorStudio.uiLanguage', zh = () => TS_LANG === 'zh';
+  const FILE = !!(H && H.source === 'file'), SRC = m.source || {}, KEYS = Object.values(SRC.cell_keys || {}), IO = window.__TS_SITE_IO;
   const ORIG_SUB = "The station window round P2 (22 Oct): the chosen cells of the final wool network, its roads fixed as they are. Water bodies and the station's 250 m ring are holes no street enters; streets cross watercourses square, on culverts; a street that runs into water or the ring goes back to its last junction. Main streets grow from the wool junctions on the edge, completed first; second streets as in v6. The app places 1 to 4 attractors from the field, near the centre, near the corners, on the edge or spread out, all draggable.";
   const $id = id => document.getElementById(id);
   const info = () => { const el = $id('siteInfo'); if (!el) return;
     if (!s){ el.textContent = ORIG_SUB; return; }
     const e = s.elevation ? (zh() ? '高程 ' + s.elevation[0] + '–' + s.elevation[1] + ' 米，平均坡度 ' + s.meanSlopePct + '%' : 'elevation ' + s.elevation[0] + '–' + s.elevation[1] + ' m, mean slope ' + s.meanSlopePct + ' %') : (zh() ? '无高程数据' : 'no elevation');
     const warn = (m.warnings || []).map(w => '<br>· ' + w).join('');
+    if (FILE){ const np = (D.ctx.parks || []).length;      // (v8.49) a site file from Loop City step 3
+      el.innerHTML = (zh()
+        ? '第 3 步交来的城市地块：' + s.areaHa + ' 公顷，跨度约 ' + s.sideM + ' 米；' + e + '。单元身份：' + (KEYS.join('；') || '旧用地文件，没有记录') + '。锚点 ' + m.anchors + ' 个，是毛线路口。道路是毛线带的道路等级（含现有道路）；' + (np ? '公园 ' + np + ' 个，保持为公园，不长路；' : '') + (SRC.terrain && s.elevation ? '地形来自 OS Terrain 50（50 米）' : '这里没有地形数据，按平地计算') + '；风为 London Luton 典型气象年。'
+        : 'Urban parcels handed on by step 3: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. Cell key: ' + (KEYS.join('; ') || 'an older site file, none recorded') + '. ' + m.anchors + ' anchors, the wool junctions. The roads are the wool bands\u2019 hierarchy (existing roads among them); ' + (np ? np + ' park' + (np > 1 ? 's' : '') + ', kept as parks, no street enters; ' : '') + (SRC.terrain && s.elevation ? 'terrain: OS Terrain 50 (50 m)' : 'no terrain data here, worked out as flat ground') + '; wind: London Luton typical year.') + warn; return; }
     el.innerHTML = zh()
       ? '你在伦敦地图上选定的场地：' + s.areaHa + ' 公顷，跨度约 ' + s.sideM + ' 米；' + e + '。土地 = 选区减去水体' + (T.keepBuildings ? '和现有建筑' : '') + '；锚点 ' + m.anchors + ' 个，取自现有道路与边界的交点。地形来自 OS Terrain 50（50 米），道路、水体、铁路、建筑来自 OpenStreetMap / OpenFreeMap，风为 London Luton 典型气象年。' + warn
       : 'The site you drew on the London map: ' + s.areaHa + ' ha, about ' + s.sideM + ' m across; ' + e + '. The land is the site less the water' + (T.keepBuildings ? ' and the existing buildings' : '') + '; ' + m.anchors + ' anchors where existing streets meet the edge. Terrain: OS Terrain 50 (50 m). Streets, water, rail and buildings: OpenStreetMap via OpenFreeMap. Wind: London Luton typical year.' + warn; };
@@ -2811,7 +2817,27 @@ document.getElementById('applyPreset').onclick=()=>{
   window.setInterfaceLanguage = l => { orig(l); try { localStorage.setItem(KEY, TS_LANG); } catch (e) {} info(); try { floodNum(); syncEnv(); syncTints(); } catch (e) {} };
   syncBase(); syncEnv();
   window.addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'l2100:lang') window.setInterfaceLanguage(e.data.lang); });
-  if (s){
+  // (v8.49) a site file: open one, go back to the last one, back to the example; from the London map none of this shows
+  if (IO && (!H || FILE) && $id('fileNav')){
+    const nav = $id('fileNav'), msg = $id('fileMsg'), say = (a, b) => { msg.hidden = false; msg.dataset.zh = a; msg.dataset.en = b; msg.textContent = zh() ? a : b; };
+    nav.hidden = false; $id('fileBack').hidden = $id('fileP2').hidden = !FILE; nav.classList.toggle('one', !FILE);
+    const short = f => { const k = Object.values((f && f.cell_keys) || {}); return k.length ? k.map(x => x.split(' · ').slice(1).join(' · ')).join(' + ') : (f && f.parcels || []).slice(0, 3).join(' '); };
+    const last = !FILE && IO.last(), lb = $id('fileLast');
+    if (last){ lb.hidden = false; lb.innerHTML = '<span data-i18n></span>'; const sp = lb.firstChild; sp.dataset.zh = '上次的地块 · ' + short(last); sp.dataset.en = 'The last parcels · ' + short(last); sp.textContent = zh() ? sp.dataset.zh : sp.dataset.en; lb.onclick = () => IO.again(); }
+    $id('fileBack').onclick = () => H.close(); $id('fileP2').onclick = () => IO.example();
+    $id('fileOpen').onclick = () => $id('fileIn').click();
+    $id('fileIn').onchange = async ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
+      try { const j = JSON.parse(await f.text());
+        if (j && j.type === 'loop-city-parcel-package') return say('这是第 2 步的地块包。请先在第 3 步「张量场底图」里打开它，再保存用地文件或点「在张量场工作室打开」。', 'This is a parcel package from step 2. Open it in step 3, the base, then save the site file or press "Open in Tensor Studio".');
+        if (!(j && j.type === 'tensor-site-input' && Array.isArray(j.ring) && j.features)) return say('这不是第 3 步保存的用地文件（tensor-site-input）。', 'This is not a site file saved by step 3 (tensor-site-input).');
+        $id('hud').textContent = zh() ? '正在打开用地文件…' : 'Opening the site file…'; IO.use(j);
+      } catch (e){ say('这个文件读不出来：' + (e.message || e), 'The file could not be read: ' + (e.message || e)); } };
+  }
+  if (FILE){
+    const badge = $id('siteBadge'), k = KEYS.join(' + ') || (zh() ? '旧用地文件' : 'older site file'); badge.dataset.zh = 'Loop City 地块 · ' + (KEYS.join(' + ') || '旧用地文件'); badge.dataset.en = 'Loop City parcels · ' + (KEYS.join(' + ') || 'older site file');
+    const pt = $id('presetTitle'); pt.dataset.zh = '图册方案 · 16 个预设'; pt.dataset.en = 'Catalogue presets · 16 options';
+    document.querySelector('#aMode option[value="sketch"]')?.remove();
+  } else if (s){
     $id('siteNav').hidden = false;
     const badge = $id('siteBadge'); badge.dataset.zh = '伦敦选区'; badge.dataset.en = 'London site';
     const pt = $id('presetTitle'); pt.dataset.zh = '图册方案 · 16 个预设'; pt.dataset.en = 'Catalogue presets · 16 options';

@@ -311,7 +311,9 @@ window.addEventListener('DOMContentLoaded',()=>{
 #panel.collapsed .ts-sub{display:none}
 #panel .site-nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
 #panel .site-nav[hidden]{display:none}
-#panel .site-nav #siteBack{grid-column:1/-1}
+#panel .site-nav #siteBack,#panel .site-nav #fileBack,#panel .site-nav #fileLast{grid-column:1/-1}
+#panel #fileNav #fileOpen:only-of-type,#panel #fileNav.one #fileOpen{grid-column:1/-1}
+#panel #fileNav #fileMsg{color:#ff9f0a}
 #panel .site-nav .site-label{grid-column:1/-1;font-size:11px;color:var(--grey);padding:4px 2px 0}
 #panel .site-nav button{min-height:36px;padding:6px 10px;border:1px solid #46464b;background:#2c2c30;color:#f5f5f7;border-radius:12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 #panel .site-nav button:hover{background:#414146}
@@ -527,7 +529,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
 </style><script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("l2ui");</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=2">
 <link rel="stylesheet" href="intro/intro.css?v=2">
 </head><body>
-<script src="intro/intro-data.js?v=2"></script><script src="intro/intro.js?v=3"></script>
+<script src="intro/intro-data.js?v=2"></script><script src="intro/intro.js?v=4"></script>
 <aside class="displayPanel" id="displayPanel" role="region" aria-label="Display">
  <div class="dpSection"><div class="dpTitle">Mode</div>
   <div class="dpGrid" id="tgMode" role="group"><button class="dpTile" type="button" data-m="A"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8c6 0 12 2 18 0M3 16c6 0 12 2 18 0"/></svg><span>A · today</span></button><button class="dpTile" type="button" data-m="B"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12l8-8M12 4l8 8M8 16l-4 4M16 16l4 4"/></svg><span>B · branching</span></button></div></div>
@@ -560,7 +562,7 @@ body.pm-on #commonGrp,body.pm-on #advanced,body.pm-on #hud,body.pm-on .preset-bo
   <div id="tsBoot" role="status"><i aria-hidden="true"></i><span id="tsBootText">正在载入场地…</span></div>
   <script>try { if (window.__TS_BOOT && window.__TS_BOOT.lang !== 'zh') document.getElementById('tsBootText').textContent = 'Loading the site…'; } catch (e) {}</script></div>
  <div id="panel" class="ts-panel">
-<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.48.1" data-en="Station P2 example · v8.48.1">车站 P2 示例 · v8.48.1</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1" data-i18n-title data-zh-title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理" data-en-title="Buildings of 1,500 m² footprint or more stay and the streets go round them; the rest may go" title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理"><span data-i18n data-zh="保留大建筑" data-en="Keep the large ones">保留大建筑</span></button></nav><div class="ts-divider"></div>
+<div class="ts-head"><div><div class="ts-title"><span data-i18n data-zh="张量场工作室" data-en="Tensor Studio">张量场工作室</span></div><div class="ts-sub"><span data-i18n id="siteBadge" data-zh="车站 P2 示例 · v8.49.0" data-en="Station P2 example · v8.49.0">车站 P2 示例 · v8.49.0</span></div></div><div class="ts-actions"><div class="language-switch" aria-label="界面语言 / Interface language"><button data-language="zh" class="active" lang="zh-CN">中文</button><button data-language="en" lang="en">English</button></div><button id="tsCollapse" type="button" aria-expanded="true" title="Collapse / expand">−</button></div></div><nav class="site-nav" id="fileNav" hidden><button id="fileBack" type="button" hidden><span data-i18n data-zh="← 返回第 3 步 · 张量场底图" data-en="← Back to step 3, the base">← 返回第 3 步 · 张量场底图</span></button><button id="fileP2" type="button" hidden><span data-i18n data-zh="换回 P2 范例" data-en="The P2 example">换回 P2 范例</span></button><button id="fileLast" type="button" hidden></button><button id="fileOpen" type="button"><span data-i18n data-zh="打开用地文件…" data-en="Open a site file…">打开用地文件…</span></button><input type="file" id="fileIn" accept=".json,application/json" hidden><span class="site-label" id="fileMsg" hidden></span></nav><nav class="site-nav" id="siteNav" hidden><button id="siteBack" type="button"><span data-i18n data-zh="← 返回伦敦地图" data-en="← Back to the London map">← 返回伦敦地图</span></button><span class="site-label"><span data-i18n data-zh="现有建筑" data-en="Existing buildings">现有建筑</span></span><button id="bldClear" type="button" data-keep="0"><span data-i18n data-zh="清除重建" data-en="Clear">清除重建</span></button><button id="bldKeep" type="button" data-keep="1" data-i18n-title data-zh-title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理" data-en-title="Buildings of 1,500 m² footprint or more stay and the streets go round them; the rest may go" title="保留占地 1500 m² 以上的大体量建筑，道路绕开；其余按可拆处理"><span data-i18n data-zh="保留大建筑" data-en="Keep the large ones">保留大建筑</span></button></nav><div class="ts-divider"></div>
 <section class="preset-box"><h2><span id="presetTitle" data-i18n data-zh="图册方案 · 18 个预设" data-en="Catalogue presets · 18 options">图册方案 · 18 个预设</span></h2><select id="presetSelect" aria-label="图册方案 / Catalogue preset"></select><button id="applyPreset"><span data-i18n data-zh="应用方案" data-en="Apply preset">应用方案</span></button><p id="presetStatus"><span data-i18n data-zh="选取方案后点击应用；将重新生成道路。" data-en="Choose a preset and apply it to regenerate streets.">选取方案后点击应用；将重新生成道路。</span></p></section>
 <section class="grp" id="commonGrp"><h2><span data-i18n data-zh="常用参数" data-en="Main settings">常用参数</span></h2><div class="card">
   <div class="sub-h"><span data-i18n data-zh="场：等高线与风" data-en="The field: contour and wind">场：等高线与风</span></div>
@@ -770,10 +772,10 @@ window.__TS_INSETS = () => { const W = innerWidth, H = innerHeight, p = document
 // Opened from the London map (incubator/google-map-live), the parent page hands over the site it
 // selected (window.__TENSOR_SITE_INPUT__: boundary, OSM features, an elevation sampler) and this page
 // builds the engine's data for it. Opened on its own, it runs the station P2 example of v8.
-import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.48.1';
-import { floodForSite } from './scripts/flood_risk.js?v=8.48.1';
-import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.48.1';
-const V = '8.48.1', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
+import { buildTensorSite, wgs84ToBNG, bngToWGS84 } from './scripts/site_builder.js?v=8.49.0';
+import { floodForSite } from './scripts/flood_risk.js?v=8.49.0';
+import { environmentFields, landMaskOf, corridors } from './scripts/env_fields.js?v=8.49.0';
+const V = '8.49.0', PC = 'https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm', KEY = 'tensorStudio.uiLanguage';
 const hud = t => { const e = document.getElementById('hud'); if (e) e.textContent = t; };
 // (24 Nov 2026) the engine, the animation and the process mode are fetched now, beside the site's data, not one after
 // the other once the data has been worked through. They still run in the same order, below.
@@ -783,8 +785,46 @@ for (const f of ['app.js', 'scripts/env_anim.js', 'scripts/process.js']){ const 
 const booted = () => requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('ts-boot')));
 const bootFail = () => document.documentElement.classList.add('ts-boot-fail');
 let host = null; try { if (window.parent !== window) host = window.parent.__TENSOR_SITE_INPUT__ || null; } catch (e) { /* not same-origin */ }
+// (v8.49, 25 Nov 2026) a site file from Loop City step 3 (incubator/loop-city-tensor-base, "tensor-site-input"): the
+// urban parcels taken from the wool, with their roads and the parks beside them. It is handed on by step 3's button
+// (kept in the browser, address #site) or chosen here with "Open a site file…"; the page then starts again on it.
+// The tab remembers it is on a file (session), the browser keeps the last file. Not from the London map: no host.
+const SITE_KEY = 'tensorStudio.siteFile', SITE_ON = 'tensorStudio.siteOn', NAME_MARK = 'ts-site:';
+const siteOK = f => !!(f && f.type === 'tensor-site-input' && Array.isArray(f.ring) && f.ring.length >= 4 && f.features);
+const readLast = () => { try { const f = JSON.parse(localStorage.getItem(SITE_KEY) || 'null'); return siteOK(f) ? f : null; } catch (e) { return null; } };
+let fileSite = null;
+if (!host){
+  const asked = /[#&]site\b/.test(location.hash);
+  if (asked){ try { sessionStorage.setItem(SITE_ON, '1'); } catch (e) {} history.replaceState(null, '', location.pathname + location.search); }
+  let on = asked; try { on = on || sessionStorage.getItem(SITE_ON) === '1'; } catch (e) {}
+  if (on) fileSite = readLast();
+  if (!fileSite && typeof window.name === 'string' && window.name.startsWith(NAME_MARK)){ try { const f = JSON.parse(window.name.slice(NAME_MARK.length)); if (siteOK(f)) fileSite = f; } catch (e) {} }   // a private window: the file rides in the tab's name
+}
+window.__TS_SITE_IO = {
+  last: readLast,
+  use(f){ if (!siteOK(f)) throw new Error('not a site file'); const t = JSON.stringify(f); let kept = false;
+    try { localStorage.setItem(SITE_KEY, t); sessionStorage.setItem(SITE_ON, '1'); kept = true; } catch (e) {}
+    window.name = kept ? '' : NAME_MARK + t; location.reload(); },
+  again(){ try { sessionStorage.setItem(SITE_ON, '1'); } catch (e) {} location.reload(); },
+  example(){ try { sessionStorage.removeItem(SITE_ON); } catch (e) {} if (typeof window.name === 'string' && window.name.startsWith(NAME_MARK)) window.name = ''; location.reload(); }
+};
+// OS Terrain 50 for a site file: the London map's own raster (EPSG:3857, 50 m, 70 km round Charing Cross), read once
+async function loopTerrain(){
+  const R = 6378137, W = 2868, H = 2875, B = [-127813.8696191665, 6596204.025752107, 102461.98815442335, 6827041.923624865];
+  const r = await fetch('../google-map-live/assets/drainage_area/dem50_log16.webp', { cache: 'force-cache' }); if (!r.ok) throw new Error('terrain HTTP ' + r.status);
+  const im = await createImageBitmap(await r.blob()); if (im.width !== W || im.height !== H) throw new Error('terrain raster size');
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0); im.close?.();
+  const d = g.getImageData(0, 0, W, H).data, codes = new Uint16Array(W * H); for (let i = 0; i < codes.length; i++) codes[i] = (d[i * 4] << 8) | d[i * 4 + 1];
+  const cl = (n, a, b) => Math.max(a, Math.min(b, n)), at = (x, y) => { const v = codes[y * W + x]; return v ? -100 + (v - 1) * .1 : NaN; };
+  return (lng, lat) => { const x = R * lng * Math.PI / 180, y = R * Math.log(Math.tan(Math.PI / 4 + cl(lat, -85, 85) * Math.PI / 360));
+    if (x < B[0] || x > B[2] || y < B[1] || y > B[3]) return NaN;
+    const sx = (x - B[0]) / (B[2] - B[0]) * W - .5, sy = (B[3] - y) / (B[3] - B[1]) * H - .5, x0 = cl(Math.floor(sx), 0, W - 1), x1 = cl(x0 + 1, 0, W - 1), y0 = cl(Math.floor(sy), 0, H - 1), y1 = cl(y0 + 1, 0, H - 1);
+    const tx = cl(sx - Math.floor(sx), 0, 1), ty = cl(sy - Math.floor(sy), 0, 1), v = [at(x0, y0), at(x1, y0), at(x0, y1), at(x1, y1)], good = v.filter(Number.isFinite);
+    if (!good.length) return NaN; for (let i = 0; i < 4; i++) if (!Number.isFinite(v[i])) v[i] = good[0];
+    return (v[0] * (1 - tx) + v[1] * tx) * (1 - ty) + (v[2] * (1 - tx) + v[3] * tx) * ty; };
+}
 let stored = null; try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
-// v8.48.1 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
+// v8.49.0 · nothing chosen yet: the device's system language (any Chinese → zh, every other → en)
 const sys = (() => { try { const f = (navigator.languages && navigator.languages[0]) || navigator.language || ''; return f ? (/^zh\b/i.test(f) ? 'zh' : 'en') : null; } catch (e) { return null; } })();
 const lang0 = host?.lang || stored || sys || 'zh', zh = lang0 === 'zh';
 window.__TS_LANG0 = lang0;
@@ -805,6 +845,19 @@ try {
     const feats = { ...host.features };
     if (keep && KEEP_MIN_M2 && feats.buildings){ const all = feats.buildings.length; feats.buildings = feats.buildings.filter(pg => footM2(pg) >= KEEP_MIN_M2); window.__TS_KEPT = { all, kept: feats.buildings.length, minM2: KEEP_MIN_M2 }; }
     ({ D, meta } = buildTensorSite({ ...feats, ring: host.ring, elevation: host.elevation, wind, clip, keepBuildings: keep }));
+  } else if (fileSite){
+    hud(zh ? '正在打开用地文件…' : 'Opening the site file…');
+    const [wind, clip, elevation] = await Promise.all([
+      fetch('assets/luton_wind.json?v=' + V).then(r => { if (!r.ok) throw new Error('weather year HTTP ' + r.status); return r.json(); }),
+      import(PC).then(m => m.default || m).catch(() => null),
+      loopTerrain().catch(e => { console.warn('Tensor Studio: no terrain for the site file', e); return null; })
+    ]);
+    const F = fileSite.features || {};
+    ({ D, meta } = buildTensorSite({ roads: F.roads || [], rails: F.rails || [], waters: F.waters || [], waterways: F.waterways || [], buildings: [], parks: F.parks || [], ring: fileSite.ring, elevation, wind, clip, keepBuildings: false }));
+    // what the file says of itself: the run of step 1 it comes from, its cells and their keys, the parcels
+    meta.source = { kind: 'loop-city-site-file', run: fileSite.run || null, cells: fileSite.cells || [], cell_keys: fileSite.cell_keys || {}, parcels: fileSite.parcels || [], made: fileSite.made || null, terrain: !!elevation };
+    D.source = meta.source;
+    host = { source: 'file', file: fileSite, lang: null, close(){ location.href = '../loop-city-tensor-base/index.html'; }, fail(){} };   // no view(): not over the London map
   } else {
     hud(zh ? '正在载入车站 P2 示例…' : 'Loading the station P2 example…');
     const r = await fetch('assets/station-p2.json?v=' + V); if (!r.ok) throw new Error('example site HTTP ' + r.status);
@@ -814,7 +867,7 @@ try {
   try { D.flood = await floodForSite(D, 'assets/flood_risk/'); } catch (e){ console.warn('Tensor Studio: no flood risk', e); D.flood = null; }
   // (v8.6) layer 1: elevation, where rain gathers, summer ventilation, winter cold wind, comfort
   try { D.landMask = landMaskOf(D); D.env = environmentFields(D, D.landMask); } catch (e){ console.warn('Tensor Studio: no environmental fields', e); D.env = null; }
-  window.__TS = { D, meta, host, keepBuildings: keep, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 }, envFns: { corridors } };
+  window.__TS = { D, meta, host, keepBuildings: host && host.source === 'file' ? false : keep, lang: lang0, geo: { wgs84ToBNG, bngToWGS84 }, envFns: { corridors } };
   // (v8.7) the process mode (default) opens on step 1 with nothing grown; scripts/process.js runs it
   try { window.__TS_PROCESS_ON = localStorage.getItem('tensorStudio.flowMode') !== 'free'; } catch (e){ window.__TS_PROCESS_ON = true; }
   const s = document.createElement('script'); s.src = 'app.js?v=' + V;
@@ -824,6 +877,8 @@ try {
 } catch (error){
   console.error('Tensor Studio', error);
   hud((zh ? '无法打开场地：' : 'Could not open the site: ') + (error?.message || error)); bootFail();
+  if (fileSite){ try { sessionStorage.removeItem(SITE_ON); } catch (e) {} if (typeof window.name === 'string' && window.name.startsWith(NAME_MARK)) window.name = '';      // the next opening is the example again
+    hud((zh ? '无法打开用地文件：' : 'Could not open the site file: ') + (error?.message || error) + (zh ? '。重新载入页面回到 P2 范例。' : '. Reload the page for the P2 example.')); }
   host?.fail?.(error);
 }
 
