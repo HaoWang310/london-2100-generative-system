@@ -1,5 +1,6 @@
 // Chinese / English switching. Default language: the device's — Chinese when its system language is Chinese (any
 // variety), English for every other; once 中文 / EN is pressed, that choice is kept on the device and wins.
+// The choice is the one language of the whole site: every incubator app reads and writes it too (shared/ui/lang.js).
 // Static text: <span data-i18n="key"></span>, attributes: data-i18n-title="key".
 // Module texts use {zh, en} objects resolved with pick().
 
@@ -34,6 +35,12 @@ export function setLang(next) {
 }
 
 export const toggleLang = () => setLang(lang === 'zh' ? 'en' : 'zh');
+
+// (26 Nov 2026) one language for every app: an incubator app opened in its own tab writes its choice to the same place
+// (shared/ui/lang.js). When that happens while this page is open, it follows at once.
+if (typeof globalThis.addEventListener === 'function' && typeof document !== 'undefined') {
+  globalThis.addEventListener('storage', e => { if (e.key === STORAGE_KEY && DICTS[e.newValue]) setLang(e.newValue); });
+}
 export const onLangChange = fn => (listeners.add(fn), () => listeners.delete(fn));
 
 /** Translate a key; {name} placeholders are filled from vars. Falls back to English, then the key. */

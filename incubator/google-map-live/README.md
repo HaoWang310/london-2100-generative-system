@@ -1,5 +1,7 @@
 # London Map Live
 
+> **一个语言 · One language for every app (26 Nov 2026).** 页面最前面多一行 `shared/ui/lang.js`：全站共用的语言（`l2100.lang`）在打开时交给本页自己的 `londonMap.uiLanguage`，在本页切换时记回去，别的标签页切换时本页跟着换。`scripts/ui_language.js` 没有改。 The first script of the page, `shared/ui/lang.js`, joins this page's own key to the site's one language. `scripts/ui_language.js` is unchanged.
+
 > **统一的「下一步」· The chain row (26 Nov 2026).** 面板标题下有和其他 app 相同的一行（`shared/ui/chain.js`）。伦敦地图是研究主线的第一站：上一步是目录，下一步是 Loop City 第 1 步，不带数据。框选场地进入张量场工作室的功能不变。嵌在 VR 页面里时这一行不显示。 The same row as in every app. The London map is the first stop of the research line: Next opens Loop City step 1, nothing is carried. Selecting a site for Tensor Studio is unchanged.
 
 
