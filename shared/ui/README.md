@@ -47,10 +47,13 @@ One line under an app's title, the same in every catalogue app: six marks for th
 2 wool → Tensor Studio → Structure Studio → VR; until 26 Nov 2026 a step 3, the tensor base, stood between the wool and
 Tensor Studio), the step before on the left, **Next** on the right in
 white, and under them what goes with it or what is still missing (then Next is grey, with a link to the next app's example).
+The link under a grey Next, **See the example in …**, asks the next app for *the example of the line*: the one that comes from the same run as the
+examples before it (seed 2100, cell C67 · P2), not the app's own show-piece. An app that has one reads the asking with
+`L2Chain.wantsExample(id)` as it opens and `L2Chain.onExample(id, fn)` while it is open (Tensor Studio, Structure Studio).
 The whole system stands beside the line: no marks. (The real map stood beside it too until it was removed on 26 Nov 2026.)
 
 ```html
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=2"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=3"></script>
 <script>L2Chain.mount({ id: 'my-app', into: panel, before: firstThingUnderTheTitle,
   state: () => ({ ready, carry: ['en', '中文'], need: ['en', '中文'] }),   // only for a step that hands its result on
   go: () => myOwnHandOver() });</script>

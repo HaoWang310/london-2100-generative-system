@@ -56,6 +56,18 @@
     var sh = shell() || (M.shellSelf ? window : null); if (sh) { sh.location.hash = id === 'catalogue' ? 'catalogue' : id === 'workspace' ? 'workspace' : 'app/' + id; return; }
     location.href = hrefOf(id, false);
   }
+  // (26 Nov 2026) "See the example in …": the next app is asked for its example of the line, the one that comes from
+  // the same run as the examples before it (seed 2100, cell C67 · P2), not the app's own show-piece. The asking is a
+  // note left in the browser, good for half a minute. The app reads it as it opens (wantsExample: once for a tab, so a
+  // later reload opens as usual); a tab of that app open already hears of it (onExample) and changes at once. The note
+  // is not taken away by the reading: the link also sends that tab to the app's address, which may load the page
+  // again before it has changed, and the page that loads must still find it. No such example: the app opens as always.
+  var EX_KEY = 'l2100.example', EX_DONE = 'l2100.example.done', EX_MS = 30000;
+  function askExample(id) { try { window.localStorage.setItem(EX_KEY, id + '|' + Date.now()); } catch (e) { /* a private window */ } }
+  function exNote(id) { try { var p = String(window.localStorage.getItem(EX_KEY) || '').split('|'); return p[0] === id && Date.now() - (+p[1]) < EX_MS ? p[1] : null; } catch (e) { return null; } }
+  function wantsExample(id) { var t = exNote(id); if (!t) return false;
+    try { if (window.sessionStorage.getItem(EX_DONE) === id + '|' + t) return false; window.sessionStorage.setItem(EX_DONE, id + '|' + t); } catch (e) {} return true; }
+  function onExample(id, fn) { try { window.addEventListener('storage', function (e) { if (e.key === EX_KEY && e.newValue && exNote(id)) fn(); }); } catch (e) {} }
   function openNext(id) {                                                            // a new tab; inside the catalogue, the catalogue showing that app
     if (id === 'catalogue') { toPrev('catalogue'); return true; }
     var w = window.open(hrefOf(id, inCatalogue()), 'l2100-' + id); return !!w;
@@ -91,7 +103,7 @@
   function click(e) {
     var b = e.target.closest ? e.target.closest('[data-l2c]') : null; if (!b || !M) return; var what = b.getAttribute('data-l2c'), nx = nextOf(M.id);
     if (what === 'prev') { toPrev(prevOf(M.id)); return; }
-    if (what === 'example') { if (!openNext(nx)) say(['The browser blocked the new tab. Allow pop-ups for this page, then try again.', '浏览器拦截了新标签页。请允许本页面弹出窗口后再试。']); return; }
+    if (what === 'example') { askExample(nx); if (!openNext(nx)) say(['The browser blocked the new tab. Allow pop-ups for this page, then try again.', '浏览器拦截了新标签页。请允许本页面弹出窗口后再试。']); return; }
     var s = state(); if (s && !s.ready) return;                                     // grey: the line under it says what is missing
     if (s && M.go) { try { M.go(); } catch (err) { say(['The hand-over did not work: ' + (err.message || err), '交接没有成功：' + (err.message || err)]); } return; }
     if (!openNext(nx)) say(['The browser blocked the new tab. Allow pop-ups for this page, then try again.', '浏览器拦截了新标签页。请允许本页面弹出窗口后再试。']);
@@ -106,5 +118,5 @@
     setInterval(function () { try { if (M.key !== key()) draw(); } catch (e) {} }, 500);
     return el;
   }
-  window.L2Chain = { mount: mount, refresh: function () { try { draw(); } catch (e) {} }, line: LINE.slice(), name: function (id) { return T(NAME[id]); }, next: nextOf, prev: prevOf, open: function (id) { return openNext(id); } };
+  window.L2Chain = { mount: mount, refresh: function () { try { draw(); } catch (e) {} }, line: LINE.slice(), name: function (id) { return T(NAME[id]); }, next: nextOf, prev: prevOf, open: function (id) { return openNext(id); }, wantsExample: wantsExample, onExample: onExample };
 })();
