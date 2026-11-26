@@ -995,7 +995,7 @@ export const CHINESE_UI = {
   "The ground rises by its height · inside the 70 km circle · seen in the tilted view": "地面按高度隆起 · 只在 70 km 圈内 · 倾斜视角下可见",
   "Exaggeration": "夸张倍数",
   "3D relief exaggeration": "3D 地形起伏夸张倍数",
-  "The ground itself is raised from the open height tiles (about 30 m), and the other layers lie on it: height colors, flood risk, boundaries, rail, the 3D buildings. London is low, so the heights are multiplied (×3 to ×5 reads well). Outside the 70 km circle the ground stays flat. Trees and street vehicles are switched off while it is on: they are drawn on flat ground and would be buried.": "地面本身按开放高程瓦片（约 30 m）隆起，其他图层贴在上面：地形着色、洪水风险、边界、铁路、三维建筑。伦敦地势低，所以高度要乘以倍数（×3 到 ×5 比较清楚）。70 km 圈外地面保持平的。打开时树木和街道小车会自动关闭：它们画在平地上，会被隆起的地面埋住。",
-  "Visible · tilt the map to see it · trees and street vehicles are off meanwhile": "已显示 · 倾斜地图可见 · 期间树木和街道小车关闭",
-  "Trees and street vehicles are off while 3D relief is on.": "3D 地形起伏打开时，树木和街道小车保持关闭。",
+  "The ground itself is raised from the open height tiles (about 30 m), and the other layers lie on it: height colors, flood risk, boundaries, rail, the 3D buildings. London is low, so the heights are multiplied (×3 to ×5 reads well). Outside the 70 km circle the ground stays flat. Trees, street vehicles and building shadows are switched off while it is on: they are drawn on flat ground and would be buried.": "地面本身按开放高程瓦片（约 30 m）隆起，其他图层贴在上面：地形着色、洪水风险、边界、铁路、三维建筑。伦敦地势低，所以高度要乘以倍数（×3 到 ×5 比较清楚）。70 km 圈外地面保持平的。打开时树木、街道小车和建筑阴影会自动关闭：它们画在平地上，会被隆起的地面埋住。",
+  "Visible · tilt the map to see it · trees, vehicles and building shadows are off meanwhile": "已显示 · 倾斜地图可见 · 期间树木、小车和建筑阴影关闭",
+  "Trees, street vehicles and building shadows are off while 3D relief is on.": "3D 地形起伏打开时，树木、街道小车和建筑阴影保持关闭。",
 };

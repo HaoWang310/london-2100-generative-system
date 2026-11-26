@@ -2498,7 +2498,7 @@ const PLANNING_STATUS={
     loaded:'Visible · cut to the 70 km circle · basemap railways stay underneath',
     error:'Rail lines failed to load; refresh and retry'},
   relief3d:{el:'relief3dStatus',loading:'Loading height tiles…',
-    loaded:'Visible · tilt the map to see it · trees and street vehicles are off meanwhile',
+    loaded:'Visible · tilt the map to see it · trees, vehicles and building shadows are off meanwhile',
     error:'Height tiles failed to load; check the connection and retry'},
   highSpeed:{el:'highSpeedStatus',loading:'Loading rail lines…',
     loaded:'Visible · whole lines, also outside the 70 km circle',
@@ -2557,9 +2557,9 @@ $('reliefShade').addEventListener('input',e=>{$('reliefShadeValue').textContent=
 $('reliefShade').addEventListener('change',e=>planning?.set('relief',{shade:Number(e.target.value)}));
 drawReliefKey();
 
-// v3.45.0: 3D relief. Trees and street vehicles are drawn as their own 3D objects on flat ground and would be buried
+// v3.45.0: 3D relief. Trees, street vehicles and building shadows are drawn as their own objects on flat ground and would be buried
 // by the risen ground, so they are switched off while it is on and come back, as they were, when it goes off.
-const RELIEF3D_HOLDS=['urbanTreeToggle','streetVehicleToggle'];
+const RELIEF3D_HOLDS=['urbanTreeToggle','streetVehicleToggle','buildingShadowToggle'];
 let relief3dHeld=null;
 function holdForRelief3d(on){
   if(on&&!relief3dHeld){
@@ -2584,7 +2584,7 @@ for(const id of RELIEF3D_HOLDS){
   $(id).addEventListener('change',event=>{
     if(!relief3dHeld||!event.isTrusted||!event.target.checked)return;
     event.target.checked=false;event.target.dispatchEvent(new Event('change'));
-    $('status').textContent='Trees and street vehicles are off while 3D relief is on.';
+    $('status').textContent='Trees, street vehicles and building shadows are off while 3D relief is on.';
   });
 }
 $('relief3dToggle').addEventListener('change',e=>{

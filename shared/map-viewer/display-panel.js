@@ -244,7 +244,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
       h('div', { class: 'dp-sec' }, h('div', { class: 'dp-t' }, t('dp.display')),
         h('div', { class: 'dp-row' }, t('dp.labels'), sw(S.labels, v => lm.setLabels(v))),
         h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.vehicles'), sw(S.vehicles, v => lm.setVehicles(v))),
-        h('div', { class: 'dp-row' }, t('dp.shadows'), sw(S.shadows, v => lm.setShadows(v))),
+        h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.shadows'), sw(S.shadows, v => lm.setShadows(v))),
         h('div', { class: `dp-row ${S.held ? 'held' : ''}` }, t('dp.trees'), sw(S.trees, v => lm.setTrees(v))),
         S.held ? h('div', { class: 'dp-lstatus' }, t('dp.heldNote')) : null),
       h('div', { class: 'dp-sec' }, h('div', { class: 'dp-t' }, t('dp.layers')),

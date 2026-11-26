@@ -332,19 +332,21 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     getTheme: () => st.theme, reorder: () => stack(),
     onStatus: (group, s) => { const next = planningStatus(s); if (st[group] && st[group].status !== next) { st[group].status = next; emit('layers'); } } });
   for (const k of PLANNING_KEYS) st[k] = { ...structuredClone(planning.state[k]), status: 'off' };
-  // 3D relief (google-map-live holdForRelief3d): trees and street vehicles are drawn on flat ground and would be buried
+  // 3D relief (google-map-live holdForRelief3d): trees, street vehicles and building shadows are drawn on flat ground and would be buried
   // by the risen ground, so they are off while it is on and come back, as they were, when it goes off.
   let relief3dHeld = null;
   function holdForRelief3d(on) {
     if (on && !relief3dHeld) {
-      relief3dHeld = { trees: st.trees, vehicles: st.vehicles };
+      relief3dHeld = { trees: st.trees, vehicles: st.vehicles, shadows: st.shadows };
       if (st.trees) api.setTrees(false);
       if (st.vehicles) api.setVehicles(false);
+      if (st.shadows) api.setShadows(false);
       st.held = true;
     } else if (!on && relief3dHeld) {
       const was = relief3dHeld; relief3dHeld = null; st.held = false;
       if (was.trees) api.setTrees(true);
       if (was.vehicles) api.setVehicles(true);
+      if (was.shadows) api.setShadows(true);
     }
     emit('display');
   }
@@ -492,7 +494,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     setLighting(l) { atmosphere.setLighting(l); },
     setWeather(w) { atmosphere.setWeather(w); },
     setLabels(on) { st.labels = Boolean(on); syncLabels(); emit('display'); },
-    setShadows(on) { st.shadows = Boolean(on); shadows?.setEnabled(st.shadows); emit('display'); },
+    setShadows(on) { if (relief3dHeld && on) { emit('display'); return; } st.shadows = Boolean(on); shadows?.setEnabled(st.shadows); emit('display'); },
     setTrees(on) { if (relief3dHeld && on) { emit('display'); return; } st.trees = Boolean(on); ensureTrees().then(t => t.setEnabled(st.trees)).catch(e => console.warn('Trees unavailable', e)); emit('display'); },
     setVehicles(on) { if (relief3dHeld && on) { emit('display'); return; } st.vehicles = Boolean(on); ensureTraffic().then(t => t.setEnabled(st.vehicles)).catch(e => console.warn('Vehicles unavailable', e)); emit('display'); },
     setCityView(is3D) {
