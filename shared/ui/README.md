@@ -17,7 +17,7 @@
 
 **手机（2026-11-23）。** `phone.css` 和 `phone.js` 是所有 app 在手机上的同一个布局（手机 = 触屏且短边小于 600 像素，与伦敦地图的判断一致；iPad 和电脑不变）：地图或模型铺满屏幕；左上角「显示」按钮，点一下显示面板从它下面展开（整宽，只占上半屏）；功能面板是底部的一张卡，收起时只留名称、当前状态和最常用的一两个按钮，点把手或 + 展开。两个面板不会同时打开。按钮不小于 44 像素。app 在页面头部给 `<html>` 加 `l2phone`，再在自己的 `skin.js` 里调用 `L2Phone.init({ sheet, display, title, status, quick, hide })`；面板里的控件原样搬进去，不改引擎。Loop City 第 1 步、伦敦地图和张量场工作室各有自己更早的手机代码，位置和尺寸与这里一致。
 
-**配色选择（2026-11-25）。** `swatches.css` 是所有 app 选配色的同一个样子：黑色小卡片，三个圆点（这套配色最有代表性的三种颜色）加名字；选中的卡片 2 px 白框、名字变白。网格按面板宽度排列，浅色面板（`data-theme="light"`）用白卡。用到它的：毛线带（主 · 次 · 节点）、黏菌生长的外观（黏菌由淡到浓）和单元配色（城市 · 乡村 · 其他）、结构工作室平面（核心 · 中间 · 外围）和三维（地块核心 · 外围 · 道路）、张量场工作室（主 · 亮 · 最亮）、真实地图（道路 · 绿地 · 水；自定颜色收进折叠）、伦敦地图。只改选择器的样子，配色本身不变。
+**配色选择（2026-11-25）。** `swatches.css` 是所有 app 选配色的同一个样子：黑色小卡片，三个圆点（这套配色最有代表性的三种颜色）加名字；选中的卡片 2 px 白框、名字变白。网格按面板宽度排列，浅色面板（`data-theme="light"`）用白卡。用到它的：毛线带（主 · 次 · 节点）、黏菌生长的外观（黏菌由淡到浓）和单元配色（城市 · 乡村 · 其他）、结构工作室平面（核心 · 中间 · 外围）和三维（地块核心 · 外围 · 道路）、张量场工作室（主 · 亮 · 最亮）、伦敦地图。只改选择器的样子，配色本身不变。
 
 The tokens every app's interface layer reads. Black, white and white at lower opacity only; colour is kept for map keys and warnings. DM Sans. Floating panels: the process on the left, the display on the right. Each app's own `skin.css` / `skin.js` maps its controls onto these tokens and this layout and leaves its engine alone.
 
@@ -28,7 +28,7 @@ The tokens every app's interface layer reads. Black, white and white at lower op
 One line under an app's title, the same in every catalogue app: seven marks for the research line (London map → 1 mould →
 2 wool → 3 tensor base → Tensor Studio → Structure Studio → VR), the step before on the left, **Next** on the right in
 white, and under them what goes with it or what is still missing (then Next is grey, with a link to the next app's example).
-The whole system and the real map stand beside the line: no marks.
+The whole system stands beside the line: no marks. (The real map stood beside it too until it was removed on 26 Nov 2026.)
 
 ```html
 <link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=1"></script>
