@@ -184,6 +184,16 @@ function tensorInput(pkg) {
   const b = boxOf(ring);
   return { ring: ll(closeRing(ring)), features, check: { side: Math.max(b[2] - b[0], b[3] - b[1]), area: areaOf(ring) } };
 }
+// (26 Nov 2026) a park Tensor Studio will not show: it opens on the urban parcels and about 340 m round them
+// (its frame: 15 % of the site's side, 100 to 280 m, and 60 m more). Returns the park's distance in km, or 0 when it shows.
+function parkFar(d) {
+  const box = (r, a) => { for (const p of r) { a[0] = Math.min(a[0], p[0]); a[2] = Math.max(a[2], p[0]); a[1] = Math.min(a[1], p[1]); a[3] = Math.max(a[3], p[1]); } return a; };
+  const a = [1e9, 1e9, -1e9, -1e9]; (PK.parcels || []).forEach(u => box(u.outline, a)); if (a[0] > a[2]) return 0;
+  const m = Math.max(100, Math.min(280, 0.15 * Math.max(a[2] - a[0], a[3] - a[1]))) + 60, b = box(d.outline, [1e9, 1e9, -1e9, -1e9]);
+  if (b[0] <= a[2] + m && b[2] >= a[0] - m && b[1] <= a[3] + m && b[3] >= a[1] - m) return 0;
+  let g = 1e9; for (const u of PK.parcels) for (let i = 0; i < d.outline.length; i += 2) for (let j = 0; j < u.outline.length; j += 2) g = Math.min(g, Math.hypot(d.outline[i][0] - u.outline[j][0], d.outline[i][1] - u.outline[j][1]));
+  return Math.max(g / 1000, 0.1);
+}
 function siteFile() {
   const T = PK.T;
   return { type: 'tensor-site-input', version: 1, made: new Date().toISOString(), from: 'Loop City live v13 · the base for the tensor field',
@@ -324,7 +334,7 @@ function fit() {
 function panel() {
   $('cellsLine').textContent = PK.parcels.map(d => d.id).join('   ·   ');
   $('parcels').innerHTML = PK.parcels.map(d => `<tr><td>${d.id}</td><td>${fmt(d.ha, 1)} ha · ${fmt(d.perimeter_m / 1000, 2)} km round</td></tr>`).join('')
-    + (PK.parks || []).map(d => `<tr><td>${d.id} · park</td><td>${fmt(d.ha, 1)} ha · stays a park, no tensor field</td></tr>`).join('');
+    + (PK.parks || []).map(d => { const km = parkFar(d); return `<tr${km ? ' style="color:#FF8A3D"' : ''}><td>${d.id} · park</td><td>${fmt(d.ha, 1)} ha · stays a park, no tensor field${km ? ' · ' + fmt(km, 1) + ' km from the parcels, outside the tensor field’s view' : ''}</td></tr>`; }).join('');
   const C = PK.T.check, okSide = C.side <= 3600, okArea = C.area >= 20000, tick = b => (b ? ' <span class="ok">✓</span>' : ' <span class="no">✗</span>');
   const rows = [['Across, the larger side', fmt(C.side / 1000, 2) + ' km' + tick(okSide)], ['Area', fmt(C.area / 1e4, 1) + ' ha' + tick(okArea)],
                 ['Anchors at wool junctions', fmt(PK.site.junctions.length)], ['Roads in the site file', fmt(PK.T.features.roads.length)]];
@@ -419,7 +429,8 @@ const EN_TITLE = document.title;
 const norm = t => String(t).replace(/\s+/g, ' ').trim();
 Object.assign(ZH, { 'A park taken with the parcels is solid green: it stays a park and the tensor field does not run on it.': '随地块一并选取的公园显示为实心绿色：它保持为公园，张量场不在其上生成。', 'park': '公园' });
 Object.assign(ZH, { 'Open in Tensor Studio ›': '在张量场工作室打开 ›', 'This browser would not keep the site for Tensor Studio (a private window, perhaps). Save the site file instead, and open it in Tensor Studio with "Open a site file…".': '这个浏览器不能为张量场工作室暂存场地（可能是无痕 / 隐私模式）。请改用「保存张量场用地文件」，再在张量场工作室里点「打开用地文件…」。', 'The browser blocked the new window. Allow pop-ups for this page, then try again.': '浏览器拦截了新窗口。请允许本页面弹出窗口后再试。', 'Cell key': '单元身份', 'Older package': '旧地块包', 'Example · from an earlier run': '范例 · 来自较早的一次运行' });
-ZH_RX.push([new RegExp('^(.+) · park$'), '$1 · 公园'], [new RegExp('^([0-9.,]+) ha · stays a park, no tensor field$'), '$1 公顷 · 保持为公园，不生成张量场']);
+ZH_RX.push([new RegExp('^(.+) · park$'), '$1 · 公园'], [new RegExp('^([0-9.,]+) ha · stays a park, no tensor field$'), '$1 公顷 · 保持为公园，不生成张量场'],
+  [new RegExp('^([0-9.,]+) ha · stays a park, no tensor field · ([0-9.,]+) km from the parcels, outside the tensor field’s view$'), '$1 公顷 · 保持为公园 · 离地块 $2 km，在张量场画面外']);
 function zhOf(t) {
   const k = norm(t); if (!k) return null;
   if (Object.prototype.hasOwnProperty.call(ZH, k)) return ZH[k];
