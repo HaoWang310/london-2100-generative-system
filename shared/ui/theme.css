@@ -53,7 +53,13 @@ button, select, input { font: inherit; color: inherit; }
 .seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text); }
 .seg button { transition: background .16s cubic-bezier(.2,0,0,1), color .16s; }
 .seg button:hover:not([aria-pressed="true"]) { color: var(--text); }
+/* (26 Nov 2026) the language switch is one size everywhere on a computer: 78 × 32 px, buttons 26 px high, 11 px
+   letters, as in every incubator app (it was 94 × 30 here). The other segmented controls (2D / 3D) keep theirs. */
 .lang-seg button { min-width: 44px; font-size: 12px; }
+@media not all and (pointer: coarse) {      /* a phone keeps its 44 px switch (app/touch.css, app/appview.css) */
+  .seg.lang-seg { gap: 2px; border-radius: 11px; }
+  .lang-seg button { box-sizing: border-box; min-width: 34px; height: 26px; padding: 0 7px; border-radius: 9px; font-size: 11px; font-weight: 600; line-height: 1; }
+}
 
 .eyebrow { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
 .muted { color: var(--text-2); }

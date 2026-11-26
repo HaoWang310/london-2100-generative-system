@@ -36,3 +36,20 @@ test('Tensor Studio on a phone: the switch goes to the top right with the shared
   assert.deepEqual(e.hide, ['.language-switch'], 'and hidden there, where the catalogue shows its own');
   assert.ok(/phone\.js\?v=2/.test(html));
 });
+
+test('on a computer the switch is one size in every app: buttons 26 px high, at least 34 px wide, 11 px letters', () => {
+  // (26 Nov 2026) the wool and step 1 were a size larger (about 90 × 41 px), the catalogue wider and lower (94 × 30)
+  const same = css => { for (const k of ['min-width:34px', 'height:26px', 'padding:0 7px', 'border-radius:9px', 'font-size:11px', 'font-weight:600']) assert.ok(css.replace(/:\s+/g, ':').includes(k), k + ' in ' + css.slice(0, 60)); };
+  const rule = (file, sel) => { const s = read(file), i = s.indexOf(sel + '{') >= 0 ? s.indexOf(sel + '{') : s.indexOf(sel + ' {'); assert.ok(i >= 0, sel + ' in ' + file); return s.slice(i, s.indexOf('}', i)); };
+  same(rule('incubator/loop-city-wool/skin.css', 'html.l2ui #langbar button'));
+  same(rule('incubator/loop-city-mould-growth/skin.css', 'html.lcskin #langbar button'));
+  same(rule('shared/ui/theme.css', '  .lang-seg button'));
+  same(rule('incubator/tensor-studio/index.html', '#panel .language-switch button').replace('min-height', 'height'));
+  same(rule('incubator/structure-studio/index.html', '#panel .language-switch button').replace('min-height', 'height'));
+  // the frame: 2 px inside, 2 px between the two buttons
+  for (const [f, sel] of [['incubator/loop-city-wool/skin.css', 'html.l2ui #langbar, html.l2ui body.light #langbar'], ['incubator/loop-city-mould-growth/skin.css', 'html.lcskin #langbar, html.lcskin #hud #langbar']]) { const r = rule(f, sel);
+    assert.ok(r.includes('padding:2px') && r.includes('gap:2px'), f); }
+  // a phone keeps its own, larger switch: the catalogue's rule is for a mouse or a trackpad only
+  assert.ok(read('shared/ui/theme.css').includes('@media not all and (pointer: coarse) {'));
+  assert.ok(read('incubator/loop-city-wool/skin.css').includes('html.l2ui:not(.l2phone) #langbar button[data-lang="zh"] { width:36px; padding:0; }'));
+});

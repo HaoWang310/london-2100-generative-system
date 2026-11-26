@@ -2,6 +2,8 @@
 
 > **「中文」在前 · 中文 first (26 Nov 2026).** 电脑上语言开关的顺序由「EN 中文」改为「中文 EN」，和其他应用一致（皮肤里一行样式；手机上原来就是这个顺序）。 On a computer the switch now reads 中文 then EN, as in every other app (one line in the skin; a phone already showed it so).
 
+> **26 Nov 2026 · the language switch is one size in every app.** On a computer it was a size larger here (89 × 41 px); it is now 78 × 32 px with 11 px letters, as in the other apps. A phone keeps its 44 px switch.
+
 > **一个语言 · One language for every app (26 Nov 2026).** 全站只记一个语言（`l2100.lang`，主页、多尺度系统和 VR 原来就用它）。本页最前面多一行 `shared/ui/lang.js`：打开时把这个共用的语言交给本应用自己的语言设置，在本应用里切换时记回共用的地方，别的标签页切换时本页马上跟着换。哪里都没选过时跟系统语言（中文系统显示中文，其他显示英文）。本应用自己的语言代码没有改。以前没选过时固定是英文，现在跟系统语言。 One language is kept for the whole site (`l2100.lang`). The first line of this page, `shared/ui/lang.js`, gives it to the app's own setting on opening, takes the app's own change back, and follows a change made in another tab at once. Nothing chosen anywhere: the device's language. The app's own language code is unchanged. Until now this page opened in English when nothing was chosen.
 
 > **统一的「下一步」· The chain row (26 Nov 2026).** 每个 app 左侧面板标题下有同一行（`shared/ui/chain.js`、`chain.css`）：六个小格是研究主线上的位置（伦敦地图 → 1 黏菌 → 2 毛线带 → 张量场工作室 → 结构工作室 → VR；26 Nov 2026 起毛线带直接交给张量场工作室，原来中间的第 3 步张量场底图已去掉），左边「‹ 上一步」在本页打开上一个 app，右边白色的「下一步」在新标签页打开下一个；下面一行小字写带什么过去，或者还差哪一步（这时按钮变灰，并给一个去看下一步范例的链接）。被别的 app 嵌在里面时这一行不显示。这里的下一步是第 2 步毛线带：百年运行完、单元已提取、选了至少一个单元时可以点，带上所选单元（就是原来的「在毛线带中打开」）。 The same row under the title in every app: where it stands on the research line, the step before, the step after and what goes with it. Here Next is step 2, ready once cells are extracted and picked; it carries the picked cells.
