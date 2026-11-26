@@ -14,10 +14,10 @@ html,body{margin:0;background:#0C0C0D;width:1200px;height:800px;overflow:hidden;
 </style></head><body><div id="st"></div><svg id="ov" width="1200" height="800"></svg><script>
 const Q = new URLSearchParams(location.search), V = Q.get('v') || 'a', IMG = 'file://' + (Q.get('dir') || '/tmp/wool-cover') + '/', DOTS = (Q.get('dots') || '').split(',').filter(Boolean).map(c => '#' + c);
 const CH = ['#C9875A', '#9A88C4', '#A9C25A', '#6FB8C2'];
-const L = [[IMG + 'a26.png', 'ROAD HIERARCHY · PARCELS', '567 KM OF ROAD · 207 PARCELS'],
-           [IMG + 'a10.png', 'THE WOOL · RELAXED', '180 THREADS PULLED INTO BUNDLES'],
-           [IMG + 'a7.png', 'SOIL · FARMLAND KEPT', 'ALC GRADE 1–2 · 114 KM²'],
-           [IMG + 'm4.png', 'THREE CELLS · LOOP · ROADS', 'C66 · C60 · C77 · 309 KM²']];
+const L = [[IMG + 'a26.png', 'ROAD HIERARCHY · PARCELS', '563 KM OF ROAD · 181 PARCELS'],
+           [IMG + 'a10.png', 'THE WOOL · RELAXED', '203 THREADS PULLED INTO BUNDLES'],
+           [IMG + 'a7.png', 'SOIL · FARMLAND KEPT', 'ALC GRADE 1–2 · 105 KM²'],
+           [IMG + 'm4.png', 'THREE CELLS · LOOP · ROADS', 'C67 · C60 · C81 · 287 KM²']];
 const st = document.getElementById('st'), ov = document.getElementById('ov'), tops = [-128, 9, 146, 283];
 L.forEach((l, i) => { const d = document.createElement('div'); d.className = 'pl'; d.style.top = tops[i] + 'px'; d.style.zIndex = 10 - i; d.style.backgroundImage = `url(${l[0]})`; d.innerHTML = '<b style="position:absolute;right:0;top:50%;width:1px;height:1px"></b><u style="position:absolute;left:50%;top:50%;width:1px;height:1px"></u>'; st.appendChild(d); });
 requestAnimationFrame(() => {

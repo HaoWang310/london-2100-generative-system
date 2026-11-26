@@ -2825,6 +2825,7 @@ document.getElementById('applyPreset').onclick=()=>{
     const last = !FILE && IO.last(), lb = $id('fileLast');
     if (last){ lb.hidden = false; lb.innerHTML = '<span data-i18n></span>'; const sp = lb.firstChild; sp.dataset.zh = '上次的地块 · ' + short(last); sp.dataset.en = 'The last parcels · ' + short(last); sp.textContent = zh() ? sp.dataset.zh : sp.dataset.en; lb.onclick = () => IO.again(); }
     $id('fileBack').onclick = () => H.close(); $id('fileP2').onclick = () => IO.example();
+    const sb = $id('fileSample'); if (sb){ sb.hidden = FILE; sb.onclick = () => { $id('hud').textContent = zh() ? '正在打开 Loop City 范例地块…' : 'Opening the Loop City example parcels…'; IO.sample().catch(e => say('范例地块读不出来：' + (e.message || e), 'The example parcels could not be read: ' + (e.message || e))); }; }
     $id('fileOpen').onclick = () => $id('fileIn').click();
     $id('fileIn').onchange = async ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
       try { const j = JSON.parse(await f.text());
