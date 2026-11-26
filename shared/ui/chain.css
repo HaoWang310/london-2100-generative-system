@@ -28,3 +28,6 @@
 /* a narrow panel (the whole system's module list): the step before takes only the room of its words */
 .l2chain.narrow .l2c-row { grid-template-columns:auto minmax(0, 1fr); }
 .l2chain.narrow .l2c-bk { padding:9px 12px !important; }
+
+/* (26 Nov 2026) under a finger (a phone, a tablet) the two buttons are as tall as a thumb needs: 44 px, as Apple asks. */
+@media (pointer: coarse) { .l2chain .l2c-bk, .l2chain .l2c-nx { min-height:44px !important; } }
