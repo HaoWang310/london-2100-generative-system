@@ -86,3 +86,16 @@ test('the catalogue: the two languages say the same about Tensor Studio and Stru
   assert.ok(read('incubator/tensor-studio/index.html').includes('"three grades: main, through, local (a real city\'s)"'), 'the names Tensor Studio itself uses');
   assert.ok(!s.includes('第 8 步') && s.includes('张量场工作室的最终结果'));
 });
+
+test('the catalogue\'s first card says what the main program shows now, not the hidden road chain', async () => {
+  // (26 Nov 2026) it described London → regions → wool → tensor → integration, but those five steps are hidden
+  // (ROAD_CHAIN is false: 02–04 are placeholders); what shows is the London map and step 1's whole loop
+  const w = catalogue.items[0], { ROAD_CHAIN } = await import(new URL('app/registry.js', root));
+  assert.equal(w.id, 'workspace');
+  if (!ROAD_CHAIN) {
+    for (const l of ['zh', 'en']) assert.ok(!/区域划分|毛线|张量场|regions|Wool|Tensor|integration/i.test(w.desc[l]), l + ': ' + w.desc[l]);
+    assert.ok(w.desc.zh.includes('第 1 步整环') && w.desc.en.includes('step 1\'s whole loop'));
+    assert.deepEqual(w.tags.map(t => t.zh), ['伦敦全域', '黏菌', '整环']);
+    assert.ok(read('README.md').includes('伦敦地图 → 第 1 步 整环：黏菌与生长 → 第 2 步 毛线带 → 张量场工作室 → 结构工作室 → VR'));
+  }
+});
