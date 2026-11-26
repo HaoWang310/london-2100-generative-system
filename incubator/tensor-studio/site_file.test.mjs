@@ -34,6 +34,14 @@ test('the page: a site file is read without the London map, and the three ways i
   assert.ok(html.includes("window.parent.__TENSOR_SITE_INPUT__"), 'the London map still hands its site the same way');
   assert.ok(app.includes("H.source === 'file'")); assert.ok(app.includes('D.ctx.parks'));
 });
+test('the Loop City example parcels: a site file of seed 2100, with its run and cell key', () => {
+  const f = JSON.parse(readFileSync(new URL('assets/loop-city-sample-site.json', dir), 'utf8')), html = readFileSync(new URL('index.html', dir), 'utf8');
+  assert.equal(f.type, 'tensor-site-input'); assert.equal(f.run.id, 's2100·n1bz'); assert.equal(f.run.seed, 2100);
+  assert.deepEqual(Object.keys(f.cell_keys), ['C67']); assert.ok(f.ring.length >= 4); assert.ok(f.size.across_m <= 3600);
+  assert.ok(html.includes('id="fileSample"')); assert.ok(html.includes('assets/loop-city-sample-site.json'));
+  const { D, meta } = buildTensorSite({ ...base, ring: f.ring, roads: f.features.roads, waters: f.features.waters, waterways: f.features.waterways, parks: f.features.parks });
+  assert.ok(D.pieces.length >= 1); assert.ok(meta.areaHa > 150 && meta.areaHa < 220);
+});
 test('step 3 hands the site on under the same key, and Structure Studio carries the run', () => {
   const b = readFileSync(new URL('../loop-city-tensor-base/index.html', dir), 'utf8'), s = readFileSync(new URL('../structure-studio/index.html', dir), 'utf8');
   assert.ok(b.includes("localStorage.setItem('tensorStudio.siteFile'")); assert.ok(b.includes('../tensor-studio/index.html#site'));

@@ -2077,10 +2077,10 @@ const G = (function () {
   // by source/make-example.cjs: the bake it was made from, and its files
   var EXV = /*EXV*/'4zl4ng:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
-  if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=2', 'script');      // first what shows, then what it needs
+  if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=3', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ if (/^veins\./.test(f)) return;       // (25 Nov) the veins are for step 2: asked for once step 1 is drawn
       var h = 'example/' + f + '?b=' + EXV.split(':')[0]; if (/^(step1\.json|key\.)/.test(f)) pre(h, 'fetch', true); else pre(h, 'image'); }); }
-  window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=2"><\/script>');
+  window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=3"><\/script>');
   if (want) (function(){ var g = document.getElementById('liveStart');          // the overlay is above: dressed at once, not when the page is in
     if (!g) return; var zh = false; try { zh = localStorage.getItem('woolAppsLang') === 'zh'; } catch (e) {} var lh = /lang=(en|zh)/.exec(location.hash); if (lh) zh = lh[1] === 'zh';
     var p = g.querySelector('p'), b = document.getElementById('livePick'), h = p && p.previousElementSibling; if (h) h.textContent = zh ? '毛线带 · 范例' : 'The wool bands · the example';
@@ -4839,7 +4839,7 @@ function lkSync() {                                // what follows the step: the
 function lkKey() {                                 // (25 Nov 2026) which century these cells come from: the run's name, the cell, its station
   const el = $('lkKey'); if (!el) return; const K = WS.keys(), zh = LANG === 'zh', ex = WS.example();
   const rows = DATA.cells.map(c => K[c.id] || ((ex ? '' : zh ? '旧单元包 · ' : 'Older package · ') + c.id));
-  el.innerHTML = `<span>${zh ? '单元身份' : 'Cell key'}</span>` + rows.map(r => `<b>${r}</b>`).join('') + (ex ? `<em>${zh ? '范例 · 来自较早的一次运行' : 'Example · from an earlier run'}</em>` : '');
+  el.innerHTML = `<span>${zh ? '单元身份' : 'Cell key'}</span>` + rows.map(r => `<b>${r}</b>`).join('') + (ex && !Object.keys(K).length ? `<em>${zh ? '范例 · 来自较早的一次运行' : 'Example · from an earlier run'}</em>` : ex ? `<em>${zh ? '范例 · 第 1 步用种子 ' + ((WS.run() || {}).seed || '') + ' 可以重新得到' : 'Example · step 1 grows it again from seed ' + ((WS.run() || {}).seed || '')}</em>` : '');
 }
 function lkBig() {                                 // one number to read first, taken from the table
   lkKey();
