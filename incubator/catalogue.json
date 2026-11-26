@@ -439,9 +439,9 @@
       "owner": "HaoWang310",
       "embed": {
         "langStorageKey": "tensorStudio.uiLanguage",
-        "langButton": "#panel .language-switch button[data-language=\"{lang}\"]",
+        "langButton": ".language-switch button[data-language=\"{lang}\"]",
         "hide": [
-          "#panel .language-switch"
+          ".language-switch"
         ],
         "hostLang": "__TENSOR_SITE_INPUT__.lang"
       }
