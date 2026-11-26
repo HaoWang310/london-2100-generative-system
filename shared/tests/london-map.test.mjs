@@ -47,6 +47,9 @@ test('the planning layers the workspace shows are the incubator London map\'s ow
     center: { lat: FOCUS70.lat, lng: FOCUS70.lng }, radius: FOCUS70.radius, getTheme: () => 'dark' });
   for (const k of PLANNING_KEYS) { assert.equal(planning.state[k]?.on, false, `planning layer ${k}`); assert.equal(planning.status(k), 'off'); }
   for (const k of ['opacity', 'top', 'ramp', 'shade']) assert.ok(k in planning.state.relief, `relief.${k}`);
+  assert.ok('exaggeration' in planning.state.relief3d, 'relief3d.exaggeration');
+  assert.equal(mod.RELIEF3D_RANGE.length, 3);
+  assert.ok(planning.state.relief3d.exaggeration >= mod.RELIEF3D_RANGE[0] && planning.state.relief3d.exaggeration <= mod.RELIEF3D_RANGE[1]);
   for (const k of ['fill', 'width']) { assert.ok(k in planning.state.greenBelt, `greenBelt.${k}`); assert.ok(k in planning.state.aonb, `aonb.${k}`); }
   for (const k of ['mode', 'width', 'kinds']) assert.ok(k in planning.state.rail, `rail.${k}`);
   for (const k of ['hs1', 'hs2', 'colour']) assert.ok(k in planning.state.highSpeed, `highSpeed.${k}`);

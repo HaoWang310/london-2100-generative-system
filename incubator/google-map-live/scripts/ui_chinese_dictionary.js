@@ -990,4 +990,12 @@ export const CHINESE_UI = {
   "Tunnel": "隧道段",
   "HS1 from London to the Channel Tunnel (OpenStreetMap, ODbL) and HS2 Phase One from London to Birmingham (HS2 Ltd HS2_Route_Detailed, Open Government Licence); tunnels are dashed. Kept whole on purpose, so the lines continue outside the 70 km circle. Zoomed out the ends are named (Birmingham, and Manchester and Glasgow beyond on the West Coast Main Line; Paris and Brussels through the Channel Tunnel); from zoom 9 the stations.": "HS1 从伦敦到英吉利海峡隧道（OpenStreetMap，ODbL），HS2 第一阶段从伦敦到伯明翰（HS2 Ltd HS2_Route_Detailed，Open Government Licence）；隧道段为虚线。特意保留全线，所以线路会延伸到 70 km 圈外。缩小时标出终点与去向（伯明翰，以及经西海岸干线继续开往曼彻斯特、格拉斯哥；经英吉利海峡隧道通往巴黎、布鲁塞尔），缩放 9 级起标出车站。",
   "Visible · whole lines, also outside the 70 km circle": "已显示 · 全线，圈外也有",
+  // v3.45.0 · 3D relief
+  "3D relief": "3D 地形起伏",
+  "The ground rises by its height · inside the 70 km circle · seen in the tilted view": "地面按高度隆起 · 只在 70 km 圈内 · 倾斜视角下可见",
+  "Exaggeration": "夸张倍数",
+  "3D relief exaggeration": "3D 地形起伏夸张倍数",
+  "The ground itself is raised from the open height tiles (about 30 m), and the other layers lie on it: height colors, flood risk, boundaries, rail, the 3D buildings. London is low, so the heights are multiplied (×3 to ×5 reads well). Outside the 70 km circle the ground stays flat. Trees and street vehicles are switched off while it is on: they are drawn on flat ground and would be buried.": "地面本身按开放高程瓦片（约 30 m）隆起，其他图层贴在上面：地形着色、洪水风险、边界、铁路、三维建筑。伦敦地势低，所以高度要乘以倍数（×3 到 ×5 比较清楚）。70 km 圈外地面保持平的。打开时树木和街道小车会自动关闭：它们画在平地上，会被隆起的地面埋住。",
+  "Visible · tilt the map to see it · trees and street vehicles are off meanwhile": "已显示 · 倾斜地图可见 · 期间树木和街道小车关闭",
+  "Trees and street vehicles are off while 3D relief is on.": "3D 地形起伏打开时，树木和街道小车保持关闭。",
 };

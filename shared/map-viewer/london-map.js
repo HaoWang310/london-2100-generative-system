@@ -38,7 +38,7 @@ export const SCRIPTS = {
   terrain: ['scripts/terrain_local.js', ['createTerrainLocalLoader', 'TERRAIN_MIN_ZOOM', 'TERRAIN_MAX_ZOOM', 'TERRAIN_TILE_SIZE']],
   drainage: ['scripts/drainage_display.js', ['createDrainageDisplayLoader', 'AREA_MIN_ZOOM', 'AREA_MAX_ZOOM', 'AREA_TILE_SIZE']],
   flood: ['scripts/flood_detail.js', ['createFloodDetailLoader', 'DETAIL_MIN_ZOOM', 'DETAIL_MAX_ZOOM', 'DETAIL_TILE_SIZE']],
-  planning: ['scripts/planning_layers.js', ['createPlanningLayers', 'reliefStops', 'RELIEF_RAMPS', 'RAIL_KINDS', 'RAIL_COLOURS', 'SPEED_STOPS']],
+  planning: ['scripts/planning_layers.js', ['createPlanningLayers', 'reliefStops', 'RELIEF_RAMPS', 'RELIEF3D_RANGE', 'RAIL_KINDS', 'RAIL_COLOURS', 'SPEED_STOPS']],
   core: ['scripts/map_core.js', ['contourWorkerSource', 'contourMajorIntervalFor', 'mercatorFromLngLat']]
 };
 export const ASSETS = {
@@ -87,7 +87,7 @@ const ID = {
 };
 const RCS = ['0-0', '0-1', '1-0', '1-1'];
 // The layers scripts/planning_layers.js owns (its state keys) and the files it reads from assets/planning/.
-export const PLANNING_KEYS = ['relief', 'greenBelt', 'aonb', 'rail', 'highSpeed'];
+export const PLANNING_KEYS = ['relief', 'relief3d', 'greenBelt', 'aonb', 'rail', 'highSpeed'];
 export const PLANNING_FILES = ['green_belt', 'aonb', 'rail', 'highspeed'];
 export const CONTOUR_INTERVALS = [1, 2, 5, 10, 25, 50, 100];
 
@@ -332,6 +332,22 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     getTheme: () => st.theme, reorder: () => stack(),
     onStatus: (group, s) => { const next = planningStatus(s); if (st[group] && st[group].status !== next) { st[group].status = next; emit('layers'); } } });
   for (const k of PLANNING_KEYS) st[k] = { ...structuredClone(planning.state[k]), status: 'off' };
+  // 3D relief (google-map-live holdForRelief3d): trees and street vehicles are drawn on flat ground and would be buried
+  // by the risen ground, so they are off while it is on and come back, as they were, when it goes off.
+  let relief3dHeld = null;
+  function holdForRelief3d(on) {
+    if (on && !relief3dHeld) {
+      relief3dHeld = { trees: st.trees, vehicles: st.vehicles };
+      if (st.trees) api.setTrees(false);
+      if (st.vehicles) api.setVehicles(false);
+      st.held = true;
+    } else if (!on && relief3dHeld) {
+      const was = relief3dHeld; relief3dHeld = null; st.held = false;
+      if (was.trees) api.setTrees(true);
+      if (was.vehicles) api.setVehicles(true);
+    }
+    emit('display');
+  }
   let heightPopup = null;
   map.on('click', async e => {
     if (!st.relief.on || !planning.insideCircle(e.lngLat)) return;
@@ -468,7 +484,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   map.on('moveend', () => refreshContours());
   syncCity(); syncLabels(); syncFocus();
 
-  return {
+  const api = {
     state: st,
     themes: mods.themes.BASEMAP_THEMES,
     buildingLayer: ID.city3D,
@@ -477,18 +493,21 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     setWeather(w) { atmosphere.setWeather(w); },
     setLabels(on) { st.labels = Boolean(on); syncLabels(); emit('display'); },
     setShadows(on) { st.shadows = Boolean(on); shadows?.setEnabled(st.shadows); emit('display'); },
-    setTrees(on) { st.trees = Boolean(on); ensureTrees().then(t => t.setEnabled(st.trees)).catch(e => console.warn('Trees unavailable', e)); emit('display'); },
-    setVehicles(on) { st.vehicles = Boolean(on); ensureTraffic().then(t => t.setEnabled(st.vehicles)).catch(e => console.warn('Vehicles unavailable', e)); emit('display'); },
+    setTrees(on) { if (relief3dHeld && on) { emit('display'); return; } st.trees = Boolean(on); ensureTrees().then(t => t.setEnabled(st.trees)).catch(e => console.warn('Trees unavailable', e)); emit('display'); },
+    setVehicles(on) { if (relief3dHeld && on) { emit('display'); return; } st.vehicles = Boolean(on); ensureTraffic().then(t => t.setEnabled(st.vehicles)).catch(e => console.warn('Vehicles unavailable', e)); emit('display'); },
     setCityView(is3D) {
       map.easeTo(is3D ? { zoom: Math.max(map.getZoom(), 15.5), pitch: 55, bearing: map.getBearing() || -20, duration: 700 } : { pitch: 0, bearing: 0, duration: 450 });
     },
     // what the panel's keys are drawn from (the incubator's own lists, so a new ramp or rail service shows up here too)
-    planning: { ramps: mods.planning.RELIEF_RAMPS, stops: mods.planning.reliefStops, railKinds: mods.planning.RAIL_KINDS,
+    planning: { ramps: mods.planning.RELIEF_RAMPS, stops: mods.planning.reliefStops, relief3dRange: mods.planning.RELIEF3D_RANGE, railKinds: mods.planning.RAIL_KINDS,
       railColours: mods.planning.RAIL_COLOURS, speedStops: mods.planning.SPEED_STOPS },
     setLayer(key, patch) {
       if (PLANNING_KEYS.includes(key)) {
         // planning_layers.js keeps the state; st[key] is the panel's copy of it
+        if (key === 'relief3d' && 'on' in patch) holdForRelief3d(Boolean(patch.on));
         planning.set(key, patch);
+        // the relief only shows in a tilted view: a flat map is tilted once
+        if (key === 'relief3d' && patch.on && map.getPitch() < 15) map.easeTo({ pitch: 55, duration: 800 });
         Object.assign(st[key], structuredClone(planning.state[key]), { status: planningStatus(planning.status(key)) });
         if (key === 'relief' && !st.relief.on) { heightPopup?.remove(); heightPopup = null; }
         stack(); emit('layers'); return;
@@ -519,4 +538,5 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
       }
     }
   };
+  return api;
 }

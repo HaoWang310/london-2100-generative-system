@@ -12,6 +12,9 @@ export const RELIEF_RAMPS={
 };
 // The heights of the twenty colour steps: closer together near sea level.
 export const reliefStops=top=>RELIEF_RAMPS.classic.map((_,i)=>-3+(top+3)*Math.pow(i/19,1.5));
+// 3D relief (v3.45.0): the heights themselves, flat outside the study circle, for MapLibre's terrain.
+export const DEM_TILE_URL='l2100-relief://dem/{z}/{x}/{y}';
+export const DEM_MAX_ZOOM=12;
 export const reliefTileUrl=({ramp,top,shade})=>
   'l2100-relief://tiles/'+(RELIEF_RAMPS[ramp]?ramp:'classic')+'/'+Math.round(top)+'/'+Math.round(shade*100)+'/{z}/{x}/{y}';
 
@@ -21,7 +24,7 @@ export function createReliefLoader(config){
 
   function start(){
     if(worker)return;
-    worker=new Worker(new URL('./relief_worker.js?v=3.44.1-english',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./relief_worker.js?v=3.45.0-english',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',config});
     worker.onmessage=({data})=>{
       const request=pending.get(data.id);
@@ -41,13 +44,14 @@ export function createReliefLoader(config){
   }
 
   return (request,controller)=>{
-    const match=/^l2100-relief:\/\/tiles\/([a-z]+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
-    if(!match)return Promise.reject(new Error('Invalid relief tile URL'));
+    const dem=/^l2100-relief:\/\/dem\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+    const match=dem?null:/^l2100-relief:\/\/tiles\/([a-z]+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+    if(!match&&!dem)return Promise.reject(new Error('Invalid relief tile URL'));
     const signal=controller.signal;
     if(signal.aborted)return Promise.reject(new DOMException('Aborted','AbortError'));
     start();
     const id=++nextId;
-    const [top,shade,z,x,y]=match.slice(2).map(Number);
+    const [top,shade,z,x,y]=dem?[0,0,...dem.slice(1).map(Number)]:match.slice(2).map(Number);
     return new Promise((resolve,reject)=>{
       const cancel=()=>{
         pending.delete(id);
@@ -58,7 +62,8 @@ export function createReliefLoader(config){
       const cleanup=()=>signal.removeEventListener('abort',cancel);
       pending.set(id,{resolve,reject,cleanup});
       signal.addEventListener('abort',cancel,{once:true});
-      worker.postMessage({type:'tile',id,z,x,y,ramp:match[1],top,shade:shade/100});
+      if(dem)worker.postMessage({type:'tile',id,z,x,y,dem:true});
+      else worker.postMessage({type:'tile',id,z,x,y,ramp:match[1],top,shade:shade/100});
     });
   };
 }

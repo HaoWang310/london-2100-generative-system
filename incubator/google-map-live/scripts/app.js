@@ -1,12 +1,12 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.44.1-english';
-import {createPlaceSearch} from './place_search.js?v=3.44.1-english';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.44.1-english';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.44.1-english';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.44.1-english';
-import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.44.1-english';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.44.1-english';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.45.0-english';
+import {createPlaceSearch} from './place_search.js?v=3.45.0-english';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.45.0-english';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.45.0-english';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.45.0-english';
+import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.45.0-english';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.45.0-english';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -27,7 +27,7 @@ try {
   }
 }
 
-const APP_VERSION='3.44.1-english';
+const APP_VERSION='3.45.0-english';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -2242,7 +2242,7 @@ function initOSM(){
     initPlanningLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.44.1-english')
+    import('./tensor_site_ui.js?v=3.45.0-english')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2258,7 +2258,7 @@ function initOSM(){
     $('streetVehicleToggle').disabled=false;
     $('placeSearchButton').disabled=false;
     for(const id of ['terrainToggle','contourToggle','floodToggle','networkToggle','focus70Toggle','osmStructureToggle',
-      'reliefToggle','greenBeltToggle','aonbToggle','railToggle','highSpeedToggle']){
+      'reliefToggle','relief3dToggle','greenBeltToggle','aonbToggle','railToggle','highSpeedToggle']){
       $(id).disabled=false;
     }
     syncOsmStructureVisibility();
@@ -2497,6 +2497,9 @@ const PLANNING_STATUS={
   rail:{el:'railStatus',loading:'Loading rail lines…',
     loaded:'Visible · cut to the 70 km circle · basemap railways stay underneath',
     error:'Rail lines failed to load; refresh and retry'},
+  relief3d:{el:'relief3dStatus',loading:'Loading height tiles…',
+    loaded:'Visible · tilt the map to see it · trees and street vehicles are off meanwhile',
+    error:'Height tiles failed to load; check the connection and retry'},
   highSpeed:{el:'highSpeedStatus',loading:'Loading rail lines…',
     loaded:'Visible · whole lines, also outside the 70 km circle',
     error:'Rail lines failed to load; refresh and retry'}
@@ -2553,6 +2556,48 @@ $('reliefRamp').addEventListener('change',e=>{drawReliefKey();planning?.set('rel
 $('reliefShade').addEventListener('input',e=>{$('reliefShadeValue').textContent=percent(e.target.value);});
 $('reliefShade').addEventListener('change',e=>planning?.set('relief',{shade:Number(e.target.value)}));
 drawReliefKey();
+
+// v3.45.0: 3D relief. Trees and street vehicles are drawn as their own 3D objects on flat ground and would be buried
+// by the risen ground, so they are switched off while it is on and come back, as they were, when it goes off.
+const RELIEF3D_HOLDS=['urbanTreeToggle','streetVehicleToggle'];
+let relief3dHeld=null;
+function holdForRelief3d(on){
+  if(on&&!relief3dHeld){
+    relief3dHeld={};
+    for(const id of RELIEF3D_HOLDS){
+      const el=$(id);
+      relief3dHeld[id]=el.checked;
+      if(el.checked){el.checked=false;el.dispatchEvent(new Event('change'));}
+      el.closest('label')?.classList.add('heldOff');
+    }
+  }else if(!on&&relief3dHeld){
+    for(const id of RELIEF3D_HOLDS){
+      const el=$(id);
+      el.closest('label')?.classList.remove('heldOff');
+      if(relief3dHeld[id]&&!el.checked){el.checked=true;el.dispatchEvent(new Event('change'));}
+    }
+    relief3dHeld=null;
+  }
+}
+// switching one of them on by hand while the relief is on switches it straight back off
+for(const id of RELIEF3D_HOLDS){
+  $(id).addEventListener('change',event=>{
+    if(!relief3dHeld||!event.isTrusted||!event.target.checked)return;
+    event.target.checked=false;event.target.dispatchEvent(new Event('change'));
+    $('status').textContent='Trees and street vehicles are off while 3D relief is on.';
+  });
+}
+$('relief3dToggle').addEventListener('change',e=>{
+  const on=e.target.checked;
+  holdForRelief3d(on);
+  planning?.set('relief3d',{on});
+  // the relief only shows in a tilted view: a flat map is tilted once
+  if(on&&osmMap&&osmMap.getPitch()<15)osmMap.easeTo({pitch:55,duration:800});
+});
+$('relief3dExaggeration').addEventListener('input',e=>{
+  $('relief3dExaggerationValue').textContent='×'+Number(e.target.value);
+  planning?.set('relief3d',{exaggeration:Number(e.target.value)});
+});
 
 for(const [group,id] of [['greenBelt','greenBelt'],['aonb','aonb']]){
   $(id+'Toggle').addEventListener('change',e=>planning?.set(group,{on:e.target.checked}));
