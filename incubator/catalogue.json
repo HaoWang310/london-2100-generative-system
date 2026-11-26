@@ -11,21 +11,21 @@
         "en": "Multi-scale generative system"
       },
       "desc": {
-        "zh": "伦敦全域 → 区域划分 → 毛线区域路网 → 张量场局部道路 → 路网整合与导出。",
-        "en": "Greater London → regions → Wool regional network → Tensor local streets → integration & export."
+        "zh": "伦敦全域底图，叠上第 1 步整环的结果（黏菌与城市一起生长）；可保存工作空间。",
+        "en": "London as a base, with step 1's whole loop (mould and city grown together) on the same map; save a workspace."
       },
       "tags": [
         {
-          "zh": "区域划分",
-          "en": "Regions"
+          "zh": "伦敦全域",
+          "en": "Greater London"
         },
         {
-          "zh": "毛线",
-          "en": "Wool"
+          "zh": "黏菌",
+          "en": "Slime mould"
         },
         {
-          "zh": "张量场",
-          "en": "Tensor field"
+          "zh": "整环",
+          "en": "The whole loop"
         }
       ],
       "owner": "HaoWang310"
