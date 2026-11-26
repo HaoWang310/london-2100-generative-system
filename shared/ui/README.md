@@ -23,6 +23,24 @@ The tokens every app's interface layer reads. Black, white and white at lower op
 
 **Phones (23 Nov 2026).** `phone.css` and `phone.js` are the one phone layout (a touch screen under 600 px on its short side; iPads and computers are unchanged): the map or model fills the screen, a Display button at the top left opens the display panel under it (full width, upper half), and the process panel is a sheet along the bottom that folds to its name, its state and one or two main buttons. Only one of the two is open at a time. An app sets `l2phone` on `<html>` in its head and calls `L2Phone.init(...)` from its own `skin.js`; the controls are moved as they are and the engine is left alone.
 
+## One language · 全站一个语言 (`lang.js`, 26 Nov 2026)
+
+The home page, the whole system and VR keep the language in one place, `localStorage` `l2100.lang` (`shared/i18n/index.js`).
+Each incubator app has a key of its own; `lang.js` joins it to the one place without touching the app's code:
+
+```html
+<script src="../../shared/ui/lang.js?v=1" data-key="myApp.uiLanguage" data-button='#langSw button[data-language="{lang}"]'></script>
+```
+
+as **the first script of the page**, so the app reads its key after it. The two values are the app's `embed.langStorageKey`
+and `embed.langButton` in `incubator/catalogue.json` (`tools/tests/lang.test.mjs` holds them equal). On opening, the app's
+key is set to the shared language (nothing chosen anywhere: the device's, Chinese for any Chinese and English for every
+other). A change made in the app goes back to the shared place; a change made in another tab presses the app's own
+button, so open pages follow at once. The app must keep `<html lang>` in step with its language, as all five do.
+
+全站只记一个语言。每个 app 页面最前面加这一行，就和主页、多尺度系统、VR 用同一个语言：打开时拿到共用的语言，
+自己切换时记回去，别的标签页切换时马上跟着换。新 app 只要加这一行，并在目录条目里写好 `langStorageKey` 和 `langButton`。
+
 ## The chain row · 统一的「上一步 / 下一步」 (`chain.css`, `chain.js`, 26 Nov 2026)
 
 One line under an app's title, the same in every catalogue app: six marks for the research line (London map → 1 mould →
