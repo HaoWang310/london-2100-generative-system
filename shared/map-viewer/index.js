@@ -117,7 +117,7 @@ async function createMapLibreViewer(el, opts) {
   const overlayFloor = () => layerIds().find(id => [...overlays.keys()].some(p => id.startsWith(`${p}-`)));
   let lm = null, lmPanel = null;
   try {
-    lm = await withTimeout(loadLondonMap({ map, maplibregl, version: new URL(import.meta.url).search, analysisBefore: overlayFloor, theme: 'dark',
+    lm = await withTimeout(loadLondonMap({ map, maplibregl, version: new URL(import.meta.url).search, analysisBefore: overlayFloor, theme: 'dark', t,
       onChange: (what, state) => { lmPanel?.update(what); if (what === 'view') opts.onView3D?.(state.view3D); } }), opts.timeoutMs ?? 12000);
   } catch (e) {
     console.warn('London map features unavailable; using the plain basemap:', e.message || e);
