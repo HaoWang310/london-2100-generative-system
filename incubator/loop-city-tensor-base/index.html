@@ -64,7 +64,9 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
  <p class="hint">One parcel: its outline, at the road edge. Several: their outline together, the roads between them closed over. The yellow stubs cross the edge at the wool junctions, so the tensor app starts its main streets there.</p>
   <p class="hint">A park taken with the parcels is solid green: it stays a park and the tensor field does not run on it.</p>
  <h2>Save</h2>
- <button class="btn main" id="saveSite">Save the site for the tensor field</button>
+ <button class="btn main" id="openTS">Open in Tensor Studio ›</button>
+ <p class="hint" id="openTSNote" hidden></p>
+ <button class="btn" id="saveSite" style="display:block;width:100%;padding:10px 14px;margin:0 0 7px">Save the site for the tensor field</button>
  <button class="btn" id="saveGeo">Save GeoJSON</button><button class="btn" id="saveDxf">Save DXF (Rhino)</button><button class="btn" id="savePng">Save PNG</button>
  <p class="hint">The site file is what the tensor app reads (its site input): the edge and the roads, rail and water round it, in longitude and latitude, with the same in British National Grid metres beside them. GeoJSON and DXF are in British National Grid metres.</p>
  <button class="btn" id="openAgain">Open a parcel package…</button>
@@ -334,6 +336,7 @@ function panel() {
     : !okArea ? '<span class="no">Too small for the tensor app, which needs at least 2 ha.</span>'
     : PK.site.rings.length > 1 ? '<span class="no">The parcels do not all touch: only the largest piece goes in the site file.</span>'
     : '<span class="ok">Ready: the tensor app can take this site.</span>';
+  { const b = $('openTS'), off = !okSide || !okArea; b.disabled = off; b.style.opacity = off ? '.32' : ''; b.style.cursor = off ? 'not-allowed' : ''; }      // too wide or too small: Tensor Studio cannot take it
 }
 function swatches() {
   const T = TH(), S = { ground: T.ground, town: T.town, water: T.water, exist: T.exist, rail: T.rail, road: T.road, stop: T.stop, parcel: T.parcel, site: T.site, anchor: T.anchor };
@@ -377,6 +380,12 @@ function ready() {
     rd.onload = () => { try { start(JSON.parse(rd.result)); } catch (e) { $('baseStatus').textContent = 'This file could not be read as a parcel package.'; } };
     rd.readAsText(f); $('baseFile').value = '';
   };
+  // (25 Nov 2026) on to Tensor Studio in one press: the site file is left in the browser for it, and the page opened on it
+  $('openTS').onclick = () => { if (!PK) return; const n = $('openTSNote'), say = t => { n.hidden = false; n.textContent = t; };
+    try { localStorage.setItem('tensorStudio.siteFile', JSON.stringify(siteFile())); }
+    catch (e) { say('This browser would not keep the site for Tensor Studio (a private window, perhaps). Save the site file instead, and open it in Tensor Studio with "Open a site file…".'); return; }
+    const w = window.open('../tensor-studio/index.html#site', 'tensor-studio-site');
+    if (!w) say('The browser blocked the new window. Allow pop-ups for this page, then try again.'); else n.hidden = true; };
   $('saveSite').onclick = () => { if (PK) download('Tensor site - ' + fileName() + '.json', new Blob([JSON.stringify(siteFile())], { type: 'application/json' })); };
   $('saveGeo').onclick = () => { if (PK) download('Base for the tensor field - ' + fileName() + ' (BNG).geojson', new Blob([JSON.stringify(geoFile())], { type: 'application/geo+json' })); };
   $('saveDxf').onclick = () => { if (PK) download('Base for the tensor field - ' + fileName() + ' (BNG metres).dxf', new Blob([dxfFile()], { type: 'application/dxf' })); };
@@ -409,7 +418,7 @@ const ZH_RX = [["^Relaxing: (\\d+) of (\\d+) primary cells finished$", "松弛�
 const EN_TITLE = document.title;
 const norm = t => String(t).replace(/\s+/g, ' ').trim();
 Object.assign(ZH, { 'A park taken with the parcels is solid green: it stays a park and the tensor field does not run on it.': '随地块一并选取的公园显示为实心绿色：它保持为公园，张量场不在其上生成。', 'park': '公园' });
-Object.assign(ZH, { 'Cell key': '单元身份', 'Older package': '旧地块包', 'Example · from an earlier run': '范例 · 来自较早的一次运行' });
+Object.assign(ZH, { 'Open in Tensor Studio ›': '在张量场工作室打开 ›', 'This browser would not keep the site for Tensor Studio (a private window, perhaps). Save the site file instead, and open it in Tensor Studio with "Open a site file…".': '这个浏览器不能为张量场工作室暂存场地（可能是无痕 / 隐私模式）。请改用「保存张量场用地文件」，再在张量场工作室里点「打开用地文件…」。', 'The browser blocked the new window. Allow pop-ups for this page, then try again.': '浏览器拦截了新窗口。请允许本页面弹出窗口后再试。', 'Cell key': '单元身份', 'Older package': '旧地块包', 'Example · from an earlier run': '范例 · 来自较早的一次运行' });
 ZH_RX.push([new RegExp('^(.+) · park$'), '$1 · 公园'], [new RegExp('^([0-9.,]+) ha · stays a park, no tensor field$'), '$1 公顷 · 保持为公园，不生成张量场']);
 function zhOf(t) {
   const k = norm(t); if (!k) return null;

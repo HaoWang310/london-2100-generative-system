@@ -144,7 +144,7 @@ const STREET = /^(motorway|trunk|primary|secondary|tertiary|minor|residential|un
 const NARROW_WATER = /^(stream|ditch|drain|brook|canal|river)$/;
 const WINDS = [[0, 'N', 'across'], [45, 'NE', 'across'], [90, 'E', 'across'], [135, 'SE', 'along'], [180, 'S', 'along'], [225, 'SW', 'along'], [270, 'W', 'along'], [315, 'NW', 'across']];
 
-export function buildTensorSite({ ring, roads = [], rails = [], waters = [], waterways = [], buildings = [], elevation = null, wind, clip = null, keepBuildings = false }){
+export function buildTensorSite({ ring, roads = [], rails = [], waters = [], waterways = [], buildings = [], parks = [], elevation = null, wind, clip = null, keepBuildings = false }){
   if (!ring || ring.length < 3) throw new Error('Site boundary needs at least three points');
   if (!wind?.year?.length || !wind?.hours?.u?.length) throw new Error('Weather year missing');
   const warnings = [];
@@ -165,10 +165,12 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
     if (!pg[0] || pg[0].length < 4 || !boxHit(bboxOf(pg[0]), frame)) return false;
     const k = JSON.stringify(pg[0].slice(0, 6)) + pg[0].length; if (seen.has(k)) return false; seen.add(k); return true; });
   const R = lines(roads), RL = lines(rails), WW = lines(waterways), WA = polys(waters), BL = polys(buildings);
+  const PK = polys(parks);   // (v8.49) parks handed on with a site file: they stay parks. No street enters one; they are drawn solid green
 
   // 2. the land: the site, less the water (and, if asked, the buildings)
   const sBox = bboxOf(site);
   const cutters = WA.filter(pg => Math.abs(ringArea(pg[0])) >= 150 && boxHit(bboxOf(pg[0]), sBox));
+  cutters.push(...PK.filter(pg => Math.abs(ringArea(pg[0])) >= 150 && boxHit(bboxOf(pg[0]), sBox) && (pg[0].some(p => inRing(p, site)) || site.some(p => inRing(p, pg[0])))));   // only a park that reaches into the site
   const nWater = cutters.length; if (keepBuildings) cutters.push(...BL.filter(pg => boxHit(bboxOf(pg[0]), sBox)));
   const bldRings = keepBuildings ? cutters.slice(nWater).map(pg => pg[0]) : [];   // (v8.31) the engine tells a building hole from water
   let pieces = [], cut = [];
@@ -272,7 +274,7 @@ export function buildTensorSite({ ring, roads = [], rails = [], waters = [], wat
     ...(zOK >= 0.5 * N ? { elev: enc16(Zs, 10) } : {}),   // elevation, 0.1 m, for the environmental fields
     zone: { c: ZC, W: ZW, H: ZH, bits: encBits(zoneBits), ...(railBits ? { rail: encBits(railBits) } : {}) },
     pieces, cut, anchors, attract: { main: [], sec: [] }, contours: cont, labels,
-    ctx: { water: WA, room: [], streams: WW.map(f => f.pts), urban: [], bld: BL, lanes, prim, rib: [], parcels: [] },
+    ctx: { water: WA, room: [], streams: WW.map(f => f.pts), urban: [], bld: BL, lanes, prim, rib: [], parcels: [], ...(PK.length ? { parks: PK } : {}) },
     fixed: { link: [], bridges: [], streets: [] },
     edges: { road: pieces.map(p => p.outer), shore: pieces.flatMap(p => p.holes), shared: [] },
     buildingHoles: bldRings.map(r => r.map(q => [r1(q[0]), r1(q[1])])),

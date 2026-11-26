@@ -308,6 +308,7 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
   <div class="ts-divider"></div>
   <div class="grp"><h2>场地</h2><div class="card">
     <div class="row"><label for="srcSel">输入</label><select id="srcSel" class="sel" aria-label="输入"></select></div>
+    <p class="note" id="srcRun" hidden translate="no"></p>
     <label class="lay">只看张量场结果<input type="checkbox" id="c_ts"></label>
     <label class="lay" id="tsFieldRow" hidden>张量场方向线<input type="checkbox" id="c_tsField" checked></label>
     <div class="row" id="renRow" hidden><input type="text" id="renIn" class="sel" maxlength="60" aria-label="改名"><button type="button" class="mini" id="renOk">确定</button></div>
@@ -1048,7 +1049,7 @@ $('geoBtn').onclick = () => { const o = SNAP.origin || [0, 0], bng = p => [+(p[0
 $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.width = planBase.width; cv.height = planBase.height; const x = cv.getContext('2d'); x.drawImage(TSV && tsBase ? tsBase : planBase, 0, 0);
   { const g = F.grid, k = 2 / g.RES, X = p => [(p[0] - g.xmin) * k, (g.ymax - p[1]) * k]; drawVec(x, X, 2.4, TSV ? {} : { cells: true, prim: false }); if ($('c_furn').checked) drawFurniture(x, X, k, { x: 0, y: 0, w: cv.width, h: cv.height }, 2.4); } dl('linear_farm_plan.png', null, cv.toDataURL('image/png')); };
 
-async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj;
+async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj; runLine();
   P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
   if (window.SSIntro) SSIntro.onSnap(SNAP, name);   // 开场短片：第一次载入时，先把场地交给短片（它在后台线程里画），再在这里算
   SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
@@ -1063,7 +1064,9 @@ function snapshotFrom(win, step = 10) {
   const nx = Math.ceil(D.w / step) + 1, ny = Math.ceil(D.h / step) + 1, f = new Uint8Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a = typeof fa === 'function' ? fa(i * step, j * step) : null; f[j * nx + i] = a == null ? 255 : Math.round((((a % Math.PI) + Math.PI) % Math.PI) / Math.PI * 254); }
   let bin = ''; for (let i = 0; i < f.length; i++) bin += String.fromCharCode(f[i]);
-  return { format: 'structure-studio/snapshot@1', source: 'tensor-studio', exported: new Date().toISOString(), site: D.station ? 'station-p2' : 'london-site', origin: D.origin, crs: 'EPSG:27700 (local metres = BNG − origin)', w: D.w, h: D.h,
+  return { format: 'structure-studio/snapshot@1', source: 'tensor-studio', exported: new Date().toISOString(), site: T.source ? 'loop-city-parcels' : D.station ? 'station-p2' : 'london-site',
+    ...(T.source ? { run: T.source.run || null, cells: T.source.cells || [], cell_keys: T.source.cell_keys || {}, parcels: T.source.parcels || [] } : {}),      // (25 Nov 2026) from a Loop City site file: the run of step 1, the cells and their keys
+    origin: D.origin, crs: 'EPSG:27700 (local metres = BNG − origin)', w: D.w, h: D.h,
     pieces: D.pieces.map(pc => ({ outer: Pp(pc.outer), holes: (pc.holes || []).map(Pp) })), water: (D.ctx.water || []).map(w => w.map(Pp)), streams: (D.ctx.streams || []).map(Pp),
     attractors: T.attr.map(a => ({ x: a.x, y: a.y, kind: a.kind, reach: a.kind === 'main' ? 230 : a.kind === 'edge' ? 340 : 140, pull: +((win.document.getElementById('pull') || {}).value || 2.4) })), roads: R.streets.map(st => ({ id: st.id, grade: st.grade, level: st.level, width: st.width, pts: Pp(st.pts) })),
     junctions: R.junctions.map(j => ({ x: r1(j.x), y: r1(j.y), type: j.type })), stats: R.stats, field: { step, nx, ny, enc: 'u8 angle*254/pi, 255 = none', data: btoa(bin) },
@@ -1105,7 +1108,11 @@ function savePSoon() { clearTimeout(saveT); saveT = setTimeout(() => { const p =
   if (CUR === 'builtin') setSess({ builtinP: p }); else { const m = curMeta(); if (m) { m.P = p; STORE.putMeta(m).catch(() => {}); } } }, 500); }
 function hashSnap(snap) { const t = JSON.stringify([snap.origin, snap.pieces.length, snap.roads.map(r => r.pts)]); let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + '.' + t.length.toString(36); }
 const stamp = t => { const d = new Date(t), z = v => String(v).padStart(2, '0'); return `${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
-function refreshSel() { const sel = $('srcSel'); sel.textContent = '';
+// (25 Nov 2026) a result grown on Loop City parcels says which century of step 1 it comes from: the run's name and the cells' keys
+function keyShort(snap) { const k = Object.values((snap && snap.cell_keys) || {}); return k.length ? k.map(x => String(x).split(' · ').slice(1).join(' · ')).join(' + ').slice(0, 44) : ''; }
+function runLine() { const el = $('srcRun'); if (!el) return; const r = SNAP && SNAP.run && SNAP.run.id, k = SNAP ? Object.values(SNAP.cell_keys || {}) : [];
+  el.hidden = !r && !k.length; if (el.hidden) return; el.textContent = L('运行名 ', 'Run ') + (r || '—') + (k.length ? L(' · 单元 ', ' · cells ') + k.map(x => String(x).split(' · ').slice(1).join(' · ')).join(', ') : ''); }
+function refreshSel() { const sel = $('srcSel'); sel.textContent = ''; runLine();
   const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
   add('builtin', L('内置示例 · 车站 P2', 'Built-in example · Station P2'));
   if (LIST.length) { const g = document.createElement('optgroup'); g.label = L('已保存（这台电脑）', 'Saved (this computer)'); sel.appendChild(g);
@@ -1120,7 +1127,7 @@ async function switchTo(id) { $('busy').style.display = 'block'; $('renRow').hid
   CUR = 'builtin'; setSess({ cur: 'builtin' }); applyP(sess().builtinP); refreshSel(); loadSnap(BUILTIN, L('车站 P2', 'Station P2')); }
 async function addInput(snap, kind, fname) { const h = hashSnap(snap), same = LIST.find(m => m.hash === h);
   if (same) { await switchTo(same.id); $('saveHint').textContent = L(`这份结果已经保存过："${same.name}"，已切换过去。`, `This result was already saved as "${same.name}"; switched to it.`); return; }
-  const n = snap.roads.length, now = Date.now(), name = kind === 'file' && snap.name ? String(snap.name).slice(0, 60) : kind === 'file' ? `${fname} · ${n} ${L('条路', 'roads')}` : L(`张量场 · ${stamp(now)} · ${n} 条路`, `Tensor Studio · ${stamp(now)} · ${n} roads`);
+  const n = snap.roads.length, now = Date.now(), ck = keyShort(snap), name = kind !== 'file' && ck ? `${ck} · ${n} ${L('条路', 'roads')}` : kind === 'file' && snap.name ? String(snap.name).slice(0, 60) : kind === 'file' ? `${fname} · ${n} ${L('条路', 'roads')}` : L(`张量场 · ${stamp(now)} · ${n} 条路`, `Tensor Studio · ${stamp(now)} · ${n} roads`);
   const m = { id: 'in' + now.toString(36), name, created: now, kind, site: snap.site, roads: n, exported: snap.exported || null, hash: h, format: snap.format || 'structure-studio/snapshot@1', P: JSON.parse(JSON.stringify(snap.structureParams || P)) };
   if (snap.structureParams) applyP(snap.structureParams);
   let ok = IDB_OK; if (ok) { try { await STORE.add(m, snap); LIST.push(m); } catch (e) { ok = false; } }
