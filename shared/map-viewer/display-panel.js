@@ -2,10 +2,13 @@
 // resizable by dragging its left and bottom edges. Docked (setDocked) it sits flush
 // on the map's right edge and collapses to a slim vertical tab there. It drives the London map
 // features (london-map.js): search, jumps, lighting, weather, colour theme,
-// labels / vehicles / shadows / trees, and the analysis layers.
+// labels / vehicles / shadows / trees, and the analysis layers — the same ten, in the same five groups, as the
+// incubator London map (terrain: EA LiDAR, colour by height, contours; water: flood, drainage; planning boundaries:
+// Green Belt, AONB; transport: rail, HS1 / HS2; study area).
 
 import { h } from '../ui/index.js';
 import { t, onLangChange } from '../i18n/index.js';
+import { CONTOUR_INTERVALS } from './london-map.js';
 
 const KEY = 'l2100.displayPanel';
 const CSS = `
@@ -38,10 +41,30 @@ const CSS = `
 .dp-layer { padding: 8px 0; border-bottom: 1px solid var(--hairline); } .dp-layer:last-child { border-bottom: 0; }
 .dp-layer .name { font-size: 12.5px; } .dp-layer small { display: block; color: var(--text-3); font-size: 11px; margin-top: 1px; }
 .dp-range { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
+.dp-range > span:first-child { white-space: nowrap; }
+.dp-legend[hidden], .dp-key[hidden] { display: none; }
 .dp-range input[type=range] { flex: 1; accent-color: var(--text); } .dp-range .v { width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
 .dp-range select { flex: 1; min-width: 0; height: 26px; border-radius: 7px; background: var(--surface-2); color: var(--text); border: 1px solid var(--hairline-strong); font: inherit; font-size: 11.5px; }
 .dp-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 10.5px; color: var(--text-2); margin-top: 6px; }
 .dp-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.dp-group { font-size: 10.5px; letter-spacing: .06em; color: var(--text-3); padding: 12px 0 0; }
+.dp-group.first { padding-top: 0; }
+.dp-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px 8px; margin-top: 7px; font-size: 11px; color: var(--text-2); }
+.dp-checks label { display: flex; align-items: center; gap: 5px; min-width: 0; cursor: pointer; }
+.dp-checks input { flex: none; width: 13px; height: 13px; margin: 0; accent-color: var(--text); }
+.dp-key { margin-top: 8px; } .dp-key i { display: block; height: 8px; border-radius: 4px; }
+.dp-key div { display: flex; justify-content: space-between; margin-top: 3px; font-size: 9.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dp-legend i.dash { width: 12px; height: 0; background: none !important; border-top: 2px dashed var(--c); border-radius: 0; vertical-align: 3px; }
+.dp-legend i.edge { box-shadow: 0 0 0 1px rgba(255,255,255,.45); }
+.dp-range input[type=color] { width: 44px; height: 22px; padding: 0; border: 1px solid var(--hairline-strong); border-radius: 6px; background: none; cursor: pointer; }
+.lm-popup .maplibregl-popup-content { background: rgba(28,28,30,.96); color: #fff; border: 1px solid rgba(255,255,255,.18); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4); padding: 7px 10px; font-size: 11.5px; line-height: 1.4; }
+.lm-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip, .lm-popup.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.lm-popup.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: rgba(28,28,30,.96); }
+.lm-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip, .lm-popup.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.lm-popup.maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: rgba(28,28,30,.96); }
+.lm-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: rgba(28,28,30,.96); }
+.lm-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: rgba(28,28,30,.96); }
 .dp-lstatus { font-size: 10.5px; color: var(--text-3); margin-top: 4px; } .dp-lstatus.err { color: var(--error); }
 .dp-src { font-size: 10.5px; color: var(--text-3); margin-top: 8px; line-height: 1.4; }
 .dp-rz { position: absolute; z-index: 2; touch-action: none; } .dp-rz-x { left: -1px; top: 18px; bottom: 18px; width: 10px; cursor: ew-resize; }
@@ -118,13 +141,17 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   // ---------------------------------------------------------- content
   let searchCtl = null, results = [];
   const st = () => lm.state;
+  let statusLines = [];
   function build() {
     const S = st();
+    statusLines = [];
     const tile = (label, pressed, onclick, cls = '') => h('button', { type: 'button', class: `dp-tile ${cls}`, 'aria-pressed': String(pressed), onclick }, label);
     const sw = (on, onchange) => { const i = h('input', { type: 'checkbox', role: 'switch', checked: on }); i.addEventListener('change', () => onchange(i.checked)); return h('label', { class: 'switch' }, i, h('span')); };
-    const range = (label, value, min, max, step, fmt, oninput) => {
+    // oninput: while the slider moves; onchange (optional): once, when it is let go
+    const range = (label, value, min, max, step, fmt, oninput, onchange) => {
       const v = h('span', { class: 'v' }, fmt(value)), i = h('input', { type: 'range', min, max, step, value });
       i.addEventListener('input', () => { v.textContent = fmt(+i.value); oninput(+i.value); });
+      if (onchange) i.addEventListener('change', () => onchange(+i.value));
       return h('div', { class: 'dp-range' }, h('span', {}, label), i, v);
     };
     const select = (label, value, options, onchange) => {
@@ -133,7 +160,47 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
       return h('div', { class: 'dp-range' }, h('span', {}, label), s);
     };
     const pct = v => `${Math.round(v * 100)}%`;
-    const lstatus = s => h('div', { class: `dp-lstatus ${s.status === 'error' ? 'err' : ''}` }, t(`dp.status.${s.status || 'off'}`) + (s.error ? ` ${s.error}` : ''));
+    // note: a few words after "Visible" (what the layer is cut to), as the incubator London map's own status lines
+    // (a text or a function). Each line can be redrawn alone, so it stays true while a slider or a list has the focus.
+    const lstatus = (s, note = '') => {
+      const el = h('div');
+      const draw = () => {
+        const n = typeof note === 'function' ? note() : note;
+        el.className = `dp-lstatus ${s.status === 'error' ? 'err' : ''}`;
+        el.textContent = t(`dp.status.${s.status || 'off'}`) + (s.error ? ` ${s.error}` : '') + (n && s.status === 'visible' ? ` · ${n}` : '');
+      };
+      draw(); statusLines.push(draw);
+      return el;
+    };
+    const group = (key, first = false) => h('div', { class: `dp-group ${first ? 'first' : ''}` }, t(`dp.group.${key}`));
+    const title = (name, sub) => h('span', {}, h('span', { class: 'name' }, name), h('small', {}, sub));
+    const check = (label, on, onchange) => { const i = h('input', { type: 'checkbox', checked: on }); i.addEventListener('change', () => onchange(i.checked)); return h('label', {}, i, label); };
+    const swatch = (colour, label, cls = '') => h('span', {}, h('i', { class: cls, style: `background:${colour};--c:${colour}` }), label);
+    const named = (key, fallback) => { const s = t(key); return s === key ? fallback : s; };   // a name the incubator added later shows as it is
+
+    // colour by height: the key is drawn from the incubator's own ramps and steps
+    const P = lm.planning, R = S.relief;
+    const reliefBar = h('i'), reliefTicks = h('div');
+    const drawReliefKey = (ramp, top) => {
+      const colours = P.ramps[ramp] || P.ramps.classic, at = P.stops(top);
+      reliefBar.style.background = `linear-gradient(to right,${colours.map((c, i) => `${c} ${i * 5}% ${(i + 1) * 5}%`).join(',')})`;
+      reliefTicks.replaceChildren(...[0, 5, 10, 15, 19].map(i => h('span', {}, `${Math.round(at[i])} m`)));
+    };
+    drawReliefKey(R.ramp, R.top);
+    // rail: each service's colour; National Rail is near black on the light themes and light grey on the dark one
+    const railOrder = ['national', 'underground', ...P.railKinds.filter(k => k !== 'national' && k !== 'underground')];
+    const railName = k => named(`dp.railKind.${k}`, k);
+    const railColour = k => (k === 'national' ? (S.theme === 'dark' ? '#c9c9c9' : '#1c1c1e') : P.railColours[k]);
+    const railLegend = h('div', { class: 'dp-legend', hidden: S.rail.mode === 'shades' },
+      railOrder.map(k => swatch(railColour(k), railName(k), k === 'national' && S.theme !== 'dark' ? 'edge' : '')));
+    const speedKey = h('div', { class: 'dp-key', hidden: S.rail.mode !== 'speed' },
+      h('i', { style: `background:linear-gradient(to right,${P.speedStops.map(([, c], i) => `${c} ${i * 100 / (P.speedStops.length - 1)}%`).join(',')})` }),
+      h('div', {}, P.speedStops.map(([mph], i) => h('span', {}, i === P.speedStops.length - 1 ? `${mph} mph` : String(mph)))));
+    const hsKeys = [h('i', {}), h('i', { class: 'dash' })];
+    const paintHsKeys = c => { hsKeys[0].style.background = c; hsKeys[1].style.setProperty('--c', c); };
+    paintHsKeys(S.highSpeed.colour);
+    const hsColour = h('input', { type: 'color', value: S.highSpeed.colour, 'aria-label': t('dp.lineColour') });
+    hsColour.addEventListener('input', () => { paintHsKeys(hsColour.value); lm.setLayer('highSpeed', { colour: hsColour.value }); });
 
     // search
     const input = h('input', { type: 'search', placeholder: t('dp.searchPlaceholder'), 'aria-label': t('dp.search') });
@@ -179,24 +246,64 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
         h('div', { class: 'dp-row' }, t('dp.shadows'), sw(S.shadows, v => lm.setShadows(v))),
         h('div', { class: 'dp-row' }, t('dp.trees'), sw(S.trees, v => lm.setTrees(v)))),
       h('div', { class: 'dp-sec' }, h('div', { class: 'dp-t' }, t('dp.layers')),
+        group('terrain', true),
         h('div', { class: 'dp-layer' },
-          h('div', { class: 'dp-row' }, h('span', {}, h('span', { class: 'name' }, t('dp.terrain')), h('small', {}, t('dp.terrainSub'))), sw(S.terrain.on, v => lm.setLayer('terrain', { on: v }))),
-          range(t('dp.opacity'), S.terrain.opacity, 0, 1, 0.05, pct, v => lm.setLayer('terrain', { opacity: v })), lstatus(S.terrain)),
+          h('div', { class: 'dp-row' }, title(t('dp.terrain'), t('dp.terrainSub')), sw(S.terrain.on, v => lm.setLayer('terrain', { on: v }))),
+          range(t('dp.opacity'), S.terrain.opacity, 0, 1, 0.05, pct, v => lm.setLayer('terrain', { opacity: v })), lstatus(S.terrain, t('dp.note.circle'))),
         h('div', { class: 'dp-layer' },
-          h('div', { class: 'dp-row' }, h('span', {}, h('span', { class: 'name' }, t('dp.flood')), h('small', {}, t('dp.floodSub'))), sw(S.flood.on, v => lm.setLayer('flood', { on: v }))),
+          h('div', { class: 'dp-row' }, title(t('dp.relief'), t('dp.reliefSub')), sw(R.on, v => lm.setLayer('relief', { on: v }))),
+          range(t('dp.opacity'), R.opacity, 0, 1, 0.05, pct, v => lm.setLayer('relief', { opacity: v })),
+          // the top height, the colours and the shading are part of the tile address: new tiles are made when the slider is let go
+          range(t('dp.reliefTop'), R.top, 50, 600, 10, v => `${v} m`, v => drawReliefKey(R.ramp, v), v => lm.setLayer('relief', { top: v })),
+          select(t('dp.reliefRamp'), R.ramp, Object.keys(P.ramps).map(k => [k, named(`dp.ramp.${k}`, k)]), v => { drawReliefKey(v, lm.state.relief.top); lm.setLayer('relief', { ramp: v }); }),
+          range(t('dp.reliefShade'), R.shade, 0, 1, 0.05, pct, () => {}, v => lm.setLayer('relief', { shade: v })),
+          h('div', { class: 'dp-key' }, reliefBar, reliefTicks), lstatus(R, t('dp.note.relief'))),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.contour'), t('dp.contourSub')), sw(S.contour.on, v => lm.setLayer('contour', { on: v }))),
+          range(t('dp.opacity'), S.contour.opacity, 0, 1, 0.05, pct, v => lm.setLayer('contour', { opacity: v })),
+          select(t('dp.contourInterval'), String(S.contour.interval), CONTOUR_INTERVALS.map(n => [String(n), `${n} m`]), v => lm.setLayer('contour', { interval: +v })),
+          lstatus(S.contour, () => t('dp.note.contour', { n: S.contour.interval, count: S.contour.levels }))),
+        group('water'),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.flood'), t('dp.floodSub')), sw(S.flood.on, v => lm.setLayer('flood', { on: v }))),
           select(t('dp.floodSource'), S.flood.source, [['combined', t('dp.floodCombined')], ['surface_water', t('dp.floodSurface')], ['rivers_sea', t('dp.floodRivers')]], v => lm.setLayer('flood', { source: v })),
           select(t('dp.floodMode'), S.flood.mode, [['nearest', t('dp.floodNearest')], ['linear', t('dp.floodLinear')]], v => lm.setLayer('flood', { mode: v })),
           range(t('dp.opacity'), S.flood.opacity, 0, 1, 0.05, pct, v => lm.setLayer('flood', { opacity: v })),
           h('div', { class: 'dp-legend' }, [['#9cddea', 'dp.floodVeryLow'], ['#f7d359', 'dp.floodLow'], ['#f29d38', 'dp.floodMedium'], ['#d73731', 'dp.floodHigh'], ['#999c9e', 'dp.floodNA']]
             .map(([c, k]) => h('span', {}, h('i', { style: `background:${c}` }), t(k)))), lstatus(S.flood)),
         h('div', { class: 'dp-layer' },
-          h('div', { class: 'dp-row' }, h('span', {}, h('span', { class: 'name' }, t('dp.network')), h('small', {}, t('dp.networkSub'))), sw(S.network.on, v => lm.setLayer('network', { on: v }))),
+          h('div', { class: 'dp-row' }, title(t('dp.network'), t('dp.networkSub')), sw(S.network.on, v => lm.setLayer('network', { on: v }))),
           range(t('dp.opacity'), S.network.opacity, 0, 1, 0.05, pct, v => lm.setLayer('network', { opacity: v })),
           range(t('dp.threshold'), S.network.threshold, 0, 50, 0.25, v => `${v.toFixed(2)} km²`, v => lm.setLayer('network', { threshold: v })),
           h('div', { class: 'dp-legend' }, [['#4ba9ff', '0.25–1'], ['#2398ff', '1–5'], ['#00b7e4', '5–25'], ['#00e0e6', '25–100'], ['#70fff1', '≥100 km²']]
             .map(([c, l]) => h('span', {}, h('i', { style: `background:${c}` }), l))), lstatus(S.network)),
+        group('planning'),
         h('div', { class: 'dp-layer' },
-          h('div', { class: 'dp-row' }, h('span', {}, h('span', { class: 'name' }, t('dp.focus70')), h('small', {}, t('dp.focus70Sub'))), sw(S.focus70.on, v => lm.setLayer('focus70', { on: v }))))),
+          h('div', { class: 'dp-row' }, title(t('dp.greenBelt'), t('dp.greenBeltSub')), sw(S.greenBelt.on, v => lm.setLayer('greenBelt', { on: v }))),
+          range(t('dp.fill'), S.greenBelt.fill, 0, 1, 0.05, pct, v => lm.setLayer('greenBelt', { fill: v })),
+          range(t('dp.edge'), S.greenBelt.width, 0, 3, 0.1, pct, v => lm.setLayer('greenBelt', { width: v })),
+          h('div', { class: 'dp-legend' }, swatch('#849474', t('dp.greenBeltKey'))), lstatus(S.greenBelt, t('dp.note.greenBelt'))),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.aonb'), t('dp.aonbSub')), sw(S.aonb.on, v => lm.setLayer('aonb', { on: v }))),
+          range(t('dp.fill'), S.aonb.fill, 0, 1, 0.02, pct, v => lm.setLayer('aonb', { fill: v })),
+          range(t('dp.edge'), S.aonb.width, 0, 3, 0.1, pct, v => lm.setLayer('aonb', { width: v })),
+          h('div', { class: 'dp-legend' }, swatch(S.theme === 'dark' ? '#8ea284' : '#4f6b45', t('dp.aonbKey'), 'dash')), lstatus(S.aonb, t('dp.note.aonb'))),
+        group('transport'),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.rail'), t('dp.railSub')), sw(S.rail.on, v => lm.setLayer('rail', { on: v }))),
+          h('div', { class: 'dp-checks', role: 'group' }, railOrder.map(k => check(railName(k), S.rail.kinds[k], v => lm.setLayer('rail', { kinds: { [k]: v } })))),
+          select(t('dp.railMode'), S.rail.mode, ['lines', 'shades', 'speed'].map(k => [k, t(`dp.railMode.${k}`)]),
+            v => { railLegend.hidden = v === 'shades'; speedKey.hidden = v !== 'speed'; lm.setLayer('rail', { mode: v }); }),
+          range(t('dp.lineWidth'), S.rail.width, 0.3, 3, 0.1, pct, v => lm.setLayer('rail', { width: v })),
+          railLegend, speedKey, lstatus(S.rail, t('dp.note.rail'))),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.highSpeed'), t('dp.highSpeedSub')), sw(S.highSpeed.on, v => lm.setLayer('highSpeed', { on: v }))),
+          h('div', { class: 'dp-checks', role: 'group' }, check('HS1', S.highSpeed.hs1, v => lm.setLayer('highSpeed', { hs1: v })), check('HS2', S.highSpeed.hs2, v => lm.setLayer('highSpeed', { hs2: v }))),
+          h('div', { class: 'dp-range' }, h('span', {}, t('dp.lineColour')), hsColour),
+          h('div', { class: 'dp-legend' }, h('span', {}, hsKeys[0], t('dp.hsSurface')), h('span', {}, hsKeys[1], t('dp.hsTunnel'))), lstatus(S.highSpeed, t('dp.note.highSpeed'))),
+        group('area'),
+        h('div', { class: 'dp-layer' },
+          h('div', { class: 'dp-row' }, title(t('dp.focus70'), t('dp.focus70Sub')), sw(S.focus70.on, v => lm.setLayer('focus70', { on: v }))))),
       h('p', { class: 'dp-src' }, source));
     const icon = () => (saved.collapsed ? (docked ? '‹' : '+') : (docked ? '›' : '–'));
     const toggle = () => { saved.collapsed = panel.classList.toggle('collapsed'); collapse.textContent = icon(); store(); };
@@ -213,7 +320,7 @@ export function mountDisplayPanel(host, lm, { source = '' } = {}) {
   onLangChange(refresh);
   // keep the switches and statuses in step with the map, but never rebuild while a slider or field is in use
   return {
-    update(what) { if (what === 'layers' || what === 'atmosphere' || what === 'theme' || what === 'display') { if (!panel.contains(document.activeElement) || document.activeElement.type === 'checkbox' || document.activeElement.tagName === 'BUTTON') refresh(); } },
+    update(what) { if (what === 'layers' || what === 'atmosphere' || what === 'theme' || what === 'display') { if (!panel.contains(document.activeElement) || document.activeElement.type === 'checkbox' || document.activeElement.tagName === 'BUTTON') refresh(); else for (const draw of statusLines) draw(); } },
     /** Attach the panel to the map's right edge (a slim tab when collapsed), or float it again. */
     setDocked(on) { on = Boolean(on); if (on === docked) return; docked = on; panel.classList.toggle('docked', on); refresh(); },
     element: panel

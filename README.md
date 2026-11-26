@@ -51,4 +51,4 @@ node --test                               # 运行全部测试
 
 ## 相关仓库
 
-- [google-map-live](https://github.com/HaoWang310/google-map-live)：现有的伦敦地图、水文分析、张量场与 Wool 路网算法（v3.30.0），将逐步通过适配层迁入本仓库，原仓库保持不变。
+- [google-map-live](https://github.com/HaoWang310/google-map-live)：现有的伦敦地图、水文分析、张量场与 Wool 路网算法（迁入时为 v3.30.0；本仓库孵化区内的伦敦地图现为 v3.44.1），将逐步通过适配层迁入本仓库，原仓库保持不变。

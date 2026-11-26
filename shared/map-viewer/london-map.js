@@ -3,8 +3,11 @@
 // The features themselves are the incubator app incubator/google-map-live: this
 // file loads its own scripts at run time (search, colour themes, lighting and
 // weather, building shadows, trees, street vehicles, local terrain tiles, flood
-// risk detail, the drainage network) and its own data (assets/), so a change
-// made there reaches the workspace. Only the wiring is here; it follows
+// risk detail, the drainage network, the planning layers, the contour worker) and
+// its own data (assets/), so a change made there reaches the workspace. The planning
+// layers (colour by height, Green Belt, AONB, rail, HS1 / HS2) are drawn by the
+// incubator's own scripts/planning_layers.js: their look is decided there, not here.
+// Only the wiring is here; it follows
 // google-map-live's scripts/app.js (initOSM, ensureCityBuildings, syncCityView,
 // updateFloodLayer, updateNetworkLayer, ensureOsmFocus70, ...).
 //
@@ -34,12 +37,16 @@ export const SCRIPTS = {
   search: ['scripts/place_search.js', ['createPlaceSearch']],
   terrain: ['scripts/terrain_local.js', ['createTerrainLocalLoader', 'TERRAIN_MIN_ZOOM', 'TERRAIN_MAX_ZOOM', 'TERRAIN_TILE_SIZE']],
   drainage: ['scripts/drainage_display.js', ['createDrainageDisplayLoader', 'AREA_MIN_ZOOM', 'AREA_MAX_ZOOM', 'AREA_TILE_SIZE']],
-  flood: ['scripts/flood_detail.js', ['createFloodDetailLoader', 'DETAIL_MIN_ZOOM', 'DETAIL_MAX_ZOOM', 'DETAIL_TILE_SIZE']]
+  flood: ['scripts/flood_detail.js', ['createFloodDetailLoader', 'DETAIL_MIN_ZOOM', 'DETAIL_MAX_ZOOM', 'DETAIL_TILE_SIZE']],
+  planning: ['scripts/planning_layers.js', ['createPlanningLayers', 'reliefStops', 'RELIEF_RAMPS', 'RAIL_KINDS', 'RAIL_COLOURS', 'SPEED_STOPS']],
+  core: ['scripts/map_core.js', ['contourWorkerSource', 'contourMajorIntervalFor', 'mercatorFromLngLat']]
 };
 export const ASSETS = {
   terrain: 'assets/terrain/overview.webp',
   drainage: 'assets/drainage_area/area_log16.webp',
   londonOutline: 'assets/greater_london_outline.geojson',
+  dem: 'assets/drainage_area/dem50_log16.webp',                       // OS Terrain 50, for the contours
+  planning: name => `assets/planning/${name}.geojson`,                // read by planning_layers.js itself
   flood: (source, rc) => `assets/flood_risk/${source === 'combined' ? 'flood' : source}_${rc}.webp`
 };
 
@@ -74,21 +81,26 @@ const ID = {
   terrainSrc: 'lm-terrain', terrain: 'lm-terrain-layer',
   floodSrc: rc => `lm-flood-${rc}`, flood: rc => `lm-flood-layer-${rc}`, floodDetailSrc: 'lm-flood-detail', floodDetail: 'lm-flood-detail-layer',
   networkSrc: 'lm-network', network: 'lm-network-layer',
+  contourSrc: 'lm-contours', contour: 'lm-contours-line', contourLabel: 'lm-contours-label',
   focusSrc: 'lm-focus70', focusFill: 'lm-focus70-fill', focusLine: 'lm-focus70-line',
   outlineSrc: 'lm-london-outline', outline: 'lm-london-outline-line'
 };
 const RCS = ['0-0', '0-1', '1-0', '1-1'];
+// The layers scripts/planning_layers.js owns (its state keys) and the files it reads from assets/planning/.
+export const PLANNING_KEYS = ['relief', 'greenBelt', 'aonb', 'rail', 'highSpeed'];
+export const PLANNING_FILES = ['green_belt', 'aonb', 'rail', 'highspeed'];
+export const CONTOUR_INTERVALS = [1, 2, 5, 10, 25, 50, 100];
 
 /**
  * Load the London map features onto `map`. Call right after the style loads and
  * BEFORE adding any other layer (the colour themes capture the basemap's own layers).
  * analysisBefore(): the layer id analysis rasters go under (the workspace's overlays).
  */
-export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), version = '', analysisBefore = () => undefined, theme = 'dark', onChange = () => {} }) {
+export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), version = '', analysisBefore = () => undefined, theme = 'dark', onChange = () => {}, t = k => k }) {
   const v = version ? `?${version.replace(/^\?/, '')}` : '';
   const url = p => base + p + v;
   const mods = {};
-  await Promise.all(['themes', 'atmosphere', 'search', 'terrain', 'drainage', 'flood'].map(async k => { mods[k] = await import(url(SCRIPTS[k][0])); }));
+  await Promise.all(['themes', 'atmosphere', 'search', 'terrain', 'drainage', 'flood', 'planning', 'core'].map(async k => { mods[k] = await import(url(SCRIPTS[k][0])); }));
   const lazy = k => (mods[k] ? Promise.resolve(mods[k]) : import(url(SCRIPTS[k][0])).then(m => (mods[k] = m)));
 
   const firstSymbol = () => (map.getStyle()?.layers || []).find(l => l.type === 'symbol')?.id;
@@ -98,9 +110,12 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     terrain: { on: false, opacity: 0.42, status: '' },
     flood: { on: false, opacity: 0.7, source: 'combined', mode: 'nearest', status: '' },
     network: { on: false, opacity: 0.9, threshold: 1, status: '' },
+    contour: { on: false, opacity: 0.72, interval: 10, status: '', levels: 0 },
+    // relief, greenBelt, aonb, rail, highSpeed: filled from planning_layers.js's own defaults below
     focus70: { on: false }
   };
   const emit = what => onChange(what, st);
+  let planning = null;      // scripts/planning_layers.js, made with the analysis layers below
 
   // ------------------------------------------------------------ colour themes (paint-only)
   const themes = mods.themes.createBasemapThemeController(map);
@@ -111,6 +126,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     const c = cityColour();
     if (map.getLayer(ID.city3D)) map.setPaintProperty(ID.city3D, 'fill-extrusion-color', c);
     if (map.getLayer(ID.city2D)) map.setPaintProperty(ID.city2D, 'fill-color', c);
+    planning?.applyTheme(); paintContours();
   }
   applyTheme();
 
@@ -228,10 +244,13 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   protocol('ea-flood', async (req, ctl) => { const r = await floodLoader(req, ctl); floodDetailSeen = true; return r; });
   const hydroLoader = drainage.createDrainageDisplayLoader({ sourceUrl: url(ASSETS.drainage), width: D.baseWidth50m, height: D.baseHeight50m, center, radius: FOCUS70.radius, bounds: D });
   protocol('drainage-network', hydroLoader);
-  const terrainLoader = terrain.createTerrainLocalLoader({ imageUrl: url(ASSETS.terrain), bounds: D, tileSize: terrain.TERRAIN_TILE_SIZE });
+  // centre and radius: the picture is cut to the 70 km study circle, as in the London map v3.44.0
+  const terrainLoader = terrain.createTerrainLocalLoader({ imageUrl: url(ASSETS.terrain), bounds: D, tileSize: terrain.TERRAIN_TILE_SIZE, center, radius: FOCUS70.radius });
   protocol('ea-terrain-local', terrainLoader);
 
-  const under = () => analysisBefore() || firstSymbol();
+  // Under the workspace's overlays when a module has any; otherwise under the 3D city (its shadows, buildings and
+  // footprints), as in google-map-live — never painted over the buildings.
+  const under = () => analysisBefore() || (map.getLayer(ID.cityDriver) ? ID.cityDriver : firstSymbol());
   function syncTerrain() {
     const t = st.terrain;
     if (!t.on) { setVis(ID.terrain, 'none'); t.status = 'off'; return; }
@@ -305,14 +324,112 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     setVis(ID.network, 'visible'); map.setPaintProperty(ID.network, 'raster-opacity', n.opacity);
     n.status = 'visible'; stack();
   }
-  // Order, bottom to top: terrain, flood, network (google-map-live keepDrainageAboveTerrain), all under the workspace's overlays.
+  // ------------------------------------------------------------ planning layers (google-map-live initPlanningLayers)
+  // Colour by height, Green Belt, AONB, rail by service, HS1 / HS2: sources, layers, colours and the cut to the circle
+  // are all in the incubator's planning_layers.js. Here: its state for the panel, the order, the height under a click.
+  const planningStatus = s => (s === 'loaded' ? 'visible' : s);
+  planning = mods.planning.createPlanningLayers({ map, maplibregl, assetUrl: p => url(p), center, radius: FOCUS70.radius,
+    getTheme: () => st.theme, reorder: () => stack(),
+    onStatus: (group, s) => { const next = planningStatus(s); if (st[group] && st[group].status !== next) { st[group].status = next; emit('layers'); } } });
+  for (const k of PLANNING_KEYS) st[k] = { ...structuredClone(planning.state[k]), status: 'off' };
+  let heightPopup = null;
+  map.on('click', async e => {
+    if (!st.relief.on || !planning.insideCircle(e.lngLat)) return;
+    try {
+      const height = await planning.heightAt(e.lngLat);
+      if (!st.relief.on) return;
+      heightPopup?.remove();
+      heightPopup = new maplibregl.Popup({ closeButton: false, offset: 8, className: 'lm-popup' }).setLngLat(e.lngLat)
+        .setText(`${t('dp.popup.height')} ${Math.round(height * 10) / 10} m`).addTo(map);
+    } catch (err) { console.warn('Height not read', err); }
+  });
+
+  // ------------------------------------------------------------ contours, OS Terrain 50 (ensureContourWorker / refreshContourLayer)
+  // The lines are made by google-map-live's own worker (map_core.js contourWorkerSource) from its 50 m DEM, for the
+  // part of the study circle in view; they are made again when the map stops moving.
+  const core = mods.core;
+  let contourWorker = null, contourReq = 0, contourDone = 0, contourTimer = null, contourPopup = null;
+  function contourJob() {
+    if (contourWorker) return contourWorker;
+    const blobUrl = URL.createObjectURL(new Blob([core.contourWorkerSource()], { type: 'text/javascript' }));
+    contourWorker = new Worker(blobUrl); URL.revokeObjectURL(blobUrl);
+    const c = core.mercatorFromLngLat(center.lng, center.lat);
+    contourWorker.postMessage({ type: 'init', config: { url: new URL(url(ASSETS.dem), location.href).href, width: D.baseWidth50m, height: D.baseHeight50m, bounds: D,
+      minimum: -100, step: 0.1, interval: 10, majorInterval: 50, study: { x: c.x, y: c.y, radius: FOCUS70.radius / Math.cos(center.lat * Math.PI / 180) } } });
+    contourWorker.onmessage = ({ data = {} }) => {
+      const k = st.contour;
+      if (data.type === 'error') { if (k.on) { k.status = 'error'; k.error = data.message || ''; emit('layers'); } return; }
+      if (data.type !== 'contours' || !k.on || data.requestId < contourDone) return;
+      contourDone = data.requestId;
+      map.getSource(ID.contourSrc)?.setData(data.geojson);
+      k.status = 'visible'; k.error = ''; k.levels = data.geojson?.features?.length || 0; emit('layers');
+    };
+    return contourWorker;
+  }
+  // Brown on the light themes (as google-map-live); on the dark theme a light sand, so the lines still read.
+  function paintContours() {
+    if (!map.getLayer(ID.contour)) return;
+    const dark = st.theme === 'dark', major = ['==', ['get', 'major'], 1];
+    map.setPaintProperty(ID.contour, 'line-color', ['case', major, dark ? '#d8c7b2' : '#655548', dark ? '#a39484' : '#8b7a6b']);
+    map.setPaintProperty(ID.contourLabel, 'text-color', ['case', major, dark ? '#eadccb' : '#4f4338', dark ? '#c4b5a4' : '#75685c']);
+    map.setPaintProperty(ID.contourLabel, 'text-halo-color', dark ? 'rgba(18,18,20,0.94)' : 'rgba(255,255,255,0.94)');
+  }
+  function refreshContours(delay = 80) {
+    clearTimeout(contourTimer);
+    if (!st.contour.on) return;
+    contourTimer = setTimeout(() => {
+      if (!st.contour.on || map.isMoving() || map.isZooming()) return;
+      const b = map.getBounds(), sw = core.mercatorFromLngLat(b.getWest(), b.getSouth()), ne = core.mercatorFromLngLat(b.getEast(), b.getNorth());
+      const px = (ne.x - sw.x) * 0.1, py = (ne.y - sw.y) * 0.1;
+      const bounds = { left: Math.max(D.left, sw.x - px), right: Math.min(D.right, ne.x + px), bottom: Math.max(D.bottom, sw.y - py), top: Math.min(D.top, ne.y + py) };
+      if (bounds.left >= bounds.right || bounds.bottom >= bounds.top) return;
+      contourJob().postMessage({ type: 'contours', requestId: ++contourReq, bounds, zoom: map.getZoom(), interval: st.contour.interval, majorInterval: core.contourMajorIntervalFor(st.contour.interval) });
+    }, delay);
+  }
+  function syncContour(remake = true) {
+    const k = st.contour;
+    if (!k.on) { setVis(ID.contour, 'none'); setVis(ID.contourLabel, 'none'); contourPopup?.remove(); k.status = 'off'; return; }
+    if (!map.getSource(ID.contourSrc)) {
+      const major = ['==', ['get', 'major'], 1];
+      map.addSource(ID.contourSrc, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, attribution: 'OS Terrain 50 · Ordnance Survey OpenData' });
+      map.addLayer({ id: ID.contour, type: 'line', source: ID.contourSrc, minzoom: 9, layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#655548', 'line-opacity': k.opacity,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 9, ['case', major, 1.15, 0.55], 16, ['case', major, 2.1, 1.0]] } }, under());
+      map.addLayer({ id: ID.contourLabel, type: 'symbol', source: ID.contourSrc, minzoom: 11.5,
+        layout: { 'symbol-placement': 'line', 'symbol-spacing': 300, 'text-field': ['get', 'label'], 'text-size': ['case', major, 11.5, 10],
+          'text-allow-overlap': false, 'text-ignore-placement': false, 'text-keep-upright': true, 'text-max-angle': 35 },
+        paint: { 'text-color': '#4f4338', 'text-halo-color': 'rgba(255,255,255,0.94)', 'text-halo-width': 1.35,
+          'text-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, ['case', major, 1, 0.72], 14, 1] } });
+      paintContours();
+      const show = e => {
+        const elevation = Number(e.features?.[0]?.properties?.elevation);
+        if (!st.contour.on || !Number.isFinite(elevation)) return;
+        map.getCanvas().style.cursor = 'pointer';
+        contourPopup = contourPopup || new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, className: 'lm-popup' });
+        contourPopup.setLngLat(e.lngLat).setText(`${t('dp.popup.contour')} ${Math.round(elevation)} m`).addTo(map);
+      };
+      map.on('mousemove', ID.contour, show); map.on('click', ID.contour, show);
+      map.on('mouseleave', ID.contour, () => { map.getCanvas().style.cursor = ''; contourPopup?.remove(); });
+    }
+    setVis(ID.contour, 'visible'); setVis(ID.contourLabel, 'visible');
+    map.setPaintProperty(ID.contour, 'line-opacity', k.opacity);
+    if (remake) { k.status = 'loading'; refreshContours(10); }
+    stack();
+  }
+
+  // Order, bottom to top (google-map-live keepDrainageAboveTerrain): terrain picture, contours, the Green Belt and AONB
+  // fills, flood, drainage network, then the boundary edges, rail and HS1 / HS2 — all under the 3D city.
+  // (Colour by height is not moved: planning_layers.js keeps it under the basemap's water and roads.)
   function stack() {
     const top = under();
-    for (const id of [ID.terrain, ID.floodDetail, ...RCS.map(ID.flood), ID.network]) if (map.getLayer(id) && top && id !== top) { try { map.moveLayer(id, top); } catch { /* fine */ } }
-    // terrain lowest: move it again under the first flood / network layer present
-    const first = [ID.floodDetail, ...RCS.map(ID.flood), ID.network].find(id => map.getLayer(id));
-    if (first && map.getLayer(ID.terrain)) try { map.moveLayer(ID.terrain, first); } catch { /* fine */ }
-    for (const rc of RCS) if (map.getLayer(ID.flood(rc)) && map.getLayer(ID.floodDetail)) try { map.moveLayer(ID.flood(rc), ID.floodDetail); } catch { /* fine */ }
+    if (!top) return;
+    const mv = id => { if (map.getLayer(id) && id !== top) { try { map.moveLayer(id, top); } catch { /* fine */ } } };
+    mv(ID.terrain); mv(ID.contour);
+    try { planning?.moveFills(top); } catch { /* fine */ }
+    RCS.map(ID.flood).forEach(mv); mv(ID.floodDetail); mv(ID.network);
+    // the lines stay over the basemap's roads in every view: right under the 3D city, so over a module's ground layer
+    // (which sits under the basemap's water and roads) and under its other overlays
+    try { planning?.moveLines(map.getLayer(ID.cityDriver) ? ID.cityDriver : top); } catch { /* fine */ }
   }
   function syncFocus() {
     if (!map.getSource(ID.focusSrc)) {
@@ -348,6 +465,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     if (!st.labels) syncLabels();
   });
   for (const ev of ['pitch', 'rotate', 'zoom', 'moveend']) map.on(ev, () => { if (ev === 'zoom') tuneCity(); syncCity(); if (ev !== 'pitch') syncFloodView(); });
+  map.on('moveend', () => refreshContours());
   syncCity(); syncLabels(); syncFocus();
 
   return {
@@ -364,8 +482,19 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     setCityView(is3D) {
       map.easeTo(is3D ? { zoom: Math.max(map.getZoom(), 15.5), pitch: 55, bearing: map.getBearing() || -20, duration: 700 } : { pitch: 0, bearing: 0, duration: 450 });
     },
+    // what the panel's keys are drawn from (the incubator's own lists, so a new ramp or rail service shows up here too)
+    planning: { ramps: mods.planning.RELIEF_RAMPS, stops: mods.planning.reliefStops, railKinds: mods.planning.RAIL_KINDS,
+      railColours: mods.planning.RAIL_COLOURS, speedStops: mods.planning.SPEED_STOPS },
     setLayer(key, patch) {
+      if (PLANNING_KEYS.includes(key)) {
+        // planning_layers.js keeps the state; st[key] is the panel's copy of it
+        planning.set(key, patch);
+        Object.assign(st[key], structuredClone(planning.state[key]), { status: planningStatus(planning.status(key)) });
+        if (key === 'relief' && !st.relief.on) { heightPopup?.remove(); heightPopup = null; }
+        stack(); emit('layers'); return;
+      }
       Object.assign(st[key], patch);
+      if (key === 'contour') syncContour('on' in patch || 'interval' in patch);
       if (key === 'terrain') syncTerrain();
       if (key === 'flood') syncFlood(Boolean(patch.source));
       if (key === 'network') { if ('threshold' in patch) { clearTimeout(netTimer); netTimer = setTimeout(syncNetwork, 70); } else syncNetwork(); }
