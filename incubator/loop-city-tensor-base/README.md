@@ -1,5 +1,7 @@
 # Loop City · 第 3 步 张量场底图 · Step 3, the base for the tensor field
 
+> **远处的公园 · A park far from the parcels (26 Nov 2026).** 地块表里，离城市地块太远、张量场工作室画面装不下的公园用橙色标出：「离地块 1.9 km，在张量场画面外」。其余不变。 In the parcel table a park beyond Tensor Studio's view is marked in orange with its distance.
+
 > **范例来自种子 2100 · The example is the run of seed 2100 (26 Nov 2026).** 内置范例地块换成第 2 步新范例里车站 P2 旁的三块相连的城市地块（C67.64、C67.65、C67.41，合计 180 ha）和公园 C67.122（`sample-parcels.js`）：跨度 2.02 km，用地 186.5 ha，3 个毛线路口锚点，带运行名 `s2100·n1bz` 和单元身份。锚点比旧范例（12 个）少，因为毛线带第二版的地块更大、地块之间的路口更少。 The built-in parcels are now three touching urban parcels by station P2 from step 2's new example, with a park: 2.02 km across, 186.5 ha, three anchors, carrying the run's name and the cell key.
 
 > **一键进入张量场工作室 · On to Tensor Studio in one press (25 Nov 2026).** 「保存」里多一个主按钮「在张量场工作室打开」：把用地文件留在浏览器里，再在新窗口打开张量场工作室（`../tensor-studio/index.html#site`），它就在这几块地上开始。场地超过 3.6 km 或不到 2 公顷时按钮变灰。浏览器不让保存（无痕模式）时会提示改用「保存张量场用地文件」，再到张量场工作室里「打开用地文件…」。用地文件的格式没有变。 A main button, Open in Tensor Studio: the site file is left in the browser and Tensor Studio opened on it in a new window. Grey when the site is too wide or too small. The site file itself is unchanged.

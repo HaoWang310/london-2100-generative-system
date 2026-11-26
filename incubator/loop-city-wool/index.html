@@ -3798,7 +3798,7 @@ function bdNums() {
     '1 Boundary highway': '1 边界高速路', '2 Primary, existing': '2 一级道路，现有', '2 Primary, new': '2 一级道路，新建', '3 A road, existing': '3 A 级道路，现有', '3 A road, new': '3 A 级道路，新建', '4 B road, existing': '4 B 级道路，现有', '4 B road, new': '4 B 级道路，新建',
     'Existing, raised whole to primary': '整条提升为一级道路的现有道路', 'Existing, raised whole to A road': '整条提升为 A 级道路的现有道路', 'New primary roads': '新建一级道路', 'New A roads': '新建 A 级道路', 'none': '无',
     'Urban parcels': '城市地块', 'Farming parcels': '农业地块', 'Parks': '公园', 'Left open': '留空', 'Protected landscape': '受保护景观', 'Parcel use from': '地块用途依据', 'the Growth Simulator': '增长模拟', 'the soil': '土壤',
-    'Urban, for the tensor field': '城市地块，进入张量场', 'Parks, they stay parks': '公园，保持为公园', 'Roads along them': '沿地块的道路', 'Urban parcels in all': '城市地块总数', 'Parks in all': '公园总数',
+    'Urban, for the tensor field': '城市地块，进入张量场', 'Parks, they stay parks': '公园，保持为公园', 'Park outside the tensor field’s view': '张量场画面外的公园', 'Roads along them': '沿地块的道路', 'Urban parcels in all': '城市地块总数', 'Parks in all': '公园总数',
     'Tracing the network from the wool…': '正在由毛线描绘路网…', 'Working out the road hierarchy…': '正在计算道路等级…', 'The network is not traced yet.': '路网尚未描绘。', 'Nothing taken.': '未选取任何地块。',
     'A farming parcel stays a farm parcel: it is not taken for the tensor field.': '农业地块保持为农业地块：不进入张量场。', 'This parcel is left open: it is not taken for the tensor field.': '该地块留空：不进入张量场。',
     'Protected landscape is kept open: it is not taken for the tensor field.': '受保护景观保持开敞：不进入张量场。', 'This parcel is not taken for the tensor field.': '该地块不进入张量场。',
@@ -3812,6 +3812,7 @@ function bdNums() {
     [/^3 A road: (\d+) m$/, '3 A 级道路：$1 米'], [/^3 A road: (\d+) m, drawn ([\d.]+) times wider$/, '3 A 级道路：$1 米，按 $2 倍加宽绘制'],
     [/^4 B road: (\d+) to (\d+) m$/, '4 B 级道路：$1 至 $2 米'], [/^4 B road: (\d+) to (\d+) m, drawn ([\d.]+) times wider$/, '4 B 级道路：$1 至 $2 米，按 $3 倍加宽绘制'],
     [/^Taken: (\d+) urban parcels? and (\d+) parks? \(parks stay parks\)\. Shift-click for more, double-click to open them\.$/, '已选取：$1 个城市地块和 $2 个公园（公园保持为公园）。按住 Shift 点击可多选，双击打开。'],
+    [/^Park (C\d+\.\d+) is ([\d.]+) km from the parcels taken: it will not show in the tensor field\. It still goes into the package and the drawings\.$/, '公园 $1 离所选地块 $2 km，不会出现在张量场里。它仍会写进地块包和图纸。'],
     [/^Taken: (\d+) urban parcels?\. Shift-click for more, double-click to open them\.$/, '已选取：$1 个城市地块。按住 Shift 点击可多选，双击打开。'], [/^(C\d+\.\d+) \(park\)$/, '$1（公园）']];
   (function reg(n) {                              // the page's dictionary may not be there yet: wait for it, then translate what is already on the page
     if (!window.__ZH || !window.__ZH_RX) { if (n < 200) setTimeout(() => reg(n + 1), 150); return; }      // the builder lets the page's language part show its dictionary as window.__ZH
@@ -4322,7 +4323,9 @@ function bdPickAt(px, py, add, dbl) {
     BP.wait = setTimeout(() => { BP.sel = new Map([[t, d]]); nums(); schedule(); pickZoom(d); }, PICK.DELAY); return;
   } else { const d = BP.sel.get(t) || bpData(t); if (!d) return; BP.sel = new Map([[t, d]]); BP.zoomT = setTimeout(() => pickZoom(d), PICK.DELAY); }
   const L = [...BP.sel.values()], nu = L.filter(d => d.use === 'urban').length, np = L.length - nu;
-  setStatus(L.length ? `Taken: ${nu} urban parcel${nu === 1 ? '' : 's'}${np ? ` and ${np} park${np === 1 ? '' : 's'} (parks stay parks)` : ''}. Shift-click for more, double-click to open them.` : 'Nothing taken.');
+  const far = bpFarParks(L);
+  setStatus(far.length ? `Park ${far[0].id} is ${fmt(far[0].km, 1)} km from the parcels taken: it will not show in the tensor field. It still goes into the package and the drawings.`
+    : L.length ? `Taken: ${nu} urban parcel${nu === 1 ? '' : 's'}${np ? ` and ${np} park${np === 1 ? '' : 's'} (parks stay parks)` : ''}. Shift-click for more, double-click to open them.` : 'Nothing taken.');
   nums(); schedule();
 }
 function bdPickHover(e) {                        // the parcel under the pointer shows its outline before the click
@@ -4355,11 +4358,25 @@ function bdPickLayer() {
   }
   cx.restore();
 }
+// (26 Nov 2026) a park far from the urban parcels taken with it. Tensor Studio opens on the urban parcels and about
+// 340 m round them (its frame: 15 % of the site's side, 100 to 280 m, and 60 m more), so such a park does not show
+// there. It may still be taken: it goes into the package and the drawings. The page says so when it is picked.
+function bpFarParks(L) {
+  const U = L.filter(d => d.use === 'urban'), K = L.filter(d => d.use === 'park'); if (!U.length || !K.length) return [];
+  const box = (r, a) => { for (let i = 0; i < r.length; i += 2) { a[0] = Math.min(a[0], r[i]); a[2] = Math.max(a[2], r[i]); a[1] = Math.min(a[1], r[i + 1]); a[3] = Math.max(a[3], r[i + 1]); } return a; };
+  const a = [1e9, 1e9, -1e9, -1e9]; U.forEach(d => box(d.out[0], a));
+  const m = Math.max(100, Math.min(280, 0.15 * Math.max(a[2] - a[0], a[3] - a[1]))) + 60, out = [];
+  for (const k of K) { const b = box(k.out[0], [1e9, 1e9, -1e9, -1e9]); if (b[0] <= a[2] + m && b[2] >= a[0] - m && b[1] <= a[3] + m && b[3] >= a[1] - m) continue;
+    let g = 1e9; const p = k.out[0]; for (const u of U) { const q = u.out[0]; for (let i = 0; i < p.length; i += 4) for (let j = 0; j < q.length; j += 4) g = Math.min(g, Math.hypot(p[i] - q[j], p[i + 1] - q[j + 1])); }
+    out.push({ id: k.id, km: g / 1000 }); }
+  return out;
+}
 function bdPickNums() {
   const L = bpList(), U = L.filter(d => d.use === 'urban'), K = L.filter(d => d.use === 'park'), rows = [['Parcels taken', L.length ? fmt(L.length) : '–']], sum = a => a.reduce((s, d) => s + d.ha, 0);
   if (L.length) {
     rows.push(['Urban, for the tensor field', `${U.length} · ${fmt(sum(U), 1)} ha`]);
     if (K.length) rows.push(['Parks, they stay parks', `${K.length} · ${fmt(sum(K), 1)} ha`]);
+    bpFarParks(L).forEach(f => rows.push(['Park outside the tensor field’s view', `${f.id} · ${fmt(f.km, 1)} km`]));
     rows.push(['Roads along them', fmt(L.reduce((s, d) => s + d.roadM, 0) / 1000, 1) + ' km']);
     L.slice(0, 12).forEach(d => rows.push([d.id + (d.use === 'park' ? ' (park)' : ''), fmt(d.ha, 1) + ' ha · ' + fmt(d.perim / 1000, 2) + ' km round']));
     if (L.length > 12) rows.push(['…', '+ ' + (L.length - 12)]);

@@ -127,7 +127,7 @@
       '<button type="button" data-pause="1"' + (P.on ? '' : ' disabled') + '>' + T('Pause', '暂停') + '</button><button type="button" data-now="1">' + T('Finish now', '立即完成') + '</button></div>' +
       '<div class="sp"><label for="lcSpeed">' + T('Speed', '演示速度') + '</label><input type="range" id="lcSpeed" min="0.5" max="2" step="0.25" value="' + P.speed + '"><output>' + P.speed + '×</output></div>' +
       '<div class="b2"><button type="button" data-full="1">' + T('Full-screen demo', '全屏演示') + '</button><button type="button" data-each="1" class="' + (P.stopEach ? 'on' : '') + '">' + T('Stop after each step', '每步停') + ' · ' + (P.stopEach ? T('on', '开') : T('off', '关')) + '</button></div>' +
-      '<div class="stt">' + (k === 0 ? T('Prologue', '序章') : k === 28 ? T('After step 16', '第 16 步之后') : T('Step ' + shown(k) + ' / 16', '第 ' + String(shown(k)).padStart(2, '0') + ' / 16 步')) + ' · <b style="color:' + CHC[c] + '">' + esc(nm(k === 27 ? 27 : k)) + '</b>' +
+      '<div class="stt">' + (k === 0 ? T('Prologue', '序章') : k === 28 ? T('After step 16', '第 16 步之后') : T('Step ' + shown(k) + ' / 17', '第 ' + String(shown(k)).padStart(2, '0') + ' / 17 步')) + ' · <b style="color:' + CHC[c] + '">' + esc(nm(k === 27 ? 27 : k)) + '</b>' +
       (st ? ' · ' + st : '') + (P.total ? ' · ' + T('worked out in ', '计算共 ') + (P.total / 1000).toFixed(1) + T(' s', ' 秒') : '') + '</div><div class="sg">' + segs(k) + '</div></div>';
     var last = -1;
     SEQ.forEach(function (q) { var cc = chOf(q); if (cc !== last) { x += '<div class="chh" style="color:' + CHC[cc] + '">' + (cc ? T('Chapter ' + cc + ' · ', '第 ' + cc + ' 章 · ') : '') + T(CHN[cc][0], CHN[cc][1]) + '</div>'; last = cc; } x += card(q); });

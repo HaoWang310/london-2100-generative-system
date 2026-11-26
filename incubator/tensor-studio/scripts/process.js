@@ -411,6 +411,8 @@ function siteText(){ const s = D.site, st = T6.envStats, list = [];
   const fsrc = window.__TS && window.__TS.meta && window.__TS.meta.source;      // (v8.49) a site file from Loop City step 3
   if (fsrc){ list[0] = L('地形：', 'Terrain: ') + (s.elevation ? 'OS Terrain 50' : L('没有数据，按平地', 'no data, flat ground'));
     list.push(L('道路：毛线带的道路等级（含现有道路）', 'Roads: the wool bands\u2019 hierarchy, existing roads among them'));
+    const out = Math.max(0, (fsrc.parksGiven || 0) - (fsrc.parksShown || 0));      // (v8.49.2) parks taken with the parcels but beyond this view
+    if (out) list.push(L('公园：带来 ' + fsrc.parksGiven + ' 个，' + out + ' 个在画面外（离地块约 340 米以外的不显示）', 'Parks: ' + fsrc.parksGiven + ' handed on, ' + out + ' outside this view (beyond about 340 m of the parcels, not shown)'));
     const pk = (D.ctx.parks || []).length; if (pk) list.push(L('公园 ' + pk + ' 个：保持为公园，不长路', (pk > 1 ? pk + ' parks: kept as parks' : '1 park: kept as a park') + ', no street enters'));
     const ks = Object.values(fsrc.cell_keys || {}); list.push(L('单元身份：', 'Cell key: ') + (ks.join(L('；', '; ')) || L('旧用地文件，没有记录', 'an older site file, none recorded'))); }
   else if (s) list.push(L('道路、水体、铁路、建筑：OpenStreetMap', 'Streets, water, rail, buildings: OpenStreetMap'));
