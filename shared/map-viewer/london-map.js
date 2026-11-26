@@ -418,7 +418,7 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
   }
 
   // Order, bottom to top (google-map-live keepDrainageAboveTerrain): terrain picture, contours, the Green Belt and AONB
-  // fills, flood, drainage network, then the boundary edges, rail and HS1 / HS2 — all under the workspace's overlays.
+  // fills, flood, drainage network, then the boundary edges, rail and HS1 / HS2 — all under the 3D city.
   // (Colour by height is not moved: planning_layers.js keeps it under the basemap's water and roads.)
   function stack() {
     const top = under();
@@ -427,7 +427,9 @@ export async function loadLondonMap({ map, maplibregl, base = londonMapBase(), v
     mv(ID.terrain); mv(ID.contour);
     try { planning?.moveFills(top); } catch { /* fine */ }
     RCS.map(ID.flood).forEach(mv); mv(ID.floodDetail); mv(ID.network);
-    try { planning?.moveLines(top); } catch { /* fine */ }
+    // the lines stay over the basemap's roads in every view: right under the 3D city, so over a module's ground layer
+    // (which sits under the basemap's water and roads) and under its other overlays
+    try { planning?.moveLines(map.getLayer(ID.cityDriver) ? ID.cityDriver : top); } catch { /* fine */ }
   }
   function syncFocus() {
     if (!map.getSource(ID.focusSrc)) {
