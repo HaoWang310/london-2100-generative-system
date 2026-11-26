@@ -1409,7 +1409,9 @@ html[lang="zh-CN"] .hint, html[lang="zh-CN"] p.about, html[lang="zh-CN"] .lead {
   <div class="btns"><button class="btn" id="resetLook">Reset the look</button></div>
 </div>
 </div>
-<script>var LANG = 'en'; function trc(s) { return LANG === 'zh' && typeof zhOf === 'function' ? (zhOf(s) ?? s) : s; }</script>
+<script>/* (26 Nov 2026) fingers, not a mouse: a phone or a tablet. The words of step 17 then speak of taps, and a tap adds a parcel. */
+var TOUCH = (function () { try { return (navigator.maxTouchPoints || 0) > 0 && !!window.matchMedia && matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+var LANG = 'en'; function trc(s) { return LANG === 'zh' && typeof zhOf === 'function' ? (zhOf(s) ?? s) : s; }</script>
 <script type="text/plain" id="solverSrc">// The app's own wool solver (02_App/Wool + Slime 3D - v5), with one addition: voids the threads stay out of.
 // Made by _build/make_wool_solver_voids.py; the app itself is untouched.
 // (24 Nov 2026) faster, the same result: each void keeps a coarse grid (squares no edge crosses are wholly in or out,
@@ -2628,10 +2630,14 @@ const WS = {
   'This cell is already a town and stays as it is: there is no parcel to hand to the tensor field.': '这个单元已经是城市，保留现状：没有地块可以交给张量场。',
   'No urban parcel to hand to the tensor field: this cell is all farming or park.': '没有城市地块可以交给张量场：这个单元全部是农业或公园。',
   'Cell key': '单元身份', 'Example · from an earlier run': '范例 · 来自较早的一次运行',
+  'Tap an urban parcel to take it: it turns red. Tap more to add them, tap one again to drop it. Parks can be taken too: they are carried along and stay parks. Farming and protected land is not taken.': '点一下城市地块就选中它，它变为红色。再点别的可以加选，再点一次已选的可以取消。公园也可一并选取：它们随地块一起传递，并保持为公园。农业用地和受保护用地不可选取。',
+  'The last step, always at true road widths: the parcels that go on to the tensor field. Tap an urban parcel to take it, tap more to add them, then press Next · Tensor Studio. Parks can be taken with them and stay parks. Farming and protected land is not taken.': '最后一步，始终按道路真实宽度：选取进入张量场的地块。点一下城市地块选中，再点别的加选，然后点「下一步 · 张量场工作室」。公园可一并选取并保持为公园。农业用地和受保护用地不可选取。',
   'Open in Tensor Studio': '在张量场工作室打开', 'Opening the parcels in Tensor Studio…': '正在张量场工作室中打开地块…',
   'Site across, up to 3.6 km': '跨度，最多 3.6 km', 'Site area, at least 2 ha': '面积，至少 2 ha', 'Parcels touch': '地块相连', 'yes': '是', 'no': '否',
   'This browser would not keep the parcels for Tensor Studio (a private window, perhaps). Save the parcels (file) instead, and open the file in Tensor Studio with “Open a site file…”.': '这个浏览器不让保存交给张量场工作室的地块（可能是无痕窗口）。请改用「保存地块（文件）」，再到张量场工作室里用「打开用地文件…」打开它。' });
   (function rx(n) { if (!window.__ZH_RX) { if (n < 200) setTimeout(() => rx(n + 1), 150); return; }      // the three reasons carry a number
+    window.__ZH_RX.push([/^Taken: (\d+) urban parcels? and (\d+) parks? \(parks stay parks\)\. Tap another to add it, tap one again to drop it\.$/, '已选取：$1 个城市地块和 $2 个公园（公园保持为公园）。再点别的可以加选，再点一次已选的可以取消。'],
+      [/^Taken: (\d+) urban parcels?\. Tap another to add it, tap one again to drop it\.$/, '已选取：$1 个城市地块。再点别的可以加选，再点一次已选的可以取消。']);
     window.__ZH_RX.push([/^Too wide: ([\d.,]+) km across, and Tensor Studio runs up to 3\.6 km\. Take fewer parcels\.$/, '太宽：跨度 $1 km，张量场工作室最多 3.6 km。少选几块。'],
       [/^Too small: ([\d.,]+) ha, and Tensor Studio needs at least 2 ha\. Take a larger parcel, or more\.$/, '太小：$1 ha，张量场工作室至少要 2 ha。选更大的地块，或多选几块。'],
       [/^The parcels do not all touch: they make (\d+) pieces\. Take parcels that lie side by side\.$/, '选的地块不相连，分成 $1 片。请选相邻的地块。']); })(0); })(0);
@@ -3073,6 +3079,7 @@ STEP_HINT[23] = 'Fine tuning: wide masses where many bands meet are rebuilt as t
 STEP_HINT[24] = 'Small blocks that sit next to each other are merged into bigger parcels. Never across an existing road or the cell edge.';
 STEP_HINT[25] = 'The parcels by use, read from the growth result: urban where over half is built, farming where over half is farming, a park where the parcel is small, kept open inside a protected landscape. Built-up area today on top.';
 STEP_HINT[26] = 'The road hierarchy in four classes, at true widths. The cell edge is the boundary highway. Every existing road keeps one class from end to end, and a whole existing road is raised before a new road is made. On the right, draw the roads wider than true to read them from afar.';
+if (TOUCH) STEP_HINT[27] = 'The last step, always at true road widths: the parcels that go on to the tensor field. Tap an urban parcel to take it, tap more to add them, then press Next · Tensor Studio. Parks can be taken with them and stay parks. Farming and protected land is not taken.';
 STEP_HINT[28] = 'Chapter 5, the evaluation: six measures of the network on show, each marked, and three settings of the surplus side by side (evaluate.js).';
 
 function bdParams() {
@@ -3857,6 +3864,7 @@ function bdNums() {
     if (ex) { const d = document.createElement('div'); d.id = 'bdExtract'; d.hidden = true;
       d.innerHTML = `<p class="hint">Click an urban parcel: it turns red and the map closes in. Shift-click for more. Double-click one to open them all in Tensor Studio. Parks can be taken too: they are carried along and stay parks. Farming and protected land is not taken.</p>`
         + `<div class="btns"><button class="btn" id="bdSend" style="border-color:#FFD84A;color:#FFD84A">Open in Tensor Studio</button><button class="btn" id="bdPkg">Save the parcels (file)</button><button class="btn" id="bdGeo">Save GeoJSON</button><button class="btn" id="bdDxf">Save DXF (Rhino)</button><button class="btn" id="bdClear">Clear</button></div>`;
+      if (TOUCH) d.querySelector('p.hint').textContent = 'Tap an urban parcel to take it: it turns red. Tap more to add them, tap one again to drop it. Parks can be taken too: they are carried along and stay parks. Farming and protected land is not taken.';      // under a thumb: taps, not Shift and double-click
       ex.parentNode.insertBefore(d, ex.nextSibling);
       $('bdSend').onclick = () => bdSend(); $('bdPkg').onclick = () => bdSavePkg(); $('bdGeo').onclick = () => bdSaveGeo(); $('bdDxf').onclick = () => bdSaveDxf(); $('bdClear').onclick = () => { BP.sel = new Map(); nums(); schedule(); }; } }
   window.BD_OPPW = BD.p.oppw;
@@ -4312,7 +4320,7 @@ function bpData(t) {                             // one parcel as the roads leav
 function bpList() { bpFresh(); return [...BP.sel.values()]; }
 
 // ---------------------------------------------------------------- picking: click one, shift-click for more, double-click to open them
-function bdPickAt(px, py, add, dbl) {
+function bdPickAt(px, py, add, dbl, touch) {      // touch: a tap on a phone or a tablet, which adds or drops (no Shift there)
   bpFresh(); clearTimeout(BP.wait); clearTimeout(BP.zoomT);
   const R = BD.res; if (!R) { setStatus('The network is not traced yet.'); return; }
   if (WS.allBuilt()) { setStatus(WS.MSG.built); return; }
@@ -4329,7 +4337,7 @@ function bdPickAt(px, py, add, dbl) {
   const L = [...BP.sel.values()], nu = L.filter(d => d.use === 'urban').length, np = L.length - nu;
   const far = bpFarParks(L);
   setStatus(far.length ? `Park ${far[0].id} is ${fmt(far[0].km, 1)} km from the parcels taken: it will not show in the tensor field. It still goes into the package and the drawings.`
-    : L.length ? `Taken: ${nu} urban parcel${nu === 1 ? '' : 's'}${np ? ` and ${np} park${np === 1 ? '' : 's'} (parks stay parks)` : ''}. Shift-click for more, double-click to open them.` : 'Nothing taken.');
+    : L.length ? `Taken: ${nu} urban parcel${nu === 1 ? '' : 's'}${np ? ` and ${np} park${np === 1 ? '' : 's'} (parks stay parks)` : ''}. ` + (touch ? 'Tap another to add it, tap one again to drop it.' : 'Shift-click for more, double-click to open them.') : 'Nothing taken.');
   nums(); schedule();
 }
 function bdPickHover(e) {                        // the parcel under the pointer shows its outline before the click
@@ -5025,6 +5033,32 @@ function ready() {
     S.view.mpp = Math.min(80, Math.max(0.08, S.view.mpp * Math.exp(e.deltaY * 0.0012)));   // v14: down to a 5-10 m scale bar
     S.view.cx = X - (mx - W / 2) * S.view.mpp; S.view.cy = Y + (my - Hh / 2) * S.view.mpp; schedule();
   };
+  // (26 Nov 2026) fingers, on a phone or a tablet. The map heard the mouse only: a finger could tap but not move it,
+  // and two fingers zoomed the whole page. Now one finger moves the map, two fingers zoom it about the point between
+  // them, and a tap is a click: it places an anchor (editing) or takes a parcel (step 17). There is no Shift under a
+  // thumb, so at step 17 a tap adds a parcel to those taken and a second tap on it drops it; Clear empties them.
+  { let T = null; const at = t => { const r = cv.getBoundingClientRect(); return [t.clientX - r.left, t.clientY - r.top]; };
+    cv.style.touchAction = 'none';
+    cv.addEventListener('touchstart', e => { e.preventDefault(); PICK.anim++; clearTimeout(PICK.zoomT); S.drag = null;
+      if (e.touches.length === 1) { const p = at(e.touches[0]), h = S.edit ? nearestAnchor(p[0], p[1]) : null;
+        T = { n: 1, x: p[0], y: p[1], cx: S.view.cx, cy: S.view.cy, moved: false, t: Date.now(), anchor: h ? h.q.id : null }; }
+      else if (e.touches.length === 2) { const a = at(e.touches[0]), b = at(e.touches[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        T = { n: 2, d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mpp: S.view.mpp, X: wx(mx), Y: wy(my) }; }
+      else T = null; }, { passive: false });
+    cv.addEventListener('touchmove', e => { if (!T) return; e.preventDefault();
+      if (T.n === 1 && e.touches.length === 1) { const p = at(e.touches[0]);
+        if (T.anchor) { T.moved = true; moveAnchor(T.anchor, wx(p[0]), wy(p[1])); return; }
+        if (!T.moved && Math.hypot(p[0] - T.x, p[1] - T.y) > 8) T.moved = true;      // a thumb is less steady than a mouse
+        if (T.moved) { S.view.cx = T.cx - (p[0] - T.x) * S.view.mpp; S.view.cy = T.cy + (p[1] - T.y) * S.view.mpp; schedule(); } }
+      else if (T.n === 2 && e.touches.length === 2) { const a = at(e.touches[0]), b = at(e.touches[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        S.view.mpp = Math.min(80, Math.max(0.08, T.mpp * T.d / (Math.hypot(a[0] - b[0], a[1] - b[1]) || 1)));
+        S.view.cx = T.X - (mx - W / 2) * S.view.mpp; S.view.cy = T.Y + (my - Hh / 2) * S.view.mpp; schedule(); } }, { passive: false });
+    cv.addEventListener('touchend', e => { const d = T;
+      if (e.touches.length === 1) { const p = at(e.touches[0]); T = { n: 1, x: p[0], y: p[1], cx: S.view.cx, cy: S.view.cy, moved: true }; return; }      // one finger left after a pinch: it goes on moving the map
+      if (e.touches.length) return; T = null;
+      if (!d || d.n !== 1 || d.moved || d.anchor || Date.now() - d.t > 700) return; e.preventDefault();
+      if (S.edit) addAnchor(d.x, d.y); else if (S.step === 27) bdPickAt(d.x, d.y, true, false, true); }, { passive: false });
+    cv.addEventListener('touchcancel', () => { T = null; }); }
   window.onresize = resize;
   resize();
   { const m = /[#&]at=([A-Z]\d+|[\d.]+,[\d.]+),([\d.]+)/.exec(HASH);      // #at=P2,6 or #at=x,y,mpp: open close in
@@ -5962,5 +5996,5 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=1"><script src="../../shared/ui/chain.js?v=3"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=5"></script><script src="explain.js?v=4"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=5"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=3"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=6"></script><script src="explain.js?v=5"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=6"></script>
 </body></html>
