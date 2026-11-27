@@ -173,7 +173,7 @@ function create(G0, opt) {
     if (i === 3 && !hasStructure()) { g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); scene3(T[3] - T[2] - 0.01); }
     else if (i > 0 && lt < XF) { const e = ease(lt / XF); render(bufB, i - 1, T[i] - T[i - 1] - 0.001); render(bufA, i, lt); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - e; g.drawImage(bufB, 0, 0); g.globalAlpha = e; g.drawImage(bufA, 0, 0); g.globalAlpha = 1; g.setTransform(dpr, 0, 0, dpr, 0, 0); }
     else { g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); DRAW[i](lt); }
-    caption(o.waiting ? T[2] + 1 : t); pips(t);
+    caption(o.waiting ? T[2] + 1 : t);   // (27 Nov 2026) the progress marks are the page's own foot now (intro.js), not drawn here
     if (o.waiting) pill(L('正在生成走廊网…', 'Generating the corridor net…'), Wd / 2, nar() ? Hd * 0.12 : 64, nar() ? 13 : 14, 'center'); }
   const setWool = w => { W0 = w; };
   return { setSnap, setStructure, setDeck, setWool, resize, frame, endPlan, caption, pips, hasStructure,

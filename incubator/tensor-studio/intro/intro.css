@@ -8,23 +8,36 @@
 #tsIntro.tsi-out{opacity:0;pointer-events:none}
 #tsIntro *{box-sizing:border-box}
 #tsIntro .tsi-mono{font-family:'DM Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em}
-#tsIntro.tsi-wait .tsi-film,#tsIntro.tsi-wait .tsi-pips,#tsIntro.tsi-wait .tsi-skip{visibility:hidden}
+#tsIntro.tsi-wait .tsi-film,#tsIntro.tsi-wait .tsi-pips{visibility:hidden}
 
-/* ---- the frame: a title, the chapter marks, skip, enter */
-#tsIntro .tsi-head{position:absolute;left:clamp(20px,5vw,72px);top:calc(26px + env(safe-area-inset-top));font-size:10.5px;color:rgba(255,255,255,.42)}
-#tsIntro .tsi-pips{position:absolute;left:clamp(20px,5vw,72px);right:clamp(120px,14vw,200px);top:calc(50px + env(safe-area-inset-top));display:flex;gap:6px}
-#tsIntro .tsi-pips i{flex:1;height:2px;border-radius:1px;background:rgba(255,255,255,.18);overflow:hidden}
-#tsIntro .tsi-pips b{display:block;height:100%;background:#f5f5f7;transform-origin:0 50%;transform:scaleX(0)}
+/* ---- the frame (27 Nov 2026), as in the Loop City opening (loop-city-mould-growth/intro.css): a top row with the tag and
+   one button ("Skip", white "Enter ›" once the app is ready), the film between it and a foot with the chapter marks and the
+   status. intro.js sets --tsi-y and --tsi-k so the canvas and the chapters fit between the two. */
+#tsIntro .tsi-film{position:absolute;inset:0}
+#tsIntro .tsi-cv,#tsIntro .tsi-film{transform-origin:50% 0;transform:translateY(var(--tsi-y,0px)) scale(var(--tsi-k,1))}
+#tsIntro.tsi-measuring .tsi-cv,#tsIntro.tsi-measuring .tsi-film{transform:none}
+#tsIntro .tsi-bar,#tsIntro .tsi-foot{position:absolute;left:0;right:0;display:flex;align-items:center;z-index:2}
+#tsIntro .tsi-bar{top:0;justify-content:space-between;gap:12px;padding:calc(18px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left))}
+#tsIntro .tsi-tag{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.6);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tsIntro .tsi-skip{flex:none;height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:#000;color:#fff;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background .2s,color .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
+#tsIntro .tsi-skip:hover{border-color:rgba(255,255,255,.4)}
+#tsIntro .tsi-skip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#tsIntro .tsi-go{display:none}
+#tsIntro.tsi-ready .tsi-skip{background:#fff;color:#000;border-color:#fff}
+#tsIntro.tsi-ready .tsi-sk{display:none}
+#tsIntro.tsi-ready .tsi-go{display:inline}
+#tsIntro .tsi-foot{bottom:0;justify-content:center;gap:10px;height:calc(44px + env(safe-area-inset-bottom));padding:0 20px calc(14px + env(safe-area-inset-bottom));font-size:12.5px;font-weight:600;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums}
+#tsIntro .tsi-pips{display:flex;gap:6px}
+#tsIntro .tsi-pips i{width:18px;height:2px;border-radius:1px;background:rgba(255,255,255,.22);overflow:hidden;display:block}
+#tsIntro .tsi-pips b{display:block;height:100%;background:#fff;transform-origin:0 50%;transform:scaleX(0)}
 #tsIntro.tsi-play .tsi-pips b{animation:tsiFill var(--len) linear var(--d) both}
-#tsIntro .tsi-skip,#tsIntro .tsi-enter{position:absolute;font:inherit;cursor:pointer;border-radius:999px;-webkit-tap-highlight-color:transparent}
-#tsIntro .tsi-skip{right:clamp(20px,5vw,72px);top:calc(36px + env(safe-area-inset-top));padding:6px 14px;font-size:12.5px;color:rgba(255,255,255,.78);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2)}
-#tsIntro .tsi-skip:hover{background:rgba(255,255,255,.12)}
-#tsIntro .tsi-enter{right:clamp(20px,5vw,72px);bottom:calc(30px + env(safe-area-inset-bottom));padding:10px 20px;font-size:14px;font-weight:600;color:#000;background:#f5f5f7;border:0;
-  opacity:0;transform:translateY(8px);transition:opacity .5s ease,transform .5s cubic-bezier(.16,1,.3,1);pointer-events:none}
-#tsIntro.tsi-ready .tsi-enter{opacity:1;transform:none;pointer-events:auto}
-#tsIntro .tsi-load{pointer-events:none;position:absolute;right:clamp(20px,5vw,72px);bottom:calc(36px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(255,255,255,.7);opacity:0;transition:opacity .5s}
-#tsIntro .tsi-load i{width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(255,255,255,.22);border-top-color:#f5f5f7;animation:tsiSpin .9s linear infinite}
-#tsIntro.tsi-hold:not(.tsi-ready) .tsi-load,#tsIntro.tsi-wait .tsi-load{opacity:1}
+/* the status: "Loading the site…" while waiting, otherwise the chapter (each shown from --d to --e, by the compositor) */
+#tsIntro .tsi-stat{display:inline-grid;white-space:nowrap}
+#tsIntro .tsi-stat > span{grid-area:1 / 1;opacity:0}
+#tsIntro.tsi-play .tsi-sc{animation:tsiIn .3s ease var(--d) both,tsiOut .2s ease var(--e) forwards}
+#tsIntro.tsi-play .tsi-sc.tsi-last{animation:tsiIn .3s ease var(--d) both}
+#tsIntro.tsi-wait .tsi-sl,#tsIntro.tsi-hold:not(.tsi-ready) .tsi-sl{opacity:1}
+#tsIntro.tsi-hold:not(.tsi-ready) .tsi-sc{visibility:hidden}
 
 /* ---- chapters: each shown between --d and --e; the last one stays */
 #tsIntro .tsi-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -99,18 +112,12 @@
 
 /* ---- the phone, or any tall window: picture above, text below */
 @media (max-width:760px),(max-aspect-ratio:4/5){
-  #tsIntro .tsi-head{display:none}
-  #tsIntro .tsi-pips{left:18px;right:96px;top:calc(22px + env(safe-area-inset-top))}
-  #tsIntro .tsi-skip{right:16px;top:calc(12px + env(safe-area-inset-top));font-size:12px;padding:5px 12px}
   #tsIntro .tsi-art{left:16px;right:16px;top:calc(56px + env(safe-area-inset-top));bottom:calc(min(43vh,330px) + env(safe-area-inset-bottom))}
   #tsIntro .tsi-txt{left:20px;right:20px;width:auto;top:auto;bottom:calc(30px + env(safe-area-inset-bottom));transform:none}
   #tsIntro .tsi-t{font-size:21px;margin:8px 0 9px}
   #tsIntro .tsi-b{font-size:13.5px;line-height:1.62}
   #tsIntro .tsi-n{font-size:10.5px;margin-top:9px}
   #tsIntro .tsi-eq{font-size:10.5px;margin-top:9px}
-  #tsIntro .tsi-enter{right:16px;bottom:auto;top:calc(10px + env(safe-area-inset-top));padding:6px 14px;font-size:12.5px}
-  #tsIntro.tsi-ready .tsi-skip{visibility:hidden}
-  #tsIntro .tsi-load{right:auto;left:20px;bottom:auto;top:calc(62px + env(safe-area-inset-top))}
   #tsIntro .tsi-prec{flex-direction:column;gap:12px}
   #tsIntro .tsi-prec > div{display:grid;grid-template-columns:38% 1fr;column-gap:14px;align-items:center;padding-top:8px}
   #tsIntro .tsi-prec svg,#tsIntro .tsi-prec .tsi-ps{grid-row:1 / span 3;margin:0}
@@ -127,6 +134,12 @@
   #tsIntro .tsi-four .m{font-size:10.5px}
   #tsIntro .tsi-chip{font-size:11px;padding:5px 11px}
 }
+@media (max-width:600px),(max-height:560px){
+  #tsIntro .tsi-bar{padding:calc(12px + env(safe-area-inset-top)) 14px 0}
+  #tsIntro .tsi-foot{height:calc(38px + env(safe-area-inset-bottom));padding:0 14px calc(10px + env(safe-area-inset-bottom))}
+}
+/* opened from the catalogue on a phone, the catalogue's language switch floats at the top right: the row stands below it */
+@media (max-width:760px){html.l2-shell-lang #tsIntro .tsi-bar{padding-top:68px}}
 @media (max-width:760px) and (max-height:700px){ #tsIntro .tsi-b{font-size:12.5px} #tsIntro .tsi-t{font-size:19px} }
 
 @keyframes tsiIn{from{opacity:0}to{opacity:1}}
@@ -135,7 +148,6 @@
 @keyframes tsiRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes tsiDrop{from{opacity:1;transform:none}to{opacity:0;transform:translateY(var(--dy))}}
 @keyframes tsiDrift{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
-@keyframes tsiSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){
   @keyframes tsiRise{from{opacity:0}to{opacity:1}}
   @keyframes tsiDrop{from{opacity:1}to{opacity:0}}
