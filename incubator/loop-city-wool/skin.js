@@ -137,7 +137,8 @@
     L2Phone.init({
       sheet: L, display: R, quick: [bp, bn], hide: [h1, colL, colR, hr, nav], zh: isZh, lang: $('langbar'),
       title: function () { return h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : 'Loop City'; },
-      status: function () { var i = cur(), t = i >= 0 ? list[i].textContent.replace(/\s+/g, ' ').trim() : '', n = needNow(); return n ? t + ' · ' + n : t; }
+      status: function () { if (window.__lcSiteOnly) return isZh() ? '0 场地与环线' : '0 The site and the loop';   // (27 Nov 2026) opened on the prologue (flow.js)
+        var i = cur(), t = i >= 0 ? list[i].textContent.replace(/\s+/g, ' ').trim() : '', n = needNow(); return n ? t + ' · ' + n : t; }
     });
   }
   try { window.dispatchEvent(new Event('resize')); } catch (e) { /* the map re-fits itself */ }

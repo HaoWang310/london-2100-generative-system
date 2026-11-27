@@ -314,6 +314,7 @@
     await camera(viewFor(k)); if (ctl.dead) return false;
     if (!before) { crisp(); before = AN.showing() ? AN.picture() : snap(); }
     AN.cover(before);
+    if (k !== 0) siteEnd();                 // (27 Nov 2026) its first picture taken on the bare site, the step is worked out as usual
     if (k === 10) {                       // the wool: the real relaxation, live
       await compute(10); AN.hide();
       if (!S.relaxed) { P.phase = T('relaxing, live…', '毛线实时松弛中…'); render(); var t0 = performance.now(); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000);
@@ -326,6 +327,7 @@
     if (ctl.dead) { AN.hide(); return false; }
     var o = AN.spec(k);
     if (k === 0) AN.cover(base), before = base;
+    siteEnd();                              // the bare site of the opening is now the cover's first picture: the page draws as usual under it
     var soil = k === 6 ? soilFocus(o) : null, g1 = PX.soilKm ? PX.soilKm[0] : 0;
     var tick = function (u) { P.prog = u; progress();
       if (k === 6 && soil) {                // the scan, then Grade 1 (or a note), then Grade 2, lit in turn
@@ -393,7 +395,7 @@
   }
   async function finishNow() {
     stop(); var t0 = performance.now(); while (P.running && performance.now() - t0 < 8000) await wait(50);
-    P.on = true; P.single = true; P.phase = T('working it all out…', '全部计算中…'); P.k = 26; render();
+    siteEnd(); P.on = true; P.single = true; P.phase = T('working it all out…', '全部计算中…'); P.k = 26; render();
     try { var B = window.__WOOL_BAKER__; if (B && window.__woolUpTo) await window.__woolUpTo(8);
       if (!S.relaxed) { setStep(10, true); relax(); await until(function () { return S.relaxed && !S.busy; }, 600000); }
       setStep(26, true); await until(bdDone, 600000); SEQ.forEach(function (k) { if (!isOff(k)) P.done[k] = 1; }); crisp(); } catch (e) { console.error(e); }
@@ -402,7 +404,7 @@
   function toggleFull() {
     P.full = !P.full; H.classList.toggle('lcfull', P.full);
     setTimeout(function () { resize(); if (ok()) { var v = viewFor(P.k !== null ? P.k : S.step); S.view.cx = v.cx; S.view.cy = v.cy; S.view.mpp = v.mpp; } AN.hide(); crisp();
-      if (P.k === 0 && !P.running && ok()) { var op0 = Object.assign({}, V.op); V.op = Object.assign({}, op0, { mould: 0, rail: 0 }); crisp(); var b0 = sitePicture(snap()); V.op = op0; crisp(); AN.cover(b0); }      // the site stays shown
+      if (P.k === 0 && !P.running && ok() && !P.start) { var op0 = Object.assign({}, V.op); V.op = Object.assign({}, op0, { mould: 0, rail: 0 }); crisp(); var b0 = sitePicture(snap()); V.op = op0; crisp(); AN.cover(b0); }      // the site stays shown
       render(); var cd = box && box.querySelector('.fc.cur'); if (cd && !P.full) cd.scrollIntoView({ block: 'nearest' }); }, 30);
   }
   function mapTouched(ev) { if (P.ctl && !P.ctl.dead && AN.showing()) { P.ctl.skip = true; } if (ev === 'wheel' || (!P.on && AN.showing())) AN.hide(); }
@@ -449,9 +451,21 @@
     if (P.ctl) P.ctl.speed = P.speed;
   }
   // the page's own hooks: a step set elsewhere, a stage being worked out
-  window.__lcRender = function () { if (!P.running && !P.on && !P.backing && P.k !== (S.step === 1 && P.k === 0 ? 0 : S.step)) { P.k = null; } render(); };
+  window.__lcRender = function () { if (window.__lcSiteOnly && S.step !== 1) siteEnd();
+    if (!P.running && !P.on && !P.backing && P.k !== (S.step === 1 && P.k === 0 ? 0 : S.step)) { P.k = null; } render(); };
   window.__lcBusy = function (st) { if (P.running) return; P.phase = st ? T('working it out…', '计算中…') : ''; render(); };
-  window.__lcDemo = function () { if (!H.classList.contains('l2ui')) return; build(); render(); if (/[#&]demo\b/.test(location.hash)) setTimeout(function () { goTo(0); }, 400); };
+  // (27 Nov 2026) the example opens on the prologue: the bare site (the grey towns, the stations, the cell names; no mould,
+  // no rail), card 0 open, nothing playing. Before, it opened on step 1 with the finished mould over the whole map, the
+  // result before the process. The page draws the mould and the rail at nothing while __lcSiteOnly holds (index.html,
+  // op()); it ends as soon as anything is played or another step is set.
+  // Only for the example opened plainly (this hook runs only for the example): a link with its own step=n still opens on
+  // step n, and "&site", added to the address here, keeps the opening on a reload
+  function fromStart() { var h0 = window.__LC_HASH0__ !== undefined ? window.__LC_HASH0__ : '', a = /[#&]step=(\d+)/.exec(h0); return !a || (+a[1] === 1 && /[#&]site\b/.test(h0)); }
+  function siteStart() { window.__lcSiteOnly = true; P.start = true; P.k = 0; AN.hide(); try { draw(); } catch (e) {} render();
+    try { if (!/[#&]site\b/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search + (location.hash || '#') + '&site'); } catch (e) {} }
+  function siteEnd() { if (!window.__lcSiteOnly) return; window.__lcSiteOnly = false; P.start = false; }
+  window.__lcDemo = function () { if (!H.classList.contains('l2ui')) return; build(); render();
+    if (/[#&]demo\b/.test(location.hash)) setTimeout(function () { goTo(0); }, 400); else if (fromStart() && S.step === 1) siteStart(); };
   var boot = function () { if (!H.classList.contains('l2ui')) return; if (ok() && $('left')) { build(); render(); } else setTimeout(boot, 300); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
