@@ -259,11 +259,11 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
 <script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
-<link rel="stylesheet" href="intro/intro.css?v=0.9.40">
+<link rel="stylesheet" href="intro/intro.css?v=0.9.41">
 </head>
 <body>
 <!-- 开场短片（intro/）：页面一开始就盖上，场地和结构在下面照常载入；规则见 intro/intro.js 开头 -->
-<script src="intro/intro.js?v=0.9.40"></script>
+<script src="intro/intro.js?v=0.9.41"></script>
 <div id="view">
   <canvas id="gl"></canvas>
   <canvas id="plan"></canvas>
@@ -413,13 +413,13 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.40"></script>
-<script src="engine/deck.js?v=0.9.40"></script>
-<script src="engine/tower.js?v=0.9.40"></script>
-<script src="engine/nav.js?v=0.9.40"></script>
-<script src="intro/data.js?v=0.9.40"></script>
-<script src="intro/draw.js?v=0.9.40"></script>
-<script src="intro/scene5.js?v=0.9.40"></script>
+<script src="engine/structure.js?v=0.9.41"></script>
+<script src="engine/deck.js?v=0.9.41"></script>
+<script src="engine/tower.js?v=0.9.41"></script>
+<script src="engine/nav.js?v=0.9.41"></script>
+<script src="intro/data.js?v=0.9.41"></script>
+<script src="intro/draw.js?v=0.9.41"></script>
+<script src="intro/scene5.js?v=0.9.41"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -493,14 +493,14 @@ function flat(poly, z, mat) { const m = new THREE.Mesh(new THREE.ShapeGeometry(s
 function triMesh(arr, mat) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; return m; }
 function initGL() {
   const c = $('gl');
-  renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });   // 对数深度：镜头拉远时深度不再变粗，地面各层不闪
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer = new THREE.WebGLRenderer({ canvas: c, antialias: !LOWMEM, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });   // 对数深度：镜头拉远时深度不再变粗，地面各层不闪
+  renderer.setPixelRatio(Math.min(LOWMEM ? 1.5 : 2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
   camP = camera = new THREE.PerspectiveCamera(NAV.FOV, 1, 1, 30000); camO = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 60000);
   scene.add(new THREE.HemisphereLight(0xe2eaf2, 0x3a3a3a, 0.78));
   sun = new THREE.DirectionalLight(0xfff4e6, 1.3); sun.position.set(900, -650, 1500); sun.castShadow = true;
-  sun.shadow.mapSize.set(4096, 4096); const sc = sun.shadow.camera; sc.left = -1500; sc.right = 1500; sc.top = 1500; sc.bottom = -1500; sc.near = 100; sc.far = 5000; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.4;
+  sun.shadow.mapSize.set(LOWMEM ? 2048 : 4096, LOWMEM ? 2048 : 4096); const sc = sun.shadow.camera; sc.left = -1500; sc.right = 1500; sc.top = 1500; sc.bottom = -1500; sc.near = 100; sc.far = 5000; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.4;
   scene.add(sun, sun.target);
   const fill = new THREE.DirectionalLight(0xbfd0e8, 0.35); fill.position.set(-500, 400, 300); scene.add(fill);
   // 视口操作（参考 Rhino）：右键 / 左键拖动旋转，Shift 平移，Ctrl 缩放，中键平移，滚轮以光标为中心缩放；标准平行视图里拖动 = 平移
@@ -659,6 +659,10 @@ function buildScene() {
 function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c || mode !== '3d') return; const g = F.grid, f = new Float32Array(g.W * g.H); for (let i = 0; i < f.length; i++) f[i] = g.cellLab[i] === c.id ? 1 : 0; const r = SS.ms(F, f, 2.0, () => 0.6, z => z); G.hi = triMesh(r.top, MAT.hi); G.hi.castShadow = false; scene.add(G.hi); }
 
 // ---------------------------------------------------------------- 平面
+// (27 Nov 2026) 手机（触屏 / 小屏）内存少：iPhone Safari 一个页面所有画布加起来只有 224–384 MB。平面底图在电脑上按 1 m = 1 px（场地网格 2 m 的 2 倍）画，
+// 每张 2682 × 2634 = 28 MB，进入逐步演示时有 21 张 = 482 MB，手机上页面会被系统重载（闪退回目录）。手机上改成 2 m = 1 px（每张 7 MB，共约 143 MB），
+// 整片场地看不出差别；配色底图只留 1 张、不预画；三维关掉抗锯齿、阴影贴图 2048。
+const LOWMEM = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 600; } catch (e) { return false; } })(), PLAN_SC = LOWMEM ? 1 : 2;
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
 // 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
@@ -729,7 +733,7 @@ function buildSwatches() { const g = $('swGrid'), three = mode === '3d'; g.textC
     b.append(i, t); b.onclick = () => { clearTimeout(prewarm.t); applyScheme(sc.id); };
     b.onpointerenter = () => { clearTimeout(prewarm.t); prewarm.t = setTimeout(() => prewarm(sc.id), 90); }; b.onpointerleave = () => clearTimeout(prewarm.t); g.appendChild(b); } }
 // 鼠标停在色卡上时先在后台画好那套配色的底图，点下去就是现成的
-function prewarm(id) { if (!F || !F.grid || F.grid.RES !== 2 || DEMO.on || id === SCHEME) return; const sc = SCHEMES.find(x => x.id === id); if (!sc) return;
+function prewarm(id) { if (LOWMEM || !F || !F.grid || F.grid.RES !== 2 || DEMO.on || id === SCHEME) return; const sc = SCHEMES.find(x => x.id === id); if (!sc) return;
   if (F._pbFull && F._pbFull.has([id, $('c_ctx').checked, $('c_plots').checked].join('|'))) return;
   const sv = JSON.parse(JSON.stringify(PAL)), sid = SCHEME, pb = planBase; for (const k in PAL) delete PAL[k]; Object.assign(PAL, JSON.parse(JSON.stringify(SCHEME_BASE)), JSON.parse(JSON.stringify(sc.o))); SCHEME = id;
   try { makePlanBase(); } finally { for (const k in PAL) delete PAL[k]; Object.assign(PAL, sv); SCHEME = sid; planBase = pb; } }
@@ -810,7 +814,8 @@ function roadStroke(ctx, path, mPx, light) { for (const r of SNAP.roads) { const
 function makePlanBase(only) { // only：演示用，只画某几层（透明底），不改 planBase
   const fk = only ? null : [SCHEME, $('c_ctx').checked, $('c_plots').checked].join('|'), FC = F._pbFull || (F._pbFull = new Map());
   if (fk && FC.has(fk)) { planBase = FC.get(fk); FC.delete(fk); FC.set(fk, planBase); return; } // 最近用过的配色：直接取整张底图
-  const Lf = only || { ground: 1, farm: 1, bld: 1, water: 1, deck: 1, towers: 1 }; const g = F.grid, SC = 2, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
+  const Lf = only || { ground: 1, farm: 1, bld: 1, water: 1, deck: 1, towers: 1 }; const g = F.grid, SC = PLAN_SC, cv = document.createElement('canvas'); cv.width = g.W * SC; cv.height = g.H * SC; const ctx = cv.getContext('2d');
+  if (!ctx) throw new Error('canvas memory');   // 画布内存用完了（手机）：交给调用的地方退回
   const X = p => [(p[0] - g.xmin) / g.RES * SC, (g.ymax - p[1]) / g.RES * SC], mPx = SC / g.RES;
   const path = (c, P, close, fresh = true) => { if (fresh) c.beginPath(); P.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
   const landPath = c => { c.beginPath(); for (const pc of SNAP.pieces) { path(c, pc.outer, true, false); for (const h of pc.holes || []) if (h.length > 2) path(c, h, true, false); } };
@@ -882,12 +887,12 @@ function makePlanBase(only) { // only：演示用，只画某几层（透明底�
   }
   if (Lf.towers)   for (const t of F.towers) { ctx.fillStyle = PAL.tower; if (SS.tower && SS.tower.feet && t[5]) { for (const Fp of SS.tower.feet(t)) { ctx.beginPath(); Fp.forEach((p, i) => { const q = X(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill(); } } else { const q = X(t); ctx.beginPath(); ctx.arc(q[0], q[1], t[2] * mPx, 0, 7); ctx.fill(); } }   // 三片塔的塔脚
   if (only) return cv;
-  planBase = cv; FC.set(fk, cv); while (FC.size > 4) FC.delete(FC.keys().next().value); }
+  planBase = cv; FC.set(fk, cv); while (FC.size > (LOWMEM ? 1 : 4)) FC.delete(FC.keys().next().value); }
 function viewRect() { const ph = phoneRect(); if (ph) return ph; const cs = getComputedStyle(document.body), pl = parseFloat(cs.getPropertyValue('--pl')) || 0, pr = parseFloat(cs.getPropertyValue('--pr')) || 0, cb = document.body.classList.contains('cards-on') ? 200 : 0, w = innerWidth, h = innerHeight; return { x: pl, y: 64, w: Math.max(200, w - pl - pr), h: Math.max(200, h - 64 - cb - 14) }; }
 // 平面视图被拖动 / 缩放后：平时重画；逐步操作（演示）里由演示循环重画，只需清掉按屏幕坐标累积的粒子轨迹层
 function planMoved() { if (DEMO.on) { DEMO.trail = DEMO.trail2 = null; } else drawPlan(); }
 function fitPlan() { const g = F.grid, r = viewRect(); PV.s = Math.min(r.w / g.W, r.h / g.H) * 0.96; PV.ox = r.x + (r.w - g.W * PV.s) / 2; PV.oy = r.y + (r.h - g.H * PV.s) / 2; }
-function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight, bw = Math.round(w * pr), bh = Math.round(h * pr); if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const cv = $('plan'), pr = Math.min(LOWMEM ? 2 : 4, devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight, bw = Math.round(w * pr), bh = Math.round(h * pr); if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (TSV) { if (!tsBase) makeTsBase(); ctx.drawImage(tsBase, PV.ox, PV.oy, F.grid.W * PV.s, F.grid.H * PV.s); tsHud();
     { const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s]; drawVec(ctx, X, 1, {}); if ($('c_furn').checked) drawFurniture(ctx, X, PV.s / g.RES, freeRect(), 1); } return; }
@@ -911,7 +916,7 @@ function thumb(c) {
   const g = F.grid, bb = c.bb, m = 40, x0 = Math.max(0, bb[0] - m), y0 = Math.max(0, bb[1] - m), x1 = Math.min(g.W, bb[2] + m), y1 = Math.min(g.H, bb[3] + m), w = x1 - x0, h = y1 - y0;
   const cv = document.createElement('canvas'); cv.width = 300; cv.height = 190; const ctx = cv.getContext('2d'); ctx.fillStyle = '#0b0d10'; ctx.fillRect(0, 0, 300, 190);
   const s = Math.min(300 / w, 190 / h), dx = (300 - w * s) / 2, dy = (190 - h * s) / 2;
-  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; const tc = tmp.getContext('2d'); tc.drawImage(planBase, x0 * 2, y0 * 2, w * 2, h * 2, 0, 0, w, h);
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; const tc = tmp.getContext('2d'); tc.drawImage(planBase, x0 * PLAN_SC, y0 * PLAN_SC, w * PLAN_SC, h * PLAN_SC, 0, 0, w, h);
   const id = tc.getImageData(0, 0, w, h), d = id.data; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = (y0 + y) * g.W + x0 + x; if (g.cellLab[k] !== c.id && !g.corr[k]) { const p = (y * w + x) * 4; d[p] *= .4; d[p + 1] *= .4; d[p + 2] *= .42; } } tc.putImageData(id, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.drawImage(tmp, dx, dy, w * s, h * s); return cv.toDataURL('image/png');
 }
@@ -1183,7 +1188,7 @@ if (window.L2Chain && $('ssChain')) window.L2Chain.mount({ id: 'structure-studio
 if (window.L2Chain && window.L2Chain.onExample) window.L2Chain.onExample('structure-studio', () => { switchTo(LINE_EXAMPLE).catch(() => {}); });      // the tab is open already: it changes to the example
 // ---- 只看张量场结果：不画结构、农田、建筑，只画场地、水系、张量场道路（按等级）、路口、吸引点，可叠方向线
 let TSV = false, tsBase = null;
-function makeTsBase() { const S = SITE, SC = 2, cv = document.createElement('canvas'); cv.width = S.W * SC; cv.height = S.H * SC; const ctx = cv.getContext('2d');
+function makeTsBase() { const S = SITE, SC = PLAN_SC, cv = document.createElement('canvas'); cv.width = S.W * SC; cv.height = S.H * SC; const ctx = cv.getContext('2d');
   const X = p => [(p[0] - S.xmin) / S.RES * SC, (S.ymax - p[1]) / S.RES * SC], mPx = SC / S.RES;
   const path = (c, Q, close, fresh = true) => { if (fresh) c.beginPath(); Q.forEach((p, i) => { const q = X(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); if (close) c.closePath(); };
   ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, cv.width, cv.height); drawContext(ctx, path, mPx);
@@ -1308,7 +1313,11 @@ async function demoPrepare(v1) { const busy = $('busy'), btxt = busy.textContent
   try {
     if (!DEMO.saved) DEMO.saved = { F, mode };
     const gm = typeof v1 === 'string' ? v1 : v1 ? 'v1' : 'v0'; const FD = DEMO.reuse && F && F.trace && F.mode === gm && F.grid.RES === 2 ? F : SS.buildStructure(SITE, { ...P, mode: gm, v1: gm === 'v1' ? 1 : 0, trace: 1 }, EXCL); DEMO.reuse = false; F = FD; M = null; sceneDirty = true; DEMO.FD = FD; DEMO.mode = gm; DEMO.v1 = !!(FD.trace.rows && (gm === 'v1' || gm === 'dual'));
-    DEMO.L = {}; for (const k of ['ground', 'farm', 'bld', 'water', 'deck', 'towers', 'roadsL']) DEMO.L[k] = makePlanBase({ [k]: 1 });
+    const layers = () => { DEMO.L = {}; for (const k of ['ground', 'farm', 'bld', 'water', 'deck', 'towers', 'roadsL']) DEMO.L[k] = makePlanBase({ [k]: 1 }); };
+    try { layers(); } catch (e) {   // (27 Nov 2026) 画布内存不够：放掉配色缓存、再试一次；还不行就不进演示，页面照常可用
+      console.warn('demo layers', e); DEMO.L = null; if (F._pbFull) for (const k of [...F._pbFull.keys()]) if (F._pbFull.get(k) !== planBase) F._pbFull.delete(k); F._pb = null;
+      try { layers(); } catch (e2) { DEMO.L = null; throw e2; } }
+    if (LOWMEM) F._pb = null;   // 手机：图层做好后放掉遮罩缓存（约 60 MB；没有别处再用的就被回收），换配色时再重算
     DEMO.L.grad = dmLayerGrad(); DEMO.L.bridge = dmLayerBridge();
     DEMO.morph = FD.cellPolys.map(cp => dmMorph(cp.raw, cp.poly));
     DEMO.cells = FD.cellPolys.map(cp => { let cx = 0, cy = 0; for (const p of cp.raw) { cx += p[0]; cy += p[1]; } const c = [cx / cp.raw.length, cy / cp.raw.length]; let r = 0; for (const p of cp.raw) r = Math.max(r, dmD2(p, c)); return { c, r: Math.sqrt(r), raw: cp.raw }; });
@@ -1329,7 +1338,7 @@ function demoDraw(dt) {
   if (k === DST.length - 1) { const u = dmProg(k); DEMO.rise = rise(u); if (DEMO.camT !== DEMO.T) { DEMO.camT = DEMO.T; const c0 = DEMO.cam0 || { tx: SITE.cen[0], ty: SITE.cen[1], dist: 3900 }, e = dmE(dmC01((u - 0.1) / 0.8));
       cam.rot = false; cam.ortho = false; cam.view = 'persp'; cam.tx = c0.tx + (SITE.cen[0] - c0.tx) * e; cam.ty = c0.ty + (SITE.cen[1] - c0.ty) * e; cam.tz = 0;
       cam.az = -Math.PI / 2 + 1.45 * e; cam.el = (Math.PI / 2 - 0.002) + (0.53 - Math.PI / 2 + 0.002) * e; cam.dist = c0.dist * (1 - 0.32 * e); cam.snap = true; DEMO.camOK = e > 0.999; } return; }   /* 时间轴不动时不抢镜头：停住后可以自由转动查看 */
-  const cv = $('plan'), pr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
+  const cv = $('plan'), pr = Math.min(LOWMEM ? 2 : 4, devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * pr || cv.height !== h * pr) { cv.width = w * pr; cv.height = h * pr; }
   const ctx = cv.getContext('2d'); ctx.setTransform(pr, 0, 0, pr, 0, 0); ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, w, h); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const g = F.grid, X = p => [PV.ox + (p[0] - g.xmin) / g.RES * PV.s, PV.oy + (g.ymax - p[1]) / g.RES * PV.s], RW = g.W * PV.s, RH = g.H * PV.s, mpx = PV.s / g.RES, at = j => DEMO.T >= dmT0[j];
   const pg = j => dmProg(j), E = j => dmE(dmProg(j)), FD = DEMO.FD, TR = FD.trace, lay = (c, a) => { if (a <= 0) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(c, PV.ox, PV.oy, RW, RH); ctx.globalAlpha = 1; };
@@ -1430,7 +1439,9 @@ function demoLoop(ts, id) { if (!DEMO.on || id !== DEMO.lid) return; if (!DEMO.L
   let step = 0; if (DEMO.playing) { step = dt * DEMO.speed; DEMO.T += step; if (DEMO.stopAt != null && DEMO.T >= DEMO.stopAt) { DEMO.T = DEMO.stopAt; DEMO.stopAt = null; DEMO.playing = false; dmPlayBtn(); buildNextBtns(); $('runHint').textContent = guidedCard() < 0 ? L('现在只有场地和张量场图底。先看第 1 步的参数，再点卡片底部的“播放分析”看这一步怎么生成，或点“下一步”直接出结果。', 'Only the site and the tensor-field base so far. Check step 1’s settings, then press “Generate” at the bottom of the card; the structure grows step by step.') : L('调整这一步的参数，画面会停在这一步更新；调好后点卡片底部的“下一步”。点上面已完成的步骤卡可以退回去改。', 'Adjust this step’s settings and the picture updates in place; then press “Next” at the bottom of the card. Click an earlier step card to go back.'); } if (DEMO.T >= DEMO.total) { DEMO.T = DEMO.total - 1e-3; DEMO.playing = false; dmPlayBtn(); if (!DEMO.full) setTimeout(() => { if (DEMO.on && !DEMO.full && !DEMO.playing) demoExit(true); }, 600); } }
   try { demoDraw(step); } catch (e) { console.error(e); } if (!DEMO.playing && dmStage() >= 7) prebuild3D(); requestAnimationFrame(t => demoLoop(t, id)); }
 async function demoStart(v1, full, from) { if (!SITE || !F) return; if (DEMO.on) demoExit(); DEMO.on = true; DEMO.full = !!full; document.body.classList.add(DEMO.full ? 'demo-on' : 'demo-run'); focus = null; $('tip').style.display = 'none'; $('runPause').disabled = false; DEMO.camOK = false;
-  await demoPrepare(v1 != null ? v1 : P.mode); // 演示统一跟着第 3 步的生成模式
+  try { await demoPrepare(v1 != null ? v1 : P.mode); } // 演示统一跟着第 3 步的生成模式
+  catch (e) { console.warn('demo', e); try { demoExit(); } catch (e2) {} if (mode !== '2d') setMode('2d'); try { makePlanBase(); fitPlan(); drawPlan(); } catch (e3) {}   // (27 Nov 2026) 手机内存不够做演示：留在平面图，不崩
+    $('runHint').textContent = L('这台设备的内存不够播放逐步演示，已直接显示结果；可以点“下一步”逐张看。', 'Not enough memory on this device for the step-by-step demo: the result is shown; use “Next” to go through the steps.'); return; }
   $('dmLogic').value = DEMO.mode;
   const st = $('dmSteps'); st.textContent = ''; DST.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = String(i).padStart(2, '0'); b.title = L(s.zh, s.en); b.onclick = () => { DEMO.T = dmT0[i] + 1e-3; }; st.appendChild(b); });
   if (mode !== '2d') setMode('2d'); dmFit(); DEMO.T = from ? dmT0[from] + 1e-3 : 0; DEMO.speed = +$('runSpeed').value; $('dmSpeed').value = String(DEMO.speed); DEMO.playing = true; DEMO.last = 0; dmPlayBtn(); const lid = DEMO.lid = (DEMO.lid || 0) + 1; requestAnimationFrame(t => demoLoop(t, lid)); }
@@ -1542,7 +1553,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.40'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.41'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
