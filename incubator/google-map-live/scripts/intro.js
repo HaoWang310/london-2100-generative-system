@@ -19,7 +19,7 @@
 
    - Every visit, the whole film; it waits on chapter 6 until the map is ready, then hands over by itself.
      "Skip" at any time (Enter / Esc too), a white "Enter ›" once the map is ready.
-   - "▶ Opening" in the panel plays it again. `#nointro` in the address never plays it.
+   - "▶ Opening" in the panel plays it again. `#nointro` in the address never plays it; `#introat=18` starts it 18 s in.
    - Not with `#noskin`, nor with `?embed=1`, nor inside the VR page (which frames this map).
    - "Reduce motion": the still last chapter, until the map is ready.
    Only opacity and transform are animated, with delays set once (intro.css): the browser's compositor keeps them
@@ -66,7 +66,9 @@
   function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function sv(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
   function pct(v) { return (v / F * 100).toFixed(3) + '%'; }
-  function delay(e, d, o) { e.style.setProperty('--d', d.toFixed(2) + 's'); if (o !== undefined) e.style.setProperty('--o', o.toFixed(2) + 's'); return e; }
+  /* `#introat=18` in the address starts the film 18 s in (for checking one chapter) */
+  var SEEK = +((/[#&]introat=([\d.]+)/.exec(location.hash || '') || [])[1] || 0);
+  function delay(e, d, o) { e.style.setProperty('--d', (d - SEEK).toFixed(2) + 's'); if (o !== undefined) e.style.setProperty('--o', (o - SEEK).toFixed(2) + 's'); return e; }
   function plate(name, anim, d) {
     var b = D.plates[name], im = mk('img', 'lmi-pl lmi-' + (anim || 'in'));
     im.alt = ''; im.decoding = 'async'; im.draggable = false; im.src = DIR + name + '.webp';
@@ -259,7 +261,7 @@
       if (started || done) return; started = true;
       if (!asStory) { story = false; storyOver = true; }
       box.classList.remove('lmi-wait'); box.classList.add(story ? 'lmi-story' : 'lmi-still');
-      t0 = performance.now(); fit();
+      t0 = performance.now() - SEEK * 1000; fit();
     }
     function tick() {
       status();
