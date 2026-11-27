@@ -695,7 +695,9 @@ function ms(F, field, G2, zf, bottom, thr = 0.5) {
   }
   return { top: new Float32Array(top), side: new Float32Array(side) };
 }
-function meshes(F, P) {
+// meshesIter：同一套网格分 5 段算（每段之间 yield），页面可以在段与段之间让出主线程（手机上第 9 步不再整段冻住）
+function meshes(F, P) { const it = meshesIter(F, P); let r; while (!(r = it.next()).done); return r.value; }
+function* meshesIter(F, P) {
   const g = F.grid, { W, H, RES, xmin, ymax } = g, NN = W * H;
   const deckZ = P.deckZ;
   const corrZ = (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; };
@@ -704,19 +706,23 @@ function meshes(F, P) {
   const roadM0 = F.site.roadM || new Uint8Array(NN), dR = edt(roadM0, W, H), roadM = new Uint8Array(NN); for (let i = 0; i < NN; i++) roadM[i] = dR[i] * RES <= 3 ? 1 : 0;
   const RS = roadSpan(deckZ), onRoad = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1); return roadM[j * W + i] === 1; };
   // 跨水 / 跨铁路段：1.2 m 厚的架空桥面；跨路段：按顶标高留出净空（见 roadSpan），带整层种植或只留桥面
+  yield 'prep';
   const corridor = ms(F, g.corrF, 2.0, corrZ, (z, x, y) => !solidAt(x, y) ? z - 1.2 : onRoad(x, y) ? z - RS.T : z > deckZ + 0.1 ? z - deckZ : 0);
   // 实心段在路面 / 水面边上的端墙：走廊足迹 ∩ 落地处 的轮廓侧面（否则从桥下能看进实心体里面）
   { const sm = new Float32Array(NN); for (let i = 0; i < NN; i++) sm[i] = F.site.landM[i] && !F.site.waterM[i] && !roadM[i] ? 1 : 0; const sb = blur(sm, W, H, 0.7), body = new Float32Array(NN); for (let i = 0; i < NN; i++) body[i] = g.corrF[i] * sb[i];
     const walls = ms(F, body, 2.0, (x, y) => corrZ(x, y) - 0.02, () => 0).side, cs = new Float32Array(corridor.side.length + walls.length); cs.set(corridor.side); cs.set(walls, corridor.side.length); corridor.side = cs; }
+  yield 'corridor';
   const fs = new Float32Array(NN); for (let i = 0; i < NN; i++) fs[i] = g.farm[i] ? 1 : 0; // 三维里农田整片铺（条纹只在平面图上）
   for (const z of F.plazas || []) { const T = plazaTiers(z, F.site), q = T.grid, L1 = T.levels[0].mask;   // 塔座的缝底下是农田（L1 盖住的地方不是）
     for (let i = 0; i < NN; i++) { if (g.polyLab[i] !== z.cell + 1) continue; const x = xmin + (i % W + .5) * RES, y = ymax - (((i / W) | 0) + .5) * RES, a = Math.floor((x - q.x0) / q.res), b = Math.floor((y - q.y0) / q.res);
       if (a >= 0 && b >= 0 && a < q.W && b < q.H && !L1[b * q.W + a] && Math.hypot(x - z.c[0], y - z.c[1]) > z.oc + 2) fs[i] = 1; } }
   const farm = ms(F, blur(fs, W, H, 0.6), 4.0, () => 0.25, z => z - 0.2);
+  yield 'farm';
   const bS = new Float32Array(NN); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let m = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const xx = x + a, yy = y + b; if (xx >= 0 && yy >= 0 && xx < W && yy < H) m = Math.max(m, g.hgt[yy * W + xx]); } bS[y * W + x] = m; }
   const bf = new Float32Array(NN); for (let i = 0; i < NN; i++) bf[i] = g.bldM[i];
   const zb = (x, y) => { const i = clamp(Math.floor((x - xmin) / RES), 0, W - 1), j = clamp(Math.floor((ymax - y) / RES), 0, H - 1); return bS[j * W + i] || 7.2; };
   const bld = ms(F, blur(bf, W, H, 0.6), 2.0, zb, () => 0);
+  yield 'bld';
   const pm = (F.plazas || []).map(z => plazaMesh(z, F.site)), cat = (k, T) => { const n = pm.reduce((a, m) => a + m[k].length, 0), o = new T(n); let q = 0; for (const m of pm) { o.set(m[k], q); q += m[k].length; } return o; };
   const plaza = { top: cat('top', Float32Array), side: cat('side', Float32Array), bottom: cat('bottom', Float32Array), lvl: cat('lvl', Uint8Array), cols: (F.plazas || []).flatMap(z => plazaTiers(z, F.site).cols) };   // 三层塔座和它的柱子（[x, y, 柱顶, 柱脚]）
   return { corridor, farm, bld, plaza };
@@ -928,6 +934,6 @@ function plazaMesh(z, site) { const T = plazaTiers(z, site), g = T.grid, top = [
     for (const [, a, , b] of cf.segs) side.push(a[0], a[1], zt, a[0], a[1], zb, b[0], b[1], zb, a[0], a[1], zt, b[0], b[1], zb, b[0], b[1], zt); });
   return { top: new Float32Array(top), side: new Float32Array(side), bottom: new Float32Array(bottom), lvl: new Uint8Array(lvl) }; }
 function deckHeight(F, deckZ) { return (x, y) => { let z = deckZ; for (const t of F.towers) { const d = Math.hypot(x - t[0], y - t[1]) - t[2], up = t[2] > 20 ? 14.4 : 7.2; let s = clamp(1 - d / 110, 0, 1); s = s * s * (3 - 2 * s); z = Math.max(z, deckZ + up * s); } return z; }; }
-const API = { TOWER_MODEL, TIER, towerFeet, findRoundabout, plazaTiers, plazaOutline, plazaMesh, contourField, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, ms, util: { edt, blur, label4, resample, arclen } };
+const API = { TOWER_MODEL, TIER, towerFeet, findRoundabout, plazaTiers, plazaOutline, plazaMesh, contourField, deckHeight, SCORE_W0, scoreStructure, runSketch, roadSpan, prepareSite, buildStructure, planImage, meshes, meshesIter, ms, util: { edt, blur, label4, resample, arclen } };
 if (typeof module !== 'undefined') module.exports = API; else root.SS = API;
 })(typeof self !== 'undefined' ? self : this);
