@@ -1,5 +1,7 @@
 # Tensor Studio · 张量场工作室
 
+> **开场版式统一 · The opening laid out as the others (27 Nov 2026).** 原理短片原来左边文字、右边画面，现在和 Loop City 第 1 步、结构工作室、伦敦地图的开场同一版式：画面在中间（电脑上最宽 1120 px），标题和说明居中放在画面下方（22 / 14.5 px，手机 18 / 13.5 px），章节号「I · 问题」等不再压在标题上，由页脚的「第 k / 6 章」表示；第三章的五条规则在说明下面逐条出现。整片不再整体缩放（文字保持原大小），后台线程画的画面按新的画面区域测量。只改了 `intro/intro.css`（v6）。 The method film now has the picture in the middle and a centred caption under it, like the other openings.
+
 > **语言跟随 · Following the language (v8.52.2, 26 Nov 2026).** 页面加载到约半秒时在别的标签页或目录里切换语言，过几秒所有标签页会被切回原来的语言：启动时用的是页面刚开始读到的语言，并写回自己的记录（`tensorStudio.uiLanguage`），共用的 `shared/ui/lang.js` 把这当成你自己的选择改了全站。现在启动时读当时的语言（`window.__TS_NOWLANG`）。开场短片在播放中换了语言，会用新语言从头放。 Switching the language while the page loaded could switch every tab back: the start applied the language read when the page began and wrote it back. It now applies the language as it is at that moment. The opening film starts again in a language changed while it plays.
 
 > **文字核对 · The wording checked (26 Nov 2026).** 中文界面下，开场短片的六个小标题和左上角的「TENSOR STUDIO · METHOD」现在是中文；悬停提示和读屏标签（收起 / 展开、拖动调整宽度等 7 条）跟着语言走（`TS_ATTR`，原来只翻译文字，不翻译提示）。角标「车站 P2 示例」改为「范例」；场地说明里的「羊毛路网」改为「毛线路网」。 In Chinese, the opening film's six small headings and its head line are Chinese now; tooltips and spoken labels follow the language (`TS_ATTR`: only text was translated before). 示例 is written 范例 and 羊毛 is written 毛线, as in the other apps.
