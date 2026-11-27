@@ -26,7 +26,13 @@ test('place.js: coordinates, grid reference and the words for where a station is
 test('the page uses it: map labels, the key plan (computer: London context, phone: linework) and its click', () => {
   const h = read('index.html'), p = read('place.js');
   assert.ok(h.includes('__lcPlace.map(main)') && h.includes('__lcPlace.mini(c, pxCss(LK().main))') && h.includes('__lcPlace.pick(ev)'));
-  assert.ok(/<script src="places\.js\?v=1"><\/script><script src="place\.js\?v=1"><\/script>/.test(h));
+  assert.ok(/<script src="places\.js\?v=1"><\/script><script src="place\.js\?v=3"><\/script>/.test(h));
   assert.ok(p.includes("var phone = H.classList.contains('l2phone')") && p.includes('// linework') && p.includes('// London context'));
   assert.ok(/<script>const SITE = /.test(h), 'the baked script is untouched by this (example/ stays valid)');
+});
+test('legible labels: 12/13 px weight 500 town names over a dot, station places in pills, the cell codes stepped back', () => {
+  const p = read('place.js'), h = read('index.html');
+  assert.ok(p.includes("var Y = { tw: 500, ts: 12, big: 13, tc: 'rgba(255,255,255,.84)', pw: 500, ps: 12, pc: '#fff', halo: 3 };"));
+  assert.ok(p.includes('g.roundRect(at[0], at[1] - 9, w, 18, 9)') && p.includes('g.arc(x, y, 1.6, 0, 7)'));
+  assert.ok(h.includes(`cx.font = "400 10px 'DM Mono','SF Mono',ui-monospace,monospace"`) && h.includes("cx.fillStyle = 'rgba(255,255,255,.5)'; cx.fillText(c.id"));
 });

@@ -4567,7 +4567,9 @@ function draw() {
     main.lineWidth = 3; main.strokeStyle = T0.halo; main.strokeText(s.id, sx(s.x) + 8, sy(s.y) - 8); main.fillStyle = T0.ink; main.fillText(s.id, sx(s.x) + 8, sy(s.y) - 8);
   }
   if (step === 3) for (const c of DATA.cellLabels) { label(c.name, c.x, c.y, 17, true); label(c.km2, c.x, c.y - 17 * S.view.mpp, 12, false); }
-  if (step <= 3) for (const c of DATA.otherLabels) label(c.id, c.x, c.y, 11, false);
+  if (step <= 3) for (const c of DATA.otherLabels) {   // (27 Nov 2026) the neighbours' codes step back behind the place names (place.js): 10 px mono, half white
+    cx.font = "400 10px 'DM Mono','SF Mono',ui-monospace,monospace"; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.lineWidth = 3; cx.strokeStyle = TH().halo; cx.strokeText(c.id, sx(c.x), sy(c.y)); cx.fillStyle = 'rgba(255,255,255,.5)'; cx.fillText(c.id, sx(c.x), sy(c.y)); }
   if (step === 5) for (const p of DATA.primary) { label(p.id, p.lx, p.ly, 14, true); label(fmt(p.km2, 1) + ' km²', p.lx, p.ly - 15 * S.view.mpp, 11, false); }
   if (step === 7) for (const z of DATA.zoneLabels) label(z.t, z.x, z.y, 11, false);
   if (window.__lcPlace) try { __lcPlace.map(main); } catch (e) { console.warn(e); }   // (27 Nov 2026) the towns named, where each station is, the card (place.js)
@@ -6004,5 +6006,5 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=8"></script><script src="places.js?v=1"></script><script src="place.js?v=1"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=8"></script><script src="places.js?v=1"></script><script src="place.js?v=3"></script>
 </body></html>

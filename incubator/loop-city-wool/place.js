@@ -76,9 +76,9 @@
     var out = [];
     PL.stations.slice().sort(function (a, b) { return a[0] < b[0] ? -1 : 1; }).forEach(function (s) {
       var E = s[1], N = s[2]; if (E < o[0] || N < o[1] || E > o[0] + sz[0] || N > o[1] + sz[1] || /Parkway|Airport|Terminal/.test(s[0])) return;
-      var inTown = PL.towns.some(function (t, i) { var b = townBox[i]; return E >= b[0] && E <= b[2] && N >= b[1] && N <= b[3] && pip(E, N, t[1]); });
-      if (!inTown || out.some(function (q) { return Math.hypot(E - q.E, N - q.N) < 3000; })) return;
-      out.push({ n: s[0], E: E, N: N });
+      var a = 0; PL.towns.forEach(function (t, i) { var b = townBox[i]; if (E >= b[0] && E <= b[2] && N >= b[1] && N <= b[3] && pip(E, N, t[1])) a = Math.max(a, t[0]); });
+      if (!a || out.some(function (q) { return Math.hypot(E - q.E, N - q.N) < 3000; })) return;
+      out.push({ n: s[0], E: E, N: N, a: a });
     });
     NKEY = key; return (NAMES = out);
   }
@@ -91,23 +91,32 @@
   // on the map, after the stations: town names while the whole site is in view; each station's place, left of its dot
   // Nothing is written over another label: the stations' and the cells' names are kept clear first, then each
   // station's place (left of its dot, or right below it where the left has no room), then the towns
+  // (27 Nov 2026, second pass) legible on a 1x screen and drawn like a plan: town names 12 px (13 px for a town of 20 km²
+  // or more), weight 500, 84% white, over a small dot where the station is; each station's place in a black pill with a
+  // hairline edge, 12 px. (The first pass, 10.5 px at 46%, blurred to grey; the cell codes now step back, index.html.)
+  var Y = { tw: 500, ts: 12, big: 13, tc: 'rgba(255,255,255,.84)', pw: 500, ps: 12, pc: '#fff', halo: 3 };
   function map(g) {
     if (!ok()) return; var o = DATA.origin, taken = [], step = S.step;
     var box = function (x, y, w, h) { return [x - 2, y - h / 2 - 1, x + w + 2, y + h / 2 + 1]; }, hit = function (b) { return taken.some(function (t) { return b[0] < t[2] && b[2] > t[0] && b[1] < t[3] && b[3] > t[1]; }); };
-    var width = function (t, size) { g.save(); g.font = '400 ' + size + 'px ' + SANS; var w = g.measureText(t).width; g.restore(); return w; };
+    var width = function (t, size, wt, ls) { g.save(); g.font = (wt || 400) + ' ' + size + 'px ' + SANS; try { if (ls) g.letterSpacing = ls + 'px'; } catch (e) {} var w = g.measureText(t).width; g.restore(); return w; };
     DATA.stations.forEach(function (s) { var x = sx(s.x), y = sy(s.y); taken.push([x - 6, y - 6, x + 6, y + 6], box(x + 8, y - 8, width(s.id, 12) + 2, 14)); });
-    if (step <= 3) (DATA.otherLabels || []).forEach(function (c) { var w = width(c.id, 11); taken.push(box(sx(c.x) - w / 2, sy(c.y), w, 12)); });
+    if (step <= 3) (DATA.otherLabels || []).forEach(function (c) { var w = c.id.length * 6.2; taken.push(box(sx(c.x) - w / 2, sy(c.y), w, 11)); });
     if (step === 3) (DATA.cellLabels || []).forEach(function (c) { var w = width(c.name, 17); taken.push(box(sx(c.x) - w / 2, sy(c.y), w, 34)); });
+    if (step === 5) (DATA.primary || []).forEach(function (q) { var w = width(q.id, 14) + 10; taken.push(box(sx(q.lx) - w / 2, sy(q.ly) + 7, w, 34)); });
     DATA.stations.forEach(function (s) { if (s.kind === 'airport') return; var x = sx(s.x), y = sy(s.y); if (x < 0 || y < 0 || x > W || y > Hh) return;
-      var t = whereStation(s.x + o[0], s.y + o[1]), w = width(t, 10.5), at = null;
+      var t = whereStation(s.x + o[0], s.y + o[1]), w = width(t, Y.ps, Y.pw) + 14, at = null;
       var iw = width(s.id, 12) * 1.1;
       [[x - 9 - w, y + 1], [x + 14 + iw, y - 8], [x - 9 - w, y + 14], [x + 8, y + 10], [x - w / 2, y + 16], [x - w / 2, y - 22]].some(function (q) {     // left, after the id, below left, below right, below, above
         var b = box(q[0], q[1], w, 13); if (q[0] < 6 || q[0] + w > W - 6 || hit(b)) return false; at = q; taken.push(b); return true; });
       if (!at) { at = x - 9 - w > 6 ? [x - 9 - w, y + 1] : [x + 8, y + 10]; taken.push(box(at[0], at[1], w, 13)); }
-      label(g, t, at[0], at[1], { size: 10.5, col: 'rgba(255,255,255,.78)' }); });
-    if (S.view.mpp >= 12) names().forEach(function (q) { var x = sx(q.E - o[0]), y = sy(q.N - o[1]), size = W < 600 ? 9.5 : 10.5, w = width(q.n, size), b = box(x - w / 2, y, w, size + 2);
+      g.save(); g.fillStyle = 'rgba(0,0,0,.82)'; g.strokeStyle = 'rgba(255,255,255,.32)'; g.lineWidth = 1; g.beginPath(); g.roundRect(at[0], at[1] - 9, w, 18, 9); g.fill(); g.stroke(); g.restore();
+      label(g, t, at[0] + 7, at[1] + 0.5, { size: Y.ps, w: Y.pw, col: Y.pc, halo: false }); });
+    // the towns while the ground is read (steps 1 to 4, and the prologue): later the cells and the roads fill the map
+    if (S.view.mpp >= 12 && step <= 4) names().forEach(function (q) { var x = sx(q.E - o[0]), y = sy(q.N - o[1]), size = (q.a >= 20 ? Y.big : Y.ts) - (W < 600 ? 1 : 0), txt = q.n, ls = 0.3;
+      var w = width(txt, size, Y.tw, ls), yy = y - 10, b = box(x - w / 2, yy, w, size + 2);
       if (x - w / 2 < 6 || x + w / 2 > W - 6 || y < 20 || y > Hh - 20 || hit(b)) return; taken.push(b);
-      label(g, q.n, x, y, { size: size, col: 'rgba(255,255,255,.46)', align: 'center', ls: 0.3 }); });
+      g.save(); g.fillStyle = Y.tc; g.beginPath(); g.arc(x, y, 1.6, 0, 7); g.fill(); g.restore();
+      label(g, txt, x, yy, { size: size, w: Y.tw, col: Y.tc, align: 'center', ls: ls, halo: Y.halo }); });
     card();
   }
 
