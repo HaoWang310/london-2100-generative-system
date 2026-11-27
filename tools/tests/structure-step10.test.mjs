@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 const read = (p) => readFileSync(new URL('../../incubator/structure-studio/' + p, import.meta.url), 'utf8');
 const h = read('index.html');
 test('A · the 3D built during step 9 is warmed up: shaders compiled and one frame drawn before step 10', () => {
-  assert.ok(h.includes('if (sceneDirty) ensure3D(); warm3D();'), 'prebuild3D warms up after building');
+  assert.ok(h.includes('() => { if (sceneDirty) ensure3D(); }, () => warm3D()];'), 'prebuild3D warms up after building');
   assert.ok(/function warm3D\(\) \{ if \(!renderer \|\| sceneDirty \|\| !scene\) return; try \{ placeCam\(camS\); setLift\(\); renderer\.compile\(scene, camera\); renderer\.render\(scene, camera\);/.test(h));
 });
 test('B · switching to 3D keeps the plan on top until the first 3D frame of a built scene, then fades it out', () => {
