@@ -90,7 +90,8 @@
 .lmi-note span { display:block; }
 .lmi-cyan { color:#5CE1E6; }
 .lmi-noteR { left:calc(100% + 28px); bottom:4%; }
-.lmi-noteL { right:calc(100% + 28px); top:52%; text-align:right; }
+.lmi-noteL { right:calc(100% + 28px); top:52%; text-align:right; width:240px; }
+.lmi-noteL b.lmi-mono { white-space:nowrap; }
 .lmi-key { display:flex; align-items:center; gap:8px; margin:3px 0; }
 .lmi-key span { display:inline; }
 .lmi-kl { display:block; width:14px; height:2px; flex:none; }
@@ -100,6 +101,7 @@
 .lmi-ramp { display:block; width:200px; height:5px; background:linear-gradient(90deg,#3d9be9,#30e0e0,#2fe66f,#a6ee3c,#f0f53a,#ffb234,#ff4a30,#ff8f8f,#fff0f0); }
 .lmi-ends { display:flex; justify-content:space-between; font:500 9.5px/1 ui-monospace,'SF Mono',Menlo,monospace; color:rgba(255,255,255,.55); margin:5px 0 8px; }
 #lmIntro.lmi-narrow .lmi-noteR, #lmIntro.lmi-narrow .lmi-noteL { top:calc(100% + 12px); bottom:auto; right:auto; text-align:left; width:48%; }
+#lmIntro.lmi-narrow .lmi-noteL b.lmi-mono { white-space:normal; }
 #lmIntro.lmi-narrow .lmi-noteL { left:0; } #lmIntro.lmi-narrow .lmi-noteR { left:52%; }
 #lmIntro.lmi-narrow .lmi-noteR:only-of-type { left:0; width:100%; }
 #lmIntro.lmi-narrow .lmi-ramp { width:100%; }
@@ -172,4 +174,4 @@
 #panel button.introReplay:hover, html.l2ui #panel button.introReplay:hover:not(:disabled) { border-color:rgba(255,255,255,.45); background:transparent; color:#fff; }
 #panel button.introReplay:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 html:not(.l2ui) #introReplay { display:none; }   /* #noskin: no film, so no button */
-#lmIntro.lmi-hold, #lmIntro.lmi-hold * { animation-play-state:paused !important; }   /* #introat=…&introhold */
+#lmIntro.lmi-hold, #lmIntro.lmi-hold *, #lmIntro.lmi-hold *::after { animation-play-state:paused !important; }   /* #introat=…&introhold */
