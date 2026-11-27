@@ -4570,6 +4570,7 @@ function draw() {
   if (step <= 3) for (const c of DATA.otherLabels) label(c.id, c.x, c.y, 11, false);
   if (step === 5) for (const p of DATA.primary) { label(p.id, p.lx, p.ly, 14, true); label(fmt(p.km2, 1) + ' km²', p.lx, p.ly - 15 * S.view.mpp, 11, false); }
   if (step === 7) for (const z of DATA.zoneLabels) label(z.t, z.x, z.y, 11, false);
+  if (window.__lcPlace) try { __lcPlace.map(main); } catch (e) { console.warn(e); }   // (27 Nov 2026) the towns named, where each station is, the card (place.js)
   furniture();
 }
 
@@ -4819,7 +4820,8 @@ function lookPanel() {
   const more = lkEl('button', 'lk-all lk-more', ''); more.type = 'button'; more.id = 'lkMore'; more.onclick = () => { LKP.more = !LKP.more; lkBig(); }; body.appendChild(more);
   const kd = lkEl('div', 'lk-key', ''); kd.id = 'lkKey'; kd.setAttribute('translate', 'no'); body.appendChild(kd);
   const mini = document.createElement('canvas'); mini.id = 'lkMini'; mini.className = 'lk-mini'; body.appendChild(mini);
-  mini.onclick = ev => { const K = DATA.key, r = mini.getBoundingClientRect(), iw = r.height * K.w / K.h, u = (ev.clientX - r.left - (r.width - iw) / 2) / iw, v = (ev.clientY - r.top) / r.height;
+  mini.onclick = ev => { const q = window.__lcPlace && __lcPlace.pick(ev); if (q) { S.view.cx = q[0]; S.view.cy = q[1]; schedule(); return; }
+    const K = DATA.key, r = mini.getBoundingClientRect(), iw = r.height * K.w / K.h, u = (ev.clientX - r.left - (r.width - iw) / 2) / iw, v = (ev.clientY - r.top) / r.height;
     S.view.cx = K.box[0] + u * (K.box[2] - K.box[0]); S.view.cy = K.box[3] - v * (K.box[3] - K.box[1]); schedule(); };
   // the palettes
   body.appendChild(lkEl('h2', '', 'Colour'));
@@ -4897,6 +4899,7 @@ function lkBig() {                                 // one number to read first, 
 }
 function lkDrawMini() {                            // the key plan, in the panel: where the view is in the loop
   const c = $('lkMini'); if (!c || !IMG.key) return false; if (!c.clientWidth) return true;      // the panel is folded away: nothing on the map either
+  if (window.__lcPlace) try { if (__lcPlace.mini(c, pxCss(LK().main))) return true; } catch (e) { console.warn(e); }   // (27 Nov 2026) London context / linework (place.js)
   const K = DATA.key, w = c.clientWidth, h = 140, d = window.devicePixelRatio || 1, iw = h * K.w / K.h, ox = (w - iw) / 2;
   if (c.width !== Math.round(w * d) || c.height !== Math.round(h * d)) { c.width = Math.round(w * d); c.height = Math.round(h * d); c.style.height = h + 'px'; }
   const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h); g.drawImage(IMG.key, ox, 0, iw, h);
@@ -6001,5 +6004,5 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=8"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=8"></script><script src="places.js?v=1"></script><script src="place.js?v=1"></script>
 </body></html>
