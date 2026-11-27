@@ -249,5 +249,12 @@ export const en = {
   "cat.slot.desc": "Put an app in incubator/ and add one entry to catalogue.json — it appears here.",
   "cat.back": "Back to catalogue",
   "app.openTab": "Open in new tab",
-  "app.loading": "Opening…"
+  "app.loading": "Opening…",
+  "aria.scale": "Scale",
+  "aria.modules": "Modules",
+  "aria.map": "Map",
+  "aria.params": "Parameters",
+  "aria.catalogue": "Catalogue",
+  "aria.timeline": "Timeline",
+  "aria.app": "App"
 };

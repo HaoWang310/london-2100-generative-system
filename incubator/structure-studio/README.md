@@ -1,5 +1,7 @@
 # Structure Studio · 结构工作室（Linear Farm 走廊）
 
+> **提示文字 · Tooltips (27 Nov 2026).** 英文下悬停提示（title）也翻译，比如张量场工作室框的名字；语言开关的读屏名称写成中文源文「语言」，英文下是 Language。 Tooltips follow the language too, and the switch's spoken name.
+
 > **开场跟随语言 · The opening follows the language (26 Nov 2026).** 开场卡片的标题、副标题、「正在载入场地…」和「跳过 / 进入」在加载中换了语言时跟着变（`intro/intro.js` 的 `relabel()`）；短片里的字用场地到达时的语言。 The opening card and its two buttons follow a language changed while the page loads; the film's own words take the language the page has when the site arrives.
 
 > **文字核对 · The wording checked (26 Nov 2026).** 英文界面下，第 6 步「结构」整块和三维视口菜单原来还是中文：第 6 步补了英文；视口菜单的英文早就在词典里，只是 `translateStatic()` 没有走到 `#vp`，现在连同两条拖动条一起走到。第 1 步的说明在英文里补全了三种吸引点。「内置示例」改为「内置范例」，和其他应用同一个词。 In English, step 6 and the 3D viewport menu were still Chinese: step 6 has its English now; the menu's English was already in `EN`, but `translateStatic()` never reached `#vp`. Step 1's note says in English all the Chinese says. 示例 is written 范例, as in the other apps.

@@ -578,6 +578,8 @@ body.phoneUi.touchUi .displayPanel{top:64px;bottom:auto;left:8px;right:8px;width
 body.phoneUi .layerHintTooltip,body.phoneUi #layerHintTooltip{max-width:calc(100vw - 24px)}
 /* 24 Nov 2026 · opened from the catalogue on a phone, the shell's language switch floats at the top right (12 px in,
    44 px high): the map's zoom and compass buttons stand below it */
+/* (26 Nov 2026) the phone's language switch sits at the top right (index.html, shared/ui/phone.css): the map's own controls go under it */
+html.l2ph-lang-top .maplibregl-ctrl-top-right{top:64px}
 @media (max-width:760px){html.l2-shell-lang .maplibregl-ctrl-top-right{top:56px}
   /* a narrow window that is not a phone keeps the floating panel at the top: it starts below the switch */
   html.l2-shell-lang body:not(.phoneUi) #panel{top:64px}}

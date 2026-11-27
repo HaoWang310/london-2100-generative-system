@@ -18,7 +18,7 @@
   #cover b{display:block;color:#f5f5f7;font-size:15px;font-weight:600;margin-bottom:4px}
   #cover[hidden]{display:none}
 </style>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=3"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script>
 <script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js). VR is the last stop of the research line:
    before it Structure Studio, after it the catalogue. It sits at the top of the VR view's side panel (desktop); in the headset that panel is not shown. */
 (function () { if (!window.L2Chain) return; var done = false, n = 0;
@@ -40,8 +40,9 @@
   if (l === 'en') { document.title = 'London map · VR'; document.getElementById('coverText').textContent = 'Loading the London map in the background…'; }
   // and when the language changes while it loads (another tab, the catalogue): the map follows by itself, these two lines here
   var relabel = function (v) { if (v !== 'en' && v !== 'zh') return; document.title = v === 'en' ? 'London map · VR' : '伦敦地图 · VR'; document.documentElement.lang = v;
+    var fr = document.getElementById('map'); if (fr) fr.title = v === 'en' ? 'London map' : '伦敦地图';      // the map frame's name (26 Nov 2026)
     var c = document.getElementById('coverText'); if (c && /^(正在后台加载伦敦地图…|Loading the London map in the background…)$/.test(c.textContent)) c.textContent = v === 'en' ? 'Loading the London map in the background…' : '正在后台加载伦敦地图…'; };
-  document.documentElement.lang = l;
+  document.documentElement.lang = l; relabel(l);
   addEventListener('storage', function (e) { if (e.key === 'l2100.lang') relabel(e.newValue); });
   addEventListener('message', function (e) { if (e.origin === location.origin && e.data && e.data.type === 'l2100:lang') relabel(e.data.lang); }); })();</script>
 <div id="err"></div>
