@@ -95,4 +95,12 @@ Keep the files in one folder: each opens the next by its file name.
 
 ## Data
 
+**Where the site is (27 Nov 2026)** — `place.js` names the towns on the map after the rail stations that stand in them
+(a station inside a town of 2 km² or more; none named Parkway, Airport or Terminal; names 3 km apart; a town without a
+station is not named), says where each station of the run is (the nearest station, or how far and which way from it), and
+shows a card with the picked station's place, its distance and direction from central London (Charing Cross), latitude and
+longitude, and OS grid reference. The key plan is drawn again from the mould page's picture: London context on a computer,
+linework on a phone. Its data, `places.js`, is made by `source/make-places.cjs` from `../loop-city-mould-growth/reference/osm/stations.geojson`,
+that page's `intro-data.js` (the radials) and `site/vectors.js` (the towns); run it again if any of them changes.
+
 Roads, towns and buildings: OS Open Zoomstack (OGL v3). Soil: Agricultural Land Classification (Natural England). Protected landscapes: Natural England. Rail: the Loop City railway.
