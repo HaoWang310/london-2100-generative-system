@@ -40,6 +40,8 @@
       '<div class="ssi-foot" aria-hidden="true"><span class="ssi-pips"><i></i><i></i><i></i><i></i><i></i></span><span class="ssi-stat">' + L('正在载入场地…', 'Loading the site…') + '</span></div>';
     (document.body || de).appendChild(root); de.classList.add('ssi-on');
     var cvGL = root.querySelector('.ssi-gl'), cvFilm = root.querySelector('.ssi-film'), cvTop = root.querySelector('.ssi-top'), ctxTop = cvTop.getContext('2d');
+    // (27 Nov 2026) the 3D context lost (a phone short of memory): scene 5 falls back to the plan, the film goes on
+    cvGL.addEventListener('webglcontextlost', function (e) { e.preventDefault(); s5 = null; cvGL.style.opacity = '0'; });
     var W = innerWidth, Hh = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), low = Math.min(W, Hh) < 600 || (navigator.maxTouchPoints || 0) > 0;
     var worker = null, pendSnap = null, film = null, top = null, s5 = null, t0 = 0, hold = 0, holdAt = null, started = false, raf = 0, data = null, deck = null, name = opts.name || '';
     me.root = root;
@@ -135,14 +137,23 @@
     }
     // ---------------------------------------------------------------- the end (Skip, Enter, Esc or the last frame): the page goes on
     me.onDone = function (cb) { me.cb = cb; };
+    // (27 Nov 2026) the film lets go first, then the page goes on: it fades out, then gives back its 3D context, its
+    // canvases and its worker, and only then hands over (go: the guided demo, which makes the page's biggest
+    // canvases). Before, the page started in the same frame while all of the film was still held: on a phone that
+    // peak went past what the browser allows a page, and the page was reloaded (back to the catalogue).
     me.close = function () { if (me.closed) return; me.closed = true; cancelAnimationFrame(raf);
       if (!me.structure) me.skippedEarly = true;
-      if (worker) { try { worker.postMessage({ type: 'stop' }); } catch (e) {} setTimeout(function () { try { worker.terminate(); } catch (e) {} }, 700); }
+      if (worker) try { worker.postMessage({ type: 'stop' }); } catch (e) {}
       removeEventListener('resize', onResize); document.removeEventListener('keydown', onKey, true);
-      var cb = me.cb; me.cb = null; if (cb) try { cb(true); } catch (e) { console.warn(e); }
       root.classList.add('ssi-out'); de.classList.remove('ssi-on');
-      setTimeout(function () { if (s5) s5.dispose(); s5 = null; if (root.parentNode) root.parentNode.removeChild(root); }, 650);
-      if (cur === me) cur = null; };
+      if (cur === me) cur = null;
+      setTimeout(function () {
+        if (worker) try { worker.terminate(); } catch (e) {} worker = null;
+        if (s5) try { s5.dispose(); } catch (e) {} s5 = null;
+        [cvGL, cvTop, cvFilm].forEach(function (c) { try { c.width = 0; c.height = 0; } catch (e) {} });   // (the film's canvas belongs to the worker when there is one)
+        if (root.parentNode) root.parentNode.removeChild(root);
+        var cb = me.cb; me.cb = null; if (cb) try { cb(true); } catch (e) { console.warn(e); }
+      }, 650); };
     // the snapshot never came in 20 s: leave the page alone
     setTimeout(function () { if (!started && !me.hasSnap) me.close(); }, 20000);
   }

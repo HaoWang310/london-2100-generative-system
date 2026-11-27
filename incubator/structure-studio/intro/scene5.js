@@ -16,7 +16,7 @@ function create(o) {
   const THREE = root.THREE, I = o.draw, H = I.h, D = o.data, L = (a, b) => zh ? a : b, low = !!o.low;
   let zh = (o.lang || 'zh') !== 'en';
   const setLang = l => { zh = l !== 'en'; };   // (27 Nov 2026) the labels follow a language changed mid-film
-  const R = new THREE.WebGLRenderer({ canvas: o.canvas, antialias: true, powerPreference: 'high-performance' }); R.setClearColor(0x000000, 1);
+  const R = new THREE.WebGLRenderer({ canvas: o.canvas, antialias: !low, powerPreference: low ? 'default' : 'high-performance' });   // (27 Nov 2026) a phone: no antialiasing, the default GPU R.setClearColor(0x000000, 1);
   const scene = new THREE.Scene(), W = new THREE.Group(); scene.add(W);
   const uEx = { value: 1 }, uT = { value: 0 }, disp = [];
   scene.add(new THREE.HemisphereLight(0xffffff, 0x1a1e28, 0.72)); const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(-0.55, -0.75, 1.1); scene.add(sun);
