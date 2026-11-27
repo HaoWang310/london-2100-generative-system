@@ -261,11 +261,11 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
 <script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=5">
-<link rel="stylesheet" href="intro/intro.css?v=0.9.43">
+<link rel="stylesheet" href="intro/intro.css?v=0.9.44">
 </head>
 <body>
 <!-- 开场短片（intro/）：页面一开始就盖上，场地和结构在下面照常载入；规则见 intro/intro.js 开头 -->
-<script src="intro/intro.js?v=0.9.43"></script>
+<script src="intro/intro.js?v=0.9.44"></script>
 <div id="view">
   <canvas id="gl"></canvas>
   <canvas id="plan"></canvas>
@@ -415,13 +415,13 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.43"></script>
-<script src="engine/deck.js?v=0.9.43"></script>
-<script src="engine/tower.js?v=0.9.43"></script>
-<script src="engine/nav.js?v=0.9.43"></script>
-<script src="intro/data.js?v=0.9.43"></script>
-<script src="intro/draw.js?v=0.9.43"></script>
-<script src="intro/scene5.js?v=0.9.43"></script>
+<script src="engine/structure.js?v=0.9.44"></script>
+<script src="engine/deck.js?v=0.9.44"></script>
+<script src="engine/tower.js?v=0.9.44"></script>
+<script src="engine/nav.js?v=0.9.44"></script>
+<script src="intro/data.js?v=0.9.44"></script>
+<script src="intro/draw.js?v=0.9.44"></script>
+<script src="intro/scene5.js?v=0.9.44"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -493,11 +493,19 @@ const MAT = {
 function shapeOf(poly) { const s = new THREE.Shape(); poly.forEach((p, i) => i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])); return s; }
 function flat(poly, z, mat) { const m = new THREE.Mesh(new THREE.ShapeGeometry(shapeOf(poly)), mat); m.position.z = z; m.receiveShadow = true; return m; }
 function triMesh(arr, mat) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; return m; }
+// 标准材质（MeshStandard）的着色器要用 dFdx。WebGL2 自带；WebGL1 要有 OES_standard_derivatives，没有时这类材质（地块、水面、走道、塔）整类不画、只剩道路贴图和线。
+// 这时把 MAT 里的标准材质换成 MeshLambert（逐顶点光照，不求导），颜色、双面、顶点色、透明度照旧
+let LITE = false;
+function liteMats() { const gl3 = renderer.capabilities.isWebGL2 || renderer.extensions.has('OES_standard_derivatives'); if (gl3) return; LITE = true;
+  const to = m => !(m && m.isMeshStandardMaterial) ? m : new THREE.MeshLambertMaterial({ color: m.color, vertexColors: m.vertexColors, side: m.side, depthWrite: m.depthWrite, transparent: m.transparent, opacity: m.opacity, map: m.map });
+  for (const k in MAT) MAT[k] = Array.isArray(MAT[k]) ? MAT[k].map(to) : to(MAT[k]); }
 function initGL() {
   const c = $('gl');
   renderer = new THREE.WebGLRenderer({ canvas: c, antialias: !LOWMEM, preserveDrawingBuffer: true, logarithmicDepthBuffer: true });   // 对数深度：镜头拉远时深度不再变粗，地面各层不闪
   renderer.setPixelRatio(Math.min(LOWMEM ? 1.5 : 2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  liteMats();   // 显卡不会求导（WebGL1 且没有 OES_standard_derivatives，常见于模拟器）：标准材质整类画不出来，换成简化材质
+  if (LOWMEM) { $('c_shadow').checked = false; renderer.shadowMap.enabled = false; }   // 手机默认不画阴影（「显示」里可以打开），省一遍渲染和 16 MB 阴影贴图
   scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
   camP = camera = new THREE.PerspectiveCamera(NAV.FOV, 1, 1, 30000); camO = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 60000);
   scene.add(new THREE.HemisphereLight(0xe2eaf2, 0x3a3a3a, 0.78));
@@ -635,7 +643,7 @@ function buildScene() {
     if (seg.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(seg), 3)); G.site.add(new THREE.LineSegments(g, MAT.wline3)); } }
   // 路网：整张路网连同光晕画成一张透明底的图，平铺在地块之上、结构之下（见 paintRoads3）。
   // 不用一条条带子拼：带子在弯道外侧会张开缺口（锯齿）、内侧叠压（光晕叠亮成条纹），路口附近折线很碎的地方尤其明显
-  G.plots = new THREE.Group(); { const S = Math.max(SNAP.w || 2700, SNAP.h || 2700), cv = G.roadCv || (G.roadCv = document.createElement('canvas')); paintRoads3();
+  G.plots = new THREE.Group(); { const S = Math.max(SNAP.w || 2700, SNAP.h || 2700), cv = G.roadCv || (G.roadCv = document.createElement('canvas')); if (cv.__snap !== SNAP || cv.__sc !== SCHEME3 || cv.width !== ROAD3.size) paintRoads3();   /* 第 9 步已经分段画好就不重画 */
     const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding; try { tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); } catch (e) {} G.roadTex = tex;
     const geo = new THREE.PlaneGeometry(S, S); geo.translate(S / 2, S / 2, 0.36); G.plots.add(new THREE.Mesh(geo, MAT.road3T)); MAT.road3T.map = tex; MAT.road3T.needsUpdate = true; }
   G.plots.visible = $('c_plots').checked;
@@ -671,6 +679,7 @@ function setHighlight(c) { if (G.hi) { scene.remove(G.hi); G.hi = null; } if (!c
 // 每张 2682 × 2634 = 28 MB，进入逐步演示时有 21 张 = 482 MB，手机上页面会被系统重载（闪退回目录）。手机上改成 2 m = 1 px（每张 7 MB，共约 143 MB），
 // 整片场地看不出差别；配色底图只留 1 张、不预画；三维关掉抗锯齿、阴影贴图 2048。
 const LOWMEM = (() => { try { return matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 600; } catch (e) { return false; } })(), PLAN_SC = LOWMEM ? 1 : 2;
+if (LOWMEM) { let st = {}; try { st = JSON.parse(localStorage.getItem('structureStudio.deck') || '{}'); } catch (e) {} if (!('sub' in st)) DKP.sub = 1; }   // 手机：桥面细分默认 1（三角形和显存减半），滑块仍可调到 2
 const PV = { s: 1, ox: 0, oy: 0 }; let planBase = null;
 // ---- 平面图配色（AADRL：深色底、低饱和、单一红色强调）与矢量叠加层（屏幕空间，线宽不随缩放变）
 // 参照布达佩斯城市地图配色（橄榄灰绿地块、灰蓝水面、白色街道、黑色地标剪影），底色换成黑
@@ -705,13 +714,14 @@ const grad3Css = sc => `linear-gradient(90deg,${sc.grad.map(([t, c]) => `${rgb(c
 function gradAt(st, t) { let a = st[0], b = st[st.length - 1]; for (let k = 0; k < st.length - 1; k++) if (t >= st[k][0] && t <= st[k + 1][0]) { a = st[k]; b = st[k + 1]; break; } const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0; return [a[1][0] + (b[1][0] - a[1][0]) * u, a[1][1] + (b[1][1] - a[1][1]) * u, a[1][2] + (b[1][2] - a[1][2]) * u]; }
 // 路网贴图：每一层把所有道路放进同一条路径里一次描出来，所以弯道、路口都没有接缝和叠压。
 // 光晕 = 由宽到窄描 14 遍、每遍很淡，叠出从外到里渐亮的柔边；每遍先画到一张草稿上再整体盖过去，不同宽度的路相交处也不会叠亮。
-const ROAD3 = { size: 4096, width: 0.7, halo: [11, 9.7, 8.5, 7.4, 6.4, 5.5, 4.6, 3.8, 3.1, 2.5, 1.9, 1.4, 0.9, 0.5], alpha: 0.044 };
+const ROAD3 = { size: 4096, width: 0.7, halo: [11, 9.7, 8.5, 7.4, 6.4, 5.5, 4.6, 3.8, 3.1, 2.5, 1.9, 1.4, 0.9, 0.5], alpha: 0.044 }; if (LOWMEM) ROAD3.size = 2048;   // 手机道路贴图 2048²：画布 16 MB、显卡贴图约 21 MB（4096² 时 64 / 85 MB）
 function paintRoads3() { const cv = G.roadCv; if (!cv || !SNAP) return; const S = Math.max(SNAP.w || 2700, SNAP.h || 2700), N = ROAD3.size, k = N / S, sc = scheme3(); if (cv.width !== N) cv.width = cv.height = N;
   const x = cv.getContext('2d'); x.clearRect(0, 0, N, N); const tmp = paintRoads3.tmp || (paintRoads3.tmp = document.createElement('canvas')); if (tmp.width !== N) tmp.width = tmp.height = N; const t = tmp.getContext('2d');
   const byW = new Map(); for (const r of SNAP.roads) { const w = r.width || 6.5; if (!byW.has(w)) byW.set(w, []); byW.get(w).push(r.pts); }
   const stroke = (c, extra) => { c.lineCap = c.lineJoin = 'round'; for (const [w, list] of byW) { c.lineWidth = (w * ROAD3.width + 2 * extra) * k; c.beginPath(); for (const Q of list) Q.forEach((p, i) => i ? c.lineTo(p[0] * k, (S - p[1]) * k) : c.moveTo(p[0] * k, (S - p[1]) * k)); c.stroke(); } };
   for (const h of ROAD3.halo) { t.clearRect(0, 0, N, N); t.strokeStyle = rgb(sc.glow); stroke(t, h); x.globalAlpha = ROAD3.alpha; x.drawImage(tmp, 0, 0); }
-  x.globalAlpha = 1; x.strokeStyle = rgb(sc.road); stroke(x, 0); if (G.roadTex) G.roadTex.needsUpdate = true; }
+  x.globalAlpha = 1; x.strokeStyle = rgb(sc.road); stroke(x, 0); if (G.roadTex) G.roadTex.needsUpdate = true;
+  cv.__snap = SNAP; cv.__sc = SCHEME3; if (LOWMEM) { tmp.width = tmp.height = 0; paintRoads3.tmp = null; } }   // 手机：画完放掉临时画布（2048² = 16 MB）
 // 农田逐顶点上色（颜色按 sRGB 给，换算成线性再交给渲染器）
 const lin3 = v => Math.pow(v / 255, 2.2), LIT3 = 0.6;
 function paintFarm3() { if (!G.farmMesh || !G.farmT) return; const st = scheme3().grad, at = G.farmMesh.geometry.getAttribute('color'), arr = at.array, t = G.farmT, lin = v => lin3(v) * LIT3;
@@ -1425,7 +1435,15 @@ function rise(u) { if (u < 0.12) return [RISE0, 0]; if (u < 0.6) return [RISE0 +
 function planCam() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F && F.grid; if (!g || !w || !h || !PV.s) return null;
   const tx = g.xmin + (w / 2 - PV.ox) / PV.s * g.RES, ty = g.ymax - (h / 2 - PV.oy) / PV.s * g.RES; return { tx, ty, dist: (h * g.RES / PV.s / 2) / NAV.TH }; }
 // 三维在后台先算好（第 07 步以后、演示停着的时候；自动播放时进第 09 步就算），到第 6 步不用停下来等
-function prebuild3D() { if (!DEMO.on || !sceneDirty || !F || DEMO.building) return; DEMO.building = true; setTimeout(() => { try { if (sceneDirty) ensure3D(); warm3D(); } catch (e) { console.warn(e); } DEMO.building = false; }, 60); }
+// 分段建：网格 / 桥面 / 道路贴图 / 装进场景 / 热身，每段之间让出主线程，平面动画不再整段停住（手机上原来一次冻住十几秒）
+function prebuild3D() { if (!DEMO.on || !sceneDirty || !F || DEMO.building) return; DEMO.building = true; const F0 = F;
+  let it = null; const mesh = () => { if (M) return; if (!SS.meshesIter) { M = SS.meshes(F, P); return; } it = it || SS.meshesIter(F, P); const r = it.next(); if (r.done) M = r.value; else return 'again'; };   // 网格本身也分 5 段
+  const steps = [mesh,
+    () => { if (DKP.on && SS.deck && (!DECK || DECKF !== F)) { try { DECK = SS.deck.buildDeck(F, DKP); DECKF = F; } catch (e) { console.warn('deck', e); DECK = null; } } },
+    () => { if (SNAP) { G.roadCv = G.roadCv || document.createElement('canvas'); paintRoads3(); } },
+    () => { if (sceneDirty) ensure3D(); }, () => warm3D()];
+  let i = 0; const run = () => { if (i <= 3 && !(DEMO.on && F === F0 && sceneDirty)) { DEMO.building = false; return; } let again = false; try { again = steps[i]() === 'again'; } catch (e) { console.warn(e); i = steps.length; } if (!again) i++; if (i < steps.length) setTimeout(run, 16); else DEMO.building = false; };
+  setTimeout(run, 60); }
 // 热身：第 9 步建好三维后，趁平面动画还在放，先把着色器编译、几何传上显卡、阴影画一遍；第 10 步第一帧从约 0.6 s 降到几 ms
 function warm3D() { if (!renderer || sceneDirty || !scene) return; try { placeCam(camS); setLift(); renderer.compile(scene, camera); renderer.render(scene, camera); const g = renderer.getContext(); if (g && g.finish) g.finish(); } catch (e) { console.warn(e); } }
 function dmEnterStage(k) { DEMO.stage = k; const s = DST[k]; if (k === DST.length - 1 && mode !== '3d') DEMO.cam0 = planCam(); if (k === DST.length - 2) prebuild3D();
@@ -1563,7 +1581,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.43'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.44'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);
