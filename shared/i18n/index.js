@@ -1,7 +1,7 @@
 // Chinese / English switching. Default language: the device's — Chinese when its system language is Chinese (any
 // variety), English for every other; once 中文 / EN is pressed, that choice is kept on the device and wins.
 // The choice is the one language of the whole site: every incubator app reads and writes it too (shared/ui/lang.js).
-// Static text: <span data-i18n="key"></span>, attributes: data-i18n-title="key".
+// Static text: <span data-i18n="key"></span>, attributes: data-i18n-title="key", data-i18n-aria="key" (the spoken name).
 // Module texts use {zh, en} objects resolved with pick().
 
 import { zh } from './zh.js';
@@ -58,6 +58,7 @@ export function applyI18n(root) {
   root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   root.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
   root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
 }
 
 export const dictionaries = DICTS;

@@ -991,7 +991,7 @@ export const CHINESE_UI = {
   "Tunnel": "隧道段",
   "HS1 from London to the Channel Tunnel (OpenStreetMap, ODbL) and HS2 Phase One from London to Birmingham (HS2 Ltd HS2_Route_Detailed, Open Government Licence); tunnels are dashed. Kept whole on purpose, so the lines continue outside the 70 km circle. Zoomed out the ends are named (Birmingham, and Manchester and Glasgow beyond on the West Coast Main Line; Paris and Brussels through the Channel Tunnel); from zoom 9 the stations.": "HS1 从伦敦到英吉利海峡隧道（OpenStreetMap，ODbL），HS2 第一阶段从伦敦到伯明翰（HS2 Ltd HS2_Route_Detailed，Open Government Licence）；隧道段为虚线。特意保留全线，所以线路会延伸到 70 km 圈外。缩小时标出终点与去向（伯明翰，以及经西海岸干线继续开往曼彻斯特、格拉斯哥；经英吉利海峡隧道通往巴黎、布鲁塞尔），缩放 9 级起标出车站。",
   "Visible · whole lines, also outside the 70 km circle": "已显示 · 全线，圈外也有",
-  // v3.45.0 · 3D relief
+  // v3.45.1 · 3D relief
   "3D relief": "3D 地形起伏",
   "The ground rises by its height · inside the 70 km circle · seen in the tilted view": "地面按高度隆起 · 只在 70 km 圈内 · 倾斜视角下可见",
   "Exaggeration": "夸张倍数",

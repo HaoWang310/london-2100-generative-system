@@ -52,7 +52,7 @@ test('the London map: tests that run, no leftovers from its first repository, th
   for (const f of ['scripts/test_basemap_themes.mjs', 'tests/app-english-ui.mjs', 'tests/ui-language.mjs', '.github', 'google-style-3d.html', 'assets/terrain_b64'])
     assert.ok(!there('incubator/google-map-live/' + f), f);
   for (const f of ['env_fields.test.mjs', 'site_builder.test.mjs']) assert.ok(there('incubator/tensor-studio/scripts/' + f), f);
-  assert.ok(read('incubator/google-map-live/index.html').includes('id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.45.0<'));
+  assert.ok(read('incubator/google-map-live/index.html').includes('id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.45.1<'));
   assert.ok(!read('incubator/google-map-live/scripts/app.js').includes('-english'));
 });
 
@@ -60,4 +60,45 @@ test('the architecture document says how things stand', () => {
   const s = read('docs/ARCHITECTURE.md');
   assert.ok(s.includes('ROAD_CHAIN = false') && s.includes('伦敦地图 → 第 1 步 整环：黏菌与生长 → 第 2 步 毛线带 → 张量场工作室 → 结构工作室 → VR'));
   assert.ok(!s.includes('01-growth-simulator'));
+});
+
+// (27 Nov 2026) four more from a re-check
+test('the wool bands: the legend\'s fold has its own id, so lkKey names one element', () => {
+  const s = read('incubator/loop-city-wool/index.html');
+  assert.ok(s.includes("const fk = lkFold('Key', 'lkLegend');") && !s.includes("lkFold('Key', 'lkKey')"));
+  assert.equal((s.match(/kd\.id = 'lkKey'/g) || []).length, 1);
+});
+
+test('the London map on a phone: the language switch every app has, at the top right', () => {
+  const html = read('incubator/google-map-live/index.html');
+  assert.ok(html.includes('<link rel="stylesheet" href="../../shared/ui/phone.css?v=2">'));
+  assert.ok(html.includes("sw.classList.add('l2ph-lang'); document.body.appendChild(sw); document.documentElement.classList.add('l2ph-lang-top');"));
+  assert.ok(html.includes("matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600"), 'the same test as app.js\'s IS_PHONE');
+  assert.ok(read('incubator/google-map-live/scripts/app.js').includes("const IS_PHONE=(()=>{try{return matchMedia('(pointer: coarse)').matches&&Math.min(screen.width,screen.height)<600;"));
+  assert.ok(read('incubator/google-map-live/styles/app.css').includes('html.l2ph-lang-top .maplibregl-ctrl-top-right{top:64px}'), 'the map\'s own controls go under it');
+  const cat = JSON.parse(read('incubator/catalogue.json')).items.find(i => i.id === 'google-map-live');
+  assert.deepEqual(cat.embed.hide, ['#uiLanguageSwitch'], 'in the catalogue\'s frame it stays hidden by its id');
+});
+
+test('spoken names and tooltips follow the language', async () => {
+  const chain = read('shared/ui/chain.js');
+  assert.ok(chain.includes("el.setAttribute('aria-label', T(['Research line', '研究主线']));"));
+  for (const p of ['index.html', 'incubator/vr/index.html', 'incubator/vr/map.html', 'incubator/loop-city-wool/index.html', 'incubator/google-map-live/index.html', 'incubator/structure-studio/index.html', 'incubator/tensor-studio/index.html', 'incubator/loop-city-mould-growth/index.html'])
+    assert.ok(read(p).includes('shared/ui/chain.js?v=4') && !read(p).includes('shared/ui/chain.js?v=3'), p);
+  const { en } = await import(new URL('shared/i18n/en.js', root)), { zh } = await import(new URL('shared/i18n/zh.js', root)), html = read('index.html');
+  for (const k of ['scale', 'modules', 'map', 'params', 'catalogue', 'timeline', 'app']) { assert.ok(en['aria.' + k] && /[㐀-鿿]/.test(zh['aria.' + k]), k); assert.ok(html.includes(`data-i18n-aria="aria.${k}"`), k); }
+  assert.ok(read('shared/i18n/index.js').includes("root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });"));
+  for (const p of ['incubator/loop-city-mould-growth/index.html', 'incubator/loop-city-wool/index.html']) { const s = read(p);
+    assert.ok(s.includes("const al = n.getAttribute('aria-label'); if (al && n.__enA === undefined)") && s.includes("el.setAttribute('aria-label', el.__enA)"), p);
+    assert.ok(s.includes("b.title = LANG === 'zh' ? '英文' : 'English';") && s.includes("x.setAttribute('aria-label', L === 'zh' ? '关闭' : 'Close');"), p);
+    assert.ok(s.includes('"North": "北"'), p); }
+  const ss = read('incubator/structure-studio/index.html');
+  assert.ok(ss.includes('id="langSw" role="group" aria-label="语言"') && ss.includes('"语言": "Language"') && ss.includes("if (!TT0.has(e)) TT0.set(e, e.getAttribute('title'));"));
+  assert.ok(read('incubator/tensor-studio/index.html').includes('"English":"英文"'));
+  assert.ok(read('incubator/vr/map.html').includes("if (fr) fr.title = v === 'en' ? 'London map' : '伦敦地图';"));
+});
+
+test('the documents point only at files that exist', () => {
+  assert.ok(!read('incubator/google-map-live/README.md').includes('london_drainage_network_metadata.json'));
+  assert.ok(!read('incubator/loop-city-wool/README.md').includes('make-thumbs'));
 });

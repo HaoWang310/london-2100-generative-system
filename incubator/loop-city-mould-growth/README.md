@@ -1,5 +1,7 @@
 # Loop City · 第 1 步 整环：黏菌与生长 · Step 1, the whole loop: mould and growth
 
+> **读屏文字 · Spoken names (27 Nov 2026).** 中文下读屏名称（aria-label，如指北针「北」）、EN 按钮的提示和范例提示的关闭按钮也跟着语言走。 Spoken names, the EN button's tooltip and the example note's close button follow the language.
+
 > **准备进度跟随语言 · The progress line follows the language (26 Nov 2026).** 「正在准备生长模型 NN %」原来在开始准备时定下语言，之后换语言这一行不变；现在每次更新数字时按页面当前的语言写。 The "preparing the growth model" line now takes the page's language at each figure.
 
 > **文字核对 · The wording checked (26 Nov 2026).** 浏览器标签名由「Loop City live v17 · the mould and its cells」改为和目录一致的「Loop City · 1 The whole loop: mould and growth」（中文「Loop City · 1 整环：黏菌与生长」）；导出的单元包里 `app` 一项随之改变，没有程序读它。中文下两条悬停提示（收起、闭合地块的说明）有了译文。 The tab is named as in the catalogue; the `app` field of a saved cell package changes with it, and nothing reads that field. Two tooltips have their Chinese.

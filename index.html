@@ -27,7 +27,7 @@
         <span class="brand-name">London 2100</span>
         <span class="brand-sub" data-i18n="app.subtitle"></span>
       </div>
-      <nav class="crumbs" id="crumbs" aria-label="Scale"></nav>
+      <nav class="crumbs" id="crumbs" aria-label="Scale" data-i18n-aria="aria.scale"></nav>
       <div class="top-actions">
         <div class="seg" role="group" aria-label="2D / 3D">
           <button id="view2d" aria-pressed="true">2D</button>
@@ -38,7 +38,7 @@
       </div>
     </header>
 
-    <aside class="sidenav" aria-label="Modules">
+    <aside class="sidenav" aria-label="Modules" data-i18n-aria="aria.modules">
       <div class="pad" id="wsChain"></div>
       <div class="eyebrow pad" data-i18n="nav.scales"></div>
       <ol class="modlist" id="scaleList"></ol>
@@ -52,13 +52,13 @@
     </aside>
 
     <main class="stage">
-      <div id="map" class="map" aria-label="Map"></div>
+      <div id="map" class="map" aria-label="Map" data-i18n-aria="aria.map"></div>
       <div class="map-loading" id="mapLoading"><span></span><em data-i18n="map.loading"></em></div>
       <div class="map-hint" id="mapHint" hidden></div>
       <div class="map-badge" id="mapBadge" hidden></div>
     </main>
 
-    <aside class="inspector" id="inspector" aria-label="Parameters">
+    <aside class="inspector" id="inspector" aria-label="Parameters" data-i18n-aria="aria.params">
       <!-- phones: the module list is hidden; its scales come here, as a row that stays at the top while the parameters scroll -->
       <nav class="phone-scales" id="phoneScales"></nav>
       <div class="insp-head">
@@ -86,7 +86,7 @@
     <footer class="timeline">
       <button class="btn ghost play" id="playButton" aria-label="Play"></button>
       <div class="tl-track">
-        <input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Timeline">
+        <input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Timeline" data-i18n-aria="aria.timeline">
       </div>
       <div class="tl-label mono" id="tlLabel"></div>
       <div class="tl-status" id="tlStatus"></div>
@@ -95,7 +95,7 @@
 
   <div class="popover" id="versionMenu" hidden></div>
 
-  <section class="catalogue" id="catalogue" aria-label="Catalogue" hidden>
+  <section class="catalogue" id="catalogue" aria-label="Catalogue" data-i18n-aria="aria.catalogue" hidden>
     <header class="cat-top">
       <button class="home" id="catHome" data-i18n-title="intro.reopen">
         <span class="brand-mark" aria-hidden="true"></span><b>London 2100</b><span data-i18n="app.subtitle"></span>
@@ -117,7 +117,7 @@
     </div>
   </section>
 
-  <section class="appview" id="appview" aria-label="App" hidden>
+  <section class="appview" id="appview" aria-label="App" data-i18n-aria="aria.app" hidden>
     <header class="appview-bar">
       <button class="btn ghost appview-back" id="appviewBack"><span aria-hidden="true">←</span> <span data-i18n="cat.title"></span></button>
       <span class="appview-title"></span>
@@ -148,7 +148,7 @@
   </section>
 
   <script src="./shared/ui/phone.js?v=3"></script>
-  <script src="./shared/ui/chain.js?v=3"></script>
+  <script src="./shared/ui/chain.js?v=4"></script>
   <script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js). The whole system stands beside the research
      line: its next step is the London map, opened in the catalogue in a new tab; nothing is carried. */
   if (window.L2Chain) L2Chain.mount({ id: 'workspace', into: '#wsChain', base: 'incubator/', shellSelf: true });</script>

@@ -249,5 +249,12 @@ export const zh = {
   "cat.slot.desc": "把 app 放进 incubator/，再在 catalogue.json 中加一条，就会出现在这里。",
   "cat.back": "返回目录",
   "app.openTab": "在新标签页打开",
-  "app.loading": "正在打开…"
+  "app.loading": "正在打开…",
+  "aria.scale": "尺度",
+  "aria.modules": "模块",
+  "aria.map": "地图",
+  "aria.params": "参数",
+  "aria.catalogue": "目录",
+  "aria.timeline": "时间轴",
+  "aria.app": "应用"
 };

@@ -13,17 +13,18 @@
   <title>London map</title>
   <!-- One language for every app: the shared choice (l2100.lang) is given to this page's own key before it reads it. -->
   <script src="../../shared/ui/lang.js?v=1" data-key="londonMap.uiLanguage" data-button='#uiLanguageSwitch button[data-language="{lang}"]'></script>
-  <script type="module" src="./scripts/ui_language.js?v=3.45.0"></script>
+  <script type="module" src="./scripts/ui_language.js?v=3.45.1"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.13.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.13.0/dist/maplibre-gl.css'">
 
-  <link rel="stylesheet" href="./styles/app.css?v=3.45.0">
+  <link rel="stylesheet" href="./styles/app.css?v=3.45.1">
 <script>if(!/[#&?]noskin\b/.test(location.href))document.documentElement.classList.add("l2ui");</script>
 <link rel="stylesheet" href="../../shared/ui/tokens.css?v=1">
 <link rel="stylesheet" href="../../shared/ui/studio.css?v=1">
 <link rel="stylesheet" href="./styles/skin.css?v=2">
 <link rel="stylesheet" href="../../shared/ui/swatches.css?v=1">
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=3"></script>
+<link rel="stylesheet" href="../../shared/ui/phone.css?v=2">
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script>
 </head>
 <body>
   <div id="googleMap"></div>
@@ -163,7 +164,7 @@
     <div class="head">
       <div>
         <div class="title">London map</div>
-        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.45.0</div>
+        <div class="sub" id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.45.1</div>
         <div class="providerBadge" id="providerBadge">OpenStreetMap · no API key</div>
       </div>
       <div class="headActions">
@@ -660,12 +661,18 @@
 
   <div id="coords" class="coords">Lat — / Lng — / Zoom —</div>
 
-<script type="module" src="./scripts/app.js?v=3.45.0"></script>
+<script type="module" src="./scripts/app.js?v=3.45.1"></script>
 <script>/* (26 Nov 2026) the chain row, the same in every catalogue app (shared/ui/chain.js): after the London map comes Loop City step 1.
    Nothing is carried on this step. Selecting a site and opening Tensor Studio over it is as it was. Framed by the VR page the row is not shown. */
 (function () { var p = document.getElementById('panel'), h = p && p.querySelector('.head'); if (!window.L2Chain || !h) return;
   L2Chain.mount({ id: 'google-map-live', into: p, before: h.nextElementSibling, lang: function () { var b = document.querySelector('#uiLanguageSwitch button[aria-pressed="true"]'); return b ? b.getAttribute('data-language') : document.documentElement.lang; } }); })();
 </script>
+<script>/* (26 Nov 2026) on a phone the language switch is the one every app has: at the top right, 44 px high, Chinese first
+   (../../shared/ui/phone.css, .l2ph-lang). It was 78 × 32 in the panel's head. Same test as app.js's IS_PHONE; in the
+   catalogue's frame the switch stays hidden by its id. */
+(function () { try { if (!(matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600)) return; } catch (e) { return; }
+  var sw = document.getElementById('uiLanguageSwitch'); if (!sw) return;
+  sw.classList.add('l2ph-lang'); document.body.appendChild(sw); document.documentElement.classList.add('l2ph-lang-top'); })();</script>
 </body>
 </html>
 

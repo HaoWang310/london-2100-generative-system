@@ -53,7 +53,7 @@ examples before it (seed 2100, cell C67 · P2), not the app's own show-piece. An
 The whole system stands beside the line: no marks. Under a finger (`pointer: coarse`) the two buttons are 44 px high. (The real map stood beside it too until it was removed on 26 Nov 2026.)
 
 ```html
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=3"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script>
 <script>L2Chain.mount({ id: 'my-app', into: panel, before: firstThingUnderTheTitle,
   state: () => ({ ready, carry: ['en', '中文'], need: ['en', '中文'] }),   // only for a step that hands its result on
   go: () => myOwnHandOver() });</script>

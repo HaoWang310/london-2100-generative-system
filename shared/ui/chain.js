@@ -97,6 +97,7 @@
     else hint = esc(T(s.need)) + ' <a data-l2c="example">' + (zh ? '去看「' + T(NAME[nx]) + '」的范例 ›' : 'See the example in ' + T(NAME[nx]) + ' ›') + '</a>';
     h += '<div class="l2c-hint' + (s && s.ready ? ' carry' : '') + '" data-l2c-hint>' + hint + '</div>';
     el.innerHTML = h; M.key = key();
+    el.setAttribute('aria-label', T(['Research line', '研究主线']));      // (26 Nov 2026) the row's spoken name, in the language in use
   }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function say(pair) { var h = M.el.querySelector('[data-l2c-hint]'); if (h) { h.className = 'l2c-hint'; h.textContent = T(pair); } }

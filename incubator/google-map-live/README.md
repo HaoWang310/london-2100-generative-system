@@ -1,5 +1,7 @@
 # London Map Live
 
+> **手机上的语言开关 · The language switch on a phone (v3.45.1, 27 Nov 2026).** 手机上（触屏、短边小于 600 px，和 `IS_PHONE` 同一个判断）语言开关和其他 app 一样：右上角、44 px 高、中文在前（`shared/ui/phone.css` 的 `.l2ph-lang`）；原来是面板标题旁的 78 × 32。地图右上角的控件往下让到 64 px。在目录的框里它仍按 id 隐藏。 On a phone the switch is the one every app has, at the top right, 44 px high; the map's own top-right controls move under it.
+
 > **文字核对 · The wording checked (26 Nov 2026).** 中文界面下，数据说明里「Site streets (Tensor Studio)…」这一段原来是英文，现在词典里有了译文（`scripts/ui_chinese_dictionary.js`）。 In Chinese, the paragraph on the site's streets was left in English; the dictionary has it now.
 
 > **一个语言 · One language for every app (26 Nov 2026).** 页面最前面多一行 `shared/ui/lang.js`：全站共用的语言（`l2100.lang`）在打开时交给本页自己的 `londonMap.uiLanguage`，在本页切换时记回去，别的标签页切换时本页跟着换。`scripts/ui_language.js` 没有改。 The first script of the page, `shared/ui/lang.js`, joins this page's own key to the site's one language. `scripts/ui_language.js` is unchanged.
@@ -208,9 +210,7 @@ analysis/display choices, not calibrated channel-initiation thresholds.
 Existing repository metadata attributes the contributing-area raster to EA
 LiDAR Composite DTM. The TIFF itself does not provide the original DEM ID,
 flow-direction raster, or processing log, so that upstream processing has not
-been independently reproduced in this update. The extraction performed here
-is reproducible from the exact input file and checksum recorded in
-[`assets/london_drainage_network_metadata.json`](assets/london_drainage_network_metadata.json).
+been independently reproduced in this update.
 
 To rebuild, install `numpy`, `rasterio` and `Pillow`, then run:
 
