@@ -925,8 +925,8 @@ function buildCards() {
     el.onclick = () => focusCell(c);
     host.appendChild(el); });
   const imgs = [...host.querySelectorAll('.card.cell')], F0 = F; let i = 0;
-  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
-  setTimeout(step, 20);
+  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; if (!planBase) { setTimeout(step, 250); return; } const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
+  setTimeout(step, 20);   // (27 Nov 2026) the plan picture may not be drawn yet (language changed during the opening film): the pictures wait for it
 }
 function focusCell(c) {
   focus = c; document.querySelectorAll('.card.cell').forEach(el => el.classList.toggle('on', !!c && el.dataset.id == c.id)); setHighlight(c);
@@ -1055,7 +1055,8 @@ $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.wi
 
 async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj; runLine();
   P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
-  if (window.SSIntro) SSIntro.onSnap(SNAP, name);   // 开场短片：第一次载入时，先把场地交给短片（它在后台线程里画），再在这里算
+  if (window.SSIntro) SSIntro.onSnap(SNAP, isBuilt(CUR) && BUILT[CUR] ? BUILT[CUR].name : name);   // (27 Nov 2026) 内置范例传名字函数：放映中换语言，短片里的场地名也跟着换
+  // 开场短片：第一次载入时，先把场地交给短片（它在后台线程里画），再在这里算
   SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; // 三维镜头一开始就对准场地（以前停在坐标原点 (0, 0)，没播第 6 步就进三维时场地在屏幕外）
   siteText();

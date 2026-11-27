@@ -32,8 +32,8 @@ test('the page plays the film first, hands over without replaying the tensor fie
   for (const f of ['data', 'draw', 'scene5']) assert.ok(html.includes(`<script src="intro/${f}.js?v=${ver}"></script>`), f);
   assert.ok(html.includes(`<script src="intro/intro.js?v=${ver}"></script>`) && html.indexOf('intro/intro.js') < html.indexOf('three.min.js'), 'the cover comes before three.js');
   assert.ok(html.includes(`intro/intro.css?v=${ver}`));
-  for (const k of ['SSIntro.onSnap(SNAP, name)', 'SSIntro.onStructure(skip => guidedIntro(skip))', 'async function guidedIntro(skip)', 'if (skip) DEMO.T = Math.max(dmT0[1], DEMO.stopAt - 2)', "$('introBtn').onclick", '"▶ 开场短片": "▶ Opening film"']) assert.ok(html.includes(k), k);
-  assert.ok(html.indexOf('SSIntro.onSnap(SNAP, name)') < html.indexOf('SITE = SS.prepareSite(SNAP); SITE4 = null'), 'the snapshot goes to the film before the page starts computing');
+  for (const k of ['SSIntro.onSnap(SNAP, isBuilt(CUR) && BUILT[CUR] ? BUILT[CUR].name : name)', 'SSIntro.onStructure(skip => guidedIntro(skip))', 'async function guidedIntro(skip)', 'if (skip) DEMO.T = Math.max(dmT0[1], DEMO.stopAt - 2)', "$('introBtn').onclick", '"▶ 开场短片": "▶ Opening film"']) assert.ok(html.includes(k), k);
+  assert.ok(html.indexOf('SSIntro.onSnap(SNAP, isBuilt(CUR) && BUILT[CUR] ? BUILT[CUR].name : name)') < html.indexOf('SITE = SS.prepareSite(SNAP); SITE4 = null'), 'the snapshot goes to the film before the page starts computing');
   const w = readFileSync(new URL('intro/worker.js', dir), 'utf8'); assert.ok(w.includes("importScripts('data.js' + (self.location.search || ''), 'draw.js' + (self.location.search || ''))"));
   const js = readFileSync(new URL('intro/intro.js', dir), 'utf8'); for (const k of ['nointro', 'embed=1', 'prefers-reduced-motion', "classList.contains('l2ui')", 'transferControlToOffscreen']) assert.ok(js.includes(k), k);
   assert.ok(!/window\.parent\s*!==\s*window/.test(js), 'the catalogue opens the app in a frame: being framed must not stop the film');

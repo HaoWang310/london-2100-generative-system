@@ -37,7 +37,7 @@
       '<canvas class="ssi-gl"></canvas><canvas class="ssi-film"></canvas><canvas class="ssi-top"></canvas></div>' +
       '<div class="ssi-bar"><span class="ssi-tag">' + L('结构工作室 · 开场', 'Structure Studio · Opening') + '</span>' +
       '<button type="button" class="ssi-skip"><span class="ssi-a">' + L('跳过', 'Skip') + '</span><span class="ssi-b">' + L('进入 ›', 'Enter ›') + '</span></button></div>' +
-      '<div class="ssi-foot"><span class="ssi-pips"><i></i><i></i><i></i><i></i><i></i></span><span class="ssi-stat">' + L('正在载入场地…', 'Loading the site…') + '</span></div>';
+      '<div class="ssi-foot" aria-hidden="true"><span class="ssi-pips"><i></i><i></i><i></i><i></i><i></i></span><span class="ssi-stat">' + L('正在载入场地…', 'Loading the site…') + '</span></div>';
     (document.body || de).appendChild(root); de.classList.add('ssi-on');
     var cvGL = root.querySelector('.ssi-gl'), cvFilm = root.querySelector('.ssi-film'), cvTop = root.querySelector('.ssi-top'), ctxTop = cvTop.getContext('2d');
     var W = innerWidth, Hh = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), low = Math.min(W, Hh) < 600 || (navigator.maxTouchPoints || 0) > 0;
@@ -58,7 +58,10 @@
       var q = function (sel, a, b) { var e = root.querySelector(sel); if (e) e.textContent = L(a, b); };
       q('.ssi-card b', '结构工作室', 'Structure Studio'); q('.ssi-card span', 'Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets');
       q('.ssi-card em', '正在载入场地…', 'Loading the site…'); q('.ssi-tag', '结构工作室 · 开场', 'Structure Studio · Opening');
-      q('.ssi-a', '跳过', 'Skip'); q('.ssi-b', '进入 ›', 'Enter ›'); lastS = ''; if (lastK >= 0) foot(T[lastK]); else q('.ssi-stat', '正在载入场地…', 'Loading the site…'); }
+      q('.ssi-a', '跳过', 'Skip'); q('.ssi-b', '进入 ›', 'Enter ›'); lastS = ''; if (lastK >= 0) foot(T[lastK]); else q('.ssi-stat', '正在载入场地…', 'Loading the site…');
+      // (27 Nov 2026) and the film's own words too, from the next frame (before, they kept the language the site arrived in)
+      var lg = zh ? 'zh' : 'en', nm = siteName();
+      if (worker) worker.postMessage({ type: 'lang', lang: lg, name: nm }); if (top) top.setLang(lg, nm); if (film) film.setLang(lg, nm); if (s5 && s5.setLang) s5.setLang(lg); }
     var relT = setInterval(function () { if (me.closed) { clearInterval(relT); return; } relabel(); }, 400);
     function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1); fit();
       if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(W, Hh, dpr); }
@@ -75,12 +78,14 @@
         worker.postMessage({ type: 'init', canvas: off, w: W, h: Hh, dpr: dpr, lang: zh ? 'zh' : 'en' }, [off]); } catch (e) { worker = null; }
     }
     // ---------------------------------------------------------------- the ground (snapshot) → the worker, or drawn here
+    // the site's name: the page may pass a function (a built-in site's name is in both languages)
+    function siteName() { try { return typeof name === 'function' ? name() : name; } catch (e) { return ''; } }
     me.snap = function (snap, nm) { if (me.closed || me.hasSnap) return; me.hasSnap = true; name = nm || name; relabel();
       Dr = window.SSIntroDraw; if (!Dr || !window.SSIntroData) { me.close(); return; } T = Dr.T; END = Dr.END; XF = Dr.XF;
-      if (worker) worker.postMessage({ type: 'snap', snap: snap, name: name, lang: zh ? 'zh' : 'en' });
-      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: name }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }
+      if (worker) worker.postMessage({ type: 'snap', snap: snap, name: siteName(), lang: zh ? 'zh' : 'en' });
+      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: siteName() }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }
       if (!worker) {                       // older browsers: everything drawn here (it stops while the page builds)
-        film = Dr.create(cvFilm.getContext('2d'), { lang: zh ? 'zh' : 'en', name: name }); film.resize(W, Hh, dpr);
+        film = Dr.create(cvFilm.getContext('2d'), { lang: zh ? 'zh' : 'en', name: siteName() }); film.resize(W, Hh, dpr);
         var A = SSIntroData.fromSnap(snap); data = Object.assign(data || {}, A); film.setSnap(A); top.setSnap(A);
         fetch('intro/wool.json' + (V ? '?v=' + V : '')).then(function (r) { return r.json(); }).then(function (w) { film.setWool(w); begin(); }, function () { begin(); });
       }

@@ -177,7 +177,7 @@
       '<div class="tsi-film">' + html + '</div>' +
       '<div class="tsi-bar"><span class="tsi-tag">' + L('张量场工作室 · 方法', 'Tensor Studio · Method') + '</span>' +
       '<button type="button" class="tsi-skip"><span class="tsi-sk">' + L('跳过', 'Skip') + '</span><span class="tsi-go">' + L('进入 ›', 'Enter ›') + '</span></button></div>' +
-      '<div class="tsi-foot"><span class="tsi-pips">' + pips + '</span><span class="tsi-stat"><span class="tsi-sl">' + L('正在载入场地…', 'Loading the site…') + '</span>' + stat + '</span></div>';
+      '<div class="tsi-foot" aria-hidden="true"><span class="tsi-pips">' + pips + '</span><span class="tsi-stat"><span class="tsi-sl">' + L('正在载入场地…', 'Loading the site…') + '</span>' + stat + '</span></div>';
   }
 
   // ---------------------------------------------------------------- playing it (once on opening, and again from the app's button)

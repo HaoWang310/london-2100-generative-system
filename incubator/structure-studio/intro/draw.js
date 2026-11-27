@@ -17,7 +17,10 @@ const mk = (w, h) => { if (typeof OffscreenCanvas !== 'undefined') return new Of
 const RW = { m: 12, t: 9, l: 6.5 }, RC = { m: '#ffffff', t: 'rgba(225,228,236,.92)', l: 'rgba(150,158,172,.75)' }, JC = { T: '#ffb37a', X: '#8fb4ff', Y: '#ffffff' };
 
 function create(G0, opt) {
-  const zh = (opt.lang || 'zh') !== 'en', L = (a, b) => zh ? a : b, name = opt.name || L('这块场地', 'This site');
+  let zh = (opt.lang || 'zh') !== 'en', name = opt.name || ((opt.lang || 'zh') !== 'en' ? '这块场地' : 'This site');
+  const L = (a, b) => zh ? a : b;
+  // (27 Nov 2026) a language changed while the film plays: its words switch on the next frame, as in the Loop City opening
+  const setLang = (l, nm) => { zh = l !== 'en'; name = nm || L('这块场地', 'This site'); };
   let g = G0, Wd = 1, Hd = 1, dpr = 1, D = null, S = {}, W0 = opt.wool || null, ground = null, bufA = null, bufB = null;
   const plan = { s: 1, ox: 0, oy: 0 }, axo = { k: 1, cx: 0, cy: 0, gap: 0 }, TH = -0.62, cT = Math.cos(TH), sT = Math.sin(TH);
   const nar = () => Wd < 600;
@@ -92,9 +95,10 @@ function create(G0, opt) {
     const toks = zh ? (s.match(/[A-Za-z0-9.,%:/+×→·°\-]+|\s+|./gu) || []) : s.split(/(\s+)/);
     for (const tk of toks) { const nx = cur + tk; if (g.measureText(nx).width > maxW && cur.trim()) { out.push(cur.trim()); cur = tk.trimStart(); } else cur = nx; } if (cur.trim()) out.push(cur.trim()); return out; }
   function caption(t, alpha) { const [tt, body] = captionAt(t), n = nar(), x = n ? 18 : 28, maxW = Math.min(Wd - x * 2, 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
-    const lines = wrap(body, maxW, bs, 400), h = ts + 12 + lines.length * lh + (n ? 22 : 30);
+    // (27 Nov 2026) a title too wide for the screen (English, on a phone) folds onto a second line instead of running off the edge
+    const tl = wrap(tt, maxW, ts, 600), tlh = ts + 5, lines = wrap(body, maxW, bs, 400), h = ts + (tl.length - 1) * tlh + 12 + lines.length * lh + (n ? 22 : 30);
     g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; const gr = g.createLinearGradient(0, Hd - h - 40, 0, Hd); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.45, 'rgba(0,0,0,.8)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); g.fillStyle = gr; g.fillRect(0, Hd - h - 40, Wd, h + 40);
-    let y = Hd - h + ts + 4 - (n ? 4 : 0); text(tt, x, y, ts, '#fff', 'left', 600); y += 10; for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.68)', 'left', 400); } g.restore(); }
+    let y = Hd - h + ts + 4 - (n ? 4 : 0); tl.forEach((s, i) => { if (i) y += tlh; text(s, x, y, ts, '#fff', 'left', 600); }); y += 10; for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.68)', 'left', 400); } g.restore(); }
   function pips(t) { const n = nar(), x0 = n ? 18 : 28, y = n ? 24 : 28, w = n ? 30 : 44, gap = 6; g.save();
     for (let k = 0; k < 5; k++) { const a = T[k], e = k < 4 ? T[k + 1] : END, f = Math.max(0, Math.min(1, (t - a) / (e - a))), x = x0 + k * (w + gap);
       g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x, y, w, 2); g.fillStyle = '#fff'; g.fillRect(x, y, w * f, 2); }
@@ -176,7 +180,7 @@ function create(G0, opt) {
     caption(o.waiting ? T[2] + 1 : t);   // (27 Nov 2026) the progress marks are the page's own foot now (intro.js), not drawn here
     if (o.waiting) pill(L('正在生成走廊网…', 'Generating the corridor net…'), Wd / 2, nar() ? Hd * 0.12 : 64, nar() ? 13 : 14, 'center'); }
   const setWool = w => { W0 = w; };
-  return { setSnap, setStructure, setDeck, setWool, resize, frame, endPlan, caption, pips, hasStructure,
+  return { setSnap, setStructure, setDeck, setWool, setLang, resize, frame, endPlan, caption, pips, hasStructure,
     h: { text, statBlock, pill, callout, seg, ease, gcol, nar: nar, size: () => [Wd, Hd, dpr], stats: () => S, use: c => { g = c || G0; } } };
 }
 const API = { create, T, END, XF, HOLD, ease, seg, gcol };

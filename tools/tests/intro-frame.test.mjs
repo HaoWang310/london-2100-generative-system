@@ -19,3 +19,12 @@ test('the openings share the mould\'s frame: one 44 px button, below the catalog
   for (const f of ['structure-studio/intro/intro.js', 'tensor-studio/intro/intro.js']) assert.ok(!/class="(ssi|tsi)-enter"/.test(read('incubator/' + f)), f + ': one button only');
   assert.ok(!read('incubator/structure-studio/intro/draw.js').includes('caption(o.waiting ? T[2] + 1 : t); pips(t);'), 'no progress line drawn in the film');
 });
+test('Structure\'s film follows a language change mid-film, folds long titles, and its cards wait for the plan picture', () => {
+  const d = read('incubator/structure-studio/intro/draw.js'), w = read('incubator/structure-studio/intro/worker.js'), i = read('incubator/structure-studio/intro/intro.js'), p = read('incubator/structure-studio/index.html');
+  assert.ok(/const setLang = \(l, nm\)/.test(d) && d.includes('setWool, setLang,'), 'draw.js setLang');
+  assert.ok(read('incubator/structure-studio/intro/scene5.js').includes('dispose, setLang }'), 'scene5 setLang');
+  assert.ok(w.includes("m.type === 'lang'") && i.includes("type: 'lang'"), 'the worker hears it');
+  assert.ok(d.includes('const tl = wrap(tt, maxW, ts, 600)'), 'titles fold');
+  assert.ok(p.includes('if (!planBase) { setTimeout(step, 250); return; }'), 'card pictures wait');
+  for (const f of ['structure-studio/intro/intro.js', 'tensor-studio/intro/intro.js']) assert.ok(/foot" aria-hidden="true"/.test(read('incubator/' + f)), f + ': foot hidden from screen readers');
+});
