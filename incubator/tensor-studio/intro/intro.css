@@ -55,7 +55,7 @@
 
 /* (27 Nov 2026) laid out as the Loop City opening: the picture in the middle, a centred caption under it (a 22 px title,
    then the lines at 14.5 px; 18 / 13.5 on a phone). The chapter numbers (I–VI) are in the foot's status, not over the title. */
-#tsIntro{--tsi-cap:184px}
+#tsIntro{--tsi-cap:140px}
 #tsIntro .tsi-art{position:absolute;left:max(20px,calc(50vw - 560px));right:max(20px,calc(50vw - 560px));top:calc(72px + env(safe-area-inset-top));
   bottom:calc(var(--tsi-cap) + 50px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center;container-type:size}
 #tsIntro .tsi-txt{position:absolute;left:50%;width:min(680px,calc(100vw - 40px));transform:translateX(-50%);bottom:calc(50px + env(safe-area-inset-bottom));
