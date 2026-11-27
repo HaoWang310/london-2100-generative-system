@@ -4508,7 +4508,7 @@ function bdSaveGeo() {
 function draw() {
   if (!S.view || toLoad) return;
   const L = S.layers, step = S.step, T0 = TH(), C = LK(), main = cx;
-  const op = k => (V.op[k] === undefined ? 100 : V.op[k]) / 100;
+  const op = k => (window.__lcSiteOnly && (k === 'mould' || k === 'rail')) ? 0 : (V.op[k] === undefined ? 100 : V.op[k]) / 100;   // (27 Nov 2026) the prologue's bare site (flow.js)
   const on = k => !!L[k];
   main.setTransform(DPR, 0, 0, DPR, 0, 0);
   main.globalAlpha = 1; main.globalCompositeOperation = 'source-over'; main.fillStyle = pxCss(C.bg); main.fillRect(0, 0, W, Hh);
@@ -6001,5 +6001,5 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=6"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=7"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=7"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=1"></script><script src="flow.js?v=8"></script>
 </body></html>
