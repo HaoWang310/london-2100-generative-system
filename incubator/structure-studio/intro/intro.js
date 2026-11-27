@@ -52,7 +52,7 @@
     var pipEl = root.querySelectorAll('.ssi-pips i'), statEl = root.querySelector('.ssi-stat'), lastK = -1, lastS = '';
     function foot(t) { var k = 0; while (k < 4 && t >= T[k + 1]) k++;
       if (k !== lastK) { lastK = k; for (var i = 0; i < pipEl.length; i++) pipEl[i].classList.toggle('on', i <= k); }
-      var s = me.structure ? L('第 ' + (k + 1) + ' / 5 幕', 'Scene ' + (k + 1) + ' / 5') : L('正在载入场地…', 'Loading the site…');
+      var s = me.structure ? L('第 ' + (k + 1) + ' / 5 章', 'Chapter ' + (k + 1) + ' / 5') : L('正在载入场地…', 'Loading the site…');   // (27 Nov 2026) "chapter", as the other openings
       if (s !== lastS) { lastS = s; statEl.textContent = s; } }
     // (26 Nov 2026) the card and the two buttons follow a language changed while the film loads (another tab, the catalogue);
     // the film's own words take the language the page has when the site arrives (me.snap)

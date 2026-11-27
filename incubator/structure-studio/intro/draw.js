@@ -41,7 +41,7 @@ function create(G0, opt) {
   function fitAxo() { const pts = []; for (const pc of D.outline) for (const p of pc[0]) { const x = p[0] - D.w / 2, y = p[1] - D.h / 2; pts.push([x * cT - y * sT, (x * sT + y * cT) * 0.52]); }
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
     axo.gap = Hd * (nar() ? 0.11 : 0.12); const avH = Hd * (nar() ? 0.62 : 0.72) - 3 * axo.gap; axo.k = Math.min(Wd * (nar() ? 0.86 : 0.56) / bw, avH / bh);
-    axo.cx = Wd * (nar() ? 0.5 : 0.56) - (Math.max(...xs) + Math.min(...xs)) / 2 * axo.k; axo.cy = Hd * (nar() ? 0.1 : 0.07) + 3 * axo.gap + Math.max(...ys) * axo.k + (avH - bh * axo.k) / 2; }
+    axo.cx = Wd * 0.5 - (Math.max(...xs) + Math.min(...xs)) / 2 * axo.k; /* (27 Nov 2026) centred, over the centred caption */ axo.cy = Hd * (nar() ? 0.1 : 0.07) + 3 * axo.gap + Math.max(...ys) * axo.k + (avH - bh * axo.k) / 2; }
   const AP = (p, z) => { const x = p[0] - D.w / 2, y = p[1] - D.h / 2; return [axo.cx + (x * cT - y * sT) * axo.k, axo.cy - (x * sT + y * cT) * 0.52 * axo.k - z * axo.gap]; };
   function fit() { fitPlan(); fitAxo(); }
   function resize(w, h, r) { Wd = w; Hd = h; dpr = r || 1; G0.canvas.width = Math.round(w * dpr); G0.canvas.height = Math.round(h * dpr); bufA = mk(G0.canvas.width, G0.canvas.height); bufB = mk(G0.canvas.width, G0.canvas.height); if (D && D.outline) { fit(); buildGround(); } }
@@ -94,11 +94,12 @@ function create(G0, opt) {
   function wrap(s, maxW, size, w) { g.font = `${w} ${size}px ${FONT}`; const out = []; let cur = '';
     const toks = zh ? (s.match(/[A-Za-z0-9.,%:/+×→·°\-]+|\s+|./gu) || []) : s.split(/(\s+)/);
     for (const tk of toks) { const nx = cur + tk; if (g.measureText(nx).width > maxW && cur.trim()) { out.push(cur.trim()); cur = tk.trimStart(); } else cur = nx; } if (cur.trim()) out.push(cur.trim()); return out; }
-  function caption(t, alpha) { const [tt, body] = captionAt(t), n = nar(), x = n ? 18 : 28, maxW = Math.min(Wd - x * 2, 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
+  // (27 Nov 2026) the caption is centred under the picture, as in the other openings (Loop City step 1): title, then the lines
+  function caption(t, alpha) { const [tt, body] = captionAt(t), n = nar(), x = Wd / 2, maxW = Math.min(Wd - (n ? 36 : 56), 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
     // (27 Nov 2026) a title too wide for the screen (English, on a phone) folds onto a second line instead of running off the edge
     const tl = wrap(tt, maxW, ts, 600), tlh = ts + 5, lines = wrap(body, maxW, bs, 400), h = ts + (tl.length - 1) * tlh + 12 + lines.length * lh + (n ? 22 : 30);
     g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; const gr = g.createLinearGradient(0, Hd - h - 40, 0, Hd); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.45, 'rgba(0,0,0,.8)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); g.fillStyle = gr; g.fillRect(0, Hd - h - 40, Wd, h + 40);
-    let y = Hd - h + ts + 4 - (n ? 4 : 0); tl.forEach((s, i) => { if (i) y += tlh; text(s, x, y, ts, '#fff', 'left', 600); }); y += 10; for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.68)', 'left', 400); } g.restore(); }
+    let y = Hd - h + ts + 4 - (n ? 4 : 0); tl.forEach((s, i) => { if (i) y += tlh; text(s, x, y, ts, '#fff', 'center', 600); }); y += 10; for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.68)', 'center', 400); } g.restore(); }
   function pips(t) { const n = nar(), x0 = n ? 18 : 28, y = n ? 24 : 28, w = n ? 30 : 44, gap = 6; g.save();
     for (let k = 0; k < 5; k++) { const a = T[k], e = k < 4 ? T[k + 1] : END, f = Math.max(0, Math.min(1, (t - a) / (e - a))), x = x0 + k * (w + gap);
       g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x, y, w, 2); g.fillStyle = '#fff'; g.fillRect(x, y, w * f, 2); }
