@@ -172,3 +172,4 @@
 #panel button.introReplay:hover, html.l2ui #panel button.introReplay:hover:not(:disabled) { border-color:rgba(255,255,255,.45); background:transparent; color:#fff; }
 #panel button.introReplay:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 html:not(.l2ui) #introReplay { display:none; }   /* #noskin: no film, so no button */
+#lmIntro.lmi-hold, #lmIntro.lmi-hold * { animation-play-state:paused !important; }   /* #introat=…&introhold */

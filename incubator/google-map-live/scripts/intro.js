@@ -19,7 +19,8 @@
 
    - Every visit, the whole film; it waits on chapter 6 until the map is ready, then hands over by itself.
      "Skip" at any time (Enter / Esc too), a white "Enter ›" once the map is ready.
-   - "▶ Opening" in the panel plays it again. `#nointro` in the address never plays it; `#introat=18` starts it 18 s in.
+   - "▶ Opening" in the panel plays it again. `#nointro` in the address never plays it; `#introat=18` starts it 18 s in
+     (`#introat=18&introhold` stops it there: for checking one moment).
    - Not with `#noskin`, nor with `?embed=1`, nor inside the VR page (which frames this map).
    - "Reduce motion": the still last chapter, until the map is ready.
    Only opacity and transform are animated, with delays set once (intro.css): the browser's compositor keeps them
@@ -67,7 +68,7 @@
   function sv(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
   function pct(v) { return (v / F * 100).toFixed(3) + '%'; }
   /* `#introat=18` in the address starts the film 18 s in (for checking one chapter) */
-  var SEEK = +((/[#&]introat=([\d.]+)/.exec(location.hash || '') || [])[1] || 0);
+  var SEEK = +((/[#&]introat=([\d.]+)/.exec(location.hash || '') || [])[1] || 0), HOLD = SEEK > 0 && /[#&]introhold\b/.test(location.hash || '');
   function delay(e, d, o) { e.style.setProperty('--d', (d - SEEK).toFixed(2) + 's'); if (o !== undefined) e.style.setProperty('--o', (o - SEEK).toFixed(2) + 's'); return e; }
   function plate(name, anim, d) {
     var b = D.plates[name], im = mk('img', 'lmi-pl lmi-' + (anim || 'in'));
@@ -261,11 +262,12 @@
       if (started || done) return; started = true;
       if (!asStory) { story = false; storyOver = true; }
       box.classList.remove('lmi-wait'); box.classList.add(story ? 'lmi-story' : 'lmi-still');
+      if (HOLD) box.classList.add('lmi-hold');
       t0 = performance.now() - SEEK * 1000; fit();
     }
     function tick() {
       status();
-      if (!started) return;
+      if (!started || HOLD) return;
       var now = performance.now(), el = (now - t0) / 1000;
       if (!storyOver && el >= END) storyOver = true;
       if (again) { if (storyOver && el >= END + 2.5) close(); return; }
