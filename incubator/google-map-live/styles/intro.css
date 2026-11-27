@@ -1,0 +1,172 @@
+/* The London map · the opening film (27 Nov 2026). See scripts/intro.js.
+
+   Laid out as the other openings (Loop City step 1): the top row (tag, one 44 px pill button), the picture, a centred
+   caption under it (22 px title, 14.5 px lines; 18 / 13.5 on a phone), the foot (chapter marks, status).
+   The picture is a square frame, 1000 x 1000 units, holding one chapter at a time; its notes stand beside it on a
+   computer and under it on a narrow screen. Only opacity and transform are animated, each with a delay set once
+   (--d: when it comes in, --o: when it goes), so the compositor keeps the film moving while the page builds the map.
+   Black, white and greys; one red (#E8463A) for the 70 km circle; the data keep the map's own colours. */
+#lmIntro { position:fixed; inset:0; z-index:2147483000; background:#000; color:#fff; display:flex; flex-direction:column;
+  font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased; opacity:1; transition:opacity .6s ease; overflow:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+#lmIntro.lmi-out { opacity:0; pointer-events:none; }
+#lmIntro * { box-sizing:border-box; }
+
+.lmi-top { flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px 0; }
+.lmi-tag { font-size:12.5px; font-weight:600; color:rgba(255,255,255,.6); letter-spacing:.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lmi-skip { flex:none; height:44px; padding:0 18px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:#000; color:#fff;
+  font:600 13px/1 inherit; font-family:inherit; cursor:pointer; transition:background .2s, color .2s, border-color .2s; }
+.lmi-skip:hover { border-color:rgba(255,255,255,.4); }
+.lmi-skip:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+.lmi-skip.lmi-go { background:#fff; color:#000; border-color:#fff; }
+
+.lmi-map { flex:1 1 auto; min-height:0; position:relative; margin:8px 20px 0; }
+.lmi-stage { position:absolute; transform-origin:0 0; transition:opacity .35s ease; }
+#lmIntro.lmi-wait .lmi-stage, #lmIntro.lmi-wait .lmi-ch0, #lmIntro.lmi-wait .lmi-pips, #lmIntro.lmi-wait .lmi-caps { opacity:0; }
+.lmi-ch { position:absolute; inset:0; opacity:0; }
+.lmi-ch0 { overflow:hidden; border-radius:2px; }
+.lmi-cover { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; transform-origin:50% 50%; }
+.lmi-pl { position:absolute; display:block; max-width:none; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+.lmi-svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; transform-origin:50% 50%; }
+.lmi-km { font:500 15px/1 ui-monospace,'SF Mono',Menlo,monospace; fill:#6e6e72; }
+#lmIntro.lmi-small .lmi-km { display:none; }
+
+.lmi-radius { position:absolute; height:1.2px; margin-top:-.6px; background:#E8463A; transform-origin:0 50%; }
+.lmi-cross { position:absolute; width:18px; height:18px; margin:-9px 0 0 -9px; }
+.lmi-cross::before, .lmi-cross::after { content:""; position:absolute; background:#fff; }
+.lmi-cross::before { left:0; right:0; top:8.25px; height:1.5px; } .lmi-cross::after { top:0; bottom:0; left:8.25px; width:1.5px; }
+.lmi-src { position:absolute; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#E8463A; }
+
+/* labels at a point of the frame: their words stay their size */
+.lmi-lab { position:absolute; white-space:nowrap; font-size:12px; line-height:1.3; color:rgba(255,255,255,.72);
+  text-shadow:0 0 2px #000, 0 0 5px #000, 0 0 10px rgba(0,0,0,.8); }
+.lmi-lab b { display:block; color:#fff; font-weight:600; }
+.lmi-lab span { display:block; }
+.lmi-sr { transform:translate(0, -50%); }
+.lmi-sl { transform:translate(-100%, -50%); text-align:right; }
+.lmi-su { transform:translate(-50%, calc(-100% - 14px)); text-align:center; }
+.lmi-sd { transform:translate(-50%, 10px); text-align:center; }
+.lmi-sc { transform:translate(-50%, 0); text-align:center; }
+.lmi-mono { font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace; font-size:10px; letter-spacing:.08em; font-weight:500; font-style:normal; }
+.lmi-lab b.lmi-mono { color:#fff; font-weight:500; }
+.lmi-red, .lmi-lab .lmi-red, .lmi-lab b.lmi-red { color:#E8463A; }
+.lmi-cc b { color:rgba(255,255,255,.9); }
+.lmi-stack b.lmi-mono { font-size:10.5px; }
+.lmi-stack span { font-size:11.5px; color:rgba(255,255,255,.58); margin-top:2px; }
+.lmi-place .lmi-dot, .lmi-ring .lmi-dot { position:absolute; width:6px; height:6px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px #000; }
+.lmi-place.lmi-su .lmi-dot { left:50%; top:calc(100% + 11px); margin-left:-3px; }
+.lmi-place.lmi-sd .lmi-dot { left:50%; top:-13px; margin-left:-3px; }
+.lmi-place.lmi-sl .lmi-dot { right:-12px; top:50%; margin-top:-3px; }
+.lmi-place.lmi-sl { transform:translate(calc(-100% - 14px), -50%); }
+.lmi-place b { font-size:13px; }
+.lmi-ring .lmi-dot { width:12px; height:12px; background:none; border:1.5px solid #fff; box-shadow:none; right:-16px; margin-top:-6px; }
+.lmi-hs b { color:#ff5aa8; font-size:13px; }
+.lmi-hs span { color:rgba(255,140,190,.85); margin-top:2px; }
+.lmi-hs.lmi-sl { transform:translate(calc(-100% - 10px), -120%); }
+.lmi-hs.lmi-sr { transform:translate(10px, 20%); }
+.lmi-name b { font-size:14px; } .lmi-name span { margin-top:3px; }
+
+/* the chain, chapter 6 */
+.lmi-node { position:absolute; display:flex; align-items:center; gap:10px; transform:translateY(-50%); white-space:nowrap; }
+.lmi-thumb { width:84px; height:47px; object-fit:cover; display:block; border:1px solid #46464a; filter:saturate(.55) brightness(.85); flex:none; }
+.lmi-nt em { display:inline-block; margin-right:8px; }
+.lmi-nt b { font-size:13.5px; font-weight:600; color:#fff; }
+.lmi-nt span { display:block; font-size:11.5px; color:rgba(255,255,255,.58); margin-top:2px; }
+#lmIntro.lmi-small .lmi-thumb { width:52px; height:29px; }
+#lmIntro.lmi-small .lmi-node { gap:7px; }
+#lmIntro.lmi-small .lmi-nt b { font-size:12px; } #lmIntro.lmi-small .lmi-nt span { font-size:10.5px; }
+#lmIntro.lmi-small .lmi-nt em { display:block; margin:0 0 1px; font-size:9px; }
+#lmIntro.lmi-small .lmi-stack span, #lmIntro.lmi-small .lmi-km { display:none; }
+#lmIntro.lmi-small .lmi-stack b.lmi-mono { font-size:9px; letter-spacing:.04em; }
+#lmIntro.lmi-small .lmi-lab { font-size:11px; } #lmIntro.lmi-small .lmi-place b, #lmIntro.lmi-small .lmi-hs b { font-size:11.5px; }
+
+/* notes beside the frame (on a narrow screen: under it) */
+.lmi-note { position:absolute; width:200px; font-size:11.5px; line-height:1.4; color:rgba(255,255,255,.62); }
+.lmi-note b { display:block; color:#fff; font-weight:600; font-size:12px; margin-bottom:6px; }
+.lmi-note b.lmi-mono { font-size:10px; font-weight:500; }
+.lmi-note .lmi-big { font-size:24px; letter-spacing:-.01em; margin-bottom:4px; }
+.lmi-note strong { display:block; font-size:15px; font-weight:600; margin-top:2px; }
+.lmi-note span { display:block; }
+.lmi-cyan { color:#5CE1E6; }
+.lmi-noteR { left:calc(100% + 28px); bottom:4%; }
+.lmi-noteL { right:calc(100% + 28px); top:52%; text-align:right; }
+.lmi-key { display:flex; align-items:center; gap:8px; margin:3px 0; }
+.lmi-key span { display:inline; }
+.lmi-kl { display:block; width:14px; height:2px; flex:none; }
+.lmi-kd { height:0; border-top:2px dashed currentColor; }
+.lmi-kb { display:block; width:9px; height:9px; flex:none; }
+.lmi-gap { margin-top:12px !important; }
+.lmi-ramp { display:block; width:200px; height:5px; background:linear-gradient(90deg,#3d9be9,#30e0e0,#2fe66f,#a6ee3c,#f0f53a,#ffb234,#ff4a30,#ff8f8f,#fff0f0); }
+.lmi-ends { display:flex; justify-content:space-between; font:500 9.5px/1 ui-monospace,'SF Mono',Menlo,monospace; color:rgba(255,255,255,.55); margin:5px 0 8px; }
+#lmIntro.lmi-narrow .lmi-noteR, #lmIntro.lmi-narrow .lmi-noteL { top:calc(100% + 12px); bottom:auto; right:auto; text-align:left; width:48%; }
+#lmIntro.lmi-narrow .lmi-noteL { left:0; } #lmIntro.lmi-narrow .lmi-noteR { left:52%; }
+#lmIntro.lmi-narrow .lmi-noteR:only-of-type { left:0; width:100%; }
+#lmIntro.lmi-narrow .lmi-ramp { width:100%; }
+#lmIntro.lmi-narrow .lmi-note { font-size:10.5px; } #lmIntro.lmi-narrow .lmi-note .lmi-big { font-size:20px; }
+#lmIntro.lmi-narrow .lmi-gap { margin-top:6px !important; }
+#lmIntro.lmi-narrow .lmi-note .lmi-key { margin:1px 0; }
+
+.lmi-caps { flex:none; position:relative; height:104px; margin:6px 20px 0; }
+.lmi-cap { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; opacity:0; }
+.lmi-cap h2 { margin:0; font-size:22px; line-height:1.25; font-weight:600; letter-spacing:-.01em; color:#fff; }
+.lmi-cap p { margin:8px 0 0; max-width:620px; font-size:14.5px; line-height:1.5; color:rgba(255,255,255,.72); text-wrap:balance; }
+
+.lmi-foot { flex:none; display:flex; align-items:center; justify-content:center; gap:10px; height:44px; padding:0 20px 14px;
+  font-size:12.5px; font-weight:600; color:rgba(255,255,255,.5); font-variant-numeric:tabular-nums; }
+.lmi-pips { display:flex; gap:6px; }
+.lmi-pips i { width:18px; height:2px; border-radius:1px; background:rgba(255,255,255,.22); display:block; position:relative; overflow:hidden; }
+.lmi-pips i::after { content:""; position:absolute; inset:0; background:#fff; opacity:0; }
+
+@media (max-width:600px), (max-height:560px) {
+  .lmi-top { padding:12px 14px 0; } .lmi-map { margin:6px 12px 0; } .lmi-caps { height:132px; margin:4px 14px 0; }
+  .lmi-cap h2 { font-size:18px; } .lmi-cap p { font-size:13.5px; margin-top:6px; }
+  .lmi-foot { padding:0 14px 10px; height:38px; }
+}
+@media (max-height:420px) { .lmi-caps { height:78px; } .lmi-cap h2 { font-size:16px; } .lmi-cap p { margin-top:3px; font-size:12.5px; } }
+/* opened from the catalogue on a phone, the shell's language switch floats at the top right: the top row stands below it */
+@media (max-width:760px) { html.l2-shell-lang .lmi-top { padding-top:68px; } }
+
+/* ---- the film */
+@keyframes lmiIn    { from { opacity:0; } to { opacity:1; } }
+@keyframes lmiOut   { from { opacity:1; } to { opacity:0; } }
+@keyframes lmiRise  { from { opacity:0; transform:translateY(5%); } to { opacity:1; transform:translateY(0); } }
+@keyframes lmiGrow  { from { opacity:0; transform:scale(.94); } to { opacity:1; transform:scale(1); } }
+@keyframes lmiSweep { from { opacity:0; transform:rotate(-120deg) scale(.96); } to { opacity:1; transform:rotate(0) scale(1); } }
+@keyframes lmiDraw  { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@keyframes lmiDrift { from { transform:scale(1); } to { transform:scale(1.05); } }
+@keyframes lmiSlide { from { opacity:0; transform:translate(-8px,-50%); } to { opacity:1; transform:translate(0,-50%); } }
+
+#lmIntro.lmi-story .lmi-ch     { animation:lmiIn .5s ease-out var(--d) both, lmiOut .4s ease-in var(--o) forwards; }
+#lmIntro.lmi-story .lmi-ch.lmi-last { animation:lmiIn .5s ease-out var(--d) both; }
+#lmIntro.lmi-story .lmi-cover  { animation:lmiDrift 2.5s linear 0s both; }
+#lmIntro.lmi-story .lmi-in     { opacity:0; animation:lmiIn .8s ease-out var(--d) both; }
+#lmIntro.lmi-story .lmi-rise   { opacity:0; animation:lmiRise .9s cubic-bezier(.2,.7,.2,1) var(--d) both; }
+#lmIntro.lmi-story .lmi-grow   { opacity:0; transform-origin:50% 50%; animation:lmiGrow 1.4s cubic-bezier(.2,.7,.2,1) var(--d) both; }
+#lmIntro.lmi-story .lmi-sweep  { opacity:0; animation:lmiSweep 1.3s cubic-bezier(.3,.6,.2,1) var(--d) both; }
+#lmIntro.lmi-story .lmi-radius { transform:scaleX(0); animation:lmiDraw .7s cubic-bezier(.3,.6,.2,1) var(--d) both; }
+#lmIntro.lmi-story .lmi-cross, #lmIntro.lmi-story .lmi-src, #lmIntro.lmi-story .lmi-lab, #lmIntro.lmi-story .lmi-note { opacity:0; animation:lmiIn .45s ease-out var(--d) both; }
+#lmIntro.lmi-story .lmi-node   { opacity:0; animation:lmiSlide .5s ease-out var(--d) both; }
+#lmIntro.lmi-story .lmi-cap    { animation:lmiIn .5s ease-out var(--d) both, lmiOut .4s ease-in var(--o) forwards; }
+#lmIntro.lmi-story .lmi-cap.lmi-last { animation:lmiIn .5s ease-out var(--d) both; }
+#lmIntro.lmi-story .lmi-pips i::after { animation:lmiIn .4s ease-out var(--d) both; }
+
+/* ---- the still picture: "reduce motion", or a film that could not start in time: the last chapter, as it ends */
+#lmIntro.lmi-still .lmi-ch { opacity:0; }
+#lmIntro.lmi-still .lmi-ch.lmi-last { opacity:1; }
+#lmIntro.lmi-still .lmi-cap { opacity:0; } #lmIntro.lmi-still .lmi-cap.lmi-last { opacity:1; }
+#lmIntro.lmi-still .lmi-pips { display:none; }
+@media (prefers-reduced-motion:reduce) { #lmIntro, .lmi-stage { transition:none !important; } }
+
+/* ---- handing over: chapter 1's circle comes back and moves onto the map's own 70 km circle, then the cover clears */
+.lmi-handc { position:absolute; inset:0; opacity:0; transition:opacity .4s ease; }
+#lmIntro.lmi-hand .lmi-ch { animation:none; opacity:0; transition:opacity .35s ease; }
+#lmIntro.lmi-hand .lmi-handc { opacity:1; }
+#lmIntro.lmi-hand .lmi-stage { transition:transform .95s cubic-bezier(.4,0,.2,1); }
+#lmIntro.lmi-hand .lmi-caps, #lmIntro.lmi-hand .lmi-foot, #lmIntro.lmi-hand .lmi-top { transition:opacity .35s ease; opacity:0; }
+
+/* the replay button in the panel */
+.introReplay { display:inline-flex; align-items:center; margin-top:8px; height:28px; padding:0 12px; border-radius:999px;
+  border:1px solid rgba(255,255,255,.22); background:transparent; color:rgba(255,255,255,.8); font:600 12px/1 inherit; font-family:inherit; cursor:pointer; }
+.introReplay:hover { border-color:rgba(255,255,255,.45); color:#fff; }
+.introReplay:focus-visible { outline:2px solid #fff; outline-offset:2px; }
