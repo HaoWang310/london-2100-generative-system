@@ -73,7 +73,7 @@ function stops(top){
   return list;
 }
 
-// ---------- 3D relief (v3.45.1): the same heights as a "terrarium" tile for MapLibre's terrain ----------
+// ---------- 3D relief (v3.46.0): the same heights as a "terrarium" tile for MapLibre's terrain ----------
 // Inside the study circle the heights are the real ones. Outside it the ground is flat (0 m), so only the study area
 // rises; over the first 2.5 km outside the circle the heights fall away smoothly, so the edge is a slope, not a wall.
 const DEM_FADE=2500;
