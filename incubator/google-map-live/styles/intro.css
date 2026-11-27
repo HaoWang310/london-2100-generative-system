@@ -102,12 +102,12 @@
 .lmi-ends { display:flex; justify-content:space-between; font:500 9.5px/1 ui-monospace,'SF Mono',Menlo,monospace; color:rgba(255,255,255,.55); margin:5px 0 8px; }
 #lmIntro.lmi-narrow .lmi-noteR, #lmIntro.lmi-narrow .lmi-noteL { top:calc(100% + 12px); bottom:auto; right:auto; text-align:left; width:48%; }
 #lmIntro.lmi-narrow .lmi-noteL b.lmi-mono { white-space:normal; }
-#lmIntro.lmi-narrow .lmi-noteL { left:0; } #lmIntro.lmi-narrow .lmi-noteR { left:52%; }
-#lmIntro.lmi-narrow .lmi-noteR:only-of-type { left:0; width:100%; }
+#lmIntro.lmi-narrow .lmi-noteL { left:0; } #lmIntro.lmi-narrow .lmi-noteR { left:0; width:100%; }
+#lmIntro.lmi-narrow .lmi-noteL ~ .lmi-noteR { left:52%; width:48%; }               /* two notes: side by side */
+#lmIntro.lmi-narrow .lmi-note .lmi-key { display:inline-flex; margin:1px 10px 1px 0; }  /* keys run on in a row */
 #lmIntro.lmi-narrow .lmi-ramp { width:100%; }
 #lmIntro.lmi-narrow .lmi-note { font-size:10.5px; } #lmIntro.lmi-narrow .lmi-note .lmi-big { font-size:20px; }
 #lmIntro.lmi-narrow .lmi-gap { margin-top:6px !important; }
-#lmIntro.lmi-narrow .lmi-note .lmi-key { margin:1px 0; }
 
 .lmi-caps { flex:none; position:relative; height:104px; margin:6px 20px 0; }
 .lmi-cap { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; opacity:0; }
