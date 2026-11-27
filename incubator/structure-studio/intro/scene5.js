@@ -13,7 +13,9 @@
 const LVZ = [0, 7.2, 11.8, 16.4], LVC = [[.6, .6, .63], [.70, .71, .75], [.84, .85, .88], [.98, .98, .98]];   // the app's own: the levels told apart by lightness only
 const gShift = z => Math.max(0, Math.min(2, (z - 7.2) / 4.6));   // storeys above L1 (fractional on ramps)
 function create(o) {
-  const THREE = root.THREE, I = o.draw, H = I.h, D = o.data, zh = (o.lang || 'zh') !== 'en', L = (a, b) => zh ? a : b, low = !!o.low;
+  const THREE = root.THREE, I = o.draw, H = I.h, D = o.data, L = (a, b) => zh ? a : b, low = !!o.low;
+  let zh = (o.lang || 'zh') !== 'en';
+  const setLang = l => { zh = l !== 'en'; };   // (27 Nov 2026) the labels follow a language changed mid-film
   const R = new THREE.WebGLRenderer({ canvas: o.canvas, antialias: true, powerPreference: 'high-performance' }); R.setClearColor(0x000000, 1);
   const scene = new THREE.Scene(), W = new THREE.Group(); scene.add(W);
   const uEx = { value: 1 }, uT = { value: 0 }, disp = [];
@@ -100,7 +102,7 @@ function create(o) {
       if (!nar) { const g = o.ctx; g.save(); g.globalAlpha = ca; H.pill(L('层间距拉开 ', 'levels pulled apart × ') + V.ex.toFixed(1) + L(' 倍示意 · 竖向放大 1.6 倍', ' · height × 1.6'), Wd - 38, Hd - 170, 12, 'right'); g.restore(); } }
     const ta = seg(t, 9.0, 9.4) * (1 - seg(t, 9.7, 9.9)); if (ta > 0) { const g = o.ctx; g.save(); g.globalAlpha = ta; H.pill(L('合回真实层高：7.2 / 11.8 / 16.4 m', 'Back to the true heights: 7.2 / 11.8 / 16.4 m'), Wd / 2, nar ? 120 : 70, nar ? 15 : 18, 'center'); g.restore(); } }
   function dispose() { for (const d of disp) try { d.dispose(); } catch (e) {} try { R.dispose(); R.forceContextLoss && R.forceContextLoss(); } catch (e) {} }
-  return { resize, update, labels, dispose };
+  return { resize, update, labels, dispose, setLang };
 }
 const API = { create };
 root.SSIntroScene5 = API;

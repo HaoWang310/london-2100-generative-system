@@ -171,10 +171,13 @@
       html = html.replace(/<img /g, '<img fetchpriority="high" decoding="async" ');
     }
     var pips = T.map(function (t, k) { var e = k < T.length - 1 ? T[k + 1] : END; return '<i><b style="--d:' + t + 's;--len:' + (e - t) + 's"></b></i>'; }).join('');
+    // (27 Nov 2026) the frame of the Loop City opening: a top row (tag + one button that turns into "Enter ›"), a foot (marks + status)
+    var stat = T.map(function (t, k) { var e = k < T.length - 1 ? T[k + 1] : 0; return '<span class="tsi-sc' + (e ? '' : ' tsi-last') + '" style="--d:' + t + 's;--e:' + e + 's">' + L('第 ' + (k + 1) + ' / ' + T.length + ' 章', 'Chapter ' + (k + 1) + ' / ' + T.length) + '</span>'; }).join('');
     return (moving ? '<canvas class="tsi-cv"></canvas>' : '') + '<div class="tsi-art tsi-measure" aria-hidden="true"></div>' +
-      '<div class="tsi-head tsi-mono">' + L('张量场工作室 · 方法', 'TENSOR STUDIO · METHOD') + '</div><div class="tsi-pips">' + pips + '</div>' +
-      '<button type="button" class="tsi-skip">' + L('跳过', 'Skip') + '</button><div class="tsi-film">' + html + '</div>' +
-      '<button type="button" class="tsi-enter">' + L('进入 ›', 'Enter ›') + '</button><div class="tsi-load"><i></i>' + L('正在载入场地…', 'Loading the site…') + '</div>';
+      '<div class="tsi-film">' + html + '</div>' +
+      '<div class="tsi-bar"><span class="tsi-tag">' + L('张量场工作室 · 方法', 'Tensor Studio · Method') + '</span>' +
+      '<button type="button" class="tsi-skip"><span class="tsi-sk">' + L('跳过', 'Skip') + '</span><span class="tsi-go">' + L('进入 ›', 'Enter ›') + '</span></button></div>' +
+      '<div class="tsi-foot" aria-hidden="true"><span class="tsi-pips">' + pips + '</span><span class="tsi-stat"><span class="tsi-sl">' + L('正在载入场地…', 'Loading the site…') + '</span>' + stat + '</span></div>';
   }
 
   // ---------------------------------------------------------------- playing it (once on opening, and again from the app's button)
@@ -200,12 +203,18 @@
       if (worker) worker.postMessage({ type: 'start', t0: performance.timeOrigin + performance.now() });
       timers.push(setTimeout(function () { ended = true; root.classList.add('tsi-hold'); if (ready()) close(); }, END * 1000 + 300));
     }
-    function rects() {
+    // the film is laid out between the top row and the foot: the canvas and the chapters scaled down from the top centre
+    function fit() { var bar = root.querySelector('.tsi-bar'), ft = root.querySelector('.tsi-foot'); if (!bar || !ft) return;
+      var y = bar.getBoundingClientRect().bottom + 4, Hv = innerHeight;
+      root.style.setProperty('--tsi-y', Math.round(y) + 'px'); root.style.setProperty('--tsi-k', Math.max(0.5, (Hv - y - ft.offsetHeight - 4) / Hv).toFixed(4)); }
+    function rects() {           // measured unscaled: the worker draws on the canvas in its own (unscaled) pixels
       var r = function (el) { var b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; };
-      return { art: r(root.querySelector('.tsi-measure')), prec: [].map.call(root.querySelectorAll('.tsi-ps'), r), four: [].map.call(root.querySelectorAll('.tsi-fs'), r) };
+      root.classList.add('tsi-measuring');
+      var o = { art: r(root.querySelector('.tsi-measure')), prec: [].map.call(root.querySelectorAll('.tsi-ps'), r), four: [].map.call(root.querySelectorAll('.tsi-fs'), r) };
+      root.classList.remove('tsi-measuring'); return o;
     }
     var rsT = 0;
-    function onResize() { clearTimeout(rsT); rsT = setTimeout(function () { if (worker) worker.postMessage({ type: 'size', w: innerWidth, h: innerHeight, dpr: Math.min(2, devicePixelRatio || 1), rects: rects() }); }, 150); }
+    function onResize() { clearTimeout(rsT); rsT = setTimeout(function () { fit(); if (worker) worker.postMessage({ type: 'size', w: innerWidth, h: innerHeight, dpr: Math.min(2, devicePixelRatio || 1), rects: rects() }); }, 150); }
     function still_() {          // the pictures made beforehand: wait for them to decode
       var imgs = [].slice.call(root.querySelectorAll('img')), left = imgs.length;
       var one = function () { if (--left <= 0) begin(); };
@@ -224,7 +233,6 @@
         worker.onerror = function () { if (!started) fallback(); };
         worker.postMessage({ type: 'init', canvas: ofs, data: new URL('intro/motion.json?v=1', location.href).href, w: innerWidth, h: innerHeight, dpr: Math.min(2, devicePixelRatio || 1),
           phone: small, rects: rects(), strings: strings() }, [ofs]);
-        addEventListener('resize', onResize);
       } catch (e) { fallback(); }
     }
     function fallback() {        // no worker after all: the still film
@@ -233,12 +241,11 @@
       moving = false; root.innerHTML = build(false); wire(); still_();
     }
     function wire() {
-      root.querySelector('.tsi-skip').onclick = close;
-      root.querySelector('.tsi-enter').onclick = close;
+      root.querySelector('.tsi-skip').onclick = close; fit();
     }
     root.innerHTML = build(moving);
     (document.body || de).appendChild(root); wire();
-    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('keydown', onKey, true); addEventListener('resize', onResize);
     new MutationObserver(onReady).observe(de, { attributes: true, attributeFilter: ['class'] }); onReady();
     if (moving) moving_(); else still_();
     // (26 Nov 2026) the language changed while the film plays (another tab, or the catalogue): it starts again in that language

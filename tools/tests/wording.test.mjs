@@ -40,9 +40,9 @@ test('Structure Studio in English: step 6 and the 3D viewport menu are translate
 
 test('Tensor Studio in Chinese: the opening film\'s headings and the tooltips', () => {
   const intro = read('incubator/tensor-studio/intro/intro.js'), html = read('incubator/tensor-studio/index.html');
-  for (const [zh, en] of [['I · 问题', 'I · QUESTION'], ['II · 立场', 'II · POSITION'], ['III · 图层', 'III · LAYERS'], ['IV · 叠加', 'IV · SUPERPOSITION'], ['V · 读图', 'V · READING'], ['VI · 依据', 'VI · EVIDENCE'], ['张量场工作室 · 方法', 'TENSOR STUDIO · METHOD']])
+  for (const [zh, en] of [['I · 问题', 'I · QUESTION'], ['II · 立场', 'II · POSITION'], ['III · 图层', 'III · LAYERS'], ['IV · 叠加', 'IV · SUPERPOSITION'], ['V · 读图', 'V · READING'], ['VI · 依据', 'VI · EVIDENCE'], ['张量场工作室 · 方法', 'Tensor Studio · Method']])
     assert.ok(intro.includes("L('" + zh + "', '" + en + "')"), en);
-  assert.ok(/intro\/intro\.js\?v=6/.test(html));
+  assert.ok(/intro\/intro\.js\?v=7/.test(html));
   const i = html.indexOf('window.TS_ATTR='), ATTR = JSON.parse(html.slice(i + 'window.TS_ATTR='.length, html.indexOf('\n', i)).replace(/;\s*$/, ''));
   for (const k of ['Collapse / expand', 'Drag to resize · double-click to reset', 'Drag to resize the control panel', 'Display', 'Palette', 'play', 'timeline']) assert.ok(HAN.test(ATTR[k] || ''), k);
   assert.ok(html.includes('title="Collapse / expand"') && html.includes("h.title = 'Drag to resize · double-click to reset'"), 'the words the table is keyed by');

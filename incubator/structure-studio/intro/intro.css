@@ -12,11 +12,29 @@
 /* transform only, so it keeps moving while the page is busy */
 #ssIntro .ssi-card i::after{content:"";position:absolute;inset:0;width:40%;background:#fff;border-radius:2px;animation:ssi-run 1.4s ease-in-out infinite;will-change:transform}
 @keyframes ssi-run{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
-#ssIntro button{font:600 13px/1 inherit;color:#f5f5f7;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:10px 16px;min-height:38px;cursor:pointer;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-#ssIntro button:focus-visible{outline:2px solid #fff;outline-offset:2px}
-#ssIntro .ssi-skip{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:calc(16px + env(safe-area-inset-right,0px))}
-#ssIntro .ssi-enter{position:absolute;right:calc(24px + env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));background:#fff;color:#000;border-color:#fff;opacity:0;pointer-events:none;transition:opacity .4s}
-#ssIntro.ssi-play.ssi-ready .ssi-enter{opacity:1;pointer-events:auto}
-@media (max-width:600px){#ssIntro .ssi-enter{bottom:auto;top:calc(14px + env(safe-area-inset-top,0px));right:calc(86px + env(safe-area-inset-right,0px))}}
+/* (27 Nov 2026) the frame, as in the Loop City opening (loop-city-mould-growth/intro.css): a top row with the tag and one
+   button, the film between it and a foot with the marks and the status. intro.js sets --ssi-y and --ssi-k so the film fits. */
+#ssIntro .ssi-stage{position:absolute;inset:0;transform-origin:50% 0;transform:translateY(var(--ssi-y,0px)) scale(var(--ssi-k,1))}
+#ssIntro .ssi-bar,#ssIntro .ssi-foot{position:absolute;left:0;right:0;display:flex;align-items:center;box-sizing:border-box;z-index:2}
+#ssIntro .ssi-bar{top:0;justify-content:space-between;gap:12px;padding:calc(18px + env(safe-area-inset-top,0px)) calc(20px + env(safe-area-inset-right,0px)) 0 calc(20px + env(safe-area-inset-left,0px))}
+#ssIntro .ssi-tag{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.6);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ssIntro .ssi-skip{flex:none;height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:#000;color:#fff;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background .2s,color .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
+#ssIntro .ssi-skip:hover{border-color:rgba(255,255,255,.4)}
+#ssIntro .ssi-skip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#ssIntro .ssi-b{display:none}
+#ssIntro.ssi-play.ssi-ready .ssi-skip{background:#fff;color:#000;border-color:#fff}
+#ssIntro.ssi-play.ssi-ready .ssi-a{display:none}
+#ssIntro.ssi-play.ssi-ready .ssi-b{display:inline}
+#ssIntro .ssi-foot{bottom:0;justify-content:center;gap:10px;height:calc(44px + env(safe-area-inset-bottom,0px));padding:0 20px calc(14px + env(safe-area-inset-bottom,0px));font-size:12.5px;font-weight:600;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;transition:opacity .5s}
+#ssIntro:not(.ssi-play) .ssi-foot{opacity:0}
+#ssIntro .ssi-pips{display:flex;gap:6px}
+#ssIntro .ssi-pips i{width:18px;height:2px;border-radius:1px;background:rgba(255,255,255,.22);display:block;transition:background .4s}
+#ssIntro .ssi-pips i.on{background:#fff}
+@media (max-width:600px),(max-height:560px){
+  #ssIntro .ssi-bar{padding:calc(12px + env(safe-area-inset-top,0px)) 14px 0}
+  #ssIntro .ssi-foot{height:calc(38px + env(safe-area-inset-bottom,0px));padding:0 14px calc(10px + env(safe-area-inset-bottom,0px))}
+}
+/* opened from the catalogue on a phone, the catalogue's language switch floats at the top right: the row stands below it */
+@media (max-width:760px){html.l2-shell-lang #ssIntro .ssi-bar{padding-top:68px}}
 html.ssi-on,html.ssi-on body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){#ssIntro .ssi-card i::after{animation:none}}

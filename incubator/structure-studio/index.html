@@ -259,11 +259,11 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
 <script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
-<link rel="stylesheet" href="intro/intro.css?v=0.9.39">
+<link rel="stylesheet" href="intro/intro.css?v=0.9.40">
 </head>
 <body>
 <!-- 开场短片（intro/）：页面一开始就盖上，场地和结构在下面照常载入；规则见 intro/intro.js 开头 -->
-<script src="intro/intro.js?v=0.9.39"></script>
+<script src="intro/intro.js?v=0.9.40"></script>
 <div id="view">
   <canvas id="gl"></canvas>
   <canvas id="plan"></canvas>
@@ -413,13 +413,13 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.39"></script>
-<script src="engine/deck.js?v=0.9.39"></script>
-<script src="engine/tower.js?v=0.9.39"></script>
-<script src="engine/nav.js?v=0.9.39"></script>
-<script src="intro/data.js?v=0.9.39"></script>
-<script src="intro/draw.js?v=0.9.39"></script>
-<script src="intro/scene5.js?v=0.9.39"></script>
+<script src="engine/structure.js?v=0.9.40"></script>
+<script src="engine/deck.js?v=0.9.40"></script>
+<script src="engine/tower.js?v=0.9.40"></script>
+<script src="engine/nav.js?v=0.9.40"></script>
+<script src="intro/data.js?v=0.9.40"></script>
+<script src="intro/draw.js?v=0.9.40"></script>
+<script src="intro/scene5.js?v=0.9.40"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -925,8 +925,8 @@ function buildCards() {
     el.onclick = () => focusCell(c);
     host.appendChild(el); });
   const imgs = [...host.querySelectorAll('.card.cell')], F0 = F; let i = 0;
-  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
-  setTimeout(step, 20);
+  const step = () => { if (i >= imgs.length || imgs[0].parentNode !== host || F !== F0 || DEMO.on) return; if (!planBase) { setTimeout(step, 250); return; } const el = imgs[i++], img = el.querySelector('img'); img.src = el.id === 'card_all' ? overviewThumb() : thumb(F.cells.find(c => c.id == el.dataset.id)); setTimeout(step, 0); };
+  setTimeout(step, 20);   // (27 Nov 2026) the plan picture may not be drawn yet (language changed during the opening film): the pictures wait for it
 }
 function focusCell(c) {
   focus = c; document.querySelectorAll('.card.cell').forEach(el => el.classList.toggle('on', !!c && el.dataset.id == c.id)); setHighlight(c);
@@ -1055,7 +1055,8 @@ $('pngBtn').onclick = () => { const cv = document.createElement('canvas'); cv.wi
 
 async function loadSnap(obj, name) { if (DEMO.on) { DEMO.dirty = false; demoExit(); } if (typeof CMP !== 'undefined') { CMP.stop = true; CMP.list = []; CMP.preview = null; cmpBase = null; CMP.stale = false; } INTRO = true; SNAP = obj; runLine();
   P.mode = 'v0'; P.v1 = 0; $('mode').value = 'v0'; syncWCore(); // 每次开场（载入场地）都从 1 · 全局拉伸 开始；演示跟着第 3 步的生成模式；其余参数照保存的
-  if (window.SSIntro) SSIntro.onSnap(SNAP, name);   // 开场短片：第一次载入时，先把场地交给短片（它在后台线程里画），再在这里算
+  if (window.SSIntro) SSIntro.onSnap(SNAP, isBuilt(CUR) && BUILT[CUR] ? BUILT[CUR].name : name);   // (27 Nov 2026) 内置范例传名字函数：放映中换语言，短片里的场地名也跟着换
+  // 开场短片：第一次载入时，先把场地交给短片（它在后台线程里画），再在这里算
   SITE = SS.prepareSite(SNAP); SITE4 = null; tsBase = null;
   cam.tx = SITE.cen[0]; cam.ty = SITE.cen[1]; cam.tz = 0; // 三维镜头一开始就对准场地（以前停在坐标原点 (0, 0)，没播第 6 步就进三维时场地在屏幕外）
   siteText();
@@ -1541,7 +1542,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.39'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.40'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);

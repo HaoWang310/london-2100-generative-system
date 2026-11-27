@@ -10,7 +10,8 @@
    It covers the page's own loading (three.js, the snapshot, the tower model, building the structure). Scenes 1–4 are
    drawn in a worker (intro/worker.js, OffscreenCanvas) so they keep moving while the page builds; scene 5 is drawn
    here with the page's three.js once the page is idle. If the structure is not ready by the end of scene 3, the film
-   holds there. "Skip" (or Esc) closes it at any time; "Enter" (or Enter) once the structure is ready. At the end the
+   holds there. One button at the top right: "Skip" (or Esc) closes it at any time; once the structure is ready it turns into
+   "Enter ›" (or Enter). At the end the
    page goes straight on to its own opening picture, the tensor field, without replaying it.
    Every visit, on its own or from the catalogue (which opens the app in a frame). Not with #nointro, #noskin,
    ?embed=1, nor with the system's "reduce motion". "▶ 开场" in the process panel plays it again (SSIntro.replay()). */
@@ -30,29 +31,44 @@
     var Dr = null, T = [0, 4.5, 9.5, 14.5, 19.5], END = 30.8, XF = 0.6;   // draw.js comes later in the page: read when the snapshot arrives
     me.closed = false; me.replay = !!opts.replay; me.cb = null; me.skippedEarly = false; me.structure = false;
     var root = document.createElement('div'); root.id = 'ssIntro'; root.setAttribute('lang', zh ? 'zh-CN' : 'en'); root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', L('开场：结构工作室在做什么', 'Opening: what Structure Studio does'));
-    root.innerHTML = '<div class="ssi-card"><b>' + L('结构工作室', 'Structure Studio') + '</b><span>' + L('Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets') + '</span><i></i><em>' + L('正在载入场地…', 'Loading the site…') + '</em></div>' +
+    // (27 Nov 2026) laid out like the Loop City opening: a top row (tag + one button), the film, a foot (marks + status)
+    root.innerHTML = '<div class="ssi-stage"><div class="ssi-card"><b>' + L('结构工作室', 'Structure Studio') + '</b><span>' + L('Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets') + '</span><i></i><em>' + L('正在载入场地…', 'Loading the site…') + '</em></div>' +
       // the canvases lie over the card: the film's first frame covers it, even while the page is too busy to hide it
-      '<canvas class="ssi-gl"></canvas><canvas class="ssi-film"></canvas><canvas class="ssi-top"></canvas>' +
-      '<button type="button" class="ssi-skip">' + L('跳过', 'Skip') + '</button><button type="button" class="ssi-enter">' + L('进入 ›', 'Enter ›') + '</button>';
+      '<canvas class="ssi-gl"></canvas><canvas class="ssi-film"></canvas><canvas class="ssi-top"></canvas></div>' +
+      '<div class="ssi-bar"><span class="ssi-tag">' + L('结构工作室 · 开场', 'Structure Studio · Opening') + '</span>' +
+      '<button type="button" class="ssi-skip"><span class="ssi-a">' + L('跳过', 'Skip') + '</span><span class="ssi-b">' + L('进入 ›', 'Enter ›') + '</span></button></div>' +
+      '<div class="ssi-foot" aria-hidden="true"><span class="ssi-pips"><i></i><i></i><i></i><i></i><i></i></span><span class="ssi-stat">' + L('正在载入场地…', 'Loading the site…') + '</span></div>';
     (document.body || de).appendChild(root); de.classList.add('ssi-on');
     var cvGL = root.querySelector('.ssi-gl'), cvFilm = root.querySelector('.ssi-film'), cvTop = root.querySelector('.ssi-top'), ctxTop = cvTop.getContext('2d');
     var W = innerWidth, Hh = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), low = Math.min(W, Hh) < 600 || (navigator.maxTouchPoints || 0) > 0;
     var worker = null, pendSnap = null, film = null, top = null, s5 = null, t0 = 0, hold = 0, holdAt = null, started = false, raf = 0, data = null, deck = null, name = opts.name || '';
     me.root = root;
+    // the film is laid out between the top row and the foot: scaled down from the top centre, so nothing lies under the row
+    function fit() { var bar = root.querySelector('.ssi-bar'), ft = root.querySelector('.ssi-foot'), y = bar.getBoundingClientRect().bottom + 4, Hv = innerHeight;
+      root.style.setProperty('--ssi-y', Math.round(y) + 'px'); root.style.setProperty('--ssi-k', Math.max(0.5, (Hv - y - ft.offsetHeight - 4) / Hv).toFixed(4)); }
+    fit();
+    var pipEl = root.querySelectorAll('.ssi-pips i'), statEl = root.querySelector('.ssi-stat'), lastK = -1, lastS = '';
+    function foot(t) { var k = 0; while (k < 4 && t >= T[k + 1]) k++;
+      if (k !== lastK) { lastK = k; for (var i = 0; i < pipEl.length; i++) pipEl[i].classList.toggle('on', i <= k); }
+      var s = me.structure ? L('第 ' + (k + 1) + ' / 5 幕', 'Scene ' + (k + 1) + ' / 5') : L('正在载入场地…', 'Loading the site…');
+      if (s !== lastS) { lastS = s; statEl.textContent = s; } }
     // (26 Nov 2026) the card and the two buttons follow a language changed while the film loads (another tab, the catalogue);
     // the film's own words take the language the page has when the site arrives (me.snap)
     function relabel() { var l = lang() !== 'en'; if (l === zh && root.getAttribute('lang') === (zh ? 'zh-CN' : 'en')) return; zh = l; root.setAttribute('lang', zh ? 'zh-CN' : 'en');
       var q = function (sel, a, b) { var e = root.querySelector(sel); if (e) e.textContent = L(a, b); };
       q('.ssi-card b', '结构工作室', 'Structure Studio'); q('.ssi-card span', 'Linear Farm 走廊 · 在张量场的街道之上', 'Linear Farm corridors · above the tensor-field streets');
-      q('.ssi-card em', '正在载入场地…', 'Loading the site…'); q('.ssi-skip', '跳过', 'Skip'); q('.ssi-enter', '进入 ›', 'Enter ›'); }
+      q('.ssi-card em', '正在载入场地…', 'Loading the site…'); q('.ssi-tag', '结构工作室 · 开场', 'Structure Studio · Opening');
+      q('.ssi-a', '跳过', 'Skip'); q('.ssi-b', '进入 ›', 'Enter ›'); lastS = ''; if (lastK >= 0) foot(T[lastK]); else q('.ssi-stat', '正在载入场地…', 'Loading the site…');
+      // (27 Nov 2026) and the film's own words too, from the next frame (before, they kept the language the site arrived in)
+      var lg = zh ? 'zh' : 'en', nm = siteName();
+      if (worker) worker.postMessage({ type: 'lang', lang: lg, name: nm }); if (top) top.setLang(lg, nm); if (film) film.setLang(lg, nm); if (s5 && s5.setLang) s5.setLang(lg); }
     var relT = setInterval(function () { if (me.closed) { clearInterval(relT); return; } relabel(); }, 400);
-    function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
+    function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1); fit();
       if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(W, Hh, dpr); }
     var rsT = 0; function onResize() { clearTimeout(rsT); rsT = setTimeout(size, 120); }
     function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); me.close(); } else if (e.key === 'Enter' && me.structure && started) { e.preventDefault(); me.close(); } }
     addEventListener('resize', onResize); document.addEventListener('keydown', onKey, true);
     root.querySelector('.ssi-skip').onclick = function () { me.close(); };
-    root.querySelector('.ssi-enter').onclick = function () { me.close(); };
     // the worker is made right away, while the page is still loading: Chrome starts a worker only when the page's
     // main thread is free, and once the page has its site it is busy building the structure for seconds
     if (canMove) {
@@ -62,12 +78,14 @@
         worker.postMessage({ type: 'init', canvas: off, w: W, h: Hh, dpr: dpr, lang: zh ? 'zh' : 'en' }, [off]); } catch (e) { worker = null; }
     }
     // ---------------------------------------------------------------- the ground (snapshot) → the worker, or drawn here
+    // the site's name: the page may pass a function (a built-in site's name is in both languages)
+    function siteName() { try { return typeof name === 'function' ? name() : name; } catch (e) { return ''; } }
     me.snap = function (snap, nm) { if (me.closed || me.hasSnap) return; me.hasSnap = true; name = nm || name; relabel();
       Dr = window.SSIntroDraw; if (!Dr || !window.SSIntroData) { me.close(); return; } T = Dr.T; END = Dr.END; XF = Dr.XF;
-      if (worker) worker.postMessage({ type: 'snap', snap: snap, name: name, lang: zh ? 'zh' : 'en' });
-      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: name }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }
+      if (worker) worker.postMessage({ type: 'snap', snap: snap, name: siteName(), lang: zh ? 'zh' : 'en' });
+      top = Dr.create(ctxTop, { lang: zh ? 'zh' : 'en', name: siteName() }); top.resize(W, Hh, dpr); if (pendSnap) { top.setSnap(pendSnap); pendSnap = null; }
       if (!worker) {                       // older browsers: everything drawn here (it stops while the page builds)
-        film = Dr.create(cvFilm.getContext('2d'), { lang: zh ? 'zh' : 'en', name: name }); film.resize(W, Hh, dpr);
+        film = Dr.create(cvFilm.getContext('2d'), { lang: zh ? 'zh' : 'en', name: siteName() }); film.resize(W, Hh, dpr);
         var A = SSIntroData.fromSnap(snap); data = Object.assign(data || {}, A); film.setSnap(A); top.setSnap(A);
         fetch('intro/wool.json' + (V ? '?v=' + V : '')).then(function (r) { return r.json(); }).then(function (w) { film.setWool(w); begin(); }, function () { begin(); });
       }
@@ -102,7 +120,7 @@
     // ---------------------------------------------------------------- the clock
     function begin(at) { if (started || me.closed) return; started = true; t0 = at || now(); root.classList.add('ssi-play'); raf = requestAnimationFrame(tick); }
     function tick() { if (me.closed) return; raf = requestAnimationFrame(tick);
-      var t = (now() - t0) / 1000 - hold, waiting = false;
+      var t = (now() - t0) / 1000 - hold, waiting = false; foot(Math.min(t, END));
       if (!worker) { if (!me.structure && t >= Dr.HOLD) { if (holdAt == null) holdAt = now(); t = Dr.HOLD; waiting = true; } else if (holdAt != null) { hold += (now() - holdAt) / 1000; holdAt = null; t = (now() - t0) / 1000 - hold; } film.frame(Math.min(t, END), { waiting: waiting }); }
       var five = t >= T[4] && me.structure && (!worker || me.clockOK), lt = t - T[4];   // with a worker: only once it has said how long it held
       ctxTop.setTransform(1, 0, 0, 1, 0, 0); ctxTop.clearRect(0, 0, cvTop.width, cvTop.height); ctxTop.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -111,7 +129,7 @@
         if (s5) { cvGL.style.opacity = String(Dr.ease(lt / XF) * (1 - out)); s5.update(Math.min(lt, END - T[4])); top.h.use(); s5.labels(lt); }
         else { cvGL.style.opacity = '0'; top.endPlan(Dr.ease(lt / XF)); }
         if (out > 0) top.endPlan(out);
-        top.caption(Math.min(t, END)); top.pips(Math.min(t, END));
+        top.caption(Math.min(t, END));
       } else cvGL.style.opacity = '0';
       if (t >= END + 0.2 && (!worker || me.clockOK)) me.close();
     }

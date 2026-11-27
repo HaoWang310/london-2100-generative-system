@@ -3,7 +3,7 @@
    Keeps its own clock: if the corridor net has not arrived by the end of scene 3, it holds there ("Generating the
    corridor net…") and tells the page how long it held, so the page's scene 5 stays in step.
    Made as soon as the page opens (Chrome starts a worker only while the page's main thread is free).
-   Messages in: init {canvas, w, h, dpr, lang} · snap {snap, name, lang} (the raw snapshot) · structure {data, deck} ·
+   Messages in: init {canvas, w, h, dpr, lang} · snap {snap, name, lang} (the raw snapshot) · lang {lang, name} · structure {data, deck} ·
    size {w, h, dpr} · stop. Out: snap {data} (the simplified ground, for the page) · started {t0} (epoch ms: it starts
    by itself once the snapshot and the wool are in) · hold {hold} (seconds held). */
 'use strict';
@@ -29,6 +29,7 @@ onmessage = e => { const m = e.data;
     fetch('wool.json' + (self.location.search || '')).then(r => r.json()).then(w => { wool = w; if (inst) inst.setWool(w); haveWool = true; sayReady(); }).catch(() => { haveWool = true; sayReady(); });
   } else if (m.type === 'snap') { inst = SSIntroDraw.create(canvas.getContext('2d'), { lang: m.lang || lang, name: m.name }); inst.resize(size[0], size[1], size[2]); if (wool) inst.setWool(wool);
     const A = SSIntroData.fromSnap(m.snap); inst.setSnap(A); postMessage({ type: 'snap', data: A }); haveSnap = true; sayReady(); }
+  else if (m.type === 'lang') { lang = m.lang; if (inst) inst.setLang(m.lang, m.name); }   // (27 Nov 2026) the page's language changed mid-film
   else if (!inst) return;
   else if (m.type === 'structure') { inst.setStructure(m.data); if (m.deck) inst.setDeck(m.deck); haveStructure = true; if (holdAt == null) postMessage({ type: 'hold', hold }); }   // not holding: the page's clock is right as it is
   else if (m.type === 'size') { size = [m.w, m.h, m.dpr]; if (inst) inst.resize(m.w, m.h, m.dpr); }
