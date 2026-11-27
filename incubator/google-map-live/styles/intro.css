@@ -65,6 +65,7 @@
 .lmi-hs span { color:rgba(255,140,190,.85); margin-top:2px; }
 .lmi-hs.lmi-sl { transform:translate(calc(-100% - 10px), -120%); }
 .lmi-hs.lmi-sr { transform:translate(10px, 20%); }
+#lmIntro.lmi-small .lmi-hs.lmi-sr { transform:translate(calc(-100% - 4px), 45%); text-align:right; }   /* on a phone: inside the screen */
 .lmi-name b { font-size:14px; } .lmi-name span { margin-top:3px; }
 
 /* the chain, chapter 6 */
