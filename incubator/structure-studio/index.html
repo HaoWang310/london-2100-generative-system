@@ -238,6 +238,8 @@ body.demo-on #cmpStrip,body.demo-on #cmpStage{display:none}
 body:not(.m3d) #vp,body:not(.m3d) #axis,body.demo-on #vp,body.demo-on #axis{display:none!important}
 body.cards-on #axis{bottom:212px}
 body.demo-run #vp{top:116px;left:calc(var(--pl) + 20px)}
+#plan.hold{pointer-events:none}   /* 切到三维时平面图先留着，三维第一帧画好再淡出（不黑屏） */
+#plan.fade{opacity:0;transition:opacity .3s ease}
 body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 #vpLabel{display:flex;align-items:center;gap:6px;height:28px;margin:0;padding:0 9px 0 12px;background:rgba(14,14,16,.88);color:#f5f5f7;border:1px solid #2f2f34;border-radius:9px;font:inherit;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 #vpLabel:hover,#vpLabel[aria-expanded="true"]{border-color:#5a5a60}
@@ -258,12 +260,12 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 .displayPanel .dpGrid.c4 .dpTile{min-height:34px;padding:6px 2px}
 .displayPanel .dpGrid + .dpGrid{margin-top:8px}
 </style>
-<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=4">
-<link rel="stylesheet" href="intro/intro.css?v=0.9.41">
+<script>if(!/[#&?]noskin\b/.test(location.href)){var d0=document.documentElement;d0.classList.add("l2ui");/* 23 Nov 2026: a phone is known before anything is laid out (shared/ui/phone.css) */try{var h0=location.hash||"";if(!/[#&]nophone\b/.test(h0)&&(/[#&]phone\b/.test(h0)||((navigator.maxTouchPoints||0)>0&&!!window.matchMedia&&matchMedia("(pointer: coarse)").matches&&Math.min(screen.width||9999,screen.height||9999)<600)))d0.classList.add("l2phone");}catch(e){}}</script><link rel="stylesheet" href="../../shared/ui/tokens.css?v=1"><link rel="stylesheet" href="../../shared/ui/phone.css?v=2"><link rel="stylesheet" href="../../shared/ui/studio.css?v=1"><link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><link rel="stylesheet" href="../../shared/ui/swatches.css?v=1"><link rel="stylesheet" href="skin.css?v=5">
+<link rel="stylesheet" href="intro/intro.css?v=0.9.42">
 </head>
 <body>
 <!-- 开场短片（intro/）：页面一开始就盖上，场地和结构在下面照常载入；规则见 intro/intro.js 开头 -->
-<script src="intro/intro.js?v=0.9.41"></script>
+<script src="intro/intro.js?v=0.9.42"></script>
 <div id="view">
   <canvas id="gl"></canvas>
   <canvas id="plan"></canvas>
@@ -413,13 +415,13 @@ body.m3d #hud{max-width:calc(100vw - var(--pl) - var(--pr) - 220px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 引擎文件带版本号：页面和引擎各自有缓存，一新一旧会出错（黑屏、圆塔）。每次发版把这里的版本号改成 CHANGELOG 最新一条（测试会核对） -->
-<script src="engine/structure.js?v=0.9.41"></script>
-<script src="engine/deck.js?v=0.9.41"></script>
-<script src="engine/tower.js?v=0.9.41"></script>
-<script src="engine/nav.js?v=0.9.41"></script>
-<script src="intro/data.js?v=0.9.41"></script>
-<script src="intro/draw.js?v=0.9.41"></script>
-<script src="intro/scene5.js?v=0.9.41"></script>
+<script src="engine/structure.js?v=0.9.42"></script>
+<script src="engine/deck.js?v=0.9.42"></script>
+<script src="engine/tower.js?v=0.9.42"></script>
+<script src="engine/nav.js?v=0.9.42"></script>
+<script src="intro/data.js?v=0.9.42"></script>
+<script src="intro/draw.js?v=0.9.42"></script>
+<script src="intro/scene5.js?v=0.9.42"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -529,7 +531,7 @@ function initGL() {
   const loop = () => { const now = performance.now(), dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
     const w = c.clientWidth, h = c.clientHeight, pr = renderer.getPixelRatio(); if (w && (c.width !== (w * pr | 0) || c.height !== (h * pr | 0))) { renderer.setSize(w, h, false); vpAsp = w / h; camP.aspect = vpAsp; camP.updateProjectionMatrix(); }
     if (cam.rot) cam.az += 0.15 * dt;
-    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); setLift(); renderer.render(scene, camera); drawAxis(); vpSync(); }
+    if (mode === '3d') { if (cam.snap) { Object.assign(camS, NAV.copy(cam)); cam.snap = false; } else NAV.step(camS, cam, dt, cam.tau); placeCam(camS); setLift(); renderer.render(scene, camera); drawAxis(); vpSync(); vpPlace(); if (HOLD === 1 && !sceneDirty) holdRelease(); }
     requestAnimationFrame(loop); };
   loop();
 }
@@ -559,6 +561,12 @@ function setShade(m) { SHADE = m; for (const k of ['deck', 'deckLv', 'deckEdge',
 function applyShadow() { if (!renderer) return; renderer.shadowMap.enabled = SHADE === 'render' && $('c_shadow').checked; scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }
 function vpMenu(on) { const m = $('vpMenu'); if (on === undefined) on = m.hidden; m.hidden = !on; $('vpLabel').setAttribute('aria-expanded', on ? 'true' : 'false'); }
 let vpKey = '', axKey = '';
+// 切到三维：平面图留在上面，等三维第一帧真正画好（场景已建好）才 0.3 s 淡出
+let HOLD = 0; function holdRelease() { HOLD = 2; const pl = $('plan'); pl.classList.add('fade'); setTimeout(() => { if (HOLD !== 2) return; HOLD = 0; pl.classList.remove('hold', 'fade'); if (mode === '3d') pl.style.display = 'none'; }, 320); }
+// 手机逐步演示时，视口菜单（透视 ▾）放在步骤说明下面，不再压住「10 结构」标题
+let vpPos = ''; function vpPlace() { const v = $('vp'), on = document.documentElement.classList.contains('l2phone') && document.body.classList.contains('demo-run'); let k = '';
+  if (on) { const h = $('dmHead').getBoundingClientRect(), n = $('dmName').getBoundingClientRect(); if (h.height) k = Math.round(h.bottom + 10) + '|' + Math.round(n.left); }
+  if (k === vpPos) return; vpPos = k; if (k) { const [t, l] = k.split('|'); v.style.setProperty('--vpT', t + 'px'); v.style.setProperty('--vpL', l + 'px'); } else { v.style.removeProperty('--vpT'); v.style.removeProperty('--vpL'); } }
 function vpSync() { const k = cam.view + (cam.ortho ? 1 : 0) + SHADE + LANG; if (k === vpKey) return; vpKey = k;
   $('vpName').textContent = cam.view === 'user' || (cam.view === 'persp' && cam.ortho) ? (cam.ortho ? L('平行', 'Parallel') : L('透视', 'Perspective')) : (LANG === 'en' ? VIEW_EN : VIEW_ZH)[cam.view] + (cam.view !== 'persp' && !cam.ortho ? L(' · 透视', ' · persp.') : '');
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === cam.view)); document.querySelectorAll('[data-proj]').forEach(b => b.classList.toggle('on', (b.dataset.proj === '1') === cam.ortho));
@@ -909,7 +917,7 @@ function drawPlan() { if (DEMO.on || mode !== '2d' || !planBase) return; const c
   cv.addEventListener('wheel', e => { e.preventDefault(); if (DEMO.on && DEMO.full) return; const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.exp(-e.deltaY * 0.0015); PV.ox = mx - (mx - PV.ox) * k; PV.oy = my - (my - PV.oy) * k; PV.s *= k; planMoved(); }, { passive: false });
   cv.addEventListener('pointerleave', () => setHover(0));
   addEventListener('resize', () => { if (mode === '2d') drawPlan(); }); })();
-function setMode(m) { if (m === '3d' && TSV) setTsv(false); if (m === '3d' && mode !== '3d') cam.snap = true; mode = m; document.body.classList.toggle('m3d', m === '3d'); if (m !== '3d') vpMenu(false); buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换：平面 8 张，三维 3 张 */ if (m === '3d' && sceneDirty && F) { $('busy').style.display = 'block'; setTimeout(() => { ensure3D(); $('busy').style.display = 'none'; }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); $('plan').style.display = m === '2d' ? 'block' : 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
+function setMode(m) { const was = mode; if (m === '3d' && TSV) setTsv(false); if (m === '3d' && mode !== '3d') cam.snap = true; mode = m; document.body.classList.toggle('m3d', m === '3d'); if (m !== '3d') vpMenu(false); buildSwatches(); syncLegend();   /* 配色栏和图例跟着视图换：平面 8 张，三维 3 张 */ if (m === '3d' && sceneDirty && F) { const bz = $('busy'), bt = bz.textContent; bz.textContent = L('正在生成三维…', 'Building 3D…'); bz.style.display = 'block'; setTimeout(() => { try { ensure3D(); } finally { bz.style.display = 'none'; bz.textContent = bt; } }, 30); } $('v3d').classList.toggle('on', m === '3d'); $('v2d').classList.toggle('on', m === '2d'); const pl = $('plan'); if (m === '2d') { HOLD = 0; pl.classList.remove('hold', 'fade'); pl.style.display = 'block'; } else if (was === '2d' && F && pl.style.display !== 'none') { HOLD = 1; pl.classList.remove('fade'); pl.classList.add('hold'); } else if (!HOLD) pl.style.display = 'none'; $('gl').style.visibility = m === '2d' ? 'hidden' : 'visible'; if (m === '2d' && F) { fitPlan(); drawPlan(); } if (typeof strip === 'function') strip(); }
 
 // ---------------------------------------------------------------- 卡片
 function thumb(c) {
@@ -1417,7 +1425,9 @@ function rise(u) { if (u < 0.12) return [RISE0, 0]; if (u < 0.6) return [RISE0 +
 function planCam() { const cv = $('plan'), w = cv.clientWidth, h = cv.clientHeight, g = F && F.grid; if (!g || !w || !h || !PV.s) return null;
   const tx = g.xmin + (w / 2 - PV.ox) / PV.s * g.RES, ty = g.ymax - (h / 2 - PV.oy) / PV.s * g.RES; return { tx, ty, dist: (h * g.RES / PV.s / 2) / NAV.TH }; }
 // 三维在后台先算好（第 07 步以后、演示停着的时候；自动播放时进第 09 步就算），到第 6 步不用停下来等
-function prebuild3D() { if (!DEMO.on || !sceneDirty || !F || DEMO.building) return; DEMO.building = true; setTimeout(() => { try { if (sceneDirty) ensure3D(); } catch (e) { console.warn(e); } DEMO.building = false; }, 60); }
+function prebuild3D() { if (!DEMO.on || !sceneDirty || !F || DEMO.building) return; DEMO.building = true; setTimeout(() => { try { if (sceneDirty) ensure3D(); warm3D(); } catch (e) { console.warn(e); } DEMO.building = false; }, 60); }
+// 热身：第 9 步建好三维后，趁平面动画还在放，先把着色器编译、几何传上显卡、阴影画一遍；第 10 步第一帧从约 0.6 s 降到几 ms
+function warm3D() { if (!renderer || sceneDirty || !scene) return; try { placeCam(camS); setLift(); renderer.compile(scene, camera); renderer.render(scene, camera); const g = renderer.getContext(); if (g && g.finish) g.finish(); } catch (e) { console.warn(e); } }
 function dmEnterStage(k) { DEMO.stage = k; const s = DST[k]; if (k === DST.length - 1 && mode !== '3d') DEMO.cam0 = planCam(); if (k === DST.length - 2) prebuild3D();
   $('dmNum').textContent = String(k).padStart(2, '0'); $('dmName').textContent = L(s.zh, s.en); $('dmSub').textContent = s.sub();
   [...$('dmSteps').children].forEach((b, i) => { b.classList.toggle('on', i === k); b.classList.toggle('done', i < k); });
@@ -1553,7 +1563,7 @@ function useRun(c) { if (!c) return; unpreview(); P.seed = c.seed; $('seed').val
   if (P.mode !== c.mode) { P.mode = c.mode; P.v1 = c.mode === 'v1' ? 1 : 0; $('mode').value = c.mode; syncWCore(); } markCur(); CMP.stale = false; savePSoon(); solve(false); renderCmp(); strip(); }
 // 后台线程：场地只准备一次；不可用时（比如直接打开本地文件）退回主线程逐个算
 let WK = null, wkSnap = null, wkSeq = 0; const wkWait = new Map();
-function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.41'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
+function worker() { if (WK === false) return null; if (!WK) { try { WK = new Worker('engine/compare-worker.js?v=0.9.42'); WK.onmessage = e => { const m = e.data, f = wkWait.get(m.type === 'ready' ? 'ready' : m.id); if (f) { wkWait.delete(m.type === 'ready' ? 'ready' : m.id); f(m); } }; WK.onerror = () => { WK = false; for (const f of wkWait.values()) f({ type: 'error' }); wkWait.clear(); }; } catch (e) { WK = false; return null; } } return WK; }
 async function runInWorker(Pr) { const w = worker(); if (!w) return runHere(Pr);
   if (wkSnap !== SNAP) { const ready = new Promise(r => wkWait.set('ready', r)); w.postMessage({ type: 'site', snap: SNAP }); const m = await ready; if (m.type === 'error') return runHere(Pr); wkSnap = SNAP; }
   const id = ++wkSeq, done = new Promise(r => wkWait.set(id, r)); w.postMessage({ type: 'run', id, P: Pr, w: SW }); const m = await done; if (m.type !== 'done') return runHere(Pr);

@@ -18,6 +18,7 @@ html.l2ui.l2phone .l2ph-panel { padding:0; }
 /* the app places what floats on the model by the widths of its two side panels (--pl, --pr): on a phone there are none */
 html.l2ui.l2phone { --pl:0px !important; --pr:0px !important; }
 html.l2ui.l2phone #vp { top:64px !important; left:14px !important; }
+html.l2ui.l2phone body.demo-run #vp { top:var(--vpT,64px) !important; left:var(--vpL,14px) !important; }   /* 逐步演示：放在步骤说明下面（index.html vpPlace） */
 html.l2ui.l2phone #axis { left:10px !important; bottom:calc(141px + 12px + env(safe-area-inset-bottom)) !important; }
 /* the list of rooms: its button and its bar stand above the folded sheet */
 html.l2ui.l2phone #cbShow { left:50% !important; bottom:calc(141px + 12px + env(safe-area-inset-bottom)) !important; min-height:44px; }
