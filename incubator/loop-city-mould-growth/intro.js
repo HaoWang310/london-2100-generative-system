@@ -297,8 +297,10 @@
     function mapShown() { var l = document.getElementById('loading'); return !l || l.style.display === 'none'; }
     function status() {
       var r = ready();
-      skip.textContent = again ? (zh ? '关闭' : 'Close') : (r ? (zh ? '进入地图' : 'Open the map') : (zh ? '跳过' : 'Skip'));
-      skip.classList.toggle('lci-go', r && !again);
+      // (27 Nov 2026) the same button as every other opening: "Skip", then a white "Enter ›" once the page is ready
+      // (also on a replay, when it always is)
+      skip.textContent = (r || again) ? (zh ? '进入 ›' : 'Enter ›') : (zh ? '跳过' : 'Skip');
+      skip.classList.toggle('lci-go', r || again);
       var prep = document.getElementById('lcPrep'), t = '';
       if (again) t = '';
       else if (r) t = zh ? '地图已准备好' : 'The map is ready';

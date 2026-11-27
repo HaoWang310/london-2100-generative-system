@@ -1,5 +1,10 @@
 # 版本记录
 
+## v0.9.44（2026-11-27）· 分支 intro/unify-loop-structure
+- **开场字幕居中**：和 Loop City 第 1 步（黏菌）一样，标题和说明放在画面下方正中（`draw.js caption`，原来在左下角）；第 3–4 幕的轴测图也左右居中（`fitAxo`，电脑上原来偏右 0.56）。
+- 页脚进度「第 k / 5 幕」改为「第 k / 5 章」（英文 Scene → Chapter），和其他开场用同一个词。
+- 版本号 0.9.43 → 0.9.44。
+
 ## v0.9.43（2026-11-27）· 分支 fix/structure-phone-3d
 - **手机（模拟器）第 10 步只剩道路、卡顿、闪退**：
   - D · 着色器兜底：标准材质要用 dFdx，WebGL1 没有 `OES_standard_derivatives` 时（常见于模拟器）地块、水面、走道、塔整类不画，只剩道路贴图和线。检测不到时三维材质换成 MeshLambert（`liteMats`）。
