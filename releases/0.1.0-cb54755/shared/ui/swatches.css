@@ -1,0 +1,24 @@
+/* London 2100 · the one palette picker (25 Nov 2026).
+   Every app that lets you pick a palette shows it the same way: a small black card with three dots (the palette's
+   three most telling colours) and its name under them; the one in use has a 2 px white frame and a white name.
+     <div class="l2sw-grid">
+       <button class="l2sw on" type="button"><span class="l2sw-d"><i style="background:#…"></i>×3</span><span class="l2sw-n">Name</span></button>
+     </div>
+   The one in use: .on, aria-pressed="true" or aria-checked="true". The classes are doubled so a page's own older rules
+   for the same buttons (set later, at the same weight) give way. A page with a light panel (data-theme="light" on the
+   root) gets the light card. Only how the choice looks: what each palette does is the page's own. */
+.l2sw-grid.l2sw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(74px, 1fr)); gap:6px; margin:6px 0 10px; }
+.l2sw.l2sw { all:unset; box-sizing:border-box; cursor:pointer; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:8px 4px 7px; border:1px solid #2A2A2E; border-radius:10px; background:#000; color:#BDBDBD; text-align:center;
+  font:500 10.5px/1.2 'DM Sans', 'Noto Sans CJK SC', 'PingFang SC', system-ui, sans-serif; transition:border-color .15s; }
+.l2sw.l2sw:hover { border-color:#5A5A60; }
+.l2sw.l2sw:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+.l2sw.l2sw.on, .l2sw.l2sw[aria-pressed="true"], .l2sw.l2sw[aria-checked="true"] { border:2px solid #fff; padding:7px 3px 6px; color:#fff; background:#000; }
+.l2sw .l2sw-d { display:flex; gap:4px; justify-content:center; }
+.l2sw .l2sw-d i { display:block; flex:none; width:13px; height:13px; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.16); }
+.l2sw .l2sw-n { display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:inherit; font:inherit; }
+.l2sw.l2sw.on .l2sw-n, .l2sw.l2sw[aria-pressed="true"] .l2sw-n, .l2sw.l2sw[aria-checked="true"] .l2sw-n { font-weight:600; }
+:root[data-theme="light"] .l2sw.l2sw { background:#fff; border-color:#DDDDDD; color:#555; }
+:root[data-theme="light"] .l2sw.l2sw:hover { border-color:#999; }
+:root[data-theme="light"] .l2sw.l2sw.on, :root[data-theme="light"] .l2sw.l2sw[aria-pressed="true"], :root[data-theme="light"] .l2sw.l2sw[aria-checked="true"] { border-color:#111; color:#111; background:#fff; }
+:root[data-theme="light"] .l2sw .l2sw-d i { box-shadow:0 0 0 1px rgba(0,0,0,.14); }
