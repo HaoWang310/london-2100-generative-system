@@ -102,7 +102,7 @@ function create(o) {
         H.callout(it[0][0], it[0][1], x + (left ? 1 : -1) * (nar ? 8 : 150), y, it[1], nar ? '' : it[2], ca * seg(t, 6.3 + i * 0.3, 6.9 + i * 0.3), left ? 'left' : 'right'); });
       place(lefts, true); place(rights, false);
       if (!nar) { const g = o.ctx; g.save(); g.globalAlpha = ca; H.pill(L('层间距拉开 ', 'levels pulled apart × ') + V.ex.toFixed(1) + L(' 倍示意 · 竖向放大 1.6 倍', ' · height × 1.6'), Wd - 38, Hd - 170, 12, 'right'); g.restore(); } }
-    const ta = seg(t, 9.0, 9.4) * (1 - seg(t, 9.7, 9.9)); if (ta > 0) { const g = o.ctx; g.save(); g.globalAlpha = ta; H.pill(L('合回真实层高：7.2 / 11.8 / 16.4 m', 'Back to the true heights: 7.2 / 11.8 / 16.4 m'), Wd / 2, nar ? 120 : 70, nar ? 15 : 18, 'center'); g.restore(); } }
+    const ta = seg(t, 9.0, 9.4) * (1 - seg(t, 9.7, 9.9)); if (ta > 0) { const g = o.ctx; g.save(); g.globalAlpha = ta; H.pill(L('合回真实层高：7.2 / 11.8 / 16.4 m', 'Back to the true heights: 7.2 / 11.8 / 16.4 m'), Wd / 2, side ? 66 : nar ? 120 : 70, side ? 13 : nar ? 15 : 18, 'center'); g.restore(); } }
   function dispose() { for (const d of disp) try { d.dispose(); } catch (e) {} try { R.dispose(); R.forceContextLoss && R.forceContextLoss(); } catch (e) {} }
   return { resize, update, labels, dispose, setLang };
 }
