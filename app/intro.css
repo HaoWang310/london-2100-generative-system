@@ -110,3 +110,5 @@
   .intro, .intro-panel, .intro-panel video, .intro-label, .intro-bar { transition: none !important; }
   .intro-panel { clip-path: none; }
 }
+/* (28 Nov 2026) a phone on its side: "London 2100" only, so the top row does not run into the first panel's title */
+@media (orientation: landscape) and (max-height: 500px) { .intro-top span[data-i18n="app.subtitle"] { display: none; } }

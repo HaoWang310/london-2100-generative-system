@@ -12,7 +12,7 @@ export const RELIEF_RAMPS={
 };
 // The heights of the twenty colour steps: closer together near sea level.
 export const reliefStops=top=>RELIEF_RAMPS.classic.map((_,i)=>-3+(top+3)*Math.pow(i/19,1.5));
-// 3D relief (v3.46.2): the heights themselves, flat outside the study circle, for MapLibre's terrain.
+// 3D relief (v3.46.3): the heights themselves, flat outside the study circle, for MapLibre's terrain.
 export const DEM_TILE_URL='l2100-relief://dem/{z}/{x}/{y}';
 export const DEM_MAX_ZOOM=12;
 export const reliefTileUrl=({ramp,top,shade})=>
@@ -24,7 +24,7 @@ export function createReliefLoader(config){
 
   function start(){
     if(worker)return;
-    worker=new Worker(new URL('./relief_worker.js?v=3.46.2',import.meta.url),{type:'module'});
+    worker=new Worker(new URL('./relief_worker.js?v=3.46.3',import.meta.url),{type:'module'});
     worker.postMessage({type:'init',config});
     worker.onmessage=({data})=>{
       const request=pending.get(data.id);

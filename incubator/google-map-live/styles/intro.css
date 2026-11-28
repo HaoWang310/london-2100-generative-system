@@ -214,3 +214,24 @@ html:not(.l2ui) #introReplay { display:none; }   /* #noskin: no film, so no butt
 #lmIntro.lmi-flat .lmi-nrv { margin-left:0; }
 #lmIntro.lmi-flat .lmi-nr { min-height:30px; }
 #lmIntro.lmi-flat .lmi-rnn span { white-space:nowrap; }
+
+/* (28 Nov 2026) a phone on its side (a screen under 500 px high, wider than high): the picture on the left, the caption
+   in a column on the right, the chapter's notes at the foot of that column; as the other openings */
+@media (orientation:landscape) and (max-height:500px) {
+  #lmIntro { display:grid; grid-template-columns:minmax(0, 62fr) minmax(0, 38fr); grid-template-rows:auto minmax(0, 1fr) auto;
+    grid-template-areas:"top top" "map caps" "foot foot"; }
+  .lmi-top { grid-area:top; padding:10px 16px 0; } .lmi-map { grid-area:map; margin:6px 8px 0 14px; }
+  .lmi-caps { grid-area:caps; height:auto; margin:6px 20px 0 12px; }
+  .lmi-cap { justify-content:flex-start; align-items:flex-start; text-align:left; padding-top:4px; }
+  .lmi-cap h2 { font-size:18px; } .lmi-cap p { font-size:13px; margin-top:6px; max-width:none; text-wrap:pretty; }
+  .lmi-foot { grid-area:foot; height:34px; padding:0 16px 8px; }
+  html.l2-shell-lang #lmIntro .lmi-top { padding-top:10px; padding-right:136px; }
+  #lmIntro.lmi-sidev .lmi-note { position:fixed; left:calc(62% + 12px); right:20px; top:auto; bottom:46px; width:auto; text-align:left; font-size:10.5px; }
+  #lmIntro.lmi-sidev .lmi-noteL { display:none; }                     /* Kingston: its label stays on the map, the caption says 0.09% */
+  #lmIntro.lmi-sidev .lmi-note .lmi-key { display:inline-flex; margin:1px 10px 1px 0; }
+  #lmIntro.lmi-sidev .lmi-note b { margin-bottom:3px; font-size:11px; } #lmIntro.lmi-sidev .lmi-gap { margin-top:5px !important; }
+  #lmIntro.lmi-sidev .lmi-note .lmi-big { font-size:18px; } #lmIntro.lmi-sidev .lmi-ramp { width:100%; }
+  #lmIntro.lmi-sidev .lmi-rnl { grid-template-columns:minmax(0, 1fr); grid-template-rows:none; grid-auto-flow:row; row-gap:3px; }
+  #lmIntro.lmi-sidev .lmi-roleN { gap:16px; inset:0 4px; }
+  #lmIntro.lmi-sidev .lmi-nr { min-height:28px; } #lmIntro.lmi-sidev .lmi-nr .lmi-thumb { width:44px; height:25px; }
+}

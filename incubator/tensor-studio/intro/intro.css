@@ -164,3 +164,26 @@
 #panel .ts-method{margin-left:8px;font:inherit;font-size:11.5px;line-height:1;padding:4px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:transparent;color:inherit;opacity:.8;cursor:pointer;vertical-align:1px}
 #panel .ts-method:hover{opacity:1;background:rgba(255,255,255,.08)}
 html[data-theme="light"] #panel .ts-method{border-color:rgba(0,0,0,.2)}
+/* (28 Nov 2026) a phone on its side (a screen under 500 px high, wider than high): the picture on the left, the caption in
+   a column on the right, as the other openings; the precedents stay in a row and the four runs in one row of four */
+@media (orientation:landscape) and (max-height:500px){
+  #tsIntro .tsi-bar{padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left))}
+  html.l2-shell-lang #tsIntro .tsi-bar{padding-top:10px;padding-right:136px}
+  #tsIntro .tsi-foot{height:calc(34px + env(safe-area-inset-bottom));padding:0 16px calc(8px + env(safe-area-inset-bottom))}
+  #tsIntro .tsi-art{left:calc(14px + env(safe-area-inset-left));right:38%;top:calc(58px + env(safe-area-inset-top));bottom:calc(38px + env(safe-area-inset-bottom))}
+  #tsIntro .tsi-txt{left:calc(62% + 12px);right:calc(20px + env(safe-area-inset-right));width:auto;transform:none;top:calc(58px + env(safe-area-inset-top));
+    bottom:calc(38px + env(safe-area-inset-bottom));height:auto;text-align:left;align-items:flex-start;justify-content:center}
+  #tsIntro .tsi-t{font-size:18px;margin:0 0 6px;text-wrap:pretty}
+  #tsIntro .tsi-b{font-size:13px;line-height:1.5;text-wrap:pretty}
+  #tsIntro .tsi-n,#tsIntro .tsi-eq{font-size:10.5px;margin-top:6px}
+  #tsIntro .tsi-rules{height:4.4em}
+  #tsIntro .tsi-rules div{text-align:left;font-size:12.5px}
+  #tsIntro .tsi-prec{flex-direction:row;gap:14px}
+  #tsIntro .tsi-prec > div{display:block;padding-top:8px}
+  #tsIntro .tsi-prec svg,#tsIntro .tsi-prec .tsi-ps{margin:4px 0 6px}
+  #tsIntro .tsi-prec .n{font-size:12.5px;margin-top:2px}
+  #tsIntro .tsi-prec .c{font-size:11px;margin-top:2px;line-height:1.4}
+  #tsIntro .tsi-four{grid-template-columns:repeat(4,1fr);gap:8px 10px;width:min(100cqw,calc((100cqh - 56px) * 3.6))}
+  #tsIntro .tsi-four .l{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tsIntro .tsi-four .m{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}

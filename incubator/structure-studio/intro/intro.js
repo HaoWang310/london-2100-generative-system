@@ -66,7 +66,9 @@
       if (worker) worker.postMessage({ type: 'lang', lang: lg, name: nm }); if (top) top.setLang(lg, nm); if (film) film.setLang(lg, nm); if (s5 && s5.setLang) s5.setLang(lg); }
     var relT = setInterval(function () { if (me.closed) { clearInterval(relT); return; } relabel(); }, 400);
     function size() { W = innerWidth; Hh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1); fit();
-      if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(W, Hh, dpr); }
+      if (worker) worker.postMessage({ type: 'size', w: W, h: Hh, dpr: dpr }); if (film) film.resize(W, Hh, dpr); if (top) top.resize(W, Hh, dpr); if (s5) s5.resize(Wv(), Hh, dpr); }
+    // (28 Nov 2026) a phone on its side: scene 5's picture takes the left 62 %, as the film's (draw.js)
+    function Wv() { var v = Hh < 500 && W > Hh ? Math.round(W * 0.62) : W; try { cvGL.style.width = v + 'px'; } catch (e) {} return v; }
     var rsT = 0; function onResize() { clearTimeout(rsT); rsT = setTimeout(size, 120); }
     function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); me.close(); } else if (e.key === 'Enter' && me.structure && started) { e.preventDefault(); me.close(); } }
     addEventListener('resize', onResize); document.addEventListener('keydown', onKey, true);
@@ -116,7 +118,7 @@
         var towers = (T3 && SS.tower) ? F.towers.filter(function (t) { return t[5]; }).map(function (t) { return { xf: SS.tower.xf(t, -1), z0: t[7] != null ? t[7] : SS.tower.BASE.podium }; }) : [];
         s5 = SSIntroScene5.create({ canvas: cvGL, ctx: ctxTop, draw: top, data: data, deckMesh: dm, bases: bases, towers: towers, shells: T3 ? T3.towers.map(function (w) { return w.mesh; }) : [],
           ramps: deck ? deck.ramps : [], towerAt: F.towers[0] ? [F.towers[0][0], F.towers[0][1]] : null, towerTip: F.towers[0] ? Math.round(F.towers[0][3]) : null, baseAnchor: anchor, lang: zh ? 'zh' : 'en', low: low });
-        s5.resize(W, Hh, dpr);
+        s5.resize(Wv(), Hh, dpr);
       }, 40);
     }
     // ---------------------------------------------------------------- the clock

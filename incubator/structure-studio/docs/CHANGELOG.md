@@ -1,5 +1,11 @@
 # 版本记录
 
+## v0.9.46（2026-11-28）· 分支 intro/landscape-side
+- **手机横屏开场：左图右文**（高度 < 500 的横屏）：
+  - 画面缩到左边约 62%，字幕改成右边一栏、左对齐，不再叠在图上。
+  - 顶栏和底栏留出右上角外壳语言按钮的位置。
+  - 版本号 0.9.45 → 0.9.46。
+
 ## v0.9.45（2026-11-27）· 分支 fix/structure-zoom-memory
 - **iPhone 上双指放大看细节 → 闪退回目录**：
   - H · 不让浏览器整页放大：三维和平面画布 `touch-action: none`，拦下 iOS 的 `gesturestart / gesturechange / gestureend`。

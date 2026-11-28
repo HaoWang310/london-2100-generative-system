@@ -249,3 +249,5 @@ html.l2phone #wsDisplay .insp-section { margin-top: 12px; padding-top: 12px; bor
 html.l2phone .map-hint { top: 68px; max-width: calc(100% - 32px); }
 html.l2phone .map-badge { bottom: calc(var(--ws-fold, 190px) + 12px); max-width: calc(100% - 24px); box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html.l2phone .stage .maplibregl-ctrl-bottom-left, html.l2phone .stage .maplibregl-ctrl-bottom-right { bottom: var(--ws-fold, 190px); }
+/* (28 Nov 2026) a phone on its side: the top bar keeps "London 2100" only, so it does not run into the opening's first title */
+@media (orientation: landscape) and (max-height: 500px) { .brand-sub { display: none; } }

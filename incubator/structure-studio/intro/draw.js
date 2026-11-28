@@ -21,9 +21,12 @@ function create(G0, opt) {
   const L = (a, b) => zh ? a : b;
   // (27 Nov 2026) a language changed while the film plays: its words switch on the next frame, as in the Loop City opening
   const setLang = (l, nm) => { zh = l !== 'en'; name = nm || L('这块场地', 'This site'); };
-  let g = G0, Wd = 1, Hd = 1, dpr = 1, D = null, S = {}, W0 = opt.wool || null, ground = null, bufA = null, bufB = null;
+  let g = G0, Wd = 1, Wr = 1, Hd = 1, dpr = 1, D = null, S = {}, W0 = opt.wool || null, ground = null, bufA = null, bufB = null;
   const plan = { s: 1, ox: 0, oy: 0 }, axo = { k: 1, cx: 0, cy: 0, gap: 0 }, TH = -0.62, cT = Math.cos(TH), sT = Math.sin(TH);
-  const nar = () => Wd < 600;
+  // (28 Nov 2026) a phone on its side (under 500 px high, wider than high): the picture takes the left 62 % (Wd), the
+  // caption a column on the right (up to Wr, the canvas's own width), as in the other openings
+  const SIDE = () => Wd !== Wr;
+  const nar = () => !SIDE() && Wd < 600;
   // ---------------------------------------------------------------- data
   function setSnap(A) { D = Object.assign(D || {}, A); S = Object.assign({}, S, A.stats); D.roads.forEach(r => r.c = plen(r.p)); D.outline.forEach(pc => pc[0].c = plen(pc[0]));
     const rb = D.roads.flatMap(r => r.p); if (rb.length) { const x0 = Math.min(...rb.map(p => p[0])) - 60, x1 = Math.max(...rb.map(p => p[0])) + 60, y0 = Math.min(...rb.map(p => p[1])) - 60, y1 = Math.max(...rb.map(p => p[1])) + 60;
@@ -44,7 +47,7 @@ function create(G0, opt) {
     axo.cx = Wd * 0.5 - (Math.max(...xs) + Math.min(...xs)) / 2 * axo.k; /* (27 Nov 2026) centred, over the centred caption */ axo.cy = Hd * (nar() ? 0.1 : 0.07) + 3 * axo.gap + Math.max(...ys) * axo.k + (avH - bh * axo.k) / 2; }
   const AP = (p, z) => { const x = p[0] - D.w / 2, y = p[1] - D.h / 2; return [axo.cx + (x * cT - y * sT) * axo.k, axo.cy - (x * sT + y * cT) * 0.52 * axo.k - z * axo.gap]; };
   function fit() { fitPlan(); fitAxo(); }
-  function resize(w, h, r) { Wd = w; Hd = h; dpr = r || 1; G0.canvas.width = Math.round(w * dpr); G0.canvas.height = Math.round(h * dpr); bufA = mk(G0.canvas.width, G0.canvas.height); bufB = mk(G0.canvas.width, G0.canvas.height); if (D && D.outline) { fit(); buildGround(); } }
+  function resize(w, h, r) { Wr = w; Hd = h; Wd = h < 500 && w > h ? Math.round(w * 0.62) : w; dpr = r || 1; G0.canvas.width = Math.round(w * dpr); G0.canvas.height = Math.round(h * dpr); bufA = mk(G0.canvas.width, G0.canvas.height); bufB = mk(G0.canvas.width, G0.canvas.height); if (D && D.outline) { fit(); buildGround(); } }
   // ---------------------------------------------------------------- primitives
   function poly(P, pr) { const a = pr(P[0]); g.moveTo(a[0], a[1]); for (let i = 1; i < P.length; i++) { const b = pr(P[i]); g.lineTo(b[0], b[1]); } }
   function line(P, pr, f, c) { f = f == null ? 1 : f; if (f <= 0 || P.length < 2) return; if (f >= 1) { poly(P, pr); return; } const Lh = c[c.length - 1] * f, a = pr(P[0]); g.moveTo(a[0], a[1]);
@@ -95,11 +98,17 @@ function create(G0, opt) {
     const toks = zh ? (s.match(/[A-Za-z0-9.,%:/+×→·°\-]+|\s+|./gu) || []) : s.split(/(\s+)/);
     for (const tk of toks) { const nx = cur + tk; if (g.measureText(nx).width > maxW && cur.trim()) { out.push(cur.trim()); cur = tk.trimStart(); } else cur = nx; } if (cur.trim()) out.push(cur.trim()); return out; }
   // (27 Nov 2026) the caption is centred under the picture, as in the other openings (Loop City step 1): title, then the lines
-  function caption(t, alpha) { const [tt, body] = captionAt(t), n = nar(), x = Wd / 2, maxW = Math.min(Wd - (n ? 36 : 56), 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
+  function caption(t, alpha) { if (SIDE()) return captionSide(t, alpha); const [tt, body] = captionAt(t), n = nar(), x = Wd / 2, maxW = Math.min(Wd - (n ? 36 : 56), 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
     // (27 Nov 2026) a title too wide for the screen (English, on a phone) folds onto a second line instead of running off the edge
     const tl = wrap(tt, maxW, ts, 600), tlh = ts + 5, lines = wrap(body, maxW, bs, 400), h = ts + (tl.length - 1) * tlh + 12 + lines.length * lh + (n ? 22 : 30);
     g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; const gr = g.createLinearGradient(0, Hd - h - 40, 0, Hd); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.45, 'rgba(0,0,0,.8)'); gr.addColorStop(1, 'rgba(0,0,0,.88)'); g.fillStyle = gr; g.fillRect(0, Hd - h - 40, Wd, h + 40);
     let y = Hd - h + ts + 4 - (n ? 4 : 0); tl.forEach((s, i) => { if (i) y += tlh; text(s, x, y, ts, '#fff', 'center', 600); }); y += 10; for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.68)', 'center', 400); } g.restore(); }
+  // the caption in its column on the right (a phone on its side): title, then the lines, left-aligned, in the column's middle
+  function captionSide(t, alpha) { const [tt, body] = captionAt(t), x = Wd + 14, maxW = Wr - Wd - 34, ts = 18, bs = 13, lh = 19.5;
+    const tl = wrap(tt, maxW, ts, 600), tlh = ts + 5, lines = wrap(body, maxW, bs, 400), h = ts + (tl.length - 1) * tlh + 10 + lines.length * lh;
+    g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; g.fillStyle = '#000'; g.fillRect(Wd, 0, Wr - Wd, Hd);
+    let y = Math.max(64, (Hd - h) / 2) + ts - 4; tl.forEach((s, i) => { if (i) y += tlh; text(s, x, y, ts, '#fff', 'left', 600); }); y += 8;
+    for (const ln of lines) { y += lh; text(ln, x, y, bs, 'rgba(245,245,247,.7)', 'left', 400); } g.restore(); }
   function pips(t) { const n = nar(), x0 = n ? 18 : 28, y = n ? 24 : 28, w = n ? 30 : 44, gap = 6; g.save();
     for (let k = 0; k < 5; k++) { const a = T[k], e = k < 4 ? T[k + 1] : END, f = Math.max(0, Math.min(1, (t - a) / (e - a))), x = x0 + k * (w + gap);
       g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x, y, w, 2); g.fillStyle = '#fff'; g.fillRect(x, y, w * f, 2); }
@@ -164,20 +173,20 @@ function create(G0, opt) {
     if (!nar()) REL.forEach((r, i) => { const a = rel(i); if (a <= 0) return; g.save(); g.globalAlpha *= a; const y = 72 + i * 34; text(r[0], Wd - 28 - (zh ? 118 : 196), y, 15, '#fff', 'right', 600); text(r[1], Wd - 28, y, 14, gcol(0.1), 'right', 500); g.restore(); });
     axo.gap = gp; }
   // the app's own opening picture: the site, the field's streamlines, the streets, the cores
-  function endPlan(a) { if (a <= 0) return; g.save(); g.globalAlpha *= a; g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); drawGround(1); siteLine(0.6);
+  function endPlan(a) { if (a <= 0) return; g.save(); g.globalAlpha *= a; g.fillStyle = '#000'; g.fillRect(0, 0, Wr, Hd); drawGround(1); siteLine(0.6);
     if (D.stream) { g.lineWidth = 0.9; g.strokeStyle = gcol(0.1, 0.5); g.beginPath(); for (const s of D.stream) line(s, PP, 1, s.c); g.stroke(); }
     roads(9, 1, 'mtl', false); if (D.cores) for (const c of D.cores) { const p = PP(c); g.beginPath(); g.arc(p[0], p[1], 4, 0, 7); g.fillStyle = gcol(0); g.fill(); } g.restore(); }
   const DRAW = [scene1, scene2, scene3, scene4];
-  function render(buf, i, lt) { const c = buf.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.clearRect(0, 0, buf.width, buf.height); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, Wd, Hd); g = c; DRAW[i](lt); g = G0; }
+  function render(buf, i, lt) { const c = buf.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.clearRect(0, 0, buf.width, buf.height); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, Wr, Hd); g = c; DRAW[i](lt); g = G0; }
   const sceneAt = t => { let i = 0; while (i < 4 && t >= T[i + 1]) i++; return i; };
   // scenes 1–4 with their captions; over scene 5 the canvas fades out and is left clear for the WebGL picture underneath
   function frame(t, o) { o = o || {}; g = G0; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, G0.canvas.width, G0.canvas.height); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (!D || !D.outline) { g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); return; }
+    if (!D || !D.outline) { g.fillStyle = '#000'; g.fillRect(0, 0, Wr, Hd); return; }
     const i = sceneAt(t), lt = t - T[i];
     if (i === 4) { if (lt < XF && hasStructure()) { render(bufB, 3, T[4] - T[3] - 0.001); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - ease(lt / XF); g.drawImage(bufB, 0, 0); g.globalAlpha = 1; } return; }
-    if (i === 3 && !hasStructure()) { g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); scene3(T[3] - T[2] - 0.01); }
+    if (i === 3 && !hasStructure()) { g.fillStyle = '#000'; g.fillRect(0, 0, Wr, Hd); scene3(T[3] - T[2] - 0.01); }
     else if (i > 0 && lt < XF) { const e = ease(lt / XF); render(bufB, i - 1, T[i] - T[i - 1] - 0.001); render(bufA, i, lt); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1 - e; g.drawImage(bufB, 0, 0); g.globalAlpha = e; g.drawImage(bufA, 0, 0); g.globalAlpha = 1; g.setTransform(dpr, 0, 0, dpr, 0, 0); }
-    else { g.fillStyle = '#000'; g.fillRect(0, 0, Wd, Hd); DRAW[i](lt); }
+    else { g.fillStyle = '#000'; g.fillRect(0, 0, Wr, Hd); DRAW[i](lt); }
     caption(o.waiting ? T[2] + 1 : t);   // (27 Nov 2026) the progress marks are the page's own foot now (intro.js), not drawn here
     if (o.waiting) pill(L('正在生成走廊网…', 'Generating the corridor net…'), Wd / 2, nar() ? Hd * 0.12 : 64, nar() ? 13 : 14, 'center'); }
   const setWool = w => { W0 = w; };

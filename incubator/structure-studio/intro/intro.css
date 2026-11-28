@@ -38,3 +38,9 @@
 @media (max-width:760px){html.l2-shell-lang #ssIntro .ssi-bar{padding-top:68px}}
 html.ssi-on,html.ssi-on body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){#ssIntro .ssi-card i::after{animation:none}}
+/* (28 Nov 2026) a phone on its side: the shell's language switch floats at the top right, the top row stays at the top */
+@media (orientation:landscape) and (max-height:500px){
+  #ssIntro .ssi-bar{padding:calc(10px + env(safe-area-inset-top,0px)) 16px 0}
+  html.l2-shell-lang #ssIntro .ssi-bar{padding-top:10px;padding-right:136px}
+  #ssIntro .ssi-foot{height:calc(34px + env(safe-area-inset-bottom,0px));padding:0 16px calc(8px + env(safe-area-inset-bottom,0px))}
+}
