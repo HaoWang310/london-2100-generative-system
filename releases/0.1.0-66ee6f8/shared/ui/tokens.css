@@ -1,0 +1,27 @@
+/* London 2100 · one interface for every app (22 Nov 2026).
+   The tokens every app's interface layer reads. Change a value here and every app follows.
+
+   The rule: black, white, and white at lower opacity. Nothing else in the interface.
+   Colour is kept for two things only: what is a key to the map (legend swatches, colour choices for the drawing),
+   and warnings (--l2-warn). The map and the 3D scenes are content, not interface, and are not touched.
+
+   Geometry: floating panels with a 30 px radius, controls with a 14 px radius, DM Sans throughout.
+   Solid white = the main action and the current choice. A white outline = the open step. */
+@font-face { font-family:'DM Sans'; src:url(DMSans.ttf) format('truetype'); font-weight:100 1000; font-display:swap; }
+:root {
+  --l2-font:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif;
+  --l2-bg:#000;                         /* page, panels, controls */
+  --l2-ink:#fff;                        /* titles, values, labels */
+  --l2-ink2:rgba(255,255,255,.72);      /* body text */
+  --l2-ink3:rgba(255,255,255,.6);       /* small headings, sub-lines */
+  --l2-ink4:rgba(255,255,255,.5);       /* hints and notes */
+  --l2-line:rgba(255,255,255,.14);      /* dividers */
+  --l2-bd:rgba(255,255,255,.22);        /* control and panel borders */
+  --l2-bd2:rgba(255,255,255,.4);        /* hover, unchecked marks */
+  --l2-fill:rgba(255,255,255,.1);       /* a quiet fill */
+  --l2-warn:#FF453A;                    /* warnings and errors only */
+  --l2-r-panel:30px; --l2-r-panel-s:24px; --l2-r:14px; --l2-r-s:12px;
+  --l2-gap:20px;                        /* panel to screen edge */
+  --l2-w-left:372px; --l2-w-right:316px;
+  --l2-shadow:0 18px 50px rgba(0,0,0,.55);
+}

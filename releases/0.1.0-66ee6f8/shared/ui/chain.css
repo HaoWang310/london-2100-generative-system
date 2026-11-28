@@ -1,0 +1,33 @@
+/* The chain row (26 Nov 2026): one line under an app's title, the same in every catalogue app: where the app stands on
+   the research line, the step before it and the step after it. chain.js draws it. Black and white, DM Sans, pills. */
+.l2chain { display:block; margin:10px 0 12px; font-family:'DM Sans', system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', sans-serif; color:#fff; text-align:left; }
+.l2chain[hidden] { display:none !important; }
+.l2chain .l2c-dots { display:flex; gap:5px; margin:0 0 9px; }
+.l2chain .l2c-dots i { flex:1; height:4px; border-radius:2px; background:#3A3A3E; display:block; }
+.l2chain .l2c-dots i.done { background:#C6F432; }
+.l2chain .l2c-dots i.on { background:#fff; }
+.l2chain .l2c-row { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.3fr); gap:8px; }
+.l2chain .l2c-bk, .l2chain .l2c-nx { appearance:none; -webkit-appearance:none; display:block !important; width:100% !important; min-width:0; margin:0 !important; padding:9px 10px !important; border-radius:999px !important; font:inherit; font-size:12.5px !important; line-height:1.25;
+  text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; text-decoration:none; box-shadow:none !important; letter-spacing:0 !important; text-transform:none !important; height:auto !important; }
+.l2chain .l2c-bk { border:1px solid #3A3A3E !important; background:#000 !important; color:#E6E6EA !important; font-weight:600 !important; }
+.l2chain .l2c-bk:hover { border-color:#6E6E73 !important; }
+.l2chain .l2c-nx { border:1px solid #fff !important; background:#fff !important; color:#000 !important; font-weight:700 !important; }
+.l2chain .l2c-nx:hover { background:#E9E9EC !important; border-color:#E9E9EC !important; }
+.l2chain .l2c-nx.off { background:#1C1C1E !important; border-color:#1C1C1E !important; color:#6E6E73 !important; cursor:not-allowed; }
+.l2chain .l2c-hint { margin:7px 2px 0; font-size:11.5px; line-height:1.5; color:#9A9A9E; min-height:17px; }
+.l2chain .l2c-hint.carry { color:#C6F432; }
+.l2chain .l2c-hint a { color:#fff; text-decoration:underline; cursor:pointer; white-space:nowrap; }
+/* on a light panel */
+.l2chain.light { color:#000; }
+.l2chain.light .l2c-dots i { background:#D2D2D7; } .l2chain.light .l2c-dots i.done { background:#6B8F00; } .l2chain.light .l2c-dots i.on { background:#000; }
+.l2chain.light .l2c-bk { background:#fff !important; color:#1D1D1F !important; border-color:#C7C7CC !important; }
+.l2chain.light .l2c-nx { background:#000 !important; border-color:#000 !important; color:#fff !important; } .l2chain.light .l2c-nx:hover { background:#2C2C2E; border-color:#2C2C2E; }
+.l2chain.light .l2c-nx.off { background:#E5E5EA !important; border-color:#E5E5EA !important; color:#8E8E93 !important; }
+.l2chain.light .l2c-hint { color:#6E6E73; } .l2chain.light .l2c-hint.carry { color:#4E6B00; } .l2chain.light .l2c-hint a { color:#000; }
+
+/* a narrow panel (the whole system's module list): the step before takes only the room of its words */
+.l2chain.narrow .l2c-row { grid-template-columns:auto minmax(0, 1fr); }
+.l2chain.narrow .l2c-bk { padding:9px 12px !important; }
+
+/* (26 Nov 2026) under a finger (a phone, a tablet) the two buttons are as tall as a thumb needs: 44 px, as Apple asks. */
+@media (pointer: coarse) { .l2chain .l2c-bk, .l2chain .l2c-nx { min-height:44px !important; } }
