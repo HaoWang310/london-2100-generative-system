@@ -1,5 +1,6 @@
 # 整个仓库（主程序、孵化器、目录封面、.github/ 等）都由 HaoWang310 负责。
-# 配合 main 的 ruleset「Require review from Code Owners」：所有路径的 PR 都需要 HaoWang310 批准。
 # 2026-11-22：仓库不再有协作者，取消了孵化器 / 目录封面「作者可自行合并」的例外。
+# 2026-11-28：新仓库的 main ruleset 只禁止删除和强制推送（Restrict deletions、Block force pushes），
+# 不要求 PR 审核；主程序改动照常走分支 + PR，孵化器改动可直接推到 main。
 
 *                               @HaoWang310
