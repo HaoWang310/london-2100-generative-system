@@ -316,6 +316,7 @@
       stage.style.width = w + 'px'; stage.style.height = h + 'px';
       stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (r.height - h) / 2 + 'px';
       box.classList.toggle('lci-small', w < 560);
+      box.classList.toggle('lci-tight', h < 300);   // (28 Nov 2026) a phone on its side: the names, not the distances
       var per = (1.5 + 5) * 1.6 / Z.k, sc = w / D.W;   // a dotted piece's dash starts where the one before it left off
       dashed.forEach(function (e) { var q = e.firstChild; if (q) q.setAttribute('stroke-dashoffset', ((+e.dataset.s * sc) % per).toFixed(3)); });
       turn();

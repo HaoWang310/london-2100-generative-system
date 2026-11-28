@@ -96,6 +96,21 @@
 }
 @media (max-height:420px) { .lci-caps { height:78px; } .lci-cap h2 { font-size:16px; } .lci-cap p { margin-top:3px; font-size:12.5px; } }
 
+/* (28 Nov 2026) a phone on its side (a screen under 500 px high, wider than high): the picture on the left, the caption
+   in a column on the right, so the map keeps the screen's whole height; the other openings do the same */
+@media (orientation:landscape) and (max-height:500px) {
+  #lcIntro { display:grid; grid-template-columns:minmax(0, 62fr) minmax(0, 38fr); grid-template-rows:auto minmax(0, 1fr) auto;
+    grid-template-areas:"top top" "map caps" "foot foot"; }
+  .lci-top { grid-area:top; padding:10px 16px 0; } .lci-map { grid-area:map; margin:6px 8px 0 14px; }
+  .lci-caps { grid-area:caps; height:auto; margin:6px 20px 0 12px; }
+  .lci-cap { justify-content:center; align-items:flex-start; text-align:left; }
+  .lci-cap h2 { font-size:18px; } .lci-cap p { font-size:13px; margin-top:6px; max-width:none; text-wrap:pretty; }
+  .lci-foot { grid-area:foot; height:34px; padding:0 16px 8px; }
+  html.l2-shell-lang #lcIntro .lci-top { padding-top:10px; padding-right:136px; }   /* the shell's language switch floats at the top right */
+}
+/* a small picture keeps the stations' names and drops where they are ("NW 6.0 km") */
+#lcIntro.lci-tight .lci-tP span, #lcIntro.lci-tight .lci-tA span, #lcIntro.lci-tight .lci-lr i, #lcIntro.lci-tight .lci-lr em { display:none; }
+
 /* ---- the story: delays come from intro.js as --d (when it comes in) and --o (when it goes) */
 @keyframes lciIn    { from { opacity:0; } to { opacity:1; } }
 @keyframes lciOut   { from { opacity:1; } to { opacity:0; } }

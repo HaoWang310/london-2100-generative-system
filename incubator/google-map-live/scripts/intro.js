@@ -252,7 +252,10 @@
     /* the square frame, as large as its room allows; on a narrow screen it stands at the top, its notes under it */
     function fit() {
       var r = map.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return;
-      var narrow = r.width < 760, side = narrow ? 0 : 230, room = 140;
+      /* (28 Nov 2026) a phone on its side: the caption has its own column (intro.css), the notes go under it */
+      var sidev = false; try { sidev = matchMedia('(orientation: landscape) and (max-height: 500px)').matches; } catch (e) { sidev = false; }
+      box.classList.toggle('lmi-sidev', sidev);
+      var narrow = !sidev && r.width < 760, side = narrow || sidev ? 0 : 230, room = 140;
       /* a narrow screen: the notes run the whole width under the frame (not just the frame's width), and the frame leaves
          room for the tallest of them, so a legend never runs into the caption on a short phone */
       if (narrow) {
