@@ -21,5 +21,5 @@ test('chapter 5 in AADRL colours: grey-white ground, red city lines, cyan high s
 });
 test('the pictures carry the script version, so new legends never sit on cached old pictures', () => {
   assert.ok(js.includes("im.src = DIR + name + '.webp' + (IV ? '?v=' + IV : '');"));
-  assert.ok(read('index.html').includes('scripts/intro.js?v=3.46.1'));
+  assert.ok(read('index.html').includes('scripts/intro.js?v=3.46.2'));
 });

@@ -198,6 +198,29 @@
       tx.appendChild(no); tx.appendChild(mk('b', null, q[1])); tx.appendChild(mk('span', null, q[2])); e.appendChild(tx); c.appendChild(e);
     });
 
+    /* (28 Nov 2026) chapter 6 on a narrow screen: the chain as a list over the whole width, the map's three slabs at its
+       head. In the square frame the six rows had a frame's sixth each, too little on a phone: their lines ran into
+       each other and off the screen. */
+    var rn = delay(mk('div', 'lmi-ch lmi-last lmi-roleN'), T[6]), hd = mk('div', 'lmi-rnh'), st = mk('div', 'lmi-rns');
+    var ub = [1e9, 1e9, -1e9, -1e9];
+    [1, 2, 3].forEach(function (j) { var q = D.plates['c6-' + j]; ub = [Math.min(ub[0], q[0]), Math.min(ub[1], q[1]), Math.max(ub[2], q[0] + q[2]), Math.max(ub[3], q[1] + q[3])]; });
+    st.style.aspectRatio = ((ub[2] - ub[0]) / (ub[3] - ub[1])).toFixed(3);
+    [1, 2, 3].forEach(function (j) {
+      var q = D.plates['c6-' + j], im = delay(mk('img', 'lmi-rise'), T[6] + 0.1 + (j - 1) * 0.25); im.alt = ''; im.decoding = 'async'; im.src = DIR + 'c6-' + j + '.webp';
+      im.style.left = ((q[0] - ub[0]) / (ub[2] - ub[0]) * 100).toFixed(2) + '%'; im.style.top = ((q[1] - ub[1]) / (ub[3] - ub[1]) * 100).toFixed(2) + '%';
+      im.style.width = (q[2] / (ub[2] - ub[0]) * 100).toFixed(2) + '%'; im.style.height = (q[3] / (ub[3] - ub[1]) * 100).toFixed(2) + '%'; st.appendChild(im);
+    });
+    var hn = delay(mk('div', 'lmi-rnn lmi-in'), T[6] + 0.8); hn.appendChild(mk('b', null, 'London map')); var m6n = mk('span', 'lmi-mono lmi-red', '02 · REAL DATA'); m6n.setAttribute('data-no-translate', ''); hn.appendChild(m6n);
+    hd.appendChild(st); hd.appendChild(hn); rn.appendChild(hd);
+    var ls = mk('div', 'lmi-rnl');
+    NODES.forEach(function (q, k) {
+      var r = delay(mk('div', 'lmi-nr' + (q[4] ? ' lmi-nrv' : '')), T[6] + 1.2 + k * 0.28);
+      var th = mk('img', 'lmi-thumb'); th.alt = ''; th.decoding = 'async'; th.src = CAT + q[3]; r.appendChild(th);
+      var tx = mk('div', 'lmi-nt'), l1 = mk('div', 'lmi-nt1'), no = mk('em', 'lmi-mono lmi-red', q[0]); no.setAttribute('data-no-translate', '');
+      l1.appendChild(no); l1.appendChild(mk('b', null, q[1])); tx.appendChild(l1); tx.appendChild(mk('span', null, q[2])); r.appendChild(tx); ls.appendChild(r);
+    });
+    rn.appendChild(ls); map.appendChild(rn);
+
     for (i = 1; i <= 6; i++) stage.appendChild(ch[i]);
     /* the hand-over: chapter 1's circle again, which moves onto the map's own 70 km circle */
     var hand = mk('div', 'lmi-handc');
@@ -242,6 +265,7 @@
       stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (narrow ? Math.max(0, (r.height - w - room) / 2) : (r.height - w) / 2) + 'px';
       if (narrow) box.style.setProperty('--nx', -(r.width - w) / 2 + 'px');
       box.classList.toggle('lmi-narrow', narrow); box.classList.toggle('lmi-small', w < 480);
+      box.classList.toggle('lmi-flat', r.height < 420);   // (28 Nov 2026) a phone on its side: chapter 6 as a list in two columns
     }
 
     function close() {

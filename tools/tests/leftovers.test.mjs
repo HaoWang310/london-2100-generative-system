@@ -52,7 +52,7 @@ test('the London map: tests that run, no leftovers from its first repository, th
   for (const f of ['scripts/test_basemap_themes.mjs', 'tests/app-english-ui.mjs', 'tests/ui-language.mjs', '.github', 'google-style-3d.html', 'assets/terrain_b64'])
     assert.ok(!there('incubator/google-map-live/' + f), f);
   for (const f of ['env_fields.test.mjs', 'site_builder.test.mjs']) assert.ok(there('incubator/tensor-studio/scripts/' + f), f);
-  assert.ok(read('incubator/google-map-live/index.html').includes('id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.46.1<'));
+  assert.ok(read('incubator/google-map-live/index.html').includes('id="appVersionLabel">OpenStreetMap / OpenFreeMap · v3.46.2<'));
   assert.ok(!read('incubator/google-map-live/scripts/app.js').includes('-english'));
 });
 
