@@ -16,8 +16,8 @@
    switching languages always restores the source string first and never
    translates an already-translated string. */
 
-import {CHINESE_UI} from './ui_chinese_dictionary.js?v=3.46.2';
-import {ENGLISH_UI} from './ui_english_dictionary.js?v=3.46.2';
+import {CHINESE_UI} from './ui_chinese_dictionary.js?v=3.46.3';
+import {ENGLISH_UI} from './ui_english_dictionary.js?v=3.46.3';
 
 const STORAGE_KEY = 'londonMap.uiLanguage';
 const DEFAULT_LANGUAGE = 'zh';
