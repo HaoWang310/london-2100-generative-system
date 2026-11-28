@@ -1,12 +1,12 @@
 // London map · the page's own code: the map, its layers, the panel and the Google / OSM switch.
 // Was the inline <script type="module"> of index.html until v3.39.0; computation without the page lives in map_core.js.
-import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.46.2';
-import {createPlaceSearch} from './place_search.js?v=3.46.2';
-import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.46.2';
-import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.46.2';
-import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.46.2';
-import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.46.2';
-import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.46.2';
+import {createFloodDetailLoader,DETAIL_MIN_ZOOM,DETAIL_MAX_ZOOM,DETAIL_TILE_SIZE} from './flood_detail.js?v=3.46.3';
+import {createPlaceSearch} from './place_search.js?v=3.46.3';
+import {createDrainageDisplayLoader,AREA_MIN_ZOOM,AREA_MAX_ZOOM,AREA_TILE_SIZE} from './drainage_display.js?v=3.46.3';
+import {createTerrainLocalLoader,TERRAIN_MIN_ZOOM,TERRAIN_MAX_ZOOM,TERRAIN_TILE_SIZE} from './terrain_local.js?v=3.46.3';
+import {createBasemapThemeController,normaliseBasemapTheme,tintPalette,BASEMAP_THEMES} from './osm_basemap_themes.js?v=3.46.3';
+import {createPlanningLayers,reliefStops,RELIEF_RAMPS,SPEED_STOPS} from './planning_layers.js?v=3.46.3';
+import {FOCUS70_CENTER,FOCUS70_RADIUS_M,TERRAIN_BOUNDS,DRAINAGE_GRID_SIZE,DRAINAGE_3857,mercator3857ToLngLat,drainageTileCoordinates,contourMajorIntervalFor,networkCoordinates,makeCircleGeoJson,contourWorkerSource,mercatorFromLngLat,formatNetworkThreshold,normaliseFloodSelectionRing} from './map_core.js?v=3.46.3';
 // Map rendering must not depend on a single CDN. Heavy analysis modules are
 // loaded only AFTER the basemap has started.
 let maplibregl;
@@ -27,7 +27,7 @@ try {
   }
 }
 
-const APP_VERSION='3.46.2';
+const APP_VERSION='3.46.3';
 // Keep the header's version derived from exactly the same runtime build id.
 document.getElementById('appVersionLabel').textContent='OpenStreetMap / OpenFreeMap · v'+APP_VERSION;
 const CITY_BUILDINGS_SOURCE='osm-city-buildings-source';
@@ -1284,6 +1284,43 @@ function syncNetworkStatus(){
     :'Loading current view · ≥ '+formatNetworkThreshold(networkThreshold)+' km² drainage network…');
 }
 
+/* (28 Nov 2026) Phones open on the whole of Greater London. At the computer's zoom 10 a phone, being narrow, showed only
+   the 20 km round Westminster. Here the extent of Greater London's outline (assets/greater_london_outline.geojson) is
+   fitted into the part of the map nothing covers: below Display, beside the zoom buttons, above the folded sheet, all
+   measured on the page, so every phone and a phone on its side fit. At that zoom the overview style (the outline drawn
+   boldly, GREATER LONDON, the streets faded) takes over by itself. Computers and iPads keep CENTER / ZOOM. */
+const GREATER_LONDON_BOUNDS=[[-0.5103,51.2868],[0.3340,51.6917]];   // west, south · east, north
+function phoneLondonPadding(box){
+  const edge=(el,side)=>{if(!el||el.offsetParent===null)return 0;const r=el.getBoundingClientRect();return r.width>0&&r.height>0?r[side]:0;};
+  const top=Math.max(56,edge(document.querySelector('.dpToggle'),'bottom')-box.top)+14;
+  const sheetTop=edge(document.getElementById('panel'),'top');
+  let bottom=sheetTop>box.top&&sheetTop<box.bottom?box.bottom-sheetTop+14:Math.round(box.height*0.3);
+  const ctrl=document.querySelector('.maplibregl-ctrl-top-right');
+  const right=Math.max(16,ctrl?box.right-edge(ctrl,'left')+8:16);
+  const room=box.height-top-bottom;
+  if(room<160)bottom=Math.max(14,bottom-(160-room));   // a phone on its side: the sheet gives way first
+  return {top,bottom,left:16,right};
+}
+function fitPhoneToGreaterLondon(animate=false){
+  if(!IS_PHONE)return false;
+  if(currentProvider==='osm'&&osmMap){
+    const padding=phoneLondonPadding(osmMap.getContainer().getBoundingClientRect());
+    const cam=osmMap.cameraForBounds(GREATER_LONDON_BOUNDS,{padding});
+    if(!cam)return false;
+    const view={center:cam.center,zoom:cam.zoom,pitch:0,bearing:0};
+    animate?osmMap.flyTo(view):osmMap.jumpTo(view);
+    const c=maplibregl.LngLat.convert(cam.center);
+    sharedView={lat:c.lat,lng:c.lng,zoom:cam.zoom,source:'osm'};
+    return true;
+  }
+  if(currentProvider==='google'&&googleMap){
+    const [[west,south],[east,north]]=GREATER_LONDON_BOUNDS;
+    googleMap.fitBounds({west,south,east,north},phoneLondonPadding($('googleMap')?.getBoundingClientRect()||document.body.getBoundingClientRect()));
+    return true;
+  }
+  return false;
+}
+
 function fitGoogleTo70(){
   if(!googleMap)return;
   googleMap.fitBounds(TERRAIN_BOUNDS,0);
@@ -2258,7 +2295,7 @@ function initOSM(){
     initPlanningLayers();
     // The site tools (selection → Tensor Studio) load after the basemap; a failure never blocks the map.
     $('siteDraw').disabled=true;
-    import('./tensor_site_ui.js?v=3.46.2')
+    import('./tensor_site_ui.js?v=3.46.3')
       .then(({createTensorSiteUI})=>{
         if(siteUI)return;
         siteUI=createTensorSiteUI({map:osmMap,maplibregl,assetUrl,demBounds:DRAINAGE_3857,demWidth:DRAINAGE_3857.baseWidth50m,demHeight:DRAINAGE_3857.baseHeight50m,say,getMapTheme:()=>basemapTheme});
@@ -2281,6 +2318,7 @@ function initOSM(){
     ensureOsmFocus70();
     updateNetworkLayer();
     updateFloodLayer();
+    fitPhoneToGreaterLondon();   // phones: the whole of Greater London, before the opening hands over onto the 70 km circle
     markIntroReady();
     if(currentProvider==='osm'){
       updateTerrainLayers();
@@ -2574,7 +2612,7 @@ $('reliefShade').addEventListener('input',e=>{$('reliefShadeValue').textContent=
 $('reliefShade').addEventListener('change',e=>planning?.set('relief',{shade:Number(e.target.value)}));
 drawReliefKey();
 
-// v3.46.2: 3D relief. Trees, street vehicles and building shadows are drawn as their own objects on flat ground and would be buried
+// v3.46.3: 3D relief. Trees, street vehicles and building shadows are drawn as their own objects on flat ground and would be buried
 // by the risen ground, so they are switched off while it is on and come back, as they were, when it goes off.
 const RELIEF3D_HOLDS=['urbanTreeToggle','streetVehicleToggle','buildingShadowToggle'];
 let relief3dHeld=null;
@@ -2823,6 +2861,7 @@ $('terrainFit').onclick=()=>{
 };
 
 $('londonBtn').onclick=()=>{
+  if(fitPhoneToGreaterLondon(true))return;
   if(currentProvider==='google'&&googleMap){
     googleMap.setCenter(CENTER);googleMap.setZoom(10);
     sharedView={lat:CENTER.lat,lng:CENTER.lng,zoom:10,source:currentProvider};
@@ -2837,6 +2876,10 @@ $('resetBtn').onclick=()=>{
   cancelPlaceSearch();$('placeSearchInput').value='';
   $('placeSearchResults').replaceChildren();setSearchStatus('');
   searchMarker?.remove();searchMarker=null;
+  if(fitPhoneToGreaterLondon()){
+    if(currentProvider==='google'&&googleMap){googleMap.setMapTypeId('roadmap');$('mapType').value='roadmap';}
+    return;
+  }
   if(currentProvider==='google'&&googleMap){
     googleMap.setCenter(CENTER);googleMap.setZoom(ZOOM);
     sharedView={lat:CENTER.lat,lng:CENTER.lng,zoom:ZOOM,source:currentProvider};
