@@ -1,3 +1,5 @@
+> **锚点看得清 · Anchors you can see (28 Nov 2026).** 第 8 步起的锚点原来画成软光斑（白芯约 0.5 px，叠加发光，颜色和橙色道路、白色单元边线一样），54 个里几乎看不见，18 个中间锚点完全隐身。现在 `anchorDots()` 画实心点：一圈淡光晕、一圈底色描边把点和线隔开，再画点——道路上的锚点实心主色（带亮芯），按间距的中间锚点空心节点色圈，你加的锚点实心青；车站出入口改成白色空心菱形。第 8 步（讲锚点的一步）再大 1.2 倍；随缩放变化，拉远最小 0.6 倍、拉近最大 1.15 倍；「锚点大小」滑块照常有效。
+
 > **id 与读屏文字 · An id and spoken names (27 Nov 2026).** 图例的折叠原来和「单元身份」共用 id `lkKey`，现在叫 `lkLegend`。中文下读屏名称（aria-label）和 EN 按钮的提示也跟着语言走。 The legend's fold has its own id (`lkLegend`); spoken names and the EN button's tooltip follow the language.
 
 > **打开时不再闪蓝 · No blue flash on opening (28 Nov 2026).** 载入时盖在页面上的封面（`#liveStart`）原来用 11 月 24 日截的第 1 步青色黏菌图，地图画好时一下子换掉，看起来闪一下蓝。现在封面图 `example/preview.jpg` 是页面自己的第一帧：第 0 步的灰色底图，不带文字和配色色彩（`source/make-cover.cjs` 生成，`make-example.cjs` 不再覆盖它），贴在地图将要出现的位置；地图画好后封面 0.3 s 淡出。本机录屏核对：修改前封面青色像素约占画面 3%，修改后为 0。
