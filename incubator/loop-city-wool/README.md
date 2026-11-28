@@ -1,5 +1,7 @@
 > **id 与读屏文字 · An id and spoken names (27 Nov 2026).** 图例的折叠原来和「单元身份」共用 id `lkKey`，现在叫 `lkLegend`。中文下读屏名称（aria-label）和 EN 按钮的提示也跟着语言走。 The legend's fold has its own id (`lkLegend`); spoken names and the EN button's tooltip follow the language.
 
+> **打开时不再闪蓝 · No blue flash on opening (28 Nov 2026).** 载入时盖在页面上的封面（`#liveStart`）原来用 11 月 24 日截的第 1 步青色黏菌图，地图画好时一下子换掉，看起来闪一下蓝。现在封面图 `example/preview.jpg` 是页面自己的第一帧：第 0 步的灰色底图，不带文字和配色色彩（`source/make-cover.cjs` 生成，`make-example.cjs` 不再覆盖它），贴在地图将要出现的位置；地图画好后封面 0.3 s 淡出。本机录屏核对：修改前封面青色像素约占画面 3%，修改后为 0。
+
 > **默认配色 · The default palette (28 Nov 2026).** 第一次打开（和每次重新打开）用 01 石墨红 Graphite Ember（主色 #FF5A2E 橙红，次色 #F4C7A1 浅杏，节点 #F5E6D3），原来是 04 深海铜蓝。五套配色本身不变，显示面板里照常可以换，地址里 `#pal=p4` 等仍可指定。注意：页面每次载入时会把显示设置重置为 `{ tcol: gold, rdcol: same }`（`index.html` 顶部那行），所以配色选择只在本次打开内有效，不需要另做迁移，所有人下次打开就是石墨红。目录封面 `loop-city-wool-v2.webp` 仍是蓝橙，之后再重出。 The default palette is now 01 Graphite Ember (was 04 Abyss Copper).
 
 > **「评价」有了卡片 · The evaluation has its card (26 Nov 2026).** 第 5 章「评价」（`evaluate.js`）原来在流程栏里没有卡片，只能从顶部章节条的一道小短线进去，那里的提示还写「18 评价」。现在流程栏在第 16 步和「出口」之间有「第 5 章 · 评价」卡：道路算出来以后点它就打开评价；还没算出来时只说明要先走完第 11–16 步。「逐步生成」不停在这里（它要把三组余长各算一遍整张路网）。小短线的提示改成「第 16 步之后 · 评价」。 Chapter 5, the evaluation, had no card in the flow panel, only a small mark in the chapter bar whose tooltip said "18". It now has its card between step 16 and the way out: with the roads worked out it opens the evaluation, before that it says what is needed first. The player passes it. The mark's tooltip reads "After step 16 · Evaluation".

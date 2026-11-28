@@ -21,7 +21,7 @@ const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg' };
       img: Object.fromEntries(['ground', 'mould', 'veins', 'key'].map(k => [k, D.img[k]])) }; }, KEYS);
   if (errs.length) throw new Error(errs.join('\n'));
   fs.mkdirSync(OUT, { recursive: true });
-  for (const f of fs.readdirSync(OUT)) fs.unlinkSync(path.join(OUT, f));
+  for (const f of fs.readdirSync(OUT)) if (f !== 'preview.jpg') fs.unlinkSync(path.join(OUT, f));   // the cover is make-cover.cjs's
   // the pictures: the JPEG as it is, the ground and the key as lossless WebP (the same pixels, a third of the bytes;
   // python3 with Pillow). The veins stay PNG: half transparent, a browser decodes their WebP a shade differently
   const WEBP = ['ground', 'key'];
@@ -31,11 +31,8 @@ const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg' };
     if (EXT[m[1]] === 'png' && WEBP.includes(k)) { img[k] = k + '.webp';
       execFileSync('python3', ['-c', 'import sys; from PIL import Image; Image.open(sys.argv[1]).save(sys.argv[2], "WEBP", lossless=True, exact=True, method=6, quality=100)', path.join(OUT, f), path.join(OUT, img[k])]);
       fs.unlinkSync(path.join(OUT, f)); } else img[k] = f; }
-  // the picture the page shows while it opens: the map of step 1 as it will be, from a 1440 x 900 window
-  await page.waitForFunction(() => document.getElementById('liveStart').style.display === 'none', null, { timeout: 60000 });
-  await page.evaluate(() => { for (const id of ['lcAuto', 'lcSampleNote', 'lcChap', 'lcNav']) { const e = document.getElementById(id); if (e) e.remove(); } });
-  await page.waitForTimeout(800);
-  await page.locator('#map').screenshot({ path: path.join(OUT, 'preview.jpg'), type: 'jpeg', quality: 72 });
+  // (28 Nov 2026) the picture the page shows while it opens (example/preview.jpg) is no longer made here: it is the
+  // page's first view, step 0, made by source/make-cover.cjs (run it after this one if the site or the bake changed)
   fs.writeFileSync(path.join(OUT, 'step1.json'), JSON.stringify({ about: 'The wool page\'s example, step 1, made by source/make-example.cjs. Used only while guard matches the page.', guard: got.guard, img, data: got.data }));
   // the page's head asks for these files early: EXV names them and the bake they were made from
   const PAGE = path.join(__dirname, '..', 'index.html'), html = fs.readFileSync(PAGE, 'utf8');
