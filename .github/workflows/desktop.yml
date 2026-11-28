@@ -1,0 +1,55 @@
+name: Desktop app
+
+# Builds the desktop app in desktop/ (Electron window onto the live site).
+# Windows: installer + portable .exe. Mac: .dmg for Apple silicon (arm64) and Intel (x64).
+# Run it by hand from Actions → "Desktop app" → Run workflow; it also runs when
+# desktop/ changes. The files are under the run's "Artifacts".
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            args: --win nsis portable --x64
+            files: desktop/dist/*.exe
+          - os: macos-latest
+            name: Mac
+            args: --mac dmg --arm64 --x64
+            files: desktop/dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Use the app's version
+        run: npm pkg set version="$(tr -d '[:space:]' < ../VERSION)"
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Build
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: London-2100-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 30

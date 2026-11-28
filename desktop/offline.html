@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>London 2100</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #000; color: #fff;
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  main { height: 100%; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; text-align: center; }
+  svg { margin-bottom: 18px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 500; }
+  p { margin: 0; max-width: 380px; color: rgba(255, 255, 255, .55); }
+  button { margin-top: 18px; padding: 9px 24px; border: 0; border-radius: 980px; background: #fff; color: #000;
+    font: inherit; font-weight: 500; cursor: pointer; }
+  button:hover { background: rgba(255, 255, 255, .85); }
+  .code { margin-top: 6px; font-size: 12px; color: rgba(255, 255, 255, .3); }
+</style>
+</head>
+<body>
+<main>
+  <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+    <circle cx="32" cy="32" r="24" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.5"/>
+    <circle cx="32" cy="8" r="3" fill="#E8792B"/>
+  </svg>
+  <h1>需要网络连接</h1>
+  <p>London 2100 的地图和数据都在线上，连上网络后再试一次。</p>
+  <p>London 2100 needs an internet connection for the map and data.</p>
+  <button id="retry">重试 · Retry</button>
+  <div class="code" id="code"></div>
+</main>
+<script>
+  var q = new URLSearchParams(location.search);
+  var target = q.get('u') || '';
+  if (!/^https:\/\//.test(target)) target = 'https://haowang310.github.io/london-2100-generative-system/';
+  if (q.get('e')) document.getElementById('code').textContent = 'Error ' + q.get('e');
+  function retry() { location.href = target; }
+  document.getElementById('retry').addEventListener('click', retry);
+  window.addEventListener('online', retry);
+</script>
+</body>
+</html>

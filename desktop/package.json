@@ -1,0 +1,54 @@
+{
+  "name": "london-2100-desktop",
+  "productName": "London 2100",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "London 2100 desktop app: a window onto the live site (needs internet for the OSM map).",
+  "author": "HaoWang310",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable --x64 --publish never",
+    "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.github.haowang310.london2100",
+    "productName": "London 2100",
+    "copyright": "© HaoWang310",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "offline.html",
+      "package.json"
+    ],
+    "afterPack": "build/adhoc-sign.cjs",
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "London 2100",
+      "artifactName": "London-2100-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "London-2100-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.education",
+      "darkModeSupport": true,
+      "identity": null,
+      "artifactName": "London-2100-${version}-${arch}.${ext}"
+    }
+  }
+}
