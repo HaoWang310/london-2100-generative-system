@@ -2072,6 +2072,11 @@ const G = (function () {
   <div style="margin-top:22px;font-size:13px"><a href="index.html?sample" style="color:#ECECEC">Open the example (C67 · P2)</a> &nbsp;·&nbsp; <a href="../loop-city-mould-growth/index.html" style="color:#ECECEC">Step 1, the whole loop</a></div>
  </div>
 </div>
+<script>/* (28 Nov 2026) the cover goes in 0.3 s, not at once: the map it gives way to is the same picture (example/preview.jpg) */
+window.liveStartHide = function () { var g = document.getElementById('liveStart'); if (!g || g.style.display === 'none' || g.dataset.out) return;
+  g.dataset.out = '1'; g.style.transition = 'opacity .3s ease'; g.style.pointerEvents = 'none'; g.style.opacity = '0';
+  setTimeout(function () { g.style.display = 'none'; }, 320); };
+</script>
 <script>/* (22 Nov 2026) opened on its own (not by step 1, no file just chosen): the example cells. ?sample forces it, #nosample skips it */
 (function(){ var stored = null; try { stored = sessionStorage.getItem('loopCity.wool.pkg'); } catch (e) {}
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
@@ -2079,14 +2084,19 @@ const G = (function () {
   // by source/make-example.cjs: the bake it was made from, and its files
   var EXV = /*EXV*/'4zl4ng:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
-  if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg', 'image'); pre('sample-cells.js?v=3', 'script');      // first what shows, then what it needs
+  if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg?v=2', 'image'); pre('sample-cells.js?v=3', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ if (/^veins\./.test(f)) return;       // (25 Nov) the veins are for step 2: asked for once step 1 is drawn
       var h = 'example/' + f + '?b=' + EXV.split(':')[0]; if (/^(step1\.json|key\.)/.test(f)) pre(h, 'fetch', true); else pre(h, 'image'); }); }
   window.__LC_SAMPLE__ = want; if (want) document.write('<script src="sample-cells.js?v=3"><\/script>');
   if (want) (function(){ var g = document.getElementById('liveStart');          // the overlay is above: dressed at once, not when the page is in
     if (!g) return; var zh = false; try { zh = localStorage.getItem('woolAppsLang') === 'zh'; } catch (e) {} var lh = /lang=(en|zh)/.exec(location.hash); if (lh) zh = lh[1] === 'zh';
     var p = g.querySelector('p'), b = document.getElementById('livePick'), h = p && p.previousElementSibling; if (h) h.textContent = zh ? '毛线带 · 范例' : 'The wool bands · the example';
-    g.style.background = '#000 url(example/preview.jpg) center / contain no-repeat'; g.style.alignItems = 'flex-end'; var box = g.firstElementChild; if (box) box.style.cssText += ';margin:0 0 28px;padding:10px 16px;border-radius:14px;background:rgba(10,10,12,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)'; var hh = box && box.firstElementChild; if (hh && hh !== h) hh.style.display = 'none'; if (h) h.style.cssText += ';font-size:15px;margin:0 0 4px'; if (p) p.style.margin = '0';
+    g.style.background = '#0B0B0B';   // (28 Nov 2026) the cover is the page's own first view, step 0 in grey (source/make-cover.cjs), laid where the map will be
+    var cv = document.createElement('div'); cv.id = 'liveCover'; cv.style.cssText = 'position:absolute;inset:0;background:url(example/preview.jpg?v=2) center / contain no-repeat;pointer-events:none';
+    g.appendChild(cv); (function place() { if (g.style.display === 'none') return; var m = document.getElementById('map'), r = m && m.getBoundingClientRect();
+      if (r && r.width > 40 && r.height > 40) { cv.style.inset = 'auto'; cv.style.left = r.left + 'px'; cv.style.top = r.top + 'px'; cv.style.width = r.width + 'px'; cv.style.height = r.height + 'px'; }
+      requestAnimationFrame(place); })();
+ g.style.alignItems = 'flex-end'; var box = g.firstElementChild; if (box) box.style.cssText += ';position:relative;z-index:1;margin:0 0 28px;padding:10px 16px;border-radius:14px;background:rgba(10,10,12,.72);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)'; var hh = box && box.firstElementChild; if (hh && hh !== h) hh.style.display = 'none'; if (h) h.style.cssText += ';font-size:15px;margin:0 0 4px'; if (p) p.style.margin = '0';
     if (p) p.textContent = zh ? '正在打开范例：C67 · P2 与相邻两个单元，停在第 1 步；点「演示」逐步生成。' : 'Opening the example: C67 · P2 and its two neighbours, on step 1; press Demo to work out the steps.'; if (b) b.style.display = 'none'; var k = g.querySelector('a'); if (k && k.parentNode) k.parentNode.style.display = 'none'; })(); })();</script>
 <script type="text/plain" id="appSrc">/* Wool on the mould cells (Loop City step 2): the cells handed on from step 1, taken to a road network.
 
@@ -4552,7 +4562,7 @@ function draw() {
   } finally { cx = main; }
   main.save(); main.setTransform(1, 0, 0, 1, 0, 0); main.globalCompositeOperation = 'lighter'; main.drawImage(PX.gl, 0, 0); main.restore();
   pxBloom();
-  if (!FC.shown) { FC.shown = 1; const g = document.getElementById('liveStart'); if (g) g.style.display = 'none'; }
+  if (!FC.shown) { FC.shown = 1; liveStartHide(); }
   // on top, crisp: rail, the existing roads' numbers, the parcels taken, stations, names
   main.globalCompositeOperation = 'source-over';
   if (on('rail')) { main.globalAlpha = op('rail');
