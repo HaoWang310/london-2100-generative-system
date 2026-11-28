@@ -164,13 +164,13 @@ function create(G0, opt) {
       [1, L('地面网', 'Ground net'), L(`主路间距 d1 ${S.d1} m · 支路 d2 ${S.d2} m`, `main streets every ${S.d1} m · others every ${S.d2} m`)],
       [2, L('架空网', 'Raised net'), S.nodes3 === S.nodes ? L(`${S.nodes} 个节点，全部三岔 · ${D.strands.length} 条离路主线`, `${S.nodes} nodes, all three-way · ${D.strands.length} off-road primaries`) : L(`${S.nodes} 个节点，${S.nodes3} 个三岔 · ${D.strands.length} 条主线`, `${S.nodes} nodes, ${S.nodes3} three-way · ${D.strands.length} primaries`)],
       [3, L('填充', 'Infill'), L(`农田 ${S.farm}% · 走廊 ${S.corr}%`, `farmland ${S.farm}% · corridors ${S.corr}%`)]];
-    const la = seg(t, 1.2, 1.9); if (la > 0) { g.save(); g.globalAlpha *= la; const n = nar();
+    const la = seg(t, 1.2, 1.9); if (la > 0) { g.save(); g.globalAlpha *= la; const n = nar() || (SIDE() && Wd < 760);   // (28 Nov 2026) a phone on its side: names only, at the left edge
       for (const [z, nm, ds] of LAYER) { let mx = 1e9, my = 0; for (const pc of D.outline) for (const p of pc[0]) { const q = AP(p, z); if (q[0] < mx) { mx = q[0]; my = q[1]; } }
         const x = n ? 14 : Math.max(18, mx - 24), y = my; if (!n) { g.strokeStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.moveTo(mx - 6, my); g.lineTo(x + 4, y); g.stroke(); }
         text('L' + z + ' ' + nm, x, y - 6, n ? 12 : 15, '#fff', n ? 'left' : 'right', 600); if (!n) text(ds, x, y + 12, 12, 'rgba(245,245,247,.6)', 'right'); }
       g.restore(); }
     const REL = [[L('方向', 'Direction'), L('← 场', '← the field')], [L('疏密 ', 'Density ') + D.P.sCore + '→' + D.P.sOut + ' m', L('← 离核心距离', '← distance from a core')], [L('主线', 'Primaries'), L('← 离主路最远', '← furthest from main streets')], [L('塔', 'Towers'), L('← 主吸引点', '← main attractors')]];
-    if (!nar()) REL.forEach((r, i) => { const a = rel(i); if (a <= 0) return; g.save(); g.globalAlpha *= a; const y = 72 + i * 34; text(r[0], Wd - 28 - (zh ? 118 : 196), y, 15, '#fff', 'right', 600); text(r[1], Wd - 28, y, 14, gcol(0.1), 'right', 500); g.restore(); });
+    if (!nar() && !(SIDE() && Wd < 760)) REL.forEach((r, i) => { const a = rel(i); if (a <= 0) return; g.save(); g.globalAlpha *= a; const y = 72 + i * 34; text(r[0], Wd - 28 - (zh ? 118 : 196), y, 15, '#fff', 'right', 600); text(r[1], Wd - 28, y, 14, gcol(0.1), 'right', 500); g.restore(); });
     axo.gap = gp; }
   // the app's own opening picture: the site, the field's streamlines, the streets, the cores
   function endPlan(a) { if (a <= 0) return; g.save(); g.globalAlpha *= a; g.fillStyle = '#000'; g.fillRect(0, 0, Wr, Hd); drawGround(1); siteLine(0.6);
