@@ -34,7 +34,10 @@
   // 5 · primary cells
   add({ step: 5, id: 'EASE', lab: ['Corners eased by', '转角圆角'], kind: 'range', min: 0, max: 200, st: 5, def: 85, f: function (v) { return fmt(v) + ' m'; } }, bake('EASE', 5));
   add({ step: 5, id: 'HALF_ROAD', more: 1, lab: ['Road cut, width', '道路刀宽'], kind: 'range', min: 10, max: 100, st: 5, def: 40, f: function (v) { return fmt(v) + ' m'; },
-    note: ['Only where a road runs through a cell.', '只在有道路穿过单元时起作用。'] }, bake('HALF_ROAD', 5, 0.5));
+    note: ['Only where a road runs through a cell.', '只在有道路穿过单元时起作用。'],
+    // (28 Nov 2026) the page opens with #whole (the method since 20 Nov): existing roads do not cut the cells, only towns do,
+    // so the road knife is never drawn and its width changes nothing
+    off: function () { return window.WHOLE_ ? T('Not used: in this method existing roads do not cut the cells, only towns do.', '不起作用：现在的方法里现有道路不切单元，只有城镇切。') : ''; } }, bake('HALF_ROAD', 5, 0.5));
   add({ step: 5, id: 'MIN_PRIM', more: 1, lab: ['Smallest piece woven', '最小可编织块'], kind: 'range', min: 0.5, max: 10, st: 0.5, def: 3, f: function (v) { return fmt(v, 1) + ' km²'; } }, bake('MIN_PRIM', 5, 1e6));
   add({ step: 5, id: 'SIMPLIFY', more: 1, lab: ['Outline simplified by', '边界简化'], kind: 'range', min: 10, max: 150, st: 5, def: 45, f: function (v) { return fmt(v) + ' m'; } }, bake('SIMPLIFY', 5));
   // 7 · good land kept for farming
@@ -45,9 +48,13 @@
   // 8 · anchors
   add({ step: 8, id: 'spacing', lab: ['Anchor spacing', '锚点间距'], kind: 'range', min: 1000, max: 5000, st: 100, def: 3000, f: function (v) { return fmt(v) + ' m'; } }, pageR('spacing'));
   add({ step: 8, id: 'nearF', lab: ['Within 3 km of the station', '车站附近'], kind: 'range', min: 0.4, max: 1, st: 0.05, def: 1, f: function (v) { return '× ' + fmt(v, 2); } }, pageR('nearF'));
+  // (28 Nov 2026) the English name follows the radius (it said 3 km whatever the radius was)
+  Object.defineProperty(L[L.length - 1], 'lab', { get: function () { var r = typeof NEAR_R === 'undefined' ? 3 : NEAR_R / 1000; return ['Within ' + fmt(r, r % 1 ? 1 : 0) + ' km of the station', '车站附近']; } });
   add({ step: 8, id: 'soilF', lab: ['On Grade 1–2 soil', '一、二级农地上'], kind: 'range', min: 1, max: 2.5, st: 0.05, def: 1.5, f: function (v) { return '× ' + fmt(v, 2); } }, pageR('soilF'));
   add({ step: 8, id: 'APART', more: 1, lab: ['Road anchors at least', '路口锚点间至少'], kind: 'range', min: 200, max: 1500, st: 50, def: 600, f: function (v) { return fmt(v) + ' m'; } }, bake('APART', 8));
-  add({ step: 8, id: 'NEAR_R', more: 1, lab: ['"Near the station" reaches', '「车站附近」半径'], kind: 'range', min: 1, max: 6, st: 0.5, def: 3, f: function (v) { return fmt(v, 1) + ' km'; } },
+  add({ step: 8, id: 'NEAR_R', more: 1, lab: ['"Near the station" reaches', '「车站附近」半径'], kind: 'range', min: 1, max: 6, st: 0.5, def: 3, f: function (v) { return fmt(v, 1) + ' km'; },
+    // (28 Nov 2026) the radius only says where the spacing is multiplied by "Within 3 km of the station": at × 1 nothing changes
+    off: function () { var e = $('nearF'); return e && Math.abs(+e.value - 1) < 1e-9 ? T('Only when "' + window.__lcParams.byId('nearF').lab[0] + '" is not × 1.', '只在「车站附近」不是 ×1 时起作用。') : ''; } },
     { get: function () { return typeof NEAR_R === 'undefined' ? 3 : NEAR_R / 1000; }, set: function (v) { NEAR_R = v * 1000; rebuildNet(); buttons(); }, how: 'net' });
   add({ step: 8, id: 'NEAR_AREA', more: 1, lab: ['A road end this near makes an anchor', '路端多近算锚点'], kind: 'range', min: 100, max: 600, st: 20, def: 260, f: function (v) { return fmt(v) + ' m'; } }, bake('NEAR_AREA', 8));
   add({ step: 8, id: 'CLEAR', more: 1, lab: ['Kept clear round a station', '车站周围留空'], kind: 'range', min: 0, max: 600, st: 25, def: 250, f: function (v) { return fmt(v) + ' m'; } }, bake('CLEAR', 8));
