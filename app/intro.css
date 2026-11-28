@@ -95,8 +95,15 @@
   .intro-label { bottom: 50%; transform: translateY(50%); }
   .intro.is-in .intro-label { transform: translateY(50%); }
   .intro-sub { display: none; }
-  .intro-bar { flex-wrap: wrap; gap: 10px 16px; padding: 14px 16px 18px; }
+  /* Phone: the words stay on the video. The bar keeps to one row (title + Enter) over a soft
+     fade, and the last panel's word sits a little higher so the bar never covers it. */
+  .intro-bar { flex-wrap: nowrap; gap: 10px 16px; padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.72) 45%); }
+  .intro-bar h1 { font-size: 13px; }
+  .intro-bar p { display: none; }
   .intro-bar .hint { display: none; }
+  .intro-panel:last-child .intro-label,
+  .intro.is-in .intro-panel:last-child .intro-label { bottom: calc(50% + 30px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
