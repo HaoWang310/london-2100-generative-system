@@ -1,0 +1,39 @@
+// The app is the only place that imports several modules. Modules never
+// import each other (enforced by tools/check-isolation.mjs).
+import london from '../modules/00-london-map/module.js?v=cee325d';
+import loopCity, { createLoopCityTool } from '../modules/01-loop-city/module.js?v=cee325d';
+import region from '../modules/02-region-planning/module.js?v=cee325d';
+import wool from '../modules/03-wool-network/module.js?v=cee325d';
+import tensor from '../modules/04-tensor-roads/module.js?v=cee325d';
+import integration from '../modules/05-road-integration/module.js?v=cee325d';
+import exporter, { toGeoJSON, toBNGGeoJSON } from '../modules/06-catalogue-export/module.js?v=cee325d';
+
+// The road chain (02 region planning -> 03 Wool -> 04 Tensor -> 05 integration / 06 export) is hidden
+// from the workspace until the Wool algorithm is ready. The modules stay in the repo and keep their
+// tests; set ROAD_CHAIN to true to bring the whole chain back.
+export const ROAD_CHAIN = false;
+const hidden = !ROAD_CHAIN;
+
+// Scale levels, in order. Each level's module consumes the previous level's result.
+export const SCALES = [
+  { level: 'london', module: london, needsSelection: false },
+  { level: 'region', module: region, needsSelection: false, hidden }, // runs on the whole study area
+  { level: 'wool', module: wool, needsSelection: true, hidden },      // runs inside one selected region
+  { level: 'tensor', module: tensor, needsSelection: true, hidden }   // runs inside one selected local area
+];
+
+// Tools act on the current Wool region (and everything generated inside it).
+export const TOOLS = [
+  { key: 'integration', module: integration, hidden },
+  { key: 'export', module: exporter, hidden }
+];
+
+// Simulations that stand beside the scale chain: open at any level, drawn on the map,
+// kept as a background while working at other levels. Listed after London in the nav.
+// 23 Nov 2026: Loop City step 1 took the place of the growth simulator as 01; on 26 Nov 2026 the simulator (modules/
+// 01-growth-simulator and incubator/growth-simulator-dark) was removed from the repository (git history keeps it). One simulation is on the map at a time; the others keep off it while it is.
+export const SIMULATIONS = [
+  { key: 'loop', module: loopCity, create: createLoopCityTool }
+];
+
+export const exporters = { toGeoJSON, toBNGGeoJSON };

@@ -1,0 +1,99 @@
+/* London 2100 · the studio family's interface on the shared tokens (22 Nov 2026).
+   For the apps that already share one set of class names: Tensor Studio, Structure Studio (and the London map's
+   panels): the floating control panel (#panel.ts-panel), the display panel (.displayPanel), the step list (.pm*).
+   Black, white and white at lower opacity; DM Sans; colour only where it is a key to the drawing and for warnings.
+   Colours, type and corner radii only: no control is moved and no script is touched.
+   Load after the app's own styles, with ../../shared/ui/tokens.css before it. `#noskin` in the address turns it off. */
+html.l2ui { --font:var(--l2-font); }
+html.l2ui #panel.ts-panel, html.l2ui .displayPanel, html.l2ui #pmBar, html.l2ui .l2-vars {
+  --side:#000; --card:#000; --ink:#fff; --grey:var(--l2-ink3); --grey2:var(--l2-ink4); --line:var(--l2-bd);
+  --fill:#000; --fill2:rgba(255,255,255,.1); --raise:rgba(255,255,255,.22); --track:var(--l2-bd); --knob:#fff; --accent:#fff; --hot:#fff; }
+html.l2ui #panel.ts-panel { background:#000; border-color:var(--l2-bd); border-radius:var(--l2-r-panel-s); }
+html.l2ui .displayPanel { background:#000; border-color:var(--l2-bd); border-radius:var(--l2-r-panel-s); color:#fff; }
+
+/* the left panel */
+html.l2ui #panel .language-switch { background:#000; border-color:var(--l2-bd); border-radius:var(--l2-r-s); }
+html.l2ui #panel .language-switch button { color:var(--l2-ink3); }
+html.l2ui #panel .language-switch button.active { background:#fff; color:#000; }
+html.l2ui #panel .ts-divider { background:var(--l2-line); }
+html.l2ui .pmMode { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd); border-radius:var(--l2-r-s); }
+html.l2ui .pmMode button.on { background:#fff; color:#000; }
+html.l2ui .pmStep { background:#000; border-color:var(--l2-bd); border-radius:var(--l2-r); }
+html.l2ui .pmStep.cur { border-color:#fff; }
+html.l2ui .pmNum { background:transparent; box-shadow:inset 0 0 0 1.5px var(--l2-bd2); color:var(--l2-ink3); }
+html.l2ui .pmStep.cur .pmNum, html.l2ui .pmStep.done .pmNum { background:#fff; color:#000; box-shadow:none; }
+html.l2ui .pmFlag { color:var(--l2-ink3); } html.l2ui .pmStep.cur .pmFlag { color:#fff; }
+html.l2ui .pmWarn { color:var(--l2-warn); }
+html.l2ui #panel .btns button.primary, html.l2ui #panel .preset-box button { background:#fff; color:#000; border-color:#fff; }
+
+/* the display panel */
+html.l2ui .displayPanel .dpSection { border-top-color:var(--l2-line); }
+html.l2ui .displayPanel .dpTitle { font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:none; color:var(--l2-ink3); }
+html.l2ui .displayPanel .dpTile { background:#000; color:var(--l2-ink2); border-color:var(--l2-bd); border-radius:var(--l2-r-s); }
+html.l2ui .displayPanel .dpTile:hover:not(.on) { background:#000; color:#fff; border-color:var(--l2-bd2); }
+html.l2ui .displayPanel .dpTile.on, html.l2ui .displayPanel .dpTile.dpPrimary { background:#fff; color:#000; border-color:#fff; }
+html.l2ui .displayPanel .dpTile:focus-visible, html.l2ui .displayPanel .dpSwitchRow:focus-visible { outline-color:#fff; }
+html.l2ui .displayPanel .dpTintHead, html.l2ui .displayPanel .dpKey, html.l2ui .displayPanel .dpKey p { color:var(--l2-ink3); }
+html.l2ui .displayPanel .dpTintHead b { color:#fff; }
+html.l2ui .displayPanel .dpTints button.on { border-color:#fff; }
+html.l2ui .displayPanel .dpSw { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui .displayPanel .dpSw::after { background:var(--l2-ink3); }
+html.l2ui .displayPanel .dpSwitchRow.on .dpSw { background:#fff; box-shadow:none; }
+html.l2ui .displayPanel .dpSwitchRow.on .dpSw::after { background:#000; }
+html.l2ui #tsCollapse { background:#000; border-color:var(--l2-bd); border-radius:var(--l2-r); }
+html.l2ui #tsCollapse:hover { background:#000; border-color:var(--l2-bd2); }
+
+/* what floats on the map */
+html.l2ui #hud, html.l2ui #pmStage, html.l2ui #pmPop, html.l2ui #pmStrip, html.l2ui #pmBar { background:#000; border-color:var(--l2-bd); color:#fff; }
+html.l2ui #hud { color:var(--l2-ink3); } html.l2ui #hud b { color:#fff; }
+html.l2ui #pmStage span, html.l2ui #pmPop span { color:var(--l2-ink3); }
+html.l2ui #pmPop.best b { color:#fff; }
+html.l2ui #bmAttrib { background:rgba(0,0,0,.7); color:var(--l2-ink4); }
+html.l2ui .pmDots button { background:var(--l2-bd); } html.l2ui .pmDots button.done { background:var(--l2-ink4); } html.l2ui .pmDots button.cur { background:#fff; }
+html.l2ui .pmSpeed { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd); }
+html.l2ui .pmSpeed button { color:var(--l2-ink3); } html.l2ui .pmSpeed button.on { background:#fff; color:#000; }
+
+/* free mode: the left panel's own controls */
+html.l2ui #panel h2 { color:#fff !important; }
+html.l2ui #panel .card, html.l2ui #panel .preset-box, html.l2ui #panel details.advanced > summary { border-color:var(--l2-bd); border-radius:var(--l2-r); }
+html.l2ui #panel .btns button, html.l2ui #panel .steps button { border-color:var(--l2-bd); border-radius:var(--l2-r-s); }
+html.l2ui #panel .btns button.primary, html.l2ui #panel .preset-box button { background:#fff; color:#000; border-color:#fff; }
+html.l2ui #panel .btns button.primary:hover, html.l2ui #panel .preset-box button:hover { background:#fff; opacity:.88; }
+html.l2ui #panel .steps button.on { box-shadow:none; background:#fff; color:#000; border-color:#fff; }
+html.l2ui #panel label.lay input[type=checkbox] { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui #panel label.lay input[type=checkbox]::before { background:var(--l2-ink3); box-shadow:none; }
+html.l2ui #panel label.lay input[type=checkbox]:checked, html.l2ui[data-theme="dark"] #panel label.lay input[type=checkbox]:checked { background:#fff; box-shadow:none; }
+html.l2ui #panel label.lay input[type=checkbox]:checked::before, html.l2ui[data-theme="dark"] #panel label.lay input[type=checkbox]:checked::before { background:#000; }
+html.l2ui #panel select, html.l2ui #panel .preset-box select { background-color:#000; border-color:var(--l2-bd); border-radius:var(--l2-r-s); color:#fff; }
+html.l2ui #panel details.info summary { color:#fff; }
+html.l2ui .displayPanel .dpSwitchRow, html.l2ui .displayPanel .dpSwitchRow span { color:#fff; }
+
+/* controls that were a grey fill with no edge: an edge instead */
+html.l2ui .package-nav, html.l2ui .seg, html.l2ui .language-switch { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd); }
+html.l2ui .package-nav button.active, html.l2ui .seg button.on, html.l2ui .language-switch button.active { background:#fff; color:#000; box-shadow:none; opacity:1; }
+html.l2ui #panel .language-switch { box-shadow:none; }
+html.l2ui #panel button.mini, html.l2ui #panel .sel, html.l2ui #panel select.sel { background-color:#000; border-color:var(--l2-bd); color:#fff; border-radius:var(--l2-r-s); }
+html.l2ui #panel button.mini:hover { border-color:var(--l2-bd2); }
+html.l2ui #panel button.mini.primary { background:#fff; color:#000; border-color:#fff; }
+html.l2ui #panel button.mini.on { background:#fff; color:#000; border-color:#fff; }
+html.l2ui #panel .ts-title { color:#fff; } html.l2ui #panel .ts-sub { color:var(--l2-ink3); }
+html.l2ui #panel .pmTop button, html.l2ui #panel .pmActs button, html.l2ui #panel .pmChips button { background:#000; border-color:var(--l2-bd); color:#fff; }
+html.l2ui #panel .pmChips button.on, html.l2ui #panel .pmKinds button.on { background:#fff; color:#000; border-color:#fff; }
+html.l2ui input[type=checkbox]:not(.lay) { accent-color:#fff; }
+html.l2ui .displayPanel input:checked + .dpSw { background:#fff; box-shadow:none; }
+html.l2ui .displayPanel input:checked + .dpSw::after { background:#000; }
+html.l2ui #panel .language-switch button.on, html.l2ui #panel .language-switch button[aria-pressed="true"] { background:#fff; color:#000; }
+html.l2ui #panel .pmActs button.primary, html.l2ui #panel .pmChips button.on { background:#fff; color:#000; border-color:#fff; }
+html.l2ui .pmTh { color:#fff; } html.l2ui .pmTh.best { border-color:#fff; } html.l2ui .pmTh.view { border-color:var(--l2-ink3); }
+html.l2ui .pmSBar, html.l2ui .pmProg { background:var(--l2-bd); }
+
+/* the London map's display panel: the same tiles, pressed by aria-pressed; its switches are inputs */
+html.l2ui .displayPanel .dpTile[aria-pressed="true"] { background:#fff; color:#000; border-color:#fff; }
+html.l2ui .displayPanel .dpTile:hover:not(:disabled):not([aria-pressed="true"]):not(.on) { background:#000; color:#fff; border-color:var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch::after { background:var(--l2-ink3); }
+html.l2ui .displayPanel .dpSwitch:checked, html.l2ui .displayPanel .dpSwitch.dpInvert:not(:checked) { background:#fff; box-shadow:none; }
+html.l2ui .displayPanel .dpSwitch:checked::after, html.l2ui .displayPanel .dpSwitch.dpInvert:not(:checked)::after { background:#000; }
+html.l2ui .displayPanel .dpSwitch.dpInvert:checked { background:#000; box-shadow:inset 0 0 0 1px var(--l2-bd2); }
+html.l2ui .displayPanel .dpSwitch.dpInvert:checked::after { background:var(--l2-ink3); }
+html.l2ui .displayPanel .dpDots i { border-color:var(--l2-bd2); }
