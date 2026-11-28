@@ -2847,14 +2847,35 @@ function threads(lines, straight, alpha) {
   ox.globalCompositeOperation = 'source-over';
   cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.globalCompositeOperation = 'lighter'; cx.globalAlpha = alpha; cx.drawImage(off, 0, 0); cx.restore();
 }
-function anchorDots() {                     // (24 Nov) stars: on the roads in the main colour, between them in the node colour
+function anchorDots() {   // (28 Nov 2026) solid dots, ringed in the page colour so they stand off the lines they sit on (they were soft glows that vanished into the glowing edges)
   const seen = new Set(), C = LK(), road = [], between = [], mine = [];
   for (const list of S.per) for (const q of list) { if (seen.has(q.id)) continue; seen.add(q.id);
     (q.kind === 'manual' || q.moved ? mine : q.kind === 'between' ? between : road).push([q.x, q.y]); }
-  const k = V.ancS * (S.edit ? 1.4 : 1);
-  pxStars(road, C.main, 0.75 * k, 0.9); pxStars(between, C.node, 0.5 * k, 0.6); pxStars(mine, pxRGB(TH().manual), 0.75 * k, 1);
+  // bigger on step 8 (the step about them); smaller zoomed out (to 0.6x) so a whole site does not blur, a little bigger zoomed in (to 1.15x)
+  const z = Math.max(0.6, Math.min(1.15, Math.sqrt(32 / S.view.mpp))), k = V.ancS * (S.edit ? 1.4 : 1) * (S.step === 8 ? 1.2 : 1) * z;
+  ancDots(road, C.main, 3.6 * k, false); ancDots(between, C.node, 2.8 * k, true); ancDots(mine, pxRGB(TH().manual), 3.6 * k, false);
   const gates = []; for (const G of (S.gates || [])) if (G) for (const g of G) gates.push([g.x, g.y]);
-  if (gates.length) pxStars(gates, [255, 255, 255], 1.15 * k, 1);      // (25 Nov 2026) the station's gateways
+  if (gates.length) ancGates(gates, 3.2 * k);      // (25 Nov 2026) the station's gateways: an open diamond, not a dot
+}
+// one kind of anchor: a faint halo, a ring of the page colour, then the dot (solid with a light core, or hollow)
+function ancDots(pts, col, r, hollow) {
+  const bg = TH().bg, dark = V.theme !== 'light'; cx.save();
+  for (const [x, y] of pts) { const X = sx(x), Y = sy(y); if (X < -20 || Y < -20 || X > W + 20 || Y > Hh + 20) continue;
+    cx.globalCompositeOperation = dark ? 'lighter' : 'source-over';
+    const g = cx.createRadialGradient(X, Y, r, X, Y, r * 3.4); g.addColorStop(0, pxCss(col, dark ? 0.42 : 0.25)); g.addColorStop(1, pxCss(col, 0));
+    cx.fillStyle = g; cx.beginPath(); cx.arc(X, Y, r * 3.4, 0, 7); cx.fill();
+    cx.globalCompositeOperation = 'source-over';
+    cx.beginPath(); cx.arc(X, Y, r + 1.8, 0, 7); cx.fillStyle = bg; cx.fill();
+    cx.beginPath(); cx.arc(X, Y, r, 0, 7);
+    if (hollow) { cx.lineWidth = 1.6; cx.strokeStyle = pxCss(dark ? col : [17, 17, 17], 1); cx.stroke(); }
+    else { cx.fillStyle = pxCss(col, 1); cx.fill(); cx.beginPath(); cx.arc(X, Y, r * 0.36, 0, 7); cx.fillStyle = dark ? '#FFFFFF' : bg; cx.fill(); } }
+  cx.restore();
+}
+function ancGates(pts, r) {
+  const t = TH(); cx.save(); cx.lineWidth = 1.5; cx.strokeStyle = t.station; cx.fillStyle = t.bg;
+  for (const [x, y] of pts) { const X = sx(x), Y = sy(y), d = r + 1.5; if (X < -20 || Y < -20 || X > W + 20 || Y > Hh + 20) continue;
+    cx.beginPath(); cx.moveTo(X, Y - d); cx.lineTo(X + d, Y); cx.lineTo(X, Y + d); cx.lineTo(X - d, Y); cx.closePath(); cx.fill(); cx.stroke(); }
+  cx.restore();
 }
 // the existing roads, drawn the way the steps before the hierarchy show them
 function existingLines() {          // (24 Nov) context: hairlines, M brightest; full strength only on step 4, the step about them
