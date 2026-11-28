@@ -66,6 +66,8 @@ function create(G0, opt) {
       g.save(); g.globalAlpha *= alpha; g.strokeStyle = RC[gr]; g.lineWidth = Math.max(gr === 'l' ? 0.7 : 1, RW[gr] * plan.s); g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); g.restore(); } }
   function text(s, x, y, size, col, al, w) { g.font = `${w || 500} ${size}px ${FONT}`; g.fillStyle = col; g.textAlign = al || 'left'; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); }
   function statBlock(rows, a) { if (a <= 0) return; g.save(); g.globalAlpha *= a;
+    // (28 Nov 2026) a phone on its side: the numbers go in one row under the plan, not over its right edge
+    if (SIDE()) { rows.forEach((r, i) => { const x = 16 + i * (Wd - 32) / rows.length; text(String(r[0]), x, Hd - 64, 17, r[2] || '#fff', 'left', 600); text(r[1], x, Hd - 49, 11, 'rgba(245,245,247,.55)', 'left'); }); g.restore(); return; }
     if (nar()) { rows.forEach((r, i) => { const x = 16 + i * (Wd - 110) / rows.length; text(String(r[0]), x, 58, 19, r[2] || '#fff', 'left', 600); text(r[1], x, 74, 11, 'rgba(245,245,247,.55)', 'left'); }); g.restore(); return; }
     const x = Wd - 28; rows.forEach((r, i) => { text(String(r[0]), x, 96 + i * 46, 24, r[2] || '#fff', 'right', 600); text(r[1], x, 96 + i * 46 + 17, 12, 'rgba(245,245,247,.55)', 'right'); }); g.restore(); }
   function pill(s, x, y, size, al) { al = al || 'left'; g.font = `600 ${size}px ${FONT}`; const w = g.measureText(s).width + 20, x0 = al === 'center' ? x - w / 2 : al === 'right' ? x - w : x - 10;
