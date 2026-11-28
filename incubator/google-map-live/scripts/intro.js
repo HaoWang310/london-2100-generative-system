@@ -36,6 +36,8 @@
   var calm = false; try { calm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { /* older browsers */ }
   var small = false; try { small = Math.min(innerWidth, innerHeight) < 600 || matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch (e) { small = false; }
   var DIR = 'assets/intro/' + (small ? 's' : 'l') + '/';
+  /* the pictures carry this script's own ?v=, so a phone never shows new legends over cached old pictures */
+  var IV = ((document.currentScript && /[?&]v=([^&]+)/.exec(document.currentScript.src)) || [])[1] || '';
   var CAT = '../../assets/catalogue/';
 
   /* when each chapter begins, in seconds; the cover is chapter 0 */
@@ -72,7 +74,7 @@
   function delay(e, d, o) { e.style.setProperty('--d', (d - SEEK).toFixed(2) + 's'); if (o !== undefined) e.style.setProperty('--o', (o - SEEK).toFixed(2) + 's'); return e; }
   function plate(name, anim, d) {
     var b = D.plates[name], im = mk('img', 'lmi-pl lmi-' + (anim || 'in'));
-    im.alt = ''; im.decoding = 'async'; im.draggable = false; im.src = DIR + name + '.webp';
+    im.alt = ''; im.decoding = 'async'; im.draggable = false; im.src = DIR + name + '.webp' + (IV ? '?v=' + IV : '');
     im.style.left = pct(b[0]); im.style.top = pct(b[1]); im.style.width = pct(b[2]); im.style.height = pct(b[3]);
     return delay(im, d);
   }
@@ -172,7 +174,7 @@
       var e = label(D.pts[q[0]], 'lmi-hs', t + 3.3, q[3]); e.appendChild(mk('b', null, q[1])); var m = mk('span', 'lmi-mono', q[2]); m.setAttribute('data-no-translate', ''); e.appendChild(m); c.appendChild(e);
     });
     var n5 = note('R', t + 0.5);
-    [['#849474', 'Green Belt 5,065 km²', 'l'], ['#bed2aa', 'AONB · 5 landscapes', 'd'], ['#e1e1e4', 'National Rail', 'l'], ['#e32017', 'Underground', 'l'], ['#ff2d95', 'HS1 · HS2', 'l']].forEach(function (q) {
+    [['#c8c8cd', 'Green Belt 5,065 km²', 'l'], ['#96969e', 'AONB · 5 landscapes', 'd'], ['#e1e1e4', 'National Rail', 'l'], ['#E8463A', 'Underground and other lines', 'l'], ['#3fe0c5', 'HS1 · HS2', 'l']].forEach(function (q) {
       var r = mk('div', 'lmi-key'), sw = mk('i', 'lmi-kl' + (q[2] === 'd' ? ' lmi-kd' : '')); sw.style.color = q[0]; sw.style.background = q[2] === 'd' ? 'none' : q[0];
       r.appendChild(sw); r.appendChild(mk('span', null, q[1])); n5.appendChild(r);
     });
@@ -227,10 +229,18 @@
     /* the square frame, as large as its room allows; on a narrow screen it stands at the top, its notes under it */
     function fit() {
       var r = map.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return;
-      var narrow = r.width < 760, side = narrow ? 0 : 230;
-      var w = Math.max(120, Math.min(r.width - 2 * side, narrow ? r.height - 150 : r.height, narrow ? r.width : 1e9));
+      var narrow = r.width < 760, side = narrow ? 0 : 230, room = 140;
+      /* a narrow screen: the notes run the whole width under the frame (not just the frame's width), and the frame leaves
+         room for the tallest of them, so a legend never runs into the caption on a short phone */
+      if (narrow) {
+        box.style.setProperty('--nw', r.width + 'px'); var nh = 0;
+        box.querySelectorAll('.lmi-note').forEach(function (n) { nh = Math.max(nh, n.offsetHeight); });
+        room = Math.max(120, nh + 14);
+      }
+      var w = Math.max(120, Math.min(r.width - 2 * side, narrow ? r.height - room - 10 : r.height, narrow ? r.width : 1e9));
       stage.style.width = w + 'px'; stage.style.height = w + 'px';
-      stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (narrow ? Math.max(0, (r.height - w - 140) / 2) : (r.height - w) / 2) + 'px';
+      stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (narrow ? Math.max(0, (r.height - w - room) / 2) : (r.height - w) / 2) + 'px';
+      if (narrow) box.style.setProperty('--nx', -(r.width - w) / 2 + 'px');
       box.classList.toggle('lmi-narrow', narrow); box.classList.toggle('lmi-small', w < 480);
     }
 
