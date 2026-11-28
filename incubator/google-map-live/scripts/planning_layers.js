@@ -6,7 +6,7 @@
 // Nothing is loaded until a layer is first switched on.
 import {createReliefLoader,reliefTileUrl,reliefStops,RELIEF_RAMPS,RELIEF_MIN_ZOOM,RELIEF_MAX_ZOOM,RELIEF_TILE_SIZE,
   DEM_TILE_URL,DEM_MAX_ZOOM}
-  from './relief_local.js?v=3.46.0';
+  from './relief_local.js?v=3.46.1';
 
 export {RELIEF_RAMPS,reliefStops};
 export const PLANNING_PREFIX='l2100-';
@@ -21,7 +21,7 @@ const GREEN_BELT='#849474',AONB='#4f6b45';
 const GB_EDGE=[1.3,2.2,3],AONB_EDGE=[1.2,1.8,2.4];
 
 const RELIEF='l2100-relief';
-// v3.46.0: 3D relief. The ground itself rises (MapLibre terrain) inside the study circle; every draped layer follows.
+// v3.46.1: 3D relief. The ground itself rises (MapLibre terrain) inside the study circle; every draped layer follows.
 const DEM='l2100-dem';
 export const RELIEF3D_RANGE=[1,8,0.5];   // exaggeration: least, most, step (London is low: 1 is hard to see)
 const GB_SOURCE='l2100-green-belt',GB_FILL='l2100-green-belt-fill',GB_LINE='l2100-green-belt-line';

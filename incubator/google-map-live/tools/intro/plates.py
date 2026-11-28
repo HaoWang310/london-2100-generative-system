@@ -151,20 +151,20 @@ gb = json.load(open(G + 'assets/planning/green_belt.geojson'))
 im = canvas(); d = ImageDraw.Draw(im)
 for f in gb['features']:
     for poly in poly_rings(f['geometry']):
-        d.polygon([P(c) for c in poly[0]], fill=(132, 148, 116, 96))
+        d.polygon([P(c) for c in poly[0]], fill=(190, 190, 196, 80))       # AADRL: the Green Belt in grey-white (was olive)
         for hole in poly[1:]:
             d.polygon([P(c) for c in hole], fill=(0, 0, 0, 0))
 for f in gb['features']:
     for poly in poly_rings(f['geometry']):
         for ring in poly:
-            d.line([P(c) for c in ring], fill=(170, 186, 150, 255), width=2 * S2, joint='curve')
+            d.line([P(c) for c in ring], fill=(210, 210, 215, 255), width=2 * S2, joint='curve')
 finish(im, 'greenbelt')
 
 ao = json.load(open(G + 'assets/planning/aonb.geojson'))
 im = canvas(); d = ImageDraw.Draw(im)
 for f in ao['features']:
     for poly in poly_rings(f['geometry']):
-        d.polygon([P(c) for c in poly[0]], fill=(142, 162, 132, 40))
+        d.polygon([P(c) for c in poly[0]], fill=(150, 150, 158, 40))
 for f in ao['features']:
     for poly in poly_rings(f['geometry']):
         for ring in poly:
@@ -172,13 +172,15 @@ for f in ao['features']:
             run = 0.0; on = True
             for a, b in zip(pts, pts[1:]):
                 L = math.dist(a, b); run += L
-                if on: d.line([a, b], fill=(190, 210, 170, 255), width=2 * S2)
+                if on: d.line([a, b], fill=(160, 160, 168, 255), width=2 * S2)
                 if run > 10 * S2: run = 0; on = not on
 finish(im, 'aonb')
 
 rail = json.load(open(G + 'assets/planning/rail.geojson'))
-RC = {'national': (225, 225, 228), 'overground': (238, 124, 14), 'elizabeth': (105, 80, 161), 'dlr': (0, 175, 173),
-      'tram': (95, 181, 38), 'underground': (227, 32, 23)}
+# AADRL: national rail white, every other line (Underground, Overground, Elizabeth, DLR, tram) one red, the 70 km
+# circle's #E8463A (was each line's TfL colour)
+RC = {'national': (225, 225, 228), 'overground': (232, 70, 58), 'elizabeth': (232, 70, 58), 'dlr': (232, 70, 58),
+      'tram': (232, 70, 58), 'underground': (232, 70, 58)}
 kinds = {}
 for f in rail['features']:
     kinds[f['properties'].get('k')] = kinds.get(f['properties'].get('k'), 0) + 1
@@ -204,10 +206,10 @@ for f in hs['features']:
             run = 0; on = True
             for a, b in zip(pts, pts[1:]):
                 run += math.dist(a, b)
-                if on: d.line([a, b], fill=(255, 45, 149, 255), width=3 * S2)
+                if on: d.line([a, b], fill=(63, 224, 197, 255), width=3 * S2)
                 if run > 9 * S2: run = 0; on = not on
         else:
-            d.line(pts, fill=(255, 45, 149, 255), width=4 * S2, joint='curve')
+            d.line(pts, fill=(63, 224, 197, 255), width=4 * S2, joint='curve')   # HS1 / HS2: cyan, the one cool accent (was magenta)
 finish(im, 'highspeed', clip=False)
 
 gl = json.load(open(G + 'assets/greater_london_outline.geojson'))

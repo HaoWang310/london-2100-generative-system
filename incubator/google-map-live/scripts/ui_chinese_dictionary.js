@@ -965,6 +965,7 @@ export const CHINESE_UI = {
   "Rail services": "铁路服务",
   "National Rail": "国铁",
   "Underground": "地铁",
+  "Underground and other lines": "地铁及其他城市线路",
   "Overground": "地上铁",
   "Elizabeth line": "伊丽莎白线",
   "Trams": "有轨电车",
@@ -999,7 +1000,7 @@ export const CHINESE_UI = {
   "The ground itself is raised from the open height tiles (about 30 m), and the other layers lie on it: height colors, flood risk, boundaries, rail, the 3D buildings. London is low, so the heights are multiplied (×3 to ×5 reads well). Outside the 70 km circle the ground stays flat. Trees, street vehicles and building shadows are switched off while it is on: they are drawn on flat ground and would be buried.": "地面本身按开放高程瓦片（约 30 m）隆起，其他图层贴在上面：地形着色、洪水风险、边界、铁路、三维建筑。伦敦地势低，所以高度要乘以倍数（×3 到 ×5 比较清楚）。70 km 圈外地面保持平的。打开时树木、街道小车和建筑阴影会自动关闭：它们画在平地上，会被隆起的地面埋住。",
   "Visible · tilt the map to see it · trees, vehicles and building shadows are off meanwhile": "已显示 · 倾斜地图可见 · 期间树木、小车和建筑阴影关闭",
   "Trees, street vehicles and building shadows are off while 3D relief is on.": "3D 地形起伏打开时，树木、街道小车和建筑阴影保持关闭。",
-  // v3.46.0 · the opening film (scripts/intro.js)
+  // v3.46.1 · the opening film (scripts/intro.js)
   "London map · opening": "伦敦地图 · 开场",
   "Skip": "跳过",
   "Enter ›": "进入 ›",
