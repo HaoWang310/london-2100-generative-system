@@ -79,14 +79,16 @@
         why: T('The new network has to join the roads there are; towns are kept.', '新路网要接上已有的路，城镇不拆。'),
         prm: [[T('A town counts from', '城镇计入下限'), (k5.TOWN_MIN || 0.25) + ' km²']],
         res: n.roads && Object.keys(n.roads).length ? [[f(sum(n.roads, 'M'), 1), T('km motorway', 'km 高速')], [f(sum(n.roads, 'A'), 1), T('km A roads', 'km A 级')], [f(sum(n.roads, 'B'), 1), T('km B roads', 'km B 级')]] : [], leg: 4 };
-      case 5: { var W5 = window.WHOLE_; return { // (28 Nov 2026) the method since 20 Nov (#whole): only towns cut the cells; existing roads stay inside, joined at step 12
-        t: W5 ? T('Towns are what the wool cannot cross', '城镇是毛线穿不过的地方') : T('Roads and towns are lines the wool cannot cross', '路和城镇是穿不过的线'),
+      case 5: { var RC5 = (window.__WOOL_K__ && window.__WOOL_K__.ROADCUT) || (window.WHOLE_ ? 'none' : 'all'), W5 = RC5 === 'none', M5 = RC5 === 'MA'; return { // (28 Nov 2026) the method since 20 Nov (#whole): only towns cut the cells; existing roads stay inside, joined at step 12
+        t: W5 ? T('Towns are what the wool cannot cross', '城镇是毛线穿不过的地方') : M5 ? T('Towns, motorways and A roads are what the wool cannot cross', '城镇、高速和 A 级路是毛线穿不过的地方') : T('Roads and towns are lines the wool cannot cross', '路和城镇是穿不过的线'),
         did: W5 ? T('Each cell cut round the towns, the corners eased; the existing roads do not cut it. Pieces under the minimum are not woven.', '沿城镇把每个单元切开，转角做圆；现有道路不切单元。小于下限的碎块不编织。')
+          : M5 ? T('Each cell cut round the towns and along the motorways and A roads, the corners eased; B roads do not cut it. Pieces under the minimum are not woven.', '沿城镇、高速和 A 级路把每个单元切开，转角做圆；B 级路不切。小于下限的碎块不编织。')
           : T('Each cell cut along the roads and round the towns, the corners eased; pieces under the minimum are not woven.', '沿道路和城镇把每个单元切开，转角做圆；小于下限的碎块不编织。'),
         why: (W5 ? T('The wool is woven inside each piece and never enters a town; it may cross an existing road, and step 12 joins the new network to those roads.', '毛线只在每一块里面编，不进城镇；可以跨过现有道路，第 12 步再让新路网并入这些路。')
+          : M5 ? T('The wool is woven inside each piece; it never crosses a motorway or an A road, may cross a B road, and step 12 joins the network to them.', '毛线只在每一块里面编，不跨高速和 A 级路，可以跨 B 级路；第 12 步再让新路网并入这些路。')
           : T('The wool is woven inside each piece only; it never runs across a road that is there.', '毛线只在每一块里面编，不能跨过现有的路。'))
           + (FLW() ? T(' The flood corridors (blue) are kept for water: the wool may cross them but does not gather in them, and no main road runs along them.', ' 洪泛走廊（蓝色）留给水：毛线可以穿过，但不在里面聚集，主路也不沿着它走。') : ''),
-        prm: [[T('Road cut, width', '道路刀宽'), W5 ? T('not used', '不起作用') : (2 * (k5.HALF_ROAD || 20)) + ' m'], [T('Corners eased by', '转角圆角'), (k5.EASE || 85) + ' m'], [T('Smallest piece woven', '最小可编织块'), ((k5.MIN_PRIM || 3e6) / 1e6) + ' km²']]
+        prm: [[T('Existing roads cut the cells', '现有道路切单元'), W5 ? T('no', '不切') : M5 ? T('M · A only', '只切 M · A') : T('all', '全切')], [T('Road cut, width', '道路刀宽'), W5 ? T('not used', '不起作用') : (2 * (k5.HALF_ROAD || 20)) + ' m'], [T('Corners eased by', '转角圆角'), (k5.EASE || 85) + ' m'], [T('Smallest piece woven', '最小可编织块'), ((k5.MIN_PRIM || 3e6) / 1e6) + ' km²']]
           .concat(FLW() ? [[T('Flood corridor: medium and high risk in one piece of at least', '洪泛走廊：中、高风险连成一片，至少'), (window.CORR_HA_ || 5) + ' ha']] : []),
         res: DATA.primary.length ? [[DATA.primary.length, T('primary cells', '个一级单元')], [f(DATA.primary.reduce(function (s, p) { return s + p.km2; }, 0), 1), 'km²'], [DATA.small.length, T('small pieces left', '块小碎块')]]
           .concat(FLW() ? [[FLW().pieces, T('flood corridors', '片洪泛走廊')], [f(FLW().km2, 1) + ' km²', T('in flood corridors', '在洪泛走廊里')]] : []) : [], leg: 5 }; }

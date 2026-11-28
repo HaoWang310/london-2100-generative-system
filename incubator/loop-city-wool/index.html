@@ -2082,7 +2082,7 @@ window.liveStartHide = function () { var g = document.getElementById('liveStart'
   var want = /[?&]sample\b/.test(location.search) || (!window.opener && !stored && !/[#&]nosample/.test(location.hash));
   // (24 Nov) the example's step 1 made before (example/) is asked for now, beside the sample, not after it. EXV is written
   // by source/make-example.cjs: the bake it was made from, and its files
-  var EXV = /*EXV*/'4zl4ng:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
+  var EXV = /*EXV*/'1t2dpq7:step1.json,ground.webp,mould.jpg,veins.png,key.webp'/*EXV*/;
   var pre = function (href, as, cors) { var l = document.createElement('link'); l.rel = 'preload'; l.as = as; if (cors) l.crossOrigin = 'anonymous'; l.href = href; document.head.appendChild(l); };
   if (want && !/[#&]nopre/.test(location.hash)) { pre('example/preview.jpg?v=2', 'image'); pre('sample-cells.js?v=3', 'script');      // first what shows, then what it needs
     EXV.split(':')[1].split(',').forEach(function(f){ if (/^veins\./.test(f)) return;       // (25 Nov) the veins are for step 2: asked for once step 1 is drawn
@@ -5153,6 +5153,9 @@ const G = 10, RW = 3200;
 // worked out again from its stage (window.__woolRedo). These are the defaults, as the Python steps had them.
 const KP = window.__WOOL_K__ = {
   TOWN_MIN: 0.25,                                      // step 4 (step2_primary_cells.py): a town under this is not cut out, km²
+  // (28 Nov 2026) step 5: which existing roads cut the cells. 'none' is the method the page opens with (#whole: only towns cut);
+  // 'MA' motorways and A roads only (B roads may be crossed); 'all' every road (the method before 20 Nov, and any link without #whole)
+  ROADCUT: window.WHOLE_ ? 'none' : 'all',
   HALF_ROAD: 20, EASE: 85, MIN_PRIM: 3e6, SIMPLIFY: 45, // step 5: half the road cut, m; corners eased by, m; smallest piece woven, m²; outline simplified by, m
   KEEP: 2, SMOOTH: 160, MIN_ZONE: 4e5, MIN_PIECE: 6e5, // step 7 (step3_soil_zones.py): grades kept for farming (2 = Grade 1 and 2); smoothing, m; smallest soil cell, m²; bits under this join a neighbour, m²
   APART: 600, NEAR_AREA: 260, CLEAR: 250 };            // step 8 (step4_anchors_net.py): road anchors at least this far apart, m; a road end this near makes an anchor, m; kept clear round a station, m
@@ -5597,7 +5600,7 @@ function baker(pkg, pre, into) {
       say('Cutting ' + cid + ' into primary cells…'); await pause();
       const knife = raster(K, (x, P) => {
         x.lineWidth = 2 * KP.HALF_ROAD / G;
-        for (const r of (window.WHOLE_ ? [] : kRoads)) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
+        for (const r of (KP.ROADCUT === 'none' ? [] : KP.ROADCUT === 'MA' ? kRoads.filter(r => r.c !== 'B') : kRoads)) { x.beginPath(); pathOn(x, P, r.p, false); x.stroke(); }
         for (const t of (window.TCROSS_ ? [] : kTowns)) { x.beginPath(); pathOn(x, P, t.p, true); x.fill(); }
       });
       const pieceM = cellM.map((v, i) => v & (1 - knife[i]));
@@ -6037,5 +6040,5 @@ window.zhOf = zhOf; window.setLang = setLang;
   }
   if (document.readyState === 'complete') setTimeout(show, C.delay || 600); else window.addEventListener('load', function(){ setTimeout(show, C.delay || 600); });
 })();</script>
-<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=8"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=2"></script><script src="flow.js?v=8"></script><script src="places.js?v=1"></script><script src="place.js?v=3"></script>
+<link rel="stylesheet" href="../../shared/ui/chain.css?v=2"><script src="../../shared/ui/chain.js?v=4"></script><script src="../../shared/ui/phone.js?v=3"></script><script src="skin.js?v=7"></script><script src="explain.js?v=9"></script><script src="evaluate.js?v=1"></script><script src="anim.js?v=1"></script><script src="params.js?v=3"></script><script src="flow.js?v=8"></script><script src="places.js?v=1"></script><script src="place.js?v=3"></script>
 </body></html>

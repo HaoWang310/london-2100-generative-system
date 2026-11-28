@@ -32,12 +32,16 @@
       set: function (v) { if (typeof EX_CLS === 'undefined') return; ['M', 'A', 'B'].forEach(function (c) { if (v.indexOf(c) >= 0) EX_CLS[c] = c; else delete EX_CLS[c]; });
         EXIST = DATA.roads.filter(function (r) { return EX_CLS[r.c]; }); BD.key = null; BD.cache.clear(); if (typeof bdChanged === 'function') bdChanged(); legend(); schedule(); }, how: 'exist' });
   // 5 · primary cells
+  // (28 Nov 2026) the design choice the road knife belongs to: which existing roads cut the cells
+  add({ step: 5, id: 'ROADCUT', lab: ['Existing roads cut the cells', '现有道路切单元'], kind: 'seg', def: 'none',
+    opts: [['none', ['No', '不切']], ['MA', ['M · A only', '只切 M · A']], ['all', ['All', '全切']]],
+    note: ['No: the wool may cross the existing roads and is joined to them at step 12. M · A: motorways and A roads are hard edges, B roads may be crossed. All: every road is a hard edge.', '不切：毛线可以跨过现有道路，第 12 步再并入。只切 M · A：高速和 A 级路是硬边界，B 级路可以跨。全切：每条路都是硬边界。'] },
+    { get: function () { return K().ROADCUT || 'none'; }, set: function (v) { K().ROADCUT = v; }, how: 'bake', stage: 5 });
   add({ step: 5, id: 'EASE', lab: ['Corners eased by', '转角圆角'], kind: 'range', min: 0, max: 200, st: 5, def: 85, f: function (v) { return fmt(v) + ' m'; } }, bake('EASE', 5));
   add({ step: 5, id: 'HALF_ROAD', more: 1, lab: ['Road cut, width', '道路刀宽'], kind: 'range', min: 10, max: 100, st: 5, def: 40, f: function (v) { return fmt(v) + ' m'; },
     note: ['Only where a road runs through a cell.', '只在有道路穿过单元时起作用。'],
-    // (28 Nov 2026) the page opens with #whole (the method since 20 Nov): existing roads do not cut the cells, only towns do,
-    // so the road knife is never drawn and its width changes nothing
-    off: function () { return window.WHOLE_ ? T('Not used: in this method existing roads do not cut the cells, only towns do.', '不起作用：现在的方法里现有道路不切单元，只有城镇切。') : ''; } }, bake('HALF_ROAD', 5, 0.5));
+    // (28 Nov 2026) the knife is drawn only when existing roads cut the cells (ROADCUT above)
+    off: function () { return (K().ROADCUT || 'none') === 'none' ? T('Not used while "Existing roads cut the cells" is No: only towns cut them.', '不起作用：「现有道路切单元」选了「不切」，只有城镇切。') : ''; } }, bake('HALF_ROAD', 5, 0.5));
   add({ step: 5, id: 'MIN_PRIM', more: 1, lab: ['Smallest piece woven', '最小可编织块'], kind: 'range', min: 0.5, max: 10, st: 0.5, def: 3, f: function (v) { return fmt(v, 1) + ' km²'; } }, bake('MIN_PRIM', 5, 1e6));
   add({ step: 5, id: 'SIMPLIFY', more: 1, lab: ['Outline simplified by', '边界简化'], kind: 'range', min: 10, max: 150, st: 5, def: 45, f: function (v) { return fmt(v) + ' m'; } }, bake('SIMPLIFY', 5));
   // 7 · good land kept for farming
