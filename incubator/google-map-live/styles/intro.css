@@ -83,6 +83,31 @@
 #lmIntro.lmi-small .lmi-stack b.lmi-mono { font-size:9px; letter-spacing:.04em; }
 #lmIntro.lmi-small .lmi-lab { font-size:11px; } #lmIntro.lmi-small .lmi-place b, #lmIntro.lmi-small .lmi-hs b { font-size:11.5px; }
 
+/* (28 Nov 2026) chapter 6 on a narrow screen: a list over the whole width (the frame's version is hidden there) */
+.lmi-roleN { display:none; }
+#lmIntro.lmi-narrow .lmi-roleN { display:flex; flex-direction:column; justify-content:center; gap:14px; inset:0 2px; }
+#lmIntro.lmi-narrow .lmi-stage .lmi-ch.lmi-last { visibility:hidden; }
+.lmi-rnh { display:flex; align-items:center; gap:14px; }
+.lmi-rns { position:relative; width:112px; flex:none; }
+.lmi-rns img { position:absolute; display:block; max-width:none; }
+.lmi-rnn b { display:block; font-size:14px; font-weight:600; color:#fff; }
+.lmi-rnn span { display:block; margin-top:3px; }
+.lmi-rnl { position:relative; display:flex; flex-direction:column; gap:7px; margin-left:54px; padding-left:16px; border-left:1px solid #5a5a5f; }
+.lmi-rnl::before { content:""; position:absolute; left:-4px; top:-4px; width:7px; height:7px; border-radius:50%; background:#E8463A; }
+.lmi-nr { position:relative; display:flex; align-items:center; gap:10px; min-height:34px; }
+.lmi-nr::before { content:""; position:absolute; left:-16px; top:50%; width:12px; border-top:1px solid #96969c; }
+.lmi-nrv { margin-left:14px; }
+.lmi-nrv::before { left:-30px; width:26px; border-top-style:dashed; }
+.lmi-nr .lmi-thumb { width:52px; height:29px; }
+.lmi-nr .lmi-nt { min-width:0; }
+.lmi-nt1 { display:flex; align-items:baseline; gap:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lmi-nr .lmi-nt em { display:inline; margin:0; font-size:9.5px; flex:none; }
+.lmi-nr .lmi-nt b { font-size:12.5px; overflow:hidden; text-overflow:ellipsis; }
+.lmi-nr .lmi-nt span { font-size:10.5px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#lmIntro.lmi-story .lmi-nr { opacity:0; animation:lmiSlideN .5s ease-out var(--d) both; }
+@keyframes lmiSlideN { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+#lmIntro.lmi-story .lmi-rns .lmi-rise { opacity:0; animation:lmiRise .9s cubic-bezier(.2,.7,.2,1) var(--d) both; }
+
 /* notes beside the frame (on a narrow screen: under it) */
 .lmi-note { position:absolute; width:200px; font-size:11.5px; line-height:1.4; color:rgba(255,255,255,.62); }
 .lmi-note b { display:block; color:#fff; font-weight:600; font-size:12px; margin-bottom:6px; }
@@ -178,3 +203,4 @@
 #panel button.introReplay:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 html:not(.l2ui) #introReplay { display:none; }   /* #noskin: no film, so no button */
 #lmIntro.lmi-hold, #lmIntro.lmi-hold *, #lmIntro.lmi-hold *::after { animation-play-state:paused !important; }   /* #introat=…&introhold */
+@media (max-height:640px) { #lmIntro.lmi-narrow .lmi-roleN { gap:8px; } .lmi-rns { width:88px; } .lmi-rnl { gap:4px; margin-left:44px; } .lmi-nr { min-height:30px; } }
