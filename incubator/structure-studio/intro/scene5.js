@@ -83,7 +83,9 @@ function create(o) {
     const sa = seg(t, 1.0, 1.6) * (1 - seg(t, 4.4, 4.9)) * fa;
     if (!nar) H.statBlock([[S.lenKm + ' km', L('连续走廊，跨街跨水不断开', 'of corridor, unbroken over streets and water')], [S.bridges + L(' 处', ''), L(`跨越街道 / 水面，共 ${S.bridgeKm} km`, `crossings of streets and water, ${S.bridgeKm} km`)], [S.entries + ' · ' + S.r12 + ' · ' + S.r23, L('地面入口 · L1→L2 坡 · L2→L3 坡', 'entries · ramps L1→L2 · L2→L3'), '#ffb37a']], sa);
     const ra = seg(t, 0.6, 1.2) * (1 - seg(t, 4.4, 4.9)) * fa;
-    if (ra > 0) { I.h.use(); const g = o.ctx; g.save(); g.globalAlpha = ra; const lx = nar ? 16 : 28, ly = nar ? 100 : 72;
+    // (28 Nov 2026) a phone on its side: the picture is only the left 62%, the caption has the right column, so the level legend would sit on the model — leave it out
+    let side = false; try { side = matchMedia('(orientation: landscape) and (max-height: 500px)').matches; } catch (e) { side = false; }
+    if (ra > 0 && !side) { I.h.use(); const g = o.ctx; g.save(); g.globalAlpha = ra; const lx = nar ? 16 : 28, ly = nar ? 100 : 72;
       [['#b3b5bf', L('L1 7.2 m · 全网', 'L1 7.2 m · the whole net')], ['#d6d9e0', L('L2 11.8 m · 全网', 'L2 11.8 m · the whole net')], ['#fafafa', L('L3 16.4 m · 塔周 200 m', 'L3 16.4 m · within 200 m of a tower')], ['#ffb37a', L('坡道（亮光向上流动）', 'ramps (the light runs upwards)')]].forEach((r, i) => { g.fillStyle = r[0]; g.fillRect(lx, ly + i * 22 - 9, 12, 10); H.text(r[1], lx + 20, ly + i * 22, 13, 'rgba(245,245,247,.85)'); });
       H.text(L('竖向放大 ', 'height × ') + V.vex.toFixed(1).replace('.0', '') + L(' 倍', '') + (V.ex > 1.05 ? L(' · 层间距拉开 ', ' · levels pulled apart × ') + V.ex.toFixed(1) + L(' 倍示意', '') : ''), lx, ly + 4 * 22 + 4, 11, 'rgba(245,245,247,.45)'); g.restore(); }
     const ca = seg(t, 6.3, 7.0) * (1 - seg(t, 8.4, 8.9)) * fa;

@@ -96,7 +96,7 @@ function create(G0, opt) {
     void allY; return C[k]; }
   function wrap(s, maxW, size, w) { g.font = `${w} ${size}px ${FONT}`; const out = []; let cur = '';
     const toks = zh ? (s.match(/[A-Za-z0-9.,%:/+×→·°\-]+|\s+|./gu) || []) : s.split(/(\s+)/);
-    for (const tk of toks) { const nx = cur + tk; if (g.measureText(nx).width > maxW && cur.trim()) { out.push(cur.trim()); cur = tk.trimStart(); } else cur = nx; } if (cur.trim()) out.push(cur.trim()); return out; }
+    for (const tk of toks) { const nx = cur + tk; if (g.measureText(nx).width > maxW && cur.trim() && !/^[，。、；：！？）」』》,.;:!?)]/.test(tk)) { out.push(cur.trim()); cur = tk.trimStart(); } else cur = nx; } if (cur.trim()) out.push(cur.trim()); return out; }
   // (27 Nov 2026) the caption is centred under the picture, as in the other openings (Loop City step 1): title, then the lines
   function caption(t, alpha) { if (SIDE()) return captionSide(t, alpha); const [tt, body] = captionAt(t), n = nar(), x = Wd / 2, maxW = Math.min(Wd - (n ? 36 : 56), 660), ts = n ? 17 : 22, bs = n ? 13 : 15, lh = n ? 19 : 23;
     // (27 Nov 2026) a title too wide for the screen (English, on a phone) folds onto a second line instead of running off the edge
