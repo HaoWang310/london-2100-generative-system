@@ -204,3 +204,13 @@
 html:not(.l2ui) #introReplay { display:none; }   /* #noskin: no film, so no button */
 #lmIntro.lmi-hold, #lmIntro.lmi-hold *, #lmIntro.lmi-hold *::after { animation-play-state:paused !important; }   /* #introat=…&introhold */
 @media (max-height:640px) { #lmIntro.lmi-narrow .lmi-roleN { gap:8px; } .lmi-rns { width:88px; } .lmi-rnl { gap:4px; margin-left:44px; } .lmi-nr { min-height:30px; } }
+/* a phone on its side (the picture's room under 420 px high): chapter 6's list in two columns beside the slabs */
+#lmIntro.lmi-flat .lmi-roleN { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:26px; inset:0; }
+#lmIntro.lmi-flat .lmi-stage .lmi-ch.lmi-last { visibility:hidden; }
+#lmIntro.lmi-flat .lmi-rnh { flex-direction:column; align-items:center; gap:6px; text-align:center; }
+#lmIntro.lmi-flat .lmi-rns { width:92px; }
+#lmIntro.lmi-flat .lmi-rnl { display:grid; grid-template-columns:repeat(2, minmax(0, 250px)); grid-template-rows:repeat(3, auto); grid-auto-flow:column; column-gap:22px; row-gap:6px; margin:0; padding:0; border:0; }
+#lmIntro.lmi-flat .lmi-rnl::before, #lmIntro.lmi-flat .lmi-nr::before { display:none; }
+#lmIntro.lmi-flat .lmi-nrv { margin-left:0; }
+#lmIntro.lmi-flat .lmi-nr { min-height:30px; }
+#lmIntro.lmi-flat .lmi-rnn span { white-space:nowrap; }

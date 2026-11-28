@@ -265,6 +265,7 @@
       stage.style.left = (r.width - w) / 2 + 'px'; stage.style.top = (narrow ? Math.max(0, (r.height - w - room) / 2) : (r.height - w) / 2) + 'px';
       if (narrow) box.style.setProperty('--nx', -(r.width - w) / 2 + 'px');
       box.classList.toggle('lmi-narrow', narrow); box.classList.toggle('lmi-small', w < 480);
+      box.classList.toggle('lmi-flat', r.height < 420);   // (28 Nov 2026) a phone on its side: chapter 6 as a list in two columns
     }
 
     function close() {
