@@ -31,7 +31,7 @@ test('the wool bands: the evaluation has a card between step 16 and the way out,
   assert.ok(i > 0 && j > i, 'its card stands before the way out');
   assert.ok(flow.includes('if (k === 28) { stop(); if (typeof BD !== \'undefined\' && BD.res && BD.res.hier && !BD.busy) { setStep(28); P.k = null; } else P.open[28] = !P.open[28]; render(); return; }'));
   assert.ok(ex.includes("s === 28 ? T('After step 16 · Evaluation', '第 16 步之后 · 评价')"), 'the chapter bar no longer calls it 18');
-  assert.ok(/flow\.js\?v=(7|8)/.test(html) && /explain\.js\?v=(7|8)/.test(html));
+  assert.ok(/flow\.js\?v=(7|8)/.test(html) && /explain\.js\?v=(7|8|9)/.test(html));
 });
 
 test('the parked folders: loop-city-live without its copies; the growth simulator removed with its module', () => {
