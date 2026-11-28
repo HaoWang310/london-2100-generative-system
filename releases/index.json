@@ -1,5 +1,12 @@
 [
   {
+    "id": "0.1.0-4560df1",
+    "version": "0.1.0",
+    "commit": "4560df115dc542d9168aa7131d8372b5c72dc6a1",
+    "builtAt": "2026-11-28T12:25:02.807Z",
+    "path": "releases/0.1.0-4560df1/"
+  },
+  {
     "id": "0.1.0-66ee6f8",
     "version": "0.1.0",
     "commit": "66ee6f8c4afab078d8b1ae1fa0f01ab99e0fbc28",
